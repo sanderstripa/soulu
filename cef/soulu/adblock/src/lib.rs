@@ -157,8 +157,9 @@ pub unsafe extern "C" fn soulu_ab_check(url: *const c_char, source: *const c_cha
     let request = Request::new(unsafe {input(url)},unsafe {input(source)},unsafe {input(kind)},unsafe {input(method)});
     let Ok(request) = request else {return output("{\"matched\":false}".into());};
     let result = rules.engine.check_network_request(&request);
-    output(serde_json::json!({"ready":true,"matched":result.matched,
-        "rule":result.filter,"exception":result.exception}).to_string())
+    output(serde_json::json!({"ready":true,"matched":result.should_block(),
+        "rule":result.filter.as_ref().map(|r|r.to_string()),
+        "exception":result.exception.as_ref().map(|r|r.to_string())}).to_string())
 }) }
 #[derive(Default, Deserialize)]
 struct Tokens { #[serde(default)] classes:Vec<String>, #[serde(default)] ids:Vec<String> }
@@ -193,7 +194,7 @@ mod tests {
     fn engine(text: &str) -> Engine { let mut set=FilterSet::new(true);
         set.add_filter_list(text.to_owned(),ParseOptions::default());Engine::new_with_filter_set(set) }
     fn blocked(e:&Engine,url:&str,source:&str,kind:&str)->bool {
-        e.check_network_request(&Request::new(url,source,kind,"get").unwrap()).matched }
+        e.check_network_request(&Request::new(url,source,kind,"get").unwrap()).should_block() }
     #[test] fn network_context_and_exceptions() {
         let e=engine("||ads.example.net^$third-party,script,image,subdocument,xmlhttprequest\n@@||ads.example.net/allowed.js$script\n||cdn.example.co.uk^$third-party\n||metrics.example.net^$domain=news.example.org\n|https://exact.example/a|\n/banner/*/ad^$image\n||first.example^$~third-party");
         for kind in ["script","image","subdocument","xmlhttprequest"] {
