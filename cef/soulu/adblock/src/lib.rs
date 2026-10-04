@@ -52,6 +52,9 @@ fn compile(lists: &[String]) -> Result<Rules, String> {
 }
 fn baseline() -> Vec<String> { BASELINE.iter().map(|s| s.to_string()).collect() }
 fn read_cache(path: &Path) -> Result<(Rules, u64), String> {
+    if fs::metadata(path).map_err(|e|e.to_string())?.len() > (LIMIT * 4) as u64 {
+        return Err("Oversize cache".into());
+    }
     let bytes = fs::read(path).map_err(|e| e.to_string())?;
     if bytes.len() > LIMIT * 4 { return Err("Oversize cache".into()); }
     let bundle: Bundle = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
@@ -115,6 +118,17 @@ fn update(path: &Path) -> Result<(), String> {
     Ok(())
 }
 fn rules() -> Option<Arc<Rules>> { STATE.get()?.read().ok().map(|s| Arc::clone(&s.rules)) }
+fn network_request(url: &str,source: &str,kind: &str,method: &str) -> Result<Request,String> {
+    fn canonical(text:&str)->Result<String,String>{
+        let mut url=url::Url::parse(text).map_err(|e|e.to_string())?;
+        if let Some(host)=url.host_str(){let host=host.trim_end_matches('.').to_owned();
+            url.set_host(Some(&host)).map_err(|e|e.to_string())?;}
+        Ok(url.to_string())
+    }
+    // The engine's fast ASCII host parser expects canonical browser URLs.
+    // Normalize hostname case/IDNA/trailing dot without changing path case.
+    Request::new(&canonical(url)?,&canonical(source)?,kind,method).map_err(|e|e.to_string())
+}
 // Every ABI entry contains panic propagation; no Rust panic may unwind into C++.
 fn boundary<T: Default>(f: impl FnOnce() -> T) -> T {
     std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)).unwrap_or_default()
@@ -154,7 +168,7 @@ pub unsafe extern "C" fn soulu_ab_init(cache: *const c_char, fixture: *const c_c
 pub unsafe extern "C" fn soulu_ab_check(url: *const c_char, source: *const c_char,
     kind: *const c_char, method: *const c_char) -> *mut c_char { boundary(|| {
     let Some(rules) = rules() else {return output("{\"ready\":false}".into());};
-    let request = Request::new(unsafe {input(url)},unsafe {input(source)},unsafe {input(kind)},unsafe {input(method)});
+    let request = network_request(unsafe {input(url)},unsafe {input(source)},unsafe {input(kind)},unsafe {input(method)});
     let Ok(request) = request else {return output("{\"matched\":false}".into());};
     let result = rules.engine.check_network_request(&request);
     output(serde_json::json!({"ready":true,"matched":result.should_block(),
@@ -194,11 +208,11 @@ mod tests {
     fn engine(text: &str) -> Engine { let mut set=FilterSet::new(true);
         set.add_filter_list(text.to_owned(),ParseOptions::default());Engine::new_with_filter_set(set) }
     fn blocked(e:&Engine,url:&str,source:&str,kind:&str)->bool {
-        e.check_network_request(&Request::new(url,source,kind,"get").unwrap()).should_block() }
+        e.check_network_request(&network_request(url,source,kind,"get").unwrap()).should_block() }
     #[test] fn network_context_and_exceptions() {
         let e=engine("||ads.example.net^$third-party,script,image,subdocument,xmlhttprequest\n@@||ads.example.net/allowed.js$script\n||cdn.example.co.uk^$third-party\n||metrics.example.net^$domain=news.example.org\n|https://exact.example/a|\n/banner/*/ad^$image\n||first.example^$~third-party");
         for kind in ["script","image","subdocument","xmlhttprequest"] {
-            assert!(blocked(&e,"https://ADS.example.net/ad", "https://news.example.org",kind)); }
+            assert!(blocked(&e,"https://ADS.example.net/ad", "https://news.example.org",kind),"Resource type: {kind}"); }
         assert!(!blocked(&e,"https://ads.example.net/allowed.js","https://news.example.org","script"));
         assert!(!blocked(&e,"https://ads.example.net/ad","https://news.example.org","font"));
         assert!(!blocked(&e,"https://cdn.example.co.uk/ad","https://www.example.co.uk","script"));

@@ -54,6 +54,8 @@ class BrowserClient final : public CefClient,
       bool, bool, const CefString&, bool&) override;
   ReturnValue OnBeforeResourceLoad(CefRefPtr<CefBrowser>, CefRefPtr<CefFrame>,
       CefRefPtr<CefRequest>, CefRefPtr<CefCallback>) override;
+  void OnResourceRedirect(CefRefPtr<CefBrowser>,CefRefPtr<CefFrame>,
+      CefRefPtr<CefRequest>,CefRefPtr<CefResponse>,CefString&) override;
   bool OnRequestMediaAccessPermission(CefRefPtr<CefBrowser>, CefRefPtr<CefFrame>,
       const CefString&, uint32_t, CefRefPtr<CefMediaAccessCallback>) override;
   bool OnShowPermissionPrompt(CefRefPtr<CefBrowser>, uint64_t, const CefString&,
@@ -103,6 +105,7 @@ class BrowserClient final : public CefClient,
                          CefRefPtr<CefDownloadItemCallback> callback) override;
 
  private:
+  bool FilterResource(CefRefPtr<CefFrame>,CefRefPtr<CefRequest>,const std::string&);
   std::mutex adblock_mutex_;
   std::string adblock_top_;
   uint64_t adblock_blocked_ = 0, adblock_checked_ = 0;

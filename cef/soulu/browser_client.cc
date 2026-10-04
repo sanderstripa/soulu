@@ -135,10 +135,20 @@ CefRefPtr<CefResourceRequestHandler> BrowserClient::GetResourceRequestHandler(
 }
 BrowserClient::ReturnValue BrowserClient::OnBeforeResourceLoad(CefRefPtr<CefBrowser>,
     CefRefPtr<CefFrame> frame,CefRefPtr<CefRequest> request,CefRefPtr<CefCallback>) {
-  CEF_REQUIRE_IO_THREAD();if(!policy_)return RV_CONTINUE;
+  CEF_REQUIRE_IO_THREAD();
+  return FilterResource(frame,request,request->GetURL())?RV_CANCEL:RV_CONTINUE;
+}
+void BrowserClient::OnResourceRedirect(CefRefPtr<CefBrowser>,CefRefPtr<CefFrame> frame,
+    CefRefPtr<CefRequest> request,CefRefPtr<CefResponse>,CefString& new_url) {
+  CEF_REQUIRE_IO_THREAD();
+  // Chromium rejects the unsafe HTTP-to-data redirect before contacting its target.
+  // This is the redirect callback's pre-network equivalent of RV_CANCEL.
+  if(FilterResource(frame,request,new_url))new_url="data:,";
+}
+bool BrowserClient::FilterResource(CefRefPtr<CefFrame> frame,CefRefPtr<CefRequest> request,const std::string& url) {
+  if(!policy_)return false;
   std::string top;{std::lock_guard lock(adblock_mutex_);top=adblock_top_;}
-  const std::string url=request->GetURL();
-  if(!policy_->Blocking(top)||WebOrigin(top).empty()||WebOrigin(url).empty())return RV_CONTINUE;
+  if(!policy_->Blocking(top)||WebOrigin(top).empty()||WebOrigin(url).empty())return false;
   std::string source=frame?frame->GetURL().ToString():top;
   if(WebOrigin(source).empty()||request->GetResourceType()==RT_SUB_FRAME)source=top;
   std::string rule;
@@ -152,7 +162,7 @@ BrowserClient::ReturnValue BrowserClient::OnBeforeResourceLoad(CefRefPtr<CefBrow
         hit->SetDouble("timestamp",static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count()));
         adblock_hits_->SetDictionary(adblock_hits_->GetSize(),hit);}}}}
   // No bytes from a matched resource are fetched: cancel synchronously on CEF IO.
-  return blocked?RV_CANCEL:RV_CONTINUE;
+  return blocked;
 }
 
 bool BrowserClient::OnRequestMediaAccessPermission(CefRefPtr<CefBrowser>,CefRefPtr<CefFrame>,
@@ -411,7 +421,10 @@ void BrowserClient::OnTitleChange(CefRefPtr<CefBrowser>, const CefString& title)
 
 void BrowserClient::OnAddressChange(CefRefPtr<CefBrowser>, CefRefPtr<CefFrame> frame,
                                     const CefString& url) {
-  if (role_ != BrowserRole::kShell && frame->IsMain()) owner_->UpdateAddress(tab_id_, url);
+  if (role_ != BrowserRole::kShell && frame->IsMain()) {
+    {std::lock_guard lock(adblock_mutex_);adblock_top_=url;}
+    owner_->UpdateAddress(tab_id_, url);
+  }
 }
 
 void BrowserClient::OnFaviconURLChange(CefRefPtr<CefBrowser>,
