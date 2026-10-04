@@ -4,6 +4,7 @@
 #include "include/cef_app.h"
 #include <windowsx.h>
 #include <dwmapi.h>
+#include <oleacc.h>
 #include <algorithm>
 #include <memory>
 
@@ -54,6 +55,7 @@ void Select(Panel& p,int next){
   if(next>=0){auto r=p.rows[next];const int top=p.session->Px(6),bottom=p.height-top;
     if(r.top-p.offset<top)p.offset=r.top-top;
     if(r.bottom-p.offset>bottom)p.offset=r.bottom-bottom;}
+  NotifyWinEvent(EVENT_OBJECT_FOCUS,p.window,OBJID_CLIENT,next+1);
   InvalidateRect(p.window,nullptr,FALSE);
 }
 void Step(Panel& p,int direction,bool edge=false){
@@ -70,6 +72,42 @@ void Activate(Panel& p,bool first=false){
     if(auto* child=Open(*p.session,item.children,at,&p);child&&first)Step(*child,1,true);
   }else{p.session->result=item.command;p.session->done=true;}
 }
+// MSAA exposes native menu rows without a document or browser bridge.
+// HWND lookup prevents an assistive client from retaining a dead Panel pointer.
+class AccessibleMenu final:public IAccessible {
+ public: explicit AccessibleMenu(HWND hwnd):window_(hwnd){}
+  HRESULT STDMETHODCALLTYPE QueryInterface(REFIID iid,void** out) override {if(!out)return E_POINTER;*out=nullptr;if(iid==IID_IUnknown||iid==IID_IDispatch||iid==IID_IAccessible){*out=static_cast<IAccessible*>(this);AddRef();return S_OK;}return E_NOINTERFACE;}
+  ULONG STDMETHODCALLTYPE AddRef() override{return ++refs_;}
+  ULONG STDMETHODCALLTYPE Release() override{auto refs=--refs_;if(!refs)delete this;return refs;}
+  HRESULT STDMETHODCALLTYPE GetTypeInfoCount(UINT* n) override{if(!n)return E_POINTER;*n=0;return S_OK;}
+  HRESULT STDMETHODCALLTYPE GetTypeInfo(UINT,LCID,ITypeInfo**) override{return E_NOTIMPL;}
+  HRESULT STDMETHODCALLTYPE GetIDsOfNames(REFIID,LPOLESTR*,UINT,LCID,DISPID*) override{return E_NOTIMPL;}
+  HRESULT STDMETHODCALLTYPE Invoke(DISPID,REFIID,LCID,WORD,DISPPARAMS*,VARIANT*,EXCEPINFO*,UINT*) override{return E_NOTIMPL;}
+  HRESULT STDMETHODCALLTYPE get_accParent(IDispatch** out) override{if(!out)return E_POINTER;*out=nullptr;return S_FALSE;}
+  HRESULT STDMETHODCALLTYPE get_accChildCount(long* n) override{if(!n)return E_POINTER;auto p=Get();*n=p?static_cast<long>(p->model->size()):0;return S_OK;}
+  HRESULT STDMETHODCALLTYPE get_accChild(VARIANT,IDispatch** out) override{if(!out)return E_POINTER;*out=nullptr;return S_FALSE;}
+  HRESULT STDMETHODCALLTYPE get_accName(VARIANT child,BSTR* out) override{if(!out)return E_POINTER;auto item=Item(child);*out=SysAllocString(item?item->label.c_str():L"Soulu");return S_OK;}
+  HRESULT STDMETHODCALLTYPE get_accValue(VARIANT,BSTR* out) override{if(!out)return E_POINTER;*out=nullptr;return S_FALSE;}
+  HRESULT STDMETHODCALLTYPE get_accDescription(VARIANT,BSTR* out) override{return get_accValue({},out);}
+  HRESULT STDMETHODCALLTYPE get_accRole(VARIANT child,VARIANT* out) override{if(!out)return E_POINTER;VariantInit(out);out->vt=VT_I4;auto item=Item(child);out->lVal=!item?ROLE_SYSTEM_MENUPOPUP:item->type==MenuItemType::Separator?ROLE_SYSTEM_SEPARATOR:ROLE_SYSTEM_MENUITEM;return S_OK;}
+  HRESULT STDMETHODCALLTYPE get_accState(VARIANT child,VARIANT* out) override{if(!out)return E_POINTER;VariantInit(out);out->vt=VT_I4;auto p=Get();auto item=Item(child);out->lVal=!p?STATE_SYSTEM_UNAVAILABLE:0;if(item){if(!item->enabled)out->lVal|=STATE_SYSTEM_UNAVAILABLE;else out->lVal|=STATE_SYSTEM_FOCUSABLE;if(item->checked)out->lVal|=STATE_SYSTEM_CHECKED;if(!item->children.empty())out->lVal|=STATE_SYSTEM_HASPOPUP;if(child.lVal==p->selected+1)out->lVal|=STATE_SYSTEM_FOCUSED;}return S_OK;}
+  HRESULT STDMETHODCALLTYPE get_accHelp(VARIANT,BSTR* out) override{return get_accValue({},out);}
+  HRESULT STDMETHODCALLTYPE get_accHelpTopic(BSTR* out,VARIANT,long* topic) override{if(out)*out=nullptr;if(topic)*topic=0;return S_FALSE;}
+  HRESULT STDMETHODCALLTYPE get_accKeyboardShortcut(VARIANT child,BSTR* out) override{if(!out)return E_POINTER;auto item=Item(child);*out=item?SysAllocString(item->accelerator.c_str()):nullptr;return item?S_OK:S_FALSE;}
+  HRESULT STDMETHODCALLTYPE get_accFocus(VARIANT* out) override{if(!out)return E_POINTER;VariantInit(out);auto p=Get();if(!p)return S_FALSE;out->vt=VT_I4;out->lVal=p->selected+1;return S_OK;}
+  HRESULT STDMETHODCALLTYPE get_accSelection(VARIANT* out) override{return get_accFocus(out);}
+  HRESULT STDMETHODCALLTYPE get_accDefaultAction(VARIANT child,BSTR* out) override{if(!out)return E_POINTER;*out=Item(child)?SysAllocString(L"Activate"):nullptr;return *out?S_OK:S_FALSE;}
+  HRESULT STDMETHODCALLTYPE accSelect(long flags,VARIANT child) override{auto p=Get();auto item=Item(child);if(!p||!item||!Selectable(*item))return E_INVALIDARG;if(flags&(SELFLAG_TAKEFOCUS|SELFLAG_TAKESELECTION)){Select(*p,child.lVal-1);SetFocus(window_);return S_OK;}return E_INVALIDARG;}
+  HRESULT STDMETHODCALLTYPE accLocation(long* x,long* y,long* width,long* height,VARIANT child) override{if(!x||!y||!width||!height)return E_POINTER;auto p=Get();if(!p)return S_FALSE;RECT r={};GetWindowRect(window_,&r);if(Item(child)){auto row=p->rows[child.lVal-1];OffsetRect(&row,r.left,r.top-p->offset);r=row;}*x=r.left;*y=r.top;*width=r.right-r.left;*height=r.bottom-r.top;return S_OK;}
+  HRESULT STDMETHODCALLTYPE accNavigate(long direction,VARIANT from,VARIANT* out) override{if(!out)return E_POINTER;VariantInit(out);auto p=Get();if(!p)return S_FALSE;long id=from.vt==VT_I4?from.lVal:0;long next=direction==NAVDIR_FIRSTCHILD?1:direction==NAVDIR_LASTCHILD?static_cast<long>(p->model->size()):direction==NAVDIR_NEXT?id+1:direction==NAVDIR_PREVIOUS?id-1:0;if(next<1||next>static_cast<long>(p->model->size()))return S_FALSE;out->vt=VT_I4;out->lVal=next;return S_OK;}
+  HRESULT STDMETHODCALLTYPE accHitTest(long x,long y,VARIANT* out) override{if(!out)return E_POINTER;VariantInit(out);auto p=Get();if(!p)return S_FALSE;POINT point={x,y};ScreenToClient(window_,&point);point.y+=p->offset;for(size_t i=0;i<p->rows.size();++i)if(PtInRect(&p->rows[i],point)){out->vt=VT_I4;out->lVal=static_cast<long>(i+1);return S_OK;}return S_FALSE;}
+  HRESULT STDMETHODCALLTYPE accDoDefaultAction(VARIANT child) override{auto p=Get();auto item=Item(child);if(!p||!item||!Selectable(*item))return E_INVALIDARG;Select(*p,child.lVal-1);Activate(*p,true);return S_OK;}
+  HRESULT STDMETHODCALLTYPE put_accName(VARIANT,BSTR) override{return E_NOTIMPL;}
+  HRESULT STDMETHODCALLTYPE put_accValue(VARIANT,BSTR) override{return E_NOTIMPL;}
+ private:Panel* Get(){return IsWindow(window_)?reinterpret_cast<Panel*>(GetWindowLongPtrW(window_,GWLP_USERDATA)):nullptr;}
+  MenuItem* Item(VARIANT child){auto p=Get();return p&&child.vt==VT_I4&&child.lVal>0&&child.lVal<=static_cast<long>(p->model->size())?&(*p->model)[child.lVal-1]:nullptr;}
+  HWND window_;ULONG refs_=1;
+};
 void Rounded(HDC dc,RECT r,COLORREF color,int radius){
   auto brush=CreateSolidBrush(color);auto oldBrush=SelectObject(dc,brush);auto oldPen=SelectObject(dc,GetStockObject(NULL_PEN));
   RoundRect(dc,r.left,r.top,r.right,r.bottom,radius,radius);SelectObject(dc,oldPen);SelectObject(dc,oldBrush);DeleteObject(brush);
@@ -79,6 +117,8 @@ LRESULT CALLBACK Procedure(HWND window,UINT message,WPARAM w,LPARAM l){
   if(message==WM_NCCREATE){p=reinterpret_cast<Panel*>(reinterpret_cast<CREATESTRUCTW*>(l)->lpCreateParams);p->window=window;SetWindowLongPtrW(window,GWLP_USERDATA,reinterpret_cast<LONG_PTR>(p));}
   if(!p)return DefWindowProcW(window,message,w,l);
   auto& s=*p->session;
+  if(message==WM_GETOBJECT&&static_cast<LONG>(l)==OBJID_CLIENT){auto* accessible=new AccessibleMenu(window);auto result=LresultFromObject(IID_IAccessible,w,accessible);accessible->Release();return result;}
+  if(message==WM_NCDESTROY){SetWindowLongPtrW(window,GWLP_USERDATA,0);return DefWindowProcW(window,message,w,l);}
   if(message==WM_ERASEBKGND)return 1;
   if(message==WM_PAINT){
     PAINTSTRUCT paint={};auto target=BeginPaint(window,&paint);
@@ -101,6 +141,7 @@ LRESULT CALLBACK Procedure(HWND window,UINT message,WPARAM w,LPARAM l){
   if(message==WM_MOUSEMOVE||message==WM_LBUTTONUP||message==WM_RBUTTONUP){
     POINT point={GET_X_LPARAM(l),GET_Y_LPARAM(l)+p->offset};int hit=-1;
     for(size_t i=0;i<p->rows.size();++i)if(PtInRect(&p->rows[i],point)&&Selectable((*p->model)[i])){hit=static_cast<int>(i);break;}
+    if(hit<0&&message==WM_MOUSEMOVE){KillTimer(window,1);Select(*p,-1);}
     if(hit>=0){Select(*p,hit);if(message!=WM_MOUSEMOVE)Activate(*p);else if(!(*p->model)[hit].children.empty())SetTimer(window,1,180,nullptr);}
     return 0;
   }
@@ -131,7 +172,7 @@ Panel* Open(Session& s,MenuModel& model,POINT at,Panel* parent){
   if(!window)return nullptr;
   SetWindowRgn(window,CreateRoundRectRgn(0,0,panel->width+1,panel->height+1,s.Px(14),s.Px(14)),FALSE);
   const DWORD corner=2;DwmSetWindowAttribute(window,33,&corner,sizeof(corner));
-  auto* result=panel.get();s.panels.push_back(std::move(panel));ShowWindow(window,SW_SHOWNOACTIVATE);SetFocus(window);return result;
+  auto* result=panel.get();s.panels.push_back(std::move(panel));ShowWindow(window,SW_SHOWNOACTIVATE);SetFocus(window);NotifyWinEvent(EVENT_SYSTEM_MENUPOPUPSTART,window,OBJID_CLIENT,CHILDID_SELF);return result;
 }
 }
 int ShowSouluMenu(HWND owner,POINT anchor,MenuModel model,MenuAppearance appearance){

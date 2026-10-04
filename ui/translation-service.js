@@ -39,13 +39,21 @@
     if(url.protocol!=='https:'||url.hostname!=='storage.googleapis.com'||
        !url.pathname.startsWith('/moz-fx-translations-data--303e-prod-translations-data/models/'))throw Error('registry');
     status('downloading');
-    const response=await fetch(url,{credentials:'omit',referrerPolicy:'no-referrer',signal});
-    if(!response.ok||Number(response.headers.get('Content-Length'))>100000000)throw Error('download');
-    bytes=await response.arrayBuffer();
+    if(window.browserShell?.translation){
+      const response=await window.browserShell.translation('model',{sha256:file.sha256});
+      bytes=response instanceof ArrayBuffer?response:response.buffer;
+    }else{
+      const response=await fetch(url,{credentials:'omit',referrerPolicy:'no-referrer',signal});
+      if(!response.ok||Number(response.headers.get('Content-Length'))>100000000)throw Error('download');
+      bytes=await response.arrayBuffer();
+    }
     const head=new Uint8Array(bytes,0,Math.min(2,bytes.byteLength));
     if(head[0]===0x1f&&head[1]===0x8b){
       const stream=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
-      bytes=await new Response(stream).arrayBuffer();
+      const reader=stream.getReader(),chunks=[];let length=0;
+      for(;;){const {done,value}=await reader.read();if(done)break;length+=value.byteLength;
+        if(length>file.size){await reader.cancel();throw Error('integrity');}chunks.push(value);}
+      const output=new Uint8Array(length);let offset=0;for(const chunk of chunks){output.set(chunk,offset);offset+=chunk.length;}bytes=output.buffer;
     }
     if(signal.aborted)throw Error('cancelled');
     if(!await verify(bytes,file))throw Error('integrity');
@@ -63,7 +71,7 @@
   class LocalTranslator {
     constructor(status=()=>{}){
       this.controller=new AbortController();this.status=status;
-      this.engine=new window.SouluBergamot.BatchTranslator({workers:1,batchSize:8},new Backing(this.controller.signal,status));
+      this.engine=new window.SouluBergamot.BatchTranslator({workers:1,batchSize:8,onerror:()=>this.engine.remove(()=>true)},new Backing(this.controller.signal,status));
     }
     async translate(from,to,text,jobKey){
       if(this.controller.signal.aborted)throw Error('cancelled');

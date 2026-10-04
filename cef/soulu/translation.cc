@@ -1,3 +1,4 @@
+#include "examples/soulu/translation_model_download.h"
 #include "examples/soulu/browser_window.h"
 #include "examples/soulu/isolated_page_job.h"
 #include "include/cef_parser.h"
@@ -30,6 +31,7 @@ bool BrowserWindow::HandleTranslationBridge(const std::string& action,CefRefPtr<
     CefRefPtr<CefMessageRouterBrowserSide::Callback> callback){
   if(action.rfind("browser.translate.",0)!=0)return false;
   auto data=payload&&payload->GetType()==VTYPE_DICTIONARY?payload->GetDictionary():nullptr;
+  if(action=="browser.translate.model"){DownloadTranslationModel(data?data->GetString("sha256").ToString():"",callback);return true;}
   auto* tab=data?FindTab(data->GetInt("tabId")):nullptr;
   if(!tab||!tab->browser||tab->main_loading||tab->reader_active||
      data->GetString("url")!=tab->url||data->GetInt("generation")!=tab->document_generation){callback->Failure(409,"Page changed");return true;}

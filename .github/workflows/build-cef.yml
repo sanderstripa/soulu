@@ -213,6 +213,18 @@ jobs:
             ${{ env.build_dir }}/licenses/
           if-no-files-found: error
 
+      - name: Test local full-page translation in native CEF
+        shell: pwsh
+        run: |
+          python -m pip install --disable-pip-version-check websocket-client
+          node browser/scripts/test-translation-unit.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $exe = Get-ChildItem cef-build -Recurse -Filter Soulu.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
+          $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP 'soulu-translation-regression'
+          $env:SOULU_UI_TEST_PORT = '9223'
+          python browser/scripts/test-cef-translation.py $exe.FullName
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Test real AdBlock request cancellation and cosmetics
         shell: pwsh
         run: |

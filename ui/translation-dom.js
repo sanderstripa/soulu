@@ -32,7 +32,7 @@
       start();const nodes=[];let total=0;
       for(const node of pending){
         pending.delete(node);if(!node.isConnected||!allowed(node))continue;
-        let id=ids.get(node);if(!id){id=++serial;ids.set(node,id);originals.set(id,{node,original:node.nodeValue,translated:null});}
+        let id=ids.get(node);if(!id||!originals.has(id)){id=++serial;ids.set(node,id);originals.set(id,{node,original:node.nodeValue,translated:null});}
         const row=originals.get(id);nodes.push({id,text:row.original});total+=row.original.length;
         if(nodes.length>=32||total>=24000)break;
       }

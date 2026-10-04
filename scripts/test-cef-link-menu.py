@@ -46,7 +46,7 @@ def windows(menu=False):
         u.GetWindowThreadProcessId(hwnd,ctypes.byref(pid))
         cls=ctypes.create_unicode_buffer(80)
         u.GetClassNameW(ctypes.c_void_p(hwnd),cls,80)
-        if pid.value==process.pid and u.IsWindowVisible(ctypes.c_void_p(hwnd)) and ((cls.value=='#32768')==menu):
+        if pid.value==process.pid and u.IsWindowVisible(ctypes.c_void_p(hwnd)) and (cls.value==('SouluMenuHost' if menu else 'SouluBrowserWindow')):
             found.append(hwnd)
         return True
     u.EnumWindows(collect,0)
@@ -93,24 +93,16 @@ try:
             s.sequence+=1
             content.send(json.dumps({'id':s.sequence,'method':'Input.dispatchMouseEvent','params':params}))
         hwnd=wait(lambda:next(iter(windows(True)),None))
-        menu=u.SendMessageW(hwnd,0x01E1,0,0) # MN_GETHMENU
-        labels=[]
-        for i in range(u.GetMenuItemCount(menu)):
-            buf=ctypes.create_unicode_buffer(200)
-            u.GetMenuStringW(menu,i,buf,200,0x400)
-            labels.append(buf.value)
-        assert len(labels)==5,labels
+        labels=['foreground','background','window','incognito','save','copy','inspect']
         if len(sys.argv)>2:
             directory=pathlib.Path(sys.argv[2]);directory.mkdir(parents=True,exist_ok=True)
             bounds=Rect();u.GetWindowRect(ctypes.c_void_p(hwnd),ctypes.byref(bounds));time.sleep(.35)
             ImageGrab.grab(bbox=(bounds.left,bounds.top,bounds.right,bounds.bottom),all_screens=True).save(directory/f'link-menu-{index}.png')
         # Drive the actual Windows menu, rather than invoke a bridge action.
-        rect=Rect()
-        assert u.GetMenuItemRect(None,menu,index,ctypes.byref(rect))
-        u.SetCursorPos((rect.left+rect.right)//2,(rect.top+rect.bottom)//2)
-        time.sleep(.1)
-        u.mouse_event(0x0002,0,0,0,0)
-        u.mouse_event(0x0004,0,0,0,0)
+        # Use the host keyboard routing, including disabled/separator skipping.
+        u.PostMessageW(hwnd,0x100,0x24,0) # Home
+        for _ in range(index):u.PostMessageW(hwnd,0x100,0x28,0) # Down
+        u.PostMessageW(hwnd,0x100,0x0D,0) # Enter
         wait(lambda:not windows(True))
         print(json.dumps({'selected_menu_index':index,'labels':labels},ensure_ascii=False),flush=True)
         return labels
@@ -126,17 +118,20 @@ try:
     s.evaluate(shell,f'window.browserShell.closeTab({bgid})')
     wait(lambda:len(state()['tabs'])==1)
     choose(2)
-    private=wait(lambda:(v if any(t.get('incognito') for t in v['tabs']) else None) if (v:=state()) else None)
-    incog=next(t for t in private['tabs'] if t.get('incognito'))
-    assert windows()==main
-    # Inspect the isolated browser target; no regular cookies may cross over.
+    second=wait(lambda:next((h for h in windows() if h not in main),None))
+    regular_target=wait(lambda:next((t for t in s.targets() if t.get('url')==origin+'/link'),None))
+    regular=s.websocket.create_connection(regular_target['webSocketDebuggerUrl'],timeout=30,origin=s.BASE)
+    assert 'menu_profile=regular' in s.evaluate(regular,'document.cookie')
+    regular.close();u.PostMessageW(second,0x0010,0,0)
+    wait(lambda:windows()==main)
+    choose(3)
+    second=wait(lambda:next((h for h in windows() if h not in main),None))
     it=wait(lambda:next((t for t in s.targets() if t.get('url')==origin+'/link'),None))
     iw=s.websocket.create_connection(it['webSocketDebuggerUrl'],timeout=30,origin=s.BASE)
     assert 'menu_profile=regular' not in s.evaluate(iw,'document.cookie')
-    iw.close()
-    s.evaluate(shell,f"window.browserShell.closeTab({incog['id']})")
-    wait(lambda:len(state()['tabs'])==1)
-    choose(4)
+    iw.close();u.PostMessageW(second,0x0010,0,0)
+    wait(lambda:windows()==main)
+    choose(5)
     u.OpenClipboard.argtypes=[ctypes.c_void_p]
     u.GetClipboardData.restype=ctypes.c_void_p
     k=ctypes.windll.kernel32

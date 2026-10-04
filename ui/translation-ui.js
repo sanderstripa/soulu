@@ -14,7 +14,7 @@
   function select(value){const s=element('select');for(const lang of Object.keys(languages)){const o=element('option',languages[lang][state.settings?.language==='en'?'en':'ru']);o.value=lang;s.append(o);}s.value=value;return s;}
   async function preference(patch){prefs=await api.translation('preferences',{...site,...patch});}
   async function restore(job){
-    if(!job)return;job.cancelled=true;engine?.cancel(job.key);
+    if(!job)return;job.cancelled=true;clearTimeout(job.timer);engine?.cancel(job.key);
     await api.translation('restore',{...job.site,token:job.token});jobs.delete(job.key);
     if(activeJob===job)activeJob=null;status.textContent='';updateIcon();
   }
@@ -38,7 +38,7 @@
         job.timer=setTimeout(tick,batch.remaining?0:700);
       }catch(error){
         if(job.cancelled)return;job.state='error';if(activeJob===job)status.textContent=tr('error');
-        jobs.delete(id);engine?.cancel(id);updateIcon();
+        engine?.cancel(id);updateIcon();
       }
     }tick();
   }
