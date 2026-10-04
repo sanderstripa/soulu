@@ -37,8 +37,7 @@
         if(nodes.length>=32||total>=24000)break;
       }
       for(const [id,row] of originals)if(!row.node.isConnected)originals.delete(id);
-      const sample=(document.body?.innerText||'').slice(0,12000);
-      return {nodes,remaining:pending.size,lang:document.documentElement.lang,sample};
+      return {nodes,remaining:pending.size};
     },
     apply(rows){
       if(!active)return {applied:0};let count=0;

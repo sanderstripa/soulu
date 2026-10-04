@@ -1,4 +1,5 @@
 #include "examples/soulu/soulu_menu.h"
+#include "examples/soulu/isolated_page_job.h"
 #include "examples/soulu/typography_native.h"
 #include "examples/soulu/browser_window.h"
 #include "examples/soulu/reader_preferences.h"
@@ -1332,7 +1333,12 @@ void BrowserWindow::UpdateTitle(int id, const std::string& title) {
 void BrowserWindow::UpdateAddress(int id, const std::string& url) {
   if (auto* tab = FindTab(id)) {
     const std::string next = IsHistoryUi(url) ? "soulu://history" : url == InternalUrl("about:blank") ? "about:blank" : (url == InternalUrl("soulu://home") ? "soulu://home" : (IsOnboardingUi(url)?"soulu://onboarding":url));
-    if (next != tab->url) {tab->thumbnail.clear();++tab->document_generation;tab->reader_active=false;tab->reader_article=nullptr;}
+    if (next != tab->url) {
+      if(tab->translation_active&&tab->browser)EvaluateTranslationPage(tab->browser,url,
+        "globalThis.__souluTranslate?globalThis.__souluTranslate.restore():({restored:true})",[](CefRefPtr<CefDictionaryValue>){});
+      ++tab->translation_generation;tab->translation_active=false;
+      tab->thumbnail.clear();++tab->document_generation;tab->reader_active=false;tab->reader_article=nullptr;
+    }
     tab->url = next;
   }
   Layout();
@@ -1565,6 +1571,7 @@ CefRefPtr<CefDictionaryValue> BrowserWindow::State() const {
                       : tab.profile_id != visible_profile) continue;
     auto row = CefDictionaryValue::Create();
     row->SetInt("id", tab.id);
+    row->SetInt("generation",tab.document_generation);
     const bool is_settings = tab.url.find("/ui/settings.html") != std::string::npos;
     row->SetString("title", is_settings
         ? (EffectiveSettings()->GetString("language") == "en" ? "Settings" : "Настройки")
@@ -1837,13 +1844,25 @@ void BrowserWindow::HandleBridge(const std::string& request,
     if(settings_source||!payload||payload->GetType()!=VTYPE_DICTIONARY){callback->Failure(403,"Menu host unavailable");return;}
     auto data=payload->GetDictionary();auto items=data->GetList("items");
     if(!items||items->GetSize()>100){callback->Failure(400,"Invalid menu model");return;}
-    MenuModel model;
-    for(size_t i=0;i<items->GetSize();++i){auto item=items->GetDictionary(i);
-      if(!item||item->GetString("label").length()>512||item->GetInt("command")<=0){callback->Failure(400,"Invalid menu item");return;}
-      MenuItem row;row.command=item->GetInt("command");row.label=item->GetString("label").ToWString();
-      row.enabled=!item->HasKey("enabled")||item->GetBool("enabled");row.checked=item->GetBool("checked");
-      if(row.checked)row.type=MenuItemType::Check;model.push_back(std::move(row));
-    }
+    MenuModel model;size_t count=0;
+    auto parse=[&](auto&& recurse,CefRefPtr<CefListValue> source,MenuModel& target,int depth)->bool {
+      if(!source||depth>4)return false;
+      for(size_t i=0;i<source->GetSize();++i){
+        if(++count>100)return false;auto item=source->GetDictionary(i);if(!item)return false;
+        const auto type=item->GetString("type").ToString();
+        if(type=="separator"){target.push_back(MenuItem::Separator());continue;}
+        if(item->GetString("label").empty()||item->GetString("label").length()>512||item->GetString("accelerator").length()>100)return false;
+        MenuItem row;row.command=item->GetInt("command");row.label=item->GetString("label").ToWString();
+        row.accelerator=item->GetString("accelerator").ToWString();row.enabled=!item->HasKey("enabled")||item->GetBool("enabled");row.checked=item->GetBool("checked");
+        if(type=="radio")row.type=MenuItemType::Radio;
+        else if(type=="check"||row.checked)row.type=MenuItemType::Check;
+        else if(!type.empty()&&type!="action"&&type!="submenu")return false;
+        if(item->HasKey("children")){row.type=MenuItemType::Submenu;if(!recurse(recurse,item->GetList("children"),row.children,depth+1)||row.children.empty())return false;}
+        else if(row.command<=0||type=="submenu")return false;
+        target.push_back(std::move(row));
+      }return true;
+    };
+    if(!parse(parse,items,model,0)){callback->Failure(400,"Invalid menu model");return;}
     const auto scale=CurrentGeometry().scale;
     POINT anchor={static_cast<LONG>(data->GetInt("x")*scale),static_cast<LONG>(data->GetInt("y")*scale)};ClientToScreen(hwnd_,&anchor);
     auto result=CefValue::Create();result->SetInt(ShowSouluMenu(hwnd_,anchor,std::move(model),{MenuDark()}));Reply(callback,result);return;

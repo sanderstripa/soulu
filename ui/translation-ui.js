@@ -9,6 +9,8 @@
   const key=s=>`${s.tabId}:${s.generation}:${s.url}`;
   const status=element('p');status.setAttribute('role','status');
   const languages={en:{ru:'Английский',en:'English'},ru:{ru:'Русский',en:'Russian'},de:{ru:'Немецкий',en:'German'}};
+  function position(){const icon=document.querySelector('.soulu-translate-button');const rect=icon?.getBoundingClientRect();const top=Math.max(8,Math.min((rect?.bottom||48)+8,innerHeight-120));panel.style.top=top+'px';panel.style.maxHeight=Math.max(100,innerHeight-top-12)+'px';}
+  window.addEventListener('resize',position);
   function close(){panel.hidden=true;api.setPopover(false,'translation');api.setSuggestionsHeight(0);document.querySelector('.soulu-translate-button')?.focus();}
   function button(text,action){const b=element('button',text);b.type='button';b.onclick=()=>Promise.resolve().then(action).catch(()=>status.textContent=tr('error'));return b;}
   function select(value){const s=element('select');if(value&&!languages[value]){const o=element('option',value);o.value=value;s.append(o);}for(const lang of Object.keys(languages)){const o=element('option',languages[lang][state.settings?.language==='en'?'en':'ru']);o.value=lang;s.append(o);}s.value=value;return s;}
@@ -45,7 +47,7 @@
   async function open(snapshot=null){
     const ticket=++revision;site=snapshot||await api.getCurrentSite();
     if(ticket!==revision)return;
-    const probe=await api.translation('probe',site);const source=service.detect(probe.sample,probe.lang);
+    const probe=await api.translation('probe',site);const source=jobs.get(key(site))?.from||service.detect(probe.sample,probe.lang);
     prefs=await api.translation('preferences',site);if(ticket!==revision)return;
     panel.classList.remove("soulu-qr");panel.replaceChildren(element('h2',tr('title')));
     const sourceLabel=element('label',tr('source')),from=select(source||'en');sourceLabel.append(from);
@@ -58,13 +60,13 @@
       checkbox.onchange=()=>preference({[name]:checkbox.checked,source:from.value}).catch(()=>status.textContent=tr('error'));
       label.append(checkbox,document.createTextNode(tr(name)));panel.append(label);
     }
-    panel.append(button(tr('close'),close));panel.hidden=false;api.setPopover(true,'translation');api.setSuggestionsHeight(innerHeight);from.focus();
+    panel.append(button(tr('close'),close));panel.hidden=false;position();api.setPopover(true,'translation');api.setSuggestionsHeight(innerHeight);from.focus();
     const job=jobs.get(key(site));activeJob=job||null;status.textContent=job?tr(job.state):'';
   }
   function updateIcon(){
     const tab=state.tabs?.find(t=>t.id===state.activeTabId);if(!tab)return;
     const host=document.querySelector(state.settings?.layout==='classic'?'.classic-address-pill':'.compact-active-tab');if(!host)return;
-    const detected=probes.get(`${tab.id}:${tab.url}`);
+    const detected=probes.get(`${tab.id}:${tab.generation}:${tab.url}`);
     const translated=[...jobs.values()].some(j=>j.site.tabId===tab.id);
     const valid=/^https?:|^file:/i.test(tab.url)&&!tab.url.includes('/ui/')&&(translated||(detected?.from&&detected.from!==detected.target&&!detected.never));
     let icon=host.querySelector('.soulu-translate-button');
@@ -76,11 +78,11 @@
     const old=state.activeTabId;state=s;if(old!==s.activeTabId){revision++;close();}
     const ids=new Set((s.tabs||[]).map(t=>t.id));
     for(const [id,job] of jobs){const tab=s.tabs?.find(t=>t.id===job.site.tabId);
-      if(!ids.has(job.site.tabId)||!tab||tab.url!==job.site.url||tab.loading){job.cancelled=true;clearTimeout(job.timer);engine?.cancel(id);jobs.delete(id);}
+      if(!ids.has(job.site.tabId)||!tab||tab.url!==job.site.url||tab.generation!==job.site.generation||tab.loading){restore(job).catch(()=>jobs.delete(id));}
     }
     requestAnimationFrame(updateIcon);
     const tab=s.tabs?.find(t=>t.id===s.activeTabId);if(!tab||tab.loading||!/^https?:/i.test(tab.url))return;
-    const probeKey=`${tab.id}:${tab.url}`;if(probes.has(probeKey))return;probes.set(probeKey,true);
+    const probeKey=`${tab.id}:${tab.generation}:${tab.url}`;if(probes.has(probeKey))return;probes.set(probeKey,true);if(probes.size>1000)probes.delete(probes.keys().next().value);
     try{const snap=await api.getCurrentSite(),probe=await api.translation('probe',snap),from=service.detect(probe.sample,probe.lang),p=await api.translation('preferences',snap);
       probes.set(probeKey,{from,target:p.target,never:(p.never||[]).includes(snap.origin)});updateIcon();
       if((p.always||[]).includes(from)&&!(p.never||[]).includes(snap.origin)&&from!==p.target)await run(snap,from,p.target);
@@ -92,7 +94,7 @@
     const qr=window.qrcode(0,'M');qr.addData(snapshot.url,'Byte');qr.make();const count=qr.getModuleCount(),scale=Math.max(2,Math.floor(240/(count+8)));
     const canvas=element('canvas');canvas.width=canvas.height=(count+8)*scale;const dc=canvas.getContext('2d');dc.fillStyle='#fff';dc.fillRect(0,0,canvas.width,canvas.height);dc.fillStyle='#000';
     for(let y=0;y<count;y++)for(let x=0;x<count;x++)if(qr.isDark(y,x))dc.fillRect((x+4)*scale,(y+4)*scale,scale,scale);
-    panel.replaceChildren(element('h2',tr('qr')),canvas,element('p',snapshot.url),button(tr('copy'),()=>navigator.clipboard.writeText(snapshot.url)),button(tr('close'),close));panel.classList.add('soulu-qr');panel.hidden=false;api.setPopover(true,'translation');api.setSuggestionsHeight(innerHeight);
+    panel.replaceChildren(element('h2',tr('qr')),canvas,element('p',snapshot.url),button(tr('copy'),()=>navigator.clipboard.writeText(snapshot.url)),button(tr('close'),close));panel.classList.add('soulu-qr');panel.hidden=false;position();api.setPopover(true,'translation');api.setSuggestionsHeight(innerHeight);
   });
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!panel.hidden){e.preventDefault();close();}});
   document.addEventListener('pointerdown',e=>{if(!panel.hidden&&!panel.contains(e.target)&&!e.target.closest('.soulu-translate-button'))close();});

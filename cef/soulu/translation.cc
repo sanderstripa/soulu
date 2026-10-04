@@ -13,6 +13,10 @@ class MenuCallback final:public CefMessageRouterBrowserSide::Callback {
  private:IMPLEMENT_REFCOUNTING(MenuCallback);
 };
 }
+std::string BrowserWindow::MenuTranslationTarget(int id) const {
+  for(const auto& tab:tabs_)if(tab.id==id&&tab.incognito&&tab.translation_preferences)return tab.translation_preferences->GetString("target");
+  return settings_->GetString("translationTarget")=="en"?"en":"ru";
+}
 bool BrowserWindow::MenuReaderAvailable(int id) const {
   for(const auto& tab:tabs_)if(tab.id==id)return tab.reader_article!=nullptr&&!tab.main_loading&&!tab.reader_active;
   return false;

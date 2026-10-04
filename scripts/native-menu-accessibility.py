@@ -10,7 +10,7 @@ def rows(hwnd):
     acc=ctypes.windll.oleacc
     acc.AccessibleObjectFromWindow.argtypes=[ctypes.c_void_p,ctypes.c_ulong,ctypes.POINTER(GUID),ctypes.POINTER(ctypes.c_void_p)]
     result=acc.AccessibleObjectFromWindow(hwnd,0xFFFFFFFC,ctypes.byref(iid),ctypes.byref(accessible))
-    assert result==0 and accessible.value,'Menu accessibility provider unavailable'
+    assert result==0 and accessible.value,f'Menu accessibility provider unavailable: {result:#x}'
     vtable=ctypes.cast(accessible,ctypes.POINTER(ctypes.POINTER(ctypes.c_void_p))).contents
     def method(index,*args):return ctypes.WINFUNCTYPE(ctypes.c_long,ctypes.c_void_p,*args)(vtable[index])
     count=ctypes.c_long();assert method(8,ctypes.POINTER(ctypes.c_long))(accessible,ctypes.byref(count))==0

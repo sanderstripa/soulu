@@ -5,6 +5,7 @@
 #include <windowsx.h>
 #include <dwmapi.h>
 #include <oleacc.h>
+#include <shellscalingapi.h>
 #include <algorithm>
 #include <memory>
 
@@ -75,15 +76,27 @@ void Activate(Panel& p,bool first=false){
 // MSAA exposes native menu rows without a document or browser bridge.
 // HWND lookup prevents an assistive client from retaining a dead Panel pointer.
 class AccessibleMenu final:public IAccessible {
- public: explicit AccessibleMenu(HWND hwnd):window_(hwnd){ITypeLib* library=nullptr;if(SUCCEEDED(LoadTypeLibEx(L"oleacc.dll",REGKIND_NONE,&library))){library->GetTypeInfoOfGuid(IID_IAccessible,&type_);library->Release();}}
-  ~AccessibleMenu(){if(type_)type_->Release();}
+ public: explicit AccessibleMenu(HWND hwnd):window_(hwnd){}
   HRESULT STDMETHODCALLTYPE QueryInterface(REFIID iid,void** out) override {if(!out)return E_POINTER;*out=nullptr;if(iid==IID_IUnknown||iid==IID_IDispatch||iid==IID_IAccessible){*out=static_cast<IAccessible*>(this);AddRef();return S_OK;}return E_NOINTERFACE;}
   ULONG STDMETHODCALLTYPE AddRef() override{return ++refs_;}
   ULONG STDMETHODCALLTYPE Release() override{auto refs=--refs_;if(!refs)delete this;return refs;}
-  HRESULT STDMETHODCALLTYPE GetTypeInfoCount(UINT* n) override{if(!n)return E_POINTER;*n=type_?1:0;return S_OK;}
-  HRESULT STDMETHODCALLTYPE GetTypeInfo(UINT index,LCID,ITypeInfo** out) override{if(!out)return E_POINTER;*out=nullptr;if(index||!type_)return DISP_E_BADINDEX;*out=type_;type_->AddRef();return S_OK;}
-  HRESULT STDMETHODCALLTYPE GetIDsOfNames(REFIID,LPOLESTR* names,UINT count,LCID,DISPID* ids) override{return type_?DispGetIDsOfNames(type_,names,count,ids):E_NOTIMPL;}
-  HRESULT STDMETHODCALLTYPE Invoke(DISPID id,REFIID,LCID,WORD flags,DISPPARAMS* params,VARIANT* result,EXCEPINFO* error,UINT* argument) override{return type_?DispInvoke(static_cast<IAccessible*>(this),type_,id,flags,params,result,error,argument):E_NOTIMPL;}
+  HRESULT STDMETHODCALLTYPE GetTypeInfoCount(UINT* n) override{if(!n)return E_POINTER;*n=0;return S_OK;}
+  HRESULT STDMETHODCALLTYPE GetTypeInfo(UINT,LCID,ITypeInfo**) override{return E_NOTIMPL;}
+  HRESULT STDMETHODCALLTYPE GetIDsOfNames(REFIID,LPOLESTR*,UINT,LCID,DISPID*) override{return E_NOTIMPL;}
+  HRESULT STDMETHODCALLTYPE Invoke(DISPID id,REFIID,LCID,WORD flags,DISPPARAMS* params,VARIANT* result,EXCEPINFO*,UINT*) override {
+    if(!(flags&DISPATCH_PROPERTYGET)||!result)return DISP_E_MEMBERNOTFOUND;
+    VARIANT child={};child.vt=VT_I4;child.lVal=CHILDID_SELF;if(params&&params->cArgs)child=params->rgvarg[0];
+    *result=VARIANT{};
+    switch(id){
+      case DISPID_ACC_NAME:result->vt=VT_BSTR;return get_accName(child,&result->bstrVal);
+      case DISPID_ACC_ROLE:return get_accRole(child,result);
+      case DISPID_ACC_STATE:return get_accState(child,result);
+      case DISPID_ACC_CHILDCOUNT:result->vt=VT_I4;return get_accChildCount(&result->lVal);
+      case DISPID_ACC_FOCUS:return get_accFocus(result);
+      case DISPID_ACC_SELECTION:return get_accSelection(result);
+      default:return DISP_E_MEMBERNOTFOUND;
+    }
+  }
   HRESULT STDMETHODCALLTYPE get_accParent(IDispatch** out) override{if(!out)return E_POINTER;*out=nullptr;return S_FALSE;}
   HRESULT STDMETHODCALLTYPE get_accChildCount(long* n) override{if(!n)return E_POINTER;auto p=Get();*n=p?static_cast<long>(p->model->size()):0;return S_OK;}
   HRESULT STDMETHODCALLTYPE get_accChild(VARIANT,IDispatch** out) override{if(!out)return E_POINTER;*out=nullptr;return S_FALSE;}
@@ -107,7 +120,7 @@ class AccessibleMenu final:public IAccessible {
   HRESULT STDMETHODCALLTYPE put_accValue(VARIANT,BSTR) override{return E_NOTIMPL;}
  private:Panel* Get(){return IsWindow(window_)?reinterpret_cast<Panel*>(GetWindowLongPtrW(window_,GWLP_USERDATA)):nullptr;}
   MenuItem* Item(VARIANT child){auto p=Get();return p&&child.vt==VT_I4&&child.lVal>0&&child.lVal<=static_cast<long>(p->model->size())?&(*p->model)[child.lVal-1]:nullptr;}
-  HWND window_;ULONG refs_=1;ITypeInfo* type_=nullptr;
+  HWND window_;ULONG refs_=1;
 };
 void Rounded(HDC dc,RECT r,COLORREF color,int radius){
   auto brush=CreateSolidBrush(color);auto oldBrush=SelectObject(dc,brush);auto oldPen=SelectObject(dc,GetStockObject(NULL_PEN));
@@ -161,7 +174,7 @@ LRESULT CALLBACK Procedure(HWND window,UINT message,WPARAM w,LPARAM l){
 Panel* Open(Session& s,MenuModel& model,POINT at,Panel* parent){
   auto panel=std::make_unique<Panel>();panel->session=&s;panel->model=&model;panel->parent=parent;
   int width=s.Px(240),y=s.Px(6);auto dc=GetDC(s.owner);auto font=SelectObject(dc,TypographyFont(typography::compactControl,s.dpi));
-  for(auto& item:model){item.label=MenuLabel(item.label);SIZE size={};GetTextExtentPoint32W(dc,item.label.c_str(),static_cast<int>(item.label.size()),&size);width=std::max(width,static_cast<int>(size.cx)+s.Px(item.accelerator.empty()?58:194));}
+  for(auto& item:model){SIZE size={};GetTextExtentPoint32W(dc,item.label.c_str(),static_cast<int>(item.label.size()),&size);width=std::max(width,static_cast<int>(size.cx)+s.Px(item.accelerator.empty()?58:194));}
   SelectObject(dc,font);ReleaseDC(s.owner,dc);panel->width=std::min(width,s.Px(560));
   for(auto& item:model){int height=s.Px(item.type==MenuItemType::Separator?9:32);panel->rows.push_back({s.Px(6),y,panel->width-s.Px(6),y+height});y+=height;}
   MONITORINFO monitor={sizeof(monitor)};GetMonitorInfoW(MonitorFromPoint(at,MONITOR_DEFAULTTONEAREST),&monitor);auto work=monitor.rcWork;
@@ -181,7 +194,13 @@ int ShowSouluMenu(HWND owner,POINT anchor,MenuModel model,MenuAppearance appeara
   static const bool registered=[](){WNDCLASSW wc={};wc.style=CS_DROPSHADOW;wc.lpfnWndProc=Procedure;wc.hInstance=GetModuleHandleW(nullptr);wc.hCursor=LoadCursorW(nullptr,IDC_ARROW);wc.lpszClassName=L"SouluMenuHost";return RegisterClassW(&wc)!=0;}();
   if(!registered)return 0;
   Session s;s.owner=owner;s.previousFocus=GetFocus();s.model=std::move(model);s.appearance=appearance;
-  s.dpi=GetDpiForWindow(owner);if(!s.dpi)s.dpi=96;
+  UINT dpiY=0;s.dpi=GetDpiForWindow(owner);
+  GetDpiForMonitor(MonitorFromPoint(anchor,MONITOR_DEFAULTTONEAREST),MDT_EFFECTIVE_DPI,&s.dpi,&dpiY);
+  if(!s.dpi)s.dpi=96;
+  wchar_t testing[12]={},testDpi[12]={};
+  if(GetEnvironmentVariableW(L"SOULU_UI_TEST_PORT",testing,12)&&GetEnvironmentVariableW(L"SOULU_MENU_TEST_DPI",testDpi,12)){
+    const int value=_wtoi(testDpi);if(value==96||value==120||value==144||value==192)s.dpi=static_cast<UINT>(value);
+  }
   active=&s;if(!Open(s,s.model,anchor,nullptr)){active=nullptr;return 0;}
   CefScopedSetNestableTasksAllowed allow_tasks;
   MSG message={};

@@ -304,7 +304,8 @@ void BrowserClient::OnBeforeContextMenu(CefRefPtr<CefBrowser> browser,CefRefPtr<
     add(kPageSave,"Сохранить как…","Save as…",DownloadableLink(params->GetPageUrl()));add(MENU_ID_PRINT,"Печать…","Print…");
     if(owner_->MenuReaderAvailable(tab_id_))add(kPageReader,"Открыть в режиме чтения","Open in Reader mode");
     model->AddSeparator();add(kPageQR,"Создать QR-код этой страницы","Create page QR code",DownloadableLink(params->GetPageUrl()));
-    add(kPageTranslate,en?"Перевести на английский":"Перевести на русский",en?"Translate to English":"Translate to Russian",DownloadableLink(params->GetPageUrl()));
+    const bool targetEnglish=owner_->MenuTranslationTarget(tab_id_)=="en";
+    add(kPageTranslate,targetEnglish?"Перевести на английский":"Перевести на русский",targetEnglish?"Translate to English":"Translate to Russian",DownloadableLink(params->GetPageUrl()));
     model->AddSeparator();add(MENU_ID_VIEW_SOURCE,"Просмотр кода страницы","View page source");
   }
   if(model->GetCount())model->AddSeparator();add(kInspect,"Просмотреть код","Inspect");
@@ -321,6 +322,7 @@ bool BrowserClient::RunContextMenu(CefRefPtr<CefBrowser> browser,
     for(size_t i=0;i<source->GetCount();++i){
       if(source->GetTypeAt(i)==MENUITEMTYPE_SEPARATOR){result.push_back(MenuItem::Separator());continue;}
       MenuItem item;item.command=source->GetCommandIdAt(i);item.label=source->GetLabelAt(i).ToWString();
+      if(item.command<MENU_ID_USER_FIRST)item.label=MenuLabel(item.label);
       auto tab=item.label.find(L'\t');if(tab!=std::wstring::npos){item.accelerator=item.label.substr(tab+1);item.label.resize(tab);}
       switch(item.command){case MENU_ID_BACK:item.accelerator=L"Alt+←";break;case MENU_ID_FORWARD:item.accelerator=L"Alt+→";break;case MENU_ID_RELOAD:item.accelerator=L"Ctrl+R";break;case MENU_ID_PRINT:item.accelerator=L"Ctrl+P";break;case MENU_ID_VIEW_SOURCE:item.accelerator=L"Ctrl+U";break;case kPageSave:item.accelerator=L"Ctrl+S";break;case MENU_ID_COPY:item.accelerator=L"Ctrl+C";break;case MENU_ID_CUT:item.accelerator=L"Ctrl+X";break;case MENU_ID_PASTE:item.accelerator=L"Ctrl+V";break;case MENU_ID_SELECT_ALL:item.accelerator=L"Ctrl+A";break;}
       item.enabled=source->IsEnabledAt(i);item.checked=source->IsCheckedAt(i);
