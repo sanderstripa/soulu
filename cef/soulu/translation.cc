@@ -43,7 +43,7 @@ bool BrowserWindow::HandleTranslationBridge(const std::string& action,CefRefPtr<
   if(action=="browser.translate.preferences"){
     if(!tab->incognito&&tab->profile_id!=active_profile_id_){callback->Failure(409,"Profile changed");return true;}
     auto preferences=tab->incognito?tab->translation_preferences:settings_->GetDictionary("translation");
-    if(!preferences){preferences=CefDictionaryValue::Create();preferences->SetString("target",MenuEnglish()?"en":"ru");preferences->SetList("always",CefListValue::Create());preferences->SetList("never",CefListValue::Create());}
+    if(!preferences){preferences=CefDictionaryValue::Create();preferences->SetString("target",settings_->GetString("translationTarget")=="en"?"en":"ru");preferences->SetList("always",CefListValue::Create());preferences->SetList("never",CefListValue::Create());}
     auto updated=preferences->Copy(false);
     if(!tab->incognito)updated->SetString("target",settings_->GetString("translationTarget"));
     if(data->HasKey("target")){auto target=data->GetString("target").ToString();if(target!="en"&&target!="ru"){callback->Failure(400,"Unsupported target");return true;}updated->SetString("target",target);}

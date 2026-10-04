@@ -259,7 +259,9 @@ void BrowserClient::OnBeforeContextMenu(CefRefPtr<CefBrowser> browser,CefRefPtr<
       {MENU_ID_UNDO,"Отменить","Undo"},{MENU_ID_REDO,"Повторить","Redo"},
       {MENU_ID_CUT,"Вырезать","Cut"},{MENU_ID_COPY,"Копировать","Copy"},
       {MENU_ID_PASTE,"Вставить","Paste"},{MENU_ID_SELECT_ALL,"Выделить всё","Select all"},
-      {MENU_ID_DELETE,"Удалить","Delete"}};
+      {MENU_ID_DELETE,"Удалить","Delete"},
+      {MENU_ID_NO_SPELLING_SUGGESTIONS,"Нет вариантов исправления","No spelling suggestions"},
+      {MENU_ID_ADD_TO_DICTIONARY,"Добавить в словарь","Add to dictionary"}};
     for(const auto& [id,ru,english]:labels)if(model->GetIndexOf(id)>=0)model->SetLabel(id,label(ru,english));
     return;
   }

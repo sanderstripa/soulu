@@ -67,6 +67,7 @@
     const tab=state.tabs?.find(t=>t.id===state.activeTabId);if(!tab)return;
     const host=document.querySelector(state.settings?.layout==='classic'?'.classic-address-pill':'.compact-active-tab');if(!host)return;
     const detected=probes.get(`${tab.id}:${tab.generation}:${tab.url}`);
+    if(detected&&typeof detected==='object'&&!tab.incognito)detected.target=state.settings?.translationTarget||'ru';
     const translated=[...jobs.values()].some(j=>j.site.tabId===tab.id);
     const valid=/^https?:|^file:/i.test(tab.url)&&!tab.url.includes('/ui/')&&(translated||(detected?.from&&detected.from!==detected.target&&!detected.never));
     let icon=host.querySelector('.soulu-translate-button');

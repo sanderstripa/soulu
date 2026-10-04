@@ -1,4 +1,16 @@
-# Soulu Beta 1.0.54 — site controls and Reader appearance
+# Soulu Beta 1.0.55 — native menus and local page translation
+
+- A shared native Soulu Menu System replaces browser-owned default context menus, using Onest, browser themes, keyboard navigation, nested menus and Windows accessibility.
+- Expanded page, link, image and media menus connect to real browser commands, with foreground/background tabs, separate normal/private windows, clipboard actions, downloads, Reader, local QR codes and translation.
+- Soulu Translate uses a local Bergamot WASM worker with Mozilla language models. English → Russian and Russian → English are direct; German → Russian uses English as a pivot.
+- Verified models are downloaded on demand into a shared cache outside profiles. Cached translation works offline after restart; page text is not sent to a cloud translation service.
+- Original text can be restored without reload. Translation handles dynamic text and navigation while preserving form values, editable content and code.
+- Always/never translation rules are saved per profile; private-tab rules remain temporary.
+- CEF 154.0.33 and Chromium 154.0.8037.94 remain unchanged.
+
+Language coverage is limited to the bundled model manifest. The main-document translator excludes shadow roots, cross-origin frame documents and technical/interactive text. Unsupported language pairs are reported explicitly.
+
+## Beta 1.0.54 — site controls and Reader appearance
 
 - Compact Site Info with separate site settings and compact permission pickers.
 - Soulu permission cards bind actual notification, location, media and download callbacks to the requesting document. Decisions persist; dismissal, navigation and tab changes cancel pending consent safely.
