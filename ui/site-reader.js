@@ -123,6 +123,10 @@
     check.onchange = () => act('blocking', {value:check.checked ? 1 : 0}).catch(error);
     toggle.append(el('span', '', 'Блокировка рекламы на этом сайте'), check); content.append(toggle);
     content.append(el('small', 'site-hint', `Глобально: ${blocking.enabled ? 'включена' : 'выключена'} · ${override === undefined ? 'по умолчанию' : 'исключение сайта'}`));
+    const protection = site.adblock;
+    if (protection) content.append(el('small', 'site-hint', !protection.ready
+      ? 'Фильтры недоступны — защита не активна'
+      : `${protection.active ? 'Защита активна' : 'Защита выключена'} · Заблокировано: ${protection.blockedRequests || 0}`));
     if (override !== undefined) content.append(button('Для рекламы: по умолчанию', () => act('blocking', {value:2})));
     content.append(button('Данные сайта…', async () => {
       const result = await act('clear'); if (result?.cleared) { status.textContent = 'Хранилища origin очищены, включая sessionStorage. Cookies и HTTP-кэш сохранены.'; status.hidden = false; }

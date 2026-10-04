@@ -22,6 +22,7 @@
 #include <unordered_map>
 
 #include "examples/soulu/browser_client.h"
+#include "examples/soulu/adblock_bridge.h"
 #include "examples/soulu/engine_version.h"
 #include "examples/soulu/frosted_backdrop.h"
 #include "examples/soulu/resource.h"
@@ -128,9 +129,33 @@ class ThumbnailObserver final : public CefDevToolsMessageObserver {
   IMPLEMENT_REFCOUNTING(ThumbnailObserver);
 };
 
+// Requests without a browser/frame (notably Service Worker network traffic)
+// still traverse a profile-owned hook. Never consult mutable tab/UI state on IO.
+class WorkerResourceHandler final : public CefResourceRequestHandler {
+ public:
+  WorkerResourceHandler(std::shared_ptr<SitePolicy> policy,std::string source)
+    :policy_(std::move(policy)),source_(std::move(source)){}
+  ReturnValue OnBeforeResourceLoad(CefRefPtr<CefBrowser>,CefRefPtr<CefFrame>,
+      CefRefPtr<CefRequest> request,CefRefPtr<CefCallback>) override {
+    CEF_REQUIRE_IO_THREAD();
+    if(!policy_||!policy_->Blocking(source_)||WebOrigin(source_).empty()||WebOrigin(request->GetURL()).empty())return RV_CONTINUE;
+    return MatchAdBlock(request->GetURL(),source_,request->GetResourceType(),request->GetMethod())?RV_CANCEL:RV_CONTINUE;
+  }
+ private:
+  std::shared_ptr<SitePolicy> policy_;std::string source_;
+  IMPLEMENT_REFCOUNTING(WorkerResourceHandler);
+};
 class ProfileContextHandler final : public CefRequestContextHandler {
  public:
-  explicit ProfileContextHandler(CefRefPtr<BrowserWindow> owner) : owner_(owner) {}
+  ProfileContextHandler(CefRefPtr<BrowserWindow> owner,std::shared_ptr<SitePolicy> policy)
+      :owner_(owner),policy_(std::move(policy)){}
+  CefRefPtr<CefResourceRequestHandler> GetResourceRequestHandler(CefRefPtr<CefBrowser> browser,
+      CefRefPtr<CefFrame>,CefRefPtr<CefRequest>,bool navigation,bool download,
+      const CefString& initiator,bool&) override {
+    CEF_REQUIRE_IO_THREAD();
+    if(browser||navigation||download||WebOrigin(initiator).empty())return nullptr;
+    return new WorkerResourceHandler(policy_,initiator);
+  }
   void OnRequestContextInitialized(CefRefPtr<CefRequestContext> context) override {
     CEF_REQUIRE_UI_THREAD();
     // Release the one-shot owner reference to avoid a profile/context cycle.
@@ -140,6 +165,7 @@ class ProfileContextHandler final : public CefRequestContextHandler {
   }
  private:
   CefRefPtr<BrowserWindow> owner_;
+  std::shared_ptr<SitePolicy> policy_;
   IMPLEMENT_REFCOUNTING(ProfileContextHandler);
 };
 
@@ -543,10 +569,10 @@ void BrowserWindow::CreateProfile(const std::string& name,
   Profile profile;
   profile.id = id;
   profile.name = name.empty() ? "Профиль" : name;
-  profile.context = CefRequestContext::CreateContext(
-      context_settings, new ProfileContextHandler(this));
-  profiles_.push_back(profile);
   policies_[id]=std::make_shared<SitePolicy>(id);
+  profile.context = CefRequestContext::CreateContext(
+      context_settings, new ProfileContextHandler(this,policies_[id]));
+  profiles_.push_back(profile);
   auto saved=ReadJson(profile_path/L"soulu-settings.json");
   auto config=saved&&saved->GetType()==VTYPE_DICTIONARY?saved->GetDictionary()->Copy(false):initial_settings_->Copy(false);
   if(!config->GetDictionary("onboarding")) {
@@ -582,8 +608,12 @@ CefRefPtr<CefRequestContext> BrowserWindow::ContextForNewTab(bool incognito) {
   if (incognito) {
     if (!incognito_context_) {
       CefRequestContextSettings context_settings;
+      auto private_policy=std::make_shared<SitePolicy>("__incognito__");
+      auto normal=policies_[active_profile_id_];
+      if(normal)private_policy->Replace(normal->Snapshot());
+      policies_["__incognito__"]=private_policy;
       incognito_context_ = CefRequestContext::CreateContext(
-          context_settings, new ProfileContextHandler(this));
+          context_settings, new ProfileContextHandler(this,private_policy));
     }
     return incognito_context_;
   }
@@ -637,7 +667,9 @@ bool BrowserWindow::AllowSite(int id,const std::string& origin,const std::string
 void BrowserWindow::ApplySiteSound() {
   for(auto& tab:tabs_)if(tab.browser){auto policy=PolicyForTab(tab.id);
     tab.browser->GetHost()->SetAudioMuted(policy&&policy->Rule(tab.url,"sound")!=0);
-    SyncSitePolicy(tab.id,tab.url);}
+    SyncSitePolicy(tab.id,tab.url);
+    auto client=static_cast<BrowserClient*>(tab.browser->GetHost()->GetClient().get());
+    if(client)client->RefreshAdBlock(tab.browser);}
 }
 void BrowserWindow::SyncSitePolicy(int id,const std::string& url) {
   auto* tab=FindTab(id);auto policy=PolicyForTab(id);
@@ -1545,6 +1577,8 @@ CefRefPtr<CefDictionaryValue> BrowserWindow::SiteSnapshot(int id) {
   result->SetDictionary("preferences",ReaderPreferences(*tab));
   if(tab->browser)result->SetInt("zoom",static_cast<int>(std::round(100*std::pow(1.2,tab->browser->GetHost()->GetZoomLevel()))));
   auto policy=PolicyForTab(tab->id);if(policy)result->SetDictionary("rules",policy->Snapshot());
+  if(tab->browser){auto client=static_cast<BrowserClient*>(tab->browser->GetHost()->GetClient().get());
+    if(client)result->SetDictionary("adblock",client->AdBlockSnapshot());}
   return result;
 }
 
@@ -1649,7 +1683,9 @@ bool BrowserWindow::HandleSiteAction(const std::string& action,CefRefPtr<CefValu
   else if(action=="browser.site.reset")ok=policy&&policy->ResetSite(tab->url);
   else {callback->Failure(400,"Неизвестное действие сайта");return true;}
   if(!ok){callback->Failure(500,"Правило сайта не сохранено");return true;}
-  ApplySiteSound();SyncSitePolicy(tab->id,tab->url);Reply(callback,SiteSnapshot());return true;
+  ApplySiteSound();SyncSitePolicy(tab->id,tab->url);
+  if(action=="browser.site.blocking")tab->browser->ReloadIgnoreCache();
+  Reply(callback,SiteSnapshot());return true;
 }
 
 void BrowserWindow::SetSetting(const std::string& key, CefRefPtr<CefValue> value) {

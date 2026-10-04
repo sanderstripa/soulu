@@ -1,0 +1,26 @@
+Soulu content filtering
+
+Engine: adblock-rust 0.13.3, Brave Software and contributors.
+Source: https://github.com/brave/adblock-rust/tree/v0.13.3
+License: Mozilla Public License 2.0 (MPL-2.0.txt).
+Unmodified engine source is available at the above URL and crates.io.
+Soulu integration source: https://github.com/sanderstripa/soulu/tree/main/cef/soulu/adblock
+
+EasyList and EasyPrivacy, The EasyList authors (https://easylist.to/).
+Distributed unchanged under Creative Commons Attribution-ShareAlike 3.0 Unported.
+License: https://creativecommons.org/licenses/by-sa/3.0/legalcode
+Source and license policy: https://easylist.to/pages/licence.html
+Official subscriptions:
+https://easylist.to/easylist/easylist.txt
+https://easylist.to/easylist/easyprivacy.txt
+Bundled versions: 202610040711 (04 October 2026, 07:11 UTC).
+
+RU AdList, denis-ovs, Akuma (DemonSat), Radik245, Lain_13, dimisa and contributors.
+Distributed unchanged under Creative Commons Attribution 3.0 Unported.
+License: https://creativecommons.org/licenses/by/3.0/legalcode
+Source: https://github.com/easylist/ruadlist
+Official subscription: https://easylist-downloads.adblockplus.org/ruadlist.txt
+Bundled version: 202610040712 (04 October 2026, 07:12 UTC).
+
+The original filter headers and attributions remain in the bundled source lists.
+Filter data is not application code. No downloaded scriptlets are executed.

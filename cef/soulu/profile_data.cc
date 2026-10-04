@@ -1,4 +1,5 @@
 #include "examples/soulu/profile_data.h"
+#include "examples/soulu/adblock_bridge.h"
 #include <windows.h>
 #include <wincrypt.h>
 #include <bcrypt.h>
@@ -241,16 +242,8 @@ bool SitePolicy::ResetSite(const std::string& input) {
   if(Save())return true;data_=old;return false;
 }
 bool BlockResource(const std::string& top,const std::string& url,int type,bool enabled) {
-  if(!enabled||WebOrigin(top).empty()||WebOrigin(url).empty())return false;
-  // Conservative host-only subset. Never filter documents, XHR, downloads,
-  // WebSockets or worker requests; no path/substring guesses in auth flows.
-  if(type!=RT_SCRIPT&&type!=RT_IMAGE&&type!=RT_STYLESHEET&&type!=RT_FONT_RESOURCE)return false;
-  auto host=SiteDomain(url),site=SiteDomain(top);if(host.empty()||site.empty()||host==site)return false;
-  static const std::string blocked[]={"doubleclick.net","googlesyndication.com",
-    "googleadservices.com","adnxs.com","adsrvr.org","advertising.com","criteo.com","criteo.net"};
-  for(const auto& domain:blocked)if(host==domain ||
-    (host.size()>domain.size()&&host.ends_with("."+domain)))return true;
-  return false;
+  if(!enabled||WebOrigin(top).empty()||WebOrigin(url).empty()||type==RT_MAIN_FRAME)return false;
+  return MatchAdBlock(url,top,type,"get");
 }
 
 std::vector<std::string> PendingProfileDeletions() {

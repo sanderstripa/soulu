@@ -1,6 +1,8 @@
 #pragma once
 
 #include <map>
+#include <atomic>
+#include <mutex>
 
 #include "include/cef_client.h"
 #include "include/cef_permission_handler.h"
@@ -43,6 +45,8 @@ class BrowserClient final : public CefClient,
   bool OnBeforeUnloadDialog(CefRefPtr<CefBrowser>, const CefString&, bool,
                             CefRefPtr<CefJSDialogCallback>) override;
   void OnResetDialogState(CefRefPtr<CefBrowser>) override;
+  CefRefPtr<CefDictionaryValue> AdBlockSnapshot();
+  void RefreshAdBlock(CefRefPtr<CefBrowser> browser);
   bool OnTooltip(CefRefPtr<CefBrowser>,CefString&) override;
   bool OnPreKeyEvent(CefRefPtr<CefBrowser>, const CefKeyEvent&, CefEventHandle, bool*) override;
   CefRefPtr<CefResourceRequestHandler> GetResourceRequestHandler(
@@ -99,6 +103,10 @@ class BrowserClient final : public CefClient,
                          CefRefPtr<CefDownloadItemCallback> callback) override;
 
  private:
+  std::mutex adblock_mutex_;
+  std::string adblock_top_;
+  uint64_t adblock_blocked_ = 0, adblock_checked_ = 0;
+  CefRefPtr<CefListValue> adblock_hits_ = CefListValue::Create();
   CefRefPtr<BrowserWindow> owner_;
   const BrowserRole role_;
   const int tab_id_;

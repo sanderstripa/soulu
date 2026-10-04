@@ -3,6 +3,7 @@
 #include "include/cef_parser.h"
 #include "include/cef_process_message.h"
 #include <set>
+#include "examples/soulu/adblock_cosmetic.h"
 
 namespace soulu {
 class CredentialSubmit final : public CefV8Handler {
@@ -21,6 +22,18 @@ class CredentialSubmit final : public CefV8Handler {
   }
  private:IMPLEMENT_REFCOUNTING(CredentialSubmit);
 };
+class CosmeticSubmit final : public CefV8Handler {
+ public:
+  bool Execute(const CefString&,CefRefPtr<CefV8Value>,const CefV8ValueList& args,
+               CefRefPtr<CefV8Value>&,CefString&) override {
+    if(args.size()!=1||!args[0]->IsString()||args[0]->GetStringValue().length()>65536)return true;
+    auto context=CefV8Context::GetCurrentContext();if(!context)return true;
+    auto message=CefProcessMessage::Create("soulu.adblock.cosmetic");
+    message->GetArgumentList()->SetString(0,args[0]->GetStringValue());
+    context->GetFrame()->SendProcessMessage(PID_BROWSER,message);return true;
+  }
+ private:IMPLEMENT_REFCOUNTING(CosmeticSubmit);
+};
 class RendererApp final : public CefApp, public CefRenderProcessHandler {
  public:
   CefRefPtr<CefRenderProcessHandler> GetRenderProcessHandler() override { return this; }
@@ -35,8 +48,12 @@ class RendererApp final : public CefApp, public CefRenderProcessHandler {
   void OnContextCreated(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame,
                         CefRefPtr<CefV8Context> context) override {
     router_->OnContextCreated(browser, frame, context);
-    if(!frame->IsMain()||private_browsers_.count(browser->GetIdentifier()))return;CefURLParts parts;
+    CefURLParts parts;
     if(!CefParseURL(frame->GetURL(),parts)||(CefString(&parts.scheme)!="https"&&CefString(&parts.scheme)!="http"))return;
+    context->GetGlobal()->SetValue("__souluCosmeticSend",CefV8Value::CreateFunction("send",new CosmeticSubmit()),V8_PROPERTY_ATTRIBUTE_NONE);
+    {CefRefPtr<CefV8Value> result;CefRefPtr<CefV8Exception> error;
+      context->Eval(kCosmeticBootstrap,frame->GetURL(),0,result,error);}
+    if(!frame->IsMain()||private_browsers_.count(browser->GetIdentifier()))return;
     context->GetGlobal()->SetValue("__souluCredentialSubmit",
       CefV8Value::CreateFunction("submit",new CredentialSubmit()),V8_PROPERTY_ATTRIBUTE_NONE);
     // The native hook is captured in a closure and removed from window. Only a
@@ -64,6 +81,26 @@ class RendererApp final : public CefApp, public CefRenderProcessHandler {
   }
   bool OnProcessMessageReceived(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame,
                                 CefProcessId source, CefRefPtr<CefProcessMessage> message) override {
+    if(source==PID_BROWSER&&frame&&(message->GetName()=="soulu.adblock.selectors"||message->GetName()=="soulu.adblock.refresh")){
+      auto context=frame->GetV8Context();if(!context)return true;
+      std::string script;
+      if(message->GetName()=="soulu.adblock.refresh")script="window.__souluCosmetic?.refresh()";
+      else {
+        auto args=message->GetArgumentList();if(args->GetSize()!=2||args->GetType(1)!=VTYPE_LIST)return true;
+        auto value=CefValue::Create();value->SetList(args->GetList(1)->Copy());
+        // JSON serialization keeps quotes, backslashes and selectors as data.
+        const std::string selectors=CefWriteJSON(value,JSON_WRITER_DEFAULT);
+        script="(()=>{const s=window.__souluCosmetic;if(!s)return;";
+        if(!args->GetBool(0))script+="s.sheet.replaceSync('');s.selectors.clear();";
+        else script+="for(const selector of "+selectors+R"JS(){
+          if(s.selectors.has(selector)||/[{};@]/.test(selector)||selector.length>4096)continue;
+          try{s.sheet.insertRule(selector+'{display:none!important}',s.sheet.cssRules.length);s.selectors.add(selector);}catch(e){}
+        })JS";
+        script+="})()";
+      }
+      context->Enter();CefRefPtr<CefV8Value> result;CefRefPtr<CefV8Exception> error;
+      context->Eval(script,frame->GetURL(),0,result,error);context->Exit();return true;
+    }
     return router_->OnProcessMessageReceived(browser, frame, source, message);
   }
  private:

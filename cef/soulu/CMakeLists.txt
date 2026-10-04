@@ -23,6 +23,8 @@ set(SOULU_SRCS
   clear_data.h
   clear_data.cc
   profile_data.cc
+  adblock_bridge.h
+  adblock_bridge.cc
   password_import.cc
   data_tests.cc
   frosted_backdrop.h
@@ -53,14 +55,25 @@ else()
   SET_EXAMPLE_EXECUTABLE_TARGET_PROPERTIES(${EXAMPLE_TARGET})
 endif()
 
-add_dependencies(${EXAMPLE_TARGET} shared)
+find_program(CARGO_EXECUTABLE cargo REQUIRED)
+set(ADBLOCK_LIB "${CMAKE_CURRENT_BINARY_DIR}/adblock/release/soulu_adblock.lib")
+file(GLOB_RECURSE ADBLOCK_INPUTS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/adblock/src/*.rs" "${CMAKE_CURRENT_SOURCE_DIR}/adblock/filters/*.txt")
+add_custom_command(OUTPUT "${ADBLOCK_LIB}"
+  COMMAND ${CARGO_EXECUTABLE} build --locked --release --manifest-path "${CMAKE_CURRENT_SOURCE_DIR}/adblock/Cargo.toml" --target-dir "${CMAKE_CURRENT_BINARY_DIR}/adblock"
+  DEPENDS ${ADBLOCK_INPUTS} adblock/Cargo.toml adblock/Cargo.lock
+  VERBATIM)
+add_custom_target(soulu_adblock_build DEPENDS "${ADBLOCK_LIB}")
+add_library(soulu_adblock STATIC IMPORTED)
+set_target_properties(soulu_adblock PROPERTIES IMPORTED_LOCATION "${ADBLOCK_LIB}")
+add_dependencies(soulu_adblock soulu_adblock_build)
+add_dependencies(${EXAMPLE_TARGET} shared soulu_adblock_build)
 enable_language(C)
 add_library(soulu_sqlite STATIC third_party/sqlite3.c)
 if(MSVC)
   target_compile_options(soulu_sqlite PRIVATE ${CEF_RUNTIME_LIBRARY_FLAG})
 endif()
 target_compile_definitions(soulu_sqlite PRIVATE SQLITE_OMIT_LOAD_EXTENSION SQLITE_DQS=0 SQLITE_SECURE_DELETE=1)
-target_link_libraries(${EXAMPLE_TARGET} shared soulu_sqlite crypt32 bcrypt dwmapi ws2_32 advapi32 shell32 ole32 uuid windowsapp CoreMessaging)
+target_link_libraries(${EXAMPLE_TARGET} shared soulu_sqlite soulu_adblock userenv ntdll secur32 crypt32 bcrypt dwmapi ws2_32 advapi32 shell32 ole32 uuid windowsapp CoreMessaging)
 target_compile_definitions(${EXAMPLE_TARGET} PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
 if(MSVC)
   target_compile_options(${EXAMPLE_TARGET} PRIVATE /utf-8 /EHsc /Zc:__cplusplus)
@@ -82,6 +95,9 @@ add_custom_command(TARGET ${EXAMPLE_TARGET} POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_directory
           "${CMAKE_CURRENT_SOURCE_DIR}/assets/vpn"
           "$<TARGET_FILE_DIR:${EXAMPLE_TARGET}>/vpn"
+  COMMAND ${CMAKE_COMMAND} -E copy_directory
+          "${CMAKE_CURRENT_SOURCE_DIR}/adblock/notices"
+          "$<TARGET_FILE_DIR:${EXAMPLE_TARGET}>/licenses/adblock"
   VERBATIM)
 
 # Preview 25 snapshot publishing keeps ordinary CEF validation unchanged.

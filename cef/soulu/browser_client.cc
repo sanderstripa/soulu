@@ -1,5 +1,8 @@
 #include "examples/soulu/typography_native.h"
 #include "examples/soulu/browser_client.h"
+#include "examples/soulu/adblock_bridge.h"
+#include "include/cef_process_message.h"
+#include <chrono>
 
 #include <string>
 #include <cstring>
@@ -108,18 +111,50 @@ bool BrowserClient::OnPreKeyEvent(CefRefPtr<CefBrowser>,const CefKeyEvent& event
   return false;
 }
 
+CefRefPtr<CefDictionaryValue> BrowserClient::AdBlockSnapshot() {
+  auto result=AdBlockStatus();std::lock_guard lock(adblock_mutex_);
+  result->SetDouble("blockedRequests",static_cast<double>(adblock_blocked_));
+  result->SetDouble("checkedRequests",static_cast<double>(adblock_checked_));
+  result->SetBool("enabled",policy_&&policy_->Blocking(adblock_top_));
+  result->SetBool("active",result->GetBool("ready")&&result->GetBool("enabled")&&!WebOrigin(adblock_top_).empty());
+  result->SetString("scope","current tab document");
+  result->SetList("hits",adblock_hits_->Copy());return result;
+}
+void BrowserClient::RefreshAdBlock(CefRefPtr<CefBrowser> browser) {
+  CEF_REQUIRE_UI_THREAD();if(role_!=BrowserRole::kContent)return;
+  std::vector<CefString> ids;browser->GetFrameIdentifiers(ids);
+  for(const auto& id:ids)if(auto frame=browser->GetFrameByIdentifier(id))
+    frame->SendProcessMessage(PID_RENDERER,CefProcessMessage::Create("soulu.adblock.refresh"));
+}
 CefRefPtr<CefResourceRequestHandler> BrowserClient::GetResourceRequestHandler(
-    CefRefPtr<CefBrowser>,CefRefPtr<CefFrame>,CefRefPtr<CefRequest>,
-    bool navigation,bool download,const CefString&,bool&) {
-  return role_!=BrowserRole::kShell&&!navigation&&!download?this:nullptr;
+    CefRefPtr<CefBrowser>,CefRefPtr<CefFrame>,CefRefPtr<CefRequest> request,
+    bool,bool download,const CefString&,bool&) {
+  // Include iframe navigations, fetch/XHR, media, and worker-originated requests.
+  // User navigation/downloads retain their separate browser policies.
+  return role_==BrowserRole::kContent&&!download&&request->GetResourceType()!=RT_MAIN_FRAME?this:nullptr;
 }
-BrowserClient::ReturnValue BrowserClient::OnBeforeResourceLoad(CefRefPtr<CefBrowser> browser,
+BrowserClient::ReturnValue BrowserClient::OnBeforeResourceLoad(CefRefPtr<CefBrowser>,
     CefRefPtr<CefFrame> frame,CefRefPtr<CefRequest> request,CefRefPtr<CefCallback>) {
-  if(!browser||!frame||!policy_)return RV_CONTINUE;
-  auto main=browser->GetMainFrame();if(!main)return RV_CONTINUE;
-  const std::string top=main->GetURL();
-  return BlockResource(top,request->GetURL(),request->GetResourceType(),policy_->Blocking(top))?RV_CANCEL:RV_CONTINUE;
+  CEF_REQUIRE_IO_THREAD();if(!policy_)return RV_CONTINUE;
+  std::string top;{std::lock_guard lock(adblock_mutex_);top=adblock_top_;}
+  const std::string url=request->GetURL();
+  if(!policy_->Blocking(top)||WebOrigin(top).empty()||WebOrigin(url).empty())return RV_CONTINUE;
+  std::string source=frame?frame->GetURL().ToString():top;
+  if(WebOrigin(source).empty()||request->GetResourceType()==RT_SUB_FRAME)source=top;
+  std::string rule;
+  const bool blocked=MatchAdBlock(url,source,request->GetResourceType(),request->GetMethod(),&rule);
+  {std::lock_guard lock(adblock_mutex_);if(top==adblock_top_){++adblock_checked_;
+    if(blocked){++adblock_blocked_;
+      // Detailed hits are bounded and available only in an explicit test/debug process.
+      wchar_t debug[12]={};if(GetEnvironmentVariableW(L"SOULU_UI_TEST_PORT",debug,12)&&adblock_hits_->GetSize()<200){
+        auto hit=CefDictionaryValue::Create();hit->SetString("site",SiteDomain(top));
+        hit->SetString("url",url);hit->SetInt("type",request->GetResourceType());hit->SetString("rule",rule);
+        hit->SetDouble("timestamp",static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count()));
+        adblock_hits_->SetDictionary(adblock_hits_->GetSize(),hit);}}}}
+  // No bytes from a matched resource are fetched: cancel synchronously on CEF IO.
+  return blocked?RV_CANCEL:RV_CONTINUE;
 }
+
 bool BrowserClient::OnRequestMediaAccessPermission(CefRefPtr<CefBrowser>,CefRefPtr<CefFrame>,
     const CefString& origin,uint32_t requested,CefRefPtr<CefMediaAccessCallback> callback) {
   CEF_REQUIRE_UI_THREAD();uint32_t allowed=0;
@@ -153,6 +188,8 @@ bool BrowserClient::OnBeforeBrowse(CefRefPtr<CefBrowser> browser,CefRefPtr<CefFr
   if (frame->IsMain() && owner_->GuardSettingsNavigation(tab_id_, request->GetURL())) return true;
   CEF_REQUIRE_UI_THREAD();if(router_)router_->OnBeforeBrowse(browser,frame);
   if(role_!=BrowserRole::kShell&&frame->IsMain()){
+    {std::lock_guard lock(adblock_mutex_);adblock_top_=request->GetURL();
+      adblock_blocked_=0;adblock_checked_=0;adblock_hits_->Clear();}
     owner_->ResetHistoryVisit(tab_id_);
     owner_->ReaderDocumentNavigation(tab_id_);owner_->SyncSitePolicy(tab_id_,request->GetURL());
   }
@@ -254,6 +291,17 @@ bool BrowserClient::OnProcessMessageReceived(CefRefPtr<CefBrowser> browser,
                                              CefProcessId source_process,
                                              CefRefPtr<CefProcessMessage> message) {
   CEF_REQUIRE_UI_THREAD();
+  if(role_==BrowserRole::kContent&&source_process==PID_RENDERER&&frame&&
+     message->GetName()=="soulu.adblock.cosmetic") {
+    auto args=message->GetArgumentList();
+    if(args->GetSize()!=1||args->GetType(0)!=VTYPE_STRING||args->GetString(0).length()>65536)return true;
+    std::string top;{std::lock_guard lock(adblock_mutex_);top=adblock_top_;}
+    auto reply=CefProcessMessage::Create("soulu.adblock.selectors");
+    const bool enabled=policy_&&policy_->Blocking(top)&&!WebOrigin(top).empty()&&!WebOrigin(frame->GetURL()).empty();
+    reply->GetArgumentList()->SetBool(0,enabled);
+    reply->GetArgumentList()->SetList(1,enabled?CosmeticSelectors(frame->GetURL(),args->GetString(0)):CefListValue::Create());
+    frame->SendProcessMessage(PID_RENDERER,reply);return true;
+  }
   if(role_!=BrowserRole::kShell&&source_process==PID_RENDERER&&
      message->GetName()=="soulu.credential.submit") {
     auto args=message->GetArgumentList();

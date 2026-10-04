@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <fstream>
 #include "examples/soulu/engine_version.h"
+#include "examples/soulu/adblock_bridge.h"
 
 #include "examples/soulu/app_factory.h"
 #include "examples/soulu/profile_data.h"
@@ -35,6 +36,8 @@ int APIENTRY wWinMain(HINSTANCE instance, HINSTANCE, wchar_t*, int) {
        !GetEnvironmentVariableW(L"LOCALAPPDATA",local,32768)||
        !GetEnvironmentVariableW(L"APPDATA",roaming,32768)||
        std::wstring(test_root)!=local||std::wstring(test_root)!=roaming)return 2;
+    auto test_cache=(soulu::DataRoot()/L"AdBlock"/L"filters-v1.json").u8string();
+    soulu::InitializeAdBlock(std::string(test_cache.begin(),test_cache.end()),"",false);
     return soulu::RunDataSecurityTests(std::filesystem::path(command_line->GetSwitchValue("data-security-test-report").ToWString()));
   }
   // CI probes the linked libcef before profile initialization or message loops.
@@ -72,6 +75,15 @@ int APIENTRY wWinMain(HINSTANCE instance, HINSTANCE, wchar_t*, int) {
   settings.persist_session_cookies = 1;
   CefString(&settings.locale) = "ru-RU";
   CefString(&settings.accept_language_list) = "ru-RU,ru,en-US,en";
+  // Compile bundled/cache rules before CEF can load the first web page.
+  auto cache=soulu::DataRoot()/L"AdBlock"/L"filters-v1.json";
+  auto cache_utf8=cache.u8string();
+  // Fixture loading/update suppression is restricted to the explicit test process.
+  wchar_t fixture[32768]={},no_update[12]={};
+  const bool testing=GetEnvironmentVariableW(L"SOULU_UI_TEST_PORT",test_port,12)>0;
+  if(testing)GetEnvironmentVariableW(L"SOULU_ADBLOCK_TEST_RULES",fixture,32768);
+  const bool updates=!(testing&&GetEnvironmentVariableW(L"SOULU_ADBLOCK_NO_UPDATE",no_update,12)>0);
+  soulu::InitializeAdBlock(std::string(cache_utf8.begin(),cache_utf8.end()),CefString(fixture).ToString(),updates);
   if (!CefInitialize(main_args, settings, app, nullptr)) return 1;
   CefRunMessageLoop();
   const auto deletions=soulu::PendingProfileDeletions();

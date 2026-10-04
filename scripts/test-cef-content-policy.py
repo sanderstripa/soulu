@@ -29,7 +29,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             body=b'window.normalLoaded=true';kind='text/javascript'
         else:
             body=(f'<!doctype html><title>Policy smoke</title><script src="/site.js"></script>'
-                  f'<script src="http://ads.doubleclick.net:{self.server.server_port}/ad.js"></script>').encode();kind='text/html'
+                  f'<script src="http://ad.doubleclick.net:{self.server.server_port}/ad.js"></script>').encode();kind='text/html'
         self.send_response(200);self.send_header('Content-Type',kind);self.send_header('Cache-Control','no-store')
         self.send_header('Access-Control-Allow-Origin','*');self.send_header('Content-Length',str(len(body)))
         self.end_headers();self.wfile.write(body)
@@ -43,7 +43,7 @@ with tempfile.TemporaryDirectory(prefix='soulu-policy-',ignore_cleanup_errors=Tr
     env=dict(os.environ,SOULU_UI_TEST_PORT=str(s.DEBUG_PORT))
     # This changes resolution only in this disposable Soulu test process.
     process=subprocess.Popen([sys.argv[1],'--no-proxy-server',
-        '--host-resolver-rules=MAP ads.doubleclick.net 127.0.0.1'],env=env)
+        '--host-resolver-rules=MAP ad.doubleclick.net 127.0.0.1'],env=env)
     try:
         shell_target=wait(lambda:next((t for t in s.targets() if '/ui/index.html' in t.get('url','')),None))
         shell=s.websocket.create_connection(shell_target['webSocketDebuggerUrl'],timeout=30,origin=s.BASE)
@@ -57,7 +57,7 @@ with tempfile.TemporaryDirectory(prefix='soulu-policy-',ignore_cleanup_errors=Tr
         assert s.evaluate(content,'window.adLoaded===true'),'Per-site allow did not override global block'
         blocking('',0);blocking('127.0.0.1',1);s.navigate(content,origin+'/block')
         assert s.evaluate(content,'window.adLoaded===undefined'),'Per-site block did not override global allow'
-        assert s.evaluate(content,f"fetch('http://ads.doubleclick.net:{server.server_port}/ad.js').then(r=>r.ok)"),'XHR was accidentally blocked'
+        assert s.evaluate(content,f"fetch('http://ad.doubleclick.net:{server.server_port}/ad.js').then(()=>false,()=>true)"),'Tracker XHR bypassed blocking'
         for name in ('camera','microphone','geolocation','notifications'):
             s.evaluate(shell,'window.browserShell.setSiteRule('+json.dumps({'domain':'','permission':name,'value':2})+')')
             state=s.evaluate(content,"navigator.permissions.query({name:"+json.dumps(name)+"}).then(p=>p.state)")
@@ -71,7 +71,7 @@ with tempfile.TemporaryDirectory(prefix='soulu-policy-',ignore_cleanup_errors=Tr
                 geolocation_effective_state=state
             else:
                 assert state=='granted',f'{name} domain allow did not override default'
-        s.navigate(content,f'http://ads.doubleclick.net:{server.server_port}/document')
+        s.navigate(content,f'http://ad.doubleclick.net:{server.server_port}/document')
         assert s.evaluate(content,'document.title')=='Policy smoke','Top-level navigation was filtered'
         content.close();shell.close();s.close_normally(process)
         preferences=json.loads((Path(root)/'Soulu'/'User Data'/'Profiles'/'personal'/'Preferences').read_text(encoding='utf-8'))
@@ -81,7 +81,7 @@ with tempfile.TemporaryDirectory(prefix='soulu-policy-',ignore_cleanup_errors=Tr
         assert geo=={'approximate':1,'precise':1},'Native approximate/precise origin override was not applied'
         print(json.dumps({'native_permission_defaults_and_overrides':True,'request_filter_actual':True,
                           'geolocation_site_allow':True,'geolocation_effective_state':geolocation_effective_state,
-                          'global_per_site_blocking':True,'xhr_and_document_exemptions':True}))
+                          'global_per_site_blocking':True,'xhr_blocked_document_navigation_allowed':True}))
     finally:
         if process.poll() is None:process.kill();process.wait()
         server.shutdown()

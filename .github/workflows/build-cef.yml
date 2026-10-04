@@ -19,7 +19,7 @@ on:
         default: ""
         type: string
   push:
-    branches: [main, codex/settings-overlay, codex/cef-stable-update, codex/beta-motion, codex/beta-typography, codex/beta-toolbar]
+    branches: [main, codex/settings-overlay, codex/cef-stable-update, codex/beta-motion, codex/beta-typography, codex/beta-toolbar, codex/beta-adblock]
     tags: [beta-1.0.52]
     paths:
       - "cef/**"
@@ -134,6 +134,13 @@ jobs:
         shell: pwsh
         run: python browser/scripts/verify-branding.py
 
+      - name: Compile and test the pinned AdBlock engine
+        shell: pwsh
+        run: |
+          rustup toolchain install stable --profile minimal
+          cargo test --locked --manifest-path browser/cef/soulu/adblock/Cargo.toml
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Configure CEF
         shell: pwsh
         run: |
@@ -178,6 +185,21 @@ jobs:
             ${{ env.build_dir }}/cef-runtime-manifest.json
             ${{ env.build_dir }}/ui/
           if-no-files-found: error
+
+      - name: Test real AdBlock request cancellation and cosmetics
+        shell: pwsh
+        run: |
+          python -m pip install --disable-pip-version-check websocket-client
+          python browser/scripts/test-cef-adblock.py "$env:build_dir/Soulu.exe" browser/artifacts/adblock-controlled.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Upload AdBlock evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Soulu-adblock-${{ github.sha }}
+          path: browser/artifacts/adblock*.json
+          if-no-files-found: ignore
 
       - name: Test native web platform, GPU, media and downloads
         shell: pwsh

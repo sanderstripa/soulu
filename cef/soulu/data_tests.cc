@@ -82,10 +82,10 @@ int RunDataSecurityTests(const std::filesystem::path& report) {
       policy.Set("other.com","camera",0)&&policy.SetBlocking("other.com",0)&&policy.ResetSite("example.com")&&
       policy.Rule("https://example.com","camera")==2&&policy.Blocking("https://example.com")&&
       policy.Rule("https://other.com","camera")==0&&!policy.Blocking("https://other.com"),"site-reset-isolated-both-models");
-    Check(BlockResource("https://example.com","https://ads.doubleclick.net/a.js",RT_SCRIPT,true),"block-ad-script");
+    Check(BlockResource("https://example.com","https://ad.doubleclick.net/a.js",RT_SCRIPT,true),"block-ad-script");
     Check(!BlockResource("https://example.com","https://doubleclick.net/login",RT_MAIN_FRAME,true)&&
-      !BlockResource("https://example.com","https://doubleclick.net/auth",RT_XHR,true)&&
-      !BlockResource("https://doubleclick.net","https://doubleclick.net/a.js",RT_SCRIPT,true)&&
+      !BlockResource("https://example.com","https://example.com/auth",RT_XHR,true)&&
+      !BlockResource("https://example.com","https://example.com/a.js",RT_SCRIPT,true)&&
       !BlockResource("https://example.com","https://notdoubleclick.net/a.js",RT_SCRIPT,true)&&
       !BlockResource("https://example.com","https://doubleclick.net/a.js",RT_SCRIPT,false),"blocking-safety-boundaries");
     auto source=DataRoot().parent_path().parent_path()/L"Google/Chrome/User Data/Default";
