@@ -24,3 +24,9 @@ Bundled version: 202610040712 (04 October 2026, 07:12 UTC).
 
 The original filter headers and attributions remain in the bundled source lists.
 Filter data is not application code. No downloaded scriptlets are executed.
+
+Rust standard library 1.99.0, The Rust Project contributors.
+The complete standard-library copyright and dependency notices from the
+pinned official Rust 1.99.0 toolchain are included unchanged in
+RUST-STANDARD-LIBRARY-1.99.0.html.
+Source: https://github.com/rust-lang/rust/tree/1.99.0/library
