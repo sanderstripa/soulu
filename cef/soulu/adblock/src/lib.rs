@@ -102,8 +102,10 @@ fn update(path: &Path) -> Result<(), String> {
         if bytes.len() > LIMIT { return Err("Oversize filter download".into()); }
         lists.push(String::from_utf8(bytes).map_err(|e|e.to_string())?);
     }
+    install_update(path,lists,STATE.get().ok_or("Engine not initialized")?)
+}
+fn install_update(path:&Path,lists:Vec<String>,state:&RwLock<State>)->Result<(),String> {
     let rules = compile(&lists)?;
-    let state = STATE.get().ok_or("Engine not initialized")?;
     {
         let old = state.read().map_err(|_|"State unavailable")?;
         if rules.network < old.rules.network / 2 || rules.cosmetic < old.rules.cosmetic / 2 {
@@ -221,7 +223,8 @@ mod tests {
         assert!(!blocked(&e,"https://metrics.example.net/a","https://other.org","xmlhttprequest"));
         assert!(blocked(&e,"https://exact.example/a","https://other.org","image"));
         assert!(!blocked(&e,"https://exact.example/ab","https://other.org","image"));
-        assert!(blocked(&e,"https://host.example/banner/test/ad.gif","https://other.org","image"));
+        assert!(blocked(&e,"https://host.example/banner/test/ad?format=gif","https://other.org","image"));
+        assert!(!blocked(&e,"https://host.example/banner/test/ad.gif","https://other.org","image"));
         assert!(blocked(&e,"https://cdn.first.example/a","https://first.example","script"));
     }
     #[test] fn cosmetic_selection() {
@@ -246,5 +249,21 @@ mod tests {
         let lists=baseline();assert!(compile(&vec!["<html>error</html>".into();3]).is_err());
         let old=compile(&lists).unwrap();let e=&old.engine;
         assert!(blocked(e,"https://ad.doubleclick.net/ad.js","https://example.org","script"));
+    }
+    #[test] fn atomic_update_and_live_snapshot_lifetime() {
+        let lists=baseline();let old=Arc::new(compile(&lists).unwrap());
+        let state=RwLock::new(State{rules:Arc::clone(&old),updated:0,error:String::new(),origin:"bundled".into()});
+        let root=std::env::temp_dir().join(format!("soulu-update-test-{}",std::process::id()));
+        let path=root.join("cache.json");let mut next=lists.clone();
+        next[0].push_str("\n||new-ad.example.com^$script\n");
+        install_update(&path,next,&state).unwrap();
+        assert!(blocked(&state.read().unwrap().rules.engine,"https://new-ad.example.com/a","https://example.org","script"));
+        assert!(!blocked(&old.engine,"https://new-ad.example.com/a","https://example.org","script"));
+        let updated=state.read().unwrap().updated;assert!(updated>0);
+        assert!(read_cache(&path).is_ok());
+        assert!(install_update(&path,vec!["<html>error</html>".into();3],&state).is_err());
+        assert_eq!(state.read().unwrap().updated,updated);
+        assert!(blocked(&read_cache(&path).unwrap().0.engine,"https://new-ad.example.com/a","https://example.org","script"));
+        fs::remove_dir_all(root).unwrap();
     }
 }
