@@ -6,7 +6,7 @@ s=module('storage','test-cef-storage.py');access=module('access','native-menu-ac
 u.PostMessageW.argtypes=[ctypes.c_void_p,ctypes.c_uint,ctypes.c_size_t,ctypes.c_ssize_t]
 class Fixture(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
-        if self.path=='/pixel.png':body=base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aNGkAAAAASUVORK5CYII=');kind='image/png'
+        if self.path=='/pixel.png':body=base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=');kind='image/png'
         else:body=b'<!doctype html><meta charset=utf-8><p id=blank>Page menu fixture</p><input id=edit value="Editable fixture"><input id=readonly readonly value="Read only fixture"><p><img id=image width=80 height=80 src=/pixel.png></p><canvas id=c width=128 height=128 hidden></canvas><video id=media muted controls width=320 height=200></video><script>const dc=c.getContext("2d");setInterval(()=>{dc.fillStyle="blue";dc.fillRect(0,0,128,128)},40);media.srcObject=c.captureStream(25);</script>';kind='text/html;charset=utf-8'
         self.send_response(200);self.send_header('Content-Type',kind);self.end_headers();self.wfile.write(body)
     def log_message(self,*args):pass
