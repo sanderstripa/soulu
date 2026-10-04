@@ -1,5 +1,6 @@
 #pragma once
 #include <filesystem>
+#include <cstdint>
 #include <mutex>
 #include <string>
 #include <vector>
@@ -39,6 +40,7 @@ class SitePolicy {
   explicit SitePolicy(const std::string& profile);
   int Rule(const std::string& url, const std::string& permission) const;
   bool Blocking(const std::string& url) const;
+  uint64_t Revision() const;
   CefRefPtr<CefDictionaryValue> Snapshot() const;
   bool Replace(CefRefPtr<CefDictionaryValue> data);
   bool Set(const std::string& domain, const std::string& permission, int value);
@@ -50,6 +52,7 @@ class SitePolicy {
   mutable std::mutex mutex_;
   std::filesystem::path path_;
   CefRefPtr<CefDictionaryValue> data_;
+  uint64_t revision_ = 1;
 };
 bool BlockResource(const std::string& top_url, const std::string& url,
                    int resource_type, bool enabled);

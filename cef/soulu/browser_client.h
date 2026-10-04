@@ -105,6 +105,8 @@ class BrowserClient final : public CefClient,
   std::mutex adblock_mutex_;
   std::string adblock_top_;
   uint64_t adblock_blocked_ = 0, adblock_checked_ = 0, adblock_generation_ = 0;
+  uint64_t adblock_policy_revision_ = 0;
+  double adblock_filter_update_ = -1;
   CefRefPtr<CefListValue> adblock_hits_ = CefListValue::Create();
   CefRefPtr<BrowserWindow> owner_;
   const BrowserRole role_;

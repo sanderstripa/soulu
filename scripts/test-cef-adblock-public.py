@@ -16,7 +16,9 @@ events=[]
 def command(ws,method,params=None):
     s.sequence+=1;ident=s.sequence
     ws.send(json.dumps({'id':ident,'method':method,'params':params or {}}))
+    deadline=time.monotonic()+45
     while True:
+        if time.monotonic()>deadline:raise TimeoutError('CDP command timed out: '+method)
         row=json.loads(ws.recv())
         if row.get('method','').startswith('Network.'):
             p=row.get('params',{})
@@ -61,7 +63,17 @@ with tempfile.TemporaryDirectory(prefix='soulu-public-adblock-',ignore_cleanup_e
                 # Let asynchronous auctions and lazy initial containers settle.
                 deadline=time.monotonic()+18
                 while time.monotonic()<deadline:
-                    s.evaluate(page,'document.readyState');time.sleep(.5)
+                    try:
+                        s.evaluate(page,'document.readyState')
+                    except (OSError,s.websocket.WebSocketException):
+                        # Cross-origin renderer replacement can detach a CDP
+                        # connection. Reattach without navigating or hiding a crash.
+                        if process.poll() is not None:raise AssertionError('Soulu exited during public navigation')
+                        page.close();page=s.page_socket()
+                        s.command(page,'Network.enable')
+                        s.command(page,'Network.setCacheDisabled',{'cacheDisabled':True})
+                        s.evaluate(page,'document.readyState')
+                    time.sleep(.5)
                 snapshot=s.evaluate(shell,'window.browserShell.getCurrentSite()')
                 dom=s.evaluate(page,"""(()=>{const s=window.__souluCosmetic;return {
                     title:document.title,url:location.href,textLength:document.body?.innerText.length||0,
@@ -76,7 +88,10 @@ with tempfile.TemporaryDirectory(prefix='soulu-public-adblock-',ignore_cleanup_e
                     'networkEvents':list(events),'screenshot':filename}
                 print(json.dumps({'url':url,'state':label,'blocked':snapshot.get('adblock',{}).get('blockedRequests'),'cosmetic':dom['cosmeticSelectors'],'title':dom['title']},ensure_ascii=False),flush=True)
             result.append(entry);(out/'adblock-public.json').write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8')
-        if not legacy:
+        e1_challenge=all('ddos-guard' in result[0]['runs'][state]['dom']['title'].lower() for state in ('off','on'))
+        if e1_challenge:
+            (out/'external-limitation.json').write_text(json.dumps({'site':'https://e1.ru','reason':'DDoS-Guard challenge in both OFF and ON; no E1 success claimed; local runtime evidence required'}),encoding='utf-8')
+        if not legacy and not e1_challenge:
             assert result[0]['runs']['on']['runtime']['blockedRequests']>0,'E1 produced no real blocked requests'
             assert result[0]['runs']['on']['dom']['textLength']>1000,'E1 main content unavailable'
             assert result[0]['runs']['on']['dom']['cosmeticSelectors']>0,'E1 cosmetic rules not applied'

@@ -74,7 +74,9 @@ def targets(timeout=45):
                 if any('/ui/onboarding.html' in row.get('url','') for row in rows):
                     time.sleep(.1);continue
             return rows
-        except OSError:
+        except (OSError, websocket.WebSocketException):
+            # Finishing onboarding closes its target, sometimes before CDP
+            # can return Runtime.evaluate. Discover the surviving shell again.
             time.sleep(0.25)
     raise AssertionError("CEF remote debugging did not start")
 

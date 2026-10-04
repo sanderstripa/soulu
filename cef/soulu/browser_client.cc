@@ -122,6 +122,10 @@ CefRefPtr<CefDictionaryValue> BrowserClient::AdBlockSnapshot() {
 }
 void BrowserClient::RefreshAdBlock(CefRefPtr<CefBrowser> browser) {
   CEF_REQUIRE_UI_THREAD();if(role_!=BrowserRole::kContent)return;
+  const auto revision=policy_?policy_->Revision():0;
+  const auto updated=AdBlockStatus()->GetDouble("lastSuccessfulUpdate");
+  if(revision==adblock_policy_revision_&&updated==adblock_filter_update_)return;
+  adblock_policy_revision_=revision;adblock_filter_update_=updated;
   std::vector<CefString> ids;browser->GetFrameIdentifiers(ids);
   for(const auto& id:ids)if(auto frame=browser->GetFrameByIdentifier(id))
     frame->SendProcessMessage(PID_RENDERER,CefProcessMessage::Create("soulu.adblock.refresh"));

@@ -177,6 +177,9 @@ int SitePolicy::Rule(const std::string& url,const std::string& name) const {
   int value=site&&site->HasKey(name)?site->GetInt(name):data_->GetDictionary("defaults")->GetInt(name);
   return value>=0&&value<=2?value:2;
 }
+uint64_t SitePolicy::Revision() const {
+  std::lock_guard lock(mutex_);return revision_;
+}
 bool SitePolicy::Blocking(const std::string& url) const {
   std::lock_guard lock(mutex_);auto b=data_->GetDictionary("blocking");
   auto sites=b->GetDictionary("sites");auto domain=SiteDomain(url);
@@ -205,7 +208,7 @@ bool SitePolicy::Replace(CefRefPtr<CefDictionaryValue> data) {
   auto exceptions=blocking->GetDictionary("sites");keys.clear();exceptions->GetKeys(keys);
   for(const auto& key:keys)if(SiteDomain(key)!=key.ToString()||exceptions->GetType(key)!=VTYPE_BOOL)return false;
   std::lock_guard lock(mutex_);auto old=data_;data_=data->Copy(false);
-  if(Save())return true;data_=old;return false;
+  if(Save()){++revision_;return true;}data_=old;return false;
 }
 bool SitePolicy::Set(const std::string& input,const std::string& name,int value) {
   if(!PermissionName(name)||value< -1||value>2||(input.empty()&&value<0))return false;
@@ -218,7 +221,7 @@ bool SitePolicy::Set(const std::string& input,const std::string& name,int value)
       rules=sites->GetDictionary(domain);}}
   if(value<0)rules->Remove(name);else rules->SetInt(name,value);
   if(!domain.empty()&&rules->GetSize()==0)data_->GetDictionary("sites")->Remove(domain);
-  if(Save())return true;data_=old;return false;
+  if(Save()){++revision_;return true;}data_=old;return false;
 }
 bool SitePolicy::SetBlocking(const std::string& input,int value) {
   auto domain=input.empty()?"":SiteDomain(input);if((!input.empty()&&domain.empty())||value<0||value>2)return false;
@@ -226,20 +229,20 @@ bool SitePolicy::SetBlocking(const std::string& input,int value) {
   if(domain.empty())b->SetBool("enabled",value==1);
   else if(value==2)b->GetDictionary("sites")->Remove(domain);
   else b->GetDictionary("sites")->SetBool(domain,value==1);
-  if(Save())return true;data_=old;return false;
+  if(Save()){++revision_;return true;}data_=old;return false;
 }
 bool SitePolicy::Reset(const std::string& input) {
   auto domain=input.empty()?"":SiteDomain(input);if(!input.empty()&&domain.empty())return false;
   std::lock_guard lock(mutex_);auto old=data_->Copy(false);
   auto sites=data_->GetDictionary("sites");if(domain.empty())sites->Clear();else sites->Remove(domain);
-  if(Save())return true;data_=old;return false;
+  if(Save()){++revision_;return true;}data_=old;return false;
 }
 bool SitePolicy::ResetSite(const std::string& input) {
   auto domain=SiteDomain(input);if(domain.empty())return false;
   std::lock_guard lock(mutex_);auto old=data_->Copy(false);
   data_->GetDictionary("sites")->Remove(domain);
   data_->GetDictionary("blocking")->GetDictionary("sites")->Remove(domain);
-  if(Save())return true;data_=old;return false;
+  if(Save()){++revision_;return true;}data_=old;return false;
 }
 bool BlockResource(const std::string& top,const std::string& url,int type,bool enabled) {
   if(!enabled||WebOrigin(top).empty()||WebOrigin(url).empty()||type==RT_MAIN_FRAME)return false;
