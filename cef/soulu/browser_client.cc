@@ -56,13 +56,18 @@ class CopyImage final:public CefDownloadImageCallback {
  public:explicit CopyImage(HWND owner):owner_(owner){}
   void OnDownloadImageFinished(const CefString&,int,CefRefPtr<CefImage> image) override {
     if(!image||!IsWindow(owner_))return;int width=0,height=0;
-    auto bitmap=image->GetAsBitmap(1.0f,CEF_COLOR_TYPE_BGRA_8888,CEF_ALPHA_TYPE_OPAQUE,width,height);
+    // Skia rejects conversion from an alpha image to an opaque pixel format.
+    auto bitmap=image->GetAsBitmap(1.0f,CEF_COLOR_TYPE_BGRA_8888,CEF_ALPHA_TYPE_POSTMULTIPLIED,width,height);
     if(!bitmap||width<=0||height<=0||bitmap->GetSize()>128*1024*1024)return;
     auto memory=GlobalAlloc(GMEM_MOVEABLE,sizeof(BITMAPINFOHEADER)+bitmap->GetSize());if(!memory)return;
     auto* bytes=static_cast<unsigned char*>(GlobalLock(memory));if(!bytes){GlobalFree(memory);return;}
     BITMAPINFOHEADER header={};header.biSize=sizeof(header);header.biWidth=width;header.biHeight=-height;header.biPlanes=1;header.biBitCount=32;header.biCompression=BI_RGB;
     memcpy(bytes,&header,sizeof(header));bitmap->GetData(bytes+sizeof(header),bitmap->GetSize(),0);GlobalUnlock(memory);
-    if(OpenClipboard(owner_)){EmptyClipboard();if(SetClipboardData(CF_DIB,memory))memory=nullptr;CloseClipboard();}if(memory)GlobalFree(memory);
+    auto png=image->GetAsPNG(1.0f,true,width,height);HGLOBAL png_memory=nullptr;
+    if(png&&png->GetSize()<=128*1024*1024){png_memory=GlobalAlloc(GMEM_MOVEABLE,png->GetSize());if(png_memory){auto* data=GlobalLock(png_memory);if(data){png->GetData(data,png->GetSize(),0);GlobalUnlock(png_memory);}else{GlobalFree(png_memory);png_memory=nullptr;}}}
+    if(OpenClipboard(owner_)){EmptyClipboard();if(SetClipboardData(CF_DIB,memory))memory=nullptr;
+      if(png_memory&&SetClipboardData(RegisterClipboardFormatW(L"PNG"),png_memory))png_memory=nullptr;CloseClipboard();}
+    if(memory)GlobalFree(memory);if(png_memory)GlobalFree(png_memory);
   }
  private:HWND owner_;IMPLEMENT_REFCOUNTING(CopyImage);
 };

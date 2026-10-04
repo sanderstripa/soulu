@@ -233,6 +233,8 @@ jobs:
           $env:SOULU_UI_TEST_PORT = '9223'
           python browser/scripts/test-cef-menu-system.py $exe.FullName browser/artifacts/native-menu-visuals
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python browser/scripts/test-cef-menu-actions.py $exe.FullName browser/artifacts/native-menu-actions.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test real AdBlock request cancellation and cosmetics
         shell: pwsh
