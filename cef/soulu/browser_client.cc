@@ -184,27 +184,35 @@ bool BrowserClient::FilterResource(CefRefPtr<CefRequest> request,const std::stri
 
 bool BrowserClient::OnRequestMediaAccessPermission(CefRefPtr<CefBrowser>,CefRefPtr<CefFrame>,
     const CefString& origin,uint32_t requested,CefRefPtr<CefMediaAccessCallback> callback) {
-  CEF_REQUIRE_UI_THREAD();uint32_t allowed=0;
-  if(requested&CEF_MEDIA_PERMISSION_DEVICE_VIDEO_CAPTURE)
-    if(owner_->AllowSite(tab_id_,origin,"camera"))allowed|=CEF_MEDIA_PERMISSION_DEVICE_VIDEO_CAPTURE;
-  if(requested&CEF_MEDIA_PERMISSION_DEVICE_AUDIO_CAPTURE)
-    if(owner_->AllowSite(tab_id_,origin,"microphone"))allowed|=CEF_MEDIA_PERMISSION_DEVICE_AUDIO_CAPTURE;
-  // Screen capture is a separate permission, deliberately never inferred from camera access.
-  callback->Continue(allowed);return true;
+  CEF_REQUIRE_UI_THREAD();std::vector<std::string> names;
+  const uint32_t known=CEF_MEDIA_PERMISSION_DEVICE_VIDEO_CAPTURE|CEF_MEDIA_PERMISSION_DEVICE_AUDIO_CAPTURE;
+  if(requested&~known){callback->Continue(0);return true;}
+  if(requested&CEF_MEDIA_PERMISSION_DEVICE_VIDEO_CAPTURE)names.push_back("camera");
+  if(requested&CEF_MEDIA_PERMISSION_DEVICE_AUDIO_CAPTURE)names.push_back("microphone");
+  owner_->RequestSitePermissions(tab_id_,origin,names,[callback,requested](bool allowed){
+    callback->Continue(allowed?requested:0);});return true;
 }
-bool BrowserClient::OnShowPermissionPrompt(CefRefPtr<CefBrowser>,uint64_t,
+bool BrowserClient::OnShowPermissionPrompt(CefRefPtr<CefBrowser>,uint64_t prompt_id,
     const CefString& origin,uint32_t requested,CefRefPtr<CefPermissionPromptCallback> callback) {
-  CEF_REQUIRE_UI_THREAD();uint32_t handled=0;bool allowed=true;
+  CEF_REQUIRE_UI_THREAD();std::vector<std::string> names;
   const std::pair<uint32_t,const char*> supported[]={
     {CEF_PERMISSION_TYPE_GEOLOCATION,"geolocation"},{CEF_PERMISSION_TYPE_NOTIFICATIONS,"notifications"},
     {CEF_PERMISSION_TYPE_CAMERA_STREAM,"camera"},{CEF_PERMISSION_TYPE_MIC_STREAM,"microphone"},
     {CEF_PERMISSION_TYPE_MULTIPLE_DOWNLOADS,"downloads"}};
   uint32_t known=0;for(const auto& item:supported)known|=item.first;
-  if(requested&~known)return false;
-  for(const auto& [flag,name]:supported)if(requested&flag){handled|=flag;
-    allowed=owner_->AllowSite(tab_id_,origin,name)&&allowed;}
-  callback->Continue(allowed&&handled==requested&&handled!=0?CEF_PERMISSION_RESULT_ACCEPT:CEF_PERMISSION_RESULT_DENY);
+  if(requested&~known){callback->Continue(CEF_PERMISSION_RESULT_DENY);return true;}
+  for(const auto& [flag,name]:supported)if(requested&flag)names.push_back(name);
+  auto owner=owner_;const int tab_id=tab_id_;const std::string requested_origin=origin;
+  owner_->RequestSitePermissions(tab_id_,origin,names,[callback,owner,tab_id,requested_origin,names](bool allowed){
+    auto policy=owner->PolicyForTab(tab_id);bool blocked=false;
+    if(policy)for(const auto& name:names)if(policy->Rule(requested_origin,name)==2)blocked=true;
+    callback->Continue(allowed?CEF_PERMISSION_RESULT_ACCEPT:
+      blocked?CEF_PERMISSION_RESULT_DENY:CEF_PERMISSION_RESULT_DISMISS);},prompt_id);
   return true;
+}
+void BrowserClient::OnDismissPermissionPrompt(CefRefPtr<CefBrowser>,uint64_t prompt_id,
+    cef_permission_request_result_t) {
+  CEF_REQUIRE_UI_THREAD();owner_->CancelSitePermissions(tab_id_,prompt_id,false);
 }
 void BrowserClient::OnLoadEnd(CefRefPtr<CefBrowser>,CefRefPtr<CefFrame> frame,int status) {
   if(frame->IsMain()&&role_!=BrowserRole::kShell&&status>=200&&status<400)owner_->RecordHistory(tab_id_);
@@ -462,11 +470,9 @@ bool BrowserClient::OnBeforeDownload(CefRefPtr<CefBrowser> browser,
                                      const CefString& suggested_name,
                                      CefRefPtr<CefBeforeDownloadCallback> callback) {
   const std::string site=browser->GetMainFrame()->GetURL();
-  if(!owner_->AllowSite(tab_id_,site,"downloads")) {
-    TypographyMessageBox(owner_->hwnd(),L"Загрузка заблокирована правилом сайта. Изменить правило можно в настройках сайтов.",L"Soulu",MB_OK|MB_ICONINFORMATION);
-    return true;
-  }
-  callback->Continue(suggested_name, true);
+  owner_->RequestSitePermissions(tab_id_,site,{"downloads"},[callback,suggested_name](bool allowed){
+    if(allowed)callback->Continue(suggested_name,true);
+  });
   return true;
 }
 

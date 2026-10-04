@@ -7,6 +7,7 @@
 #include <memory>
 #include <map>
 #include <set>
+#include <functional>
 #include "examples/soulu/profile_data.h"
 #include "examples/soulu/history_store.h"
 
@@ -81,6 +82,10 @@ class BrowserWindow final : public CefBaseRefCounted {
   bool IsIncognitoTab(int id);
   std::shared_ptr<SitePolicy> PolicyForTab(int id);
   bool AllowSite(int id, const std::string& origin, const std::string& permission);
+  void RequestSitePermissions(int id, const std::string& origin,
+      const std::vector<std::string>& permissions, std::function<void(bool)> done,
+      uint64_t cef_request = 0);
+  void CancelSitePermissions(int id, uint64_t cef_request = 0, bool notify = true);
   void ApplySiteSound();
   void RequestFind();
   void ReaderDocumentNavigation(int id);
@@ -204,6 +209,15 @@ class BrowserWindow final : public CefBaseRefCounted {
   CefRefPtr<CefDictionaryValue> SiteSnapshot(int id = 0);
   CefRefPtr<CefDictionaryValue> ReaderPreferences(const Tab& tab);
   std::map<std::string, CefRefPtr<CefDictionaryValue>> reader_preferences_;
+  struct PermissionRequest {
+    int id, tab_id, generation;
+    uint64_t cef_request;
+    std::string url, origin;
+    std::vector<std::string> permissions;
+    std::function<void(bool)> done;
+  };
+  std::vector<PermissionRequest> permission_requests_;
+  int next_permission_id_ = 1;
   std::string find_text_;
   int find_browser_id_ = 0;
 

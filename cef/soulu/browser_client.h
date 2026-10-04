@@ -54,6 +54,8 @@ class BrowserClient final : public CefClient,
       const CefString&, uint32_t, CefRefPtr<CefMediaAccessCallback>) override;
   bool OnShowPermissionPrompt(CefRefPtr<CefBrowser>, uint64_t, const CefString&,
       uint32_t, CefRefPtr<CefPermissionPromptCallback>) override;
+  void OnDismissPermissionPrompt(CefRefPtr<CefBrowser>, uint64_t,
+      cef_permission_request_result_t) override;
   void OnLoadEnd(CefRefPtr<CefBrowser>, CefRefPtr<CefFrame>, int) override;
   bool OnBeforeBrowse(CefRefPtr<CefBrowser>, CefRefPtr<CefFrame>,
       CefRefPtr<CefRequest>, bool, bool) override;

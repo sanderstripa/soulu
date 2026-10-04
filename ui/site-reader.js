@@ -3,7 +3,7 @@
   const api = window.browserShell, safe = window.souluReaderSafe;
   if (!api?.getCurrentSite || !safe) return;
   let state = {}, site = null, key = '', revision = 0, anchor = null, articleKey = '', saving = Promise.resolve(), probing = false;
-  let menuSignature = '', preferencesSignature = '', reloadMenu = null;
+  let menuSignature = '', preferencesSignature = '', reloadMenu = null, level = 'main', picking = '', promptId = 0;
   const el = (tag, cls, text) => { const n = document.createElement(tag); n.className = cls || ''; if (text !== undefined) n.textContent = text; return n; };
   const error = e => { status.textContent = e.message || String(e); status.hidden = false; if (!reader.hidden) { readerNotice.textContent = status.textContent; readerNotice.hidden = false; } };
   const button = (text, fn, cls = '') => { const n = el('button', cls, text); n.type = 'button'; n.onclick = () => Promise.resolve().then(fn).catch(error); return n; };
@@ -21,8 +21,8 @@
   style.setAttribute('aria-expanded', 'false');
   readerBar.append(exit, el('span', '', 'Режим чтения'), style); reader.append(readerBar, readerNotice, settings, article);
   let linkMenu = null;
-  async function expandSurface() {
-    await api.setPopover(true, 'site-reader');
+  async function expandSurface(owner = 'site-reader') {
+    await api.setPopover(true, owner);
     const current = await api.getState();
     const height = current.clientHeight || 200;
     // A bridge reply precedes CEF's asynchronous WasResized frame. Focusing
@@ -42,10 +42,10 @@
   function token(snapshot = site) { return {tabId: snapshot.tabId, url: snapshot.url, generation: snapshot.generation}; }
   async function act(action, values = {}, snapshot = site) {
     if (!snapshot) return;
-    if (action === 'blocking' && !menu.hidden) reloadMenu = token(snapshot);
+    if (['blocking', 'reset'].includes(action) && !menu.hidden) reloadMenu = token(snapshot);
     let result;
     try { result = await api.siteAction(action, {...token(snapshot), ...values}); }
-    catch (e) { if (action === 'blocking') reloadMenu = null; throw e; }
+    catch (e) { if (['blocking', 'reset'].includes(action)) reloadMenu = null; throw e; }
     if (result?.tabId && key === `${result.tabId}|${result.url}|${result.generation}`) {
       site = result; renderReader(); if (!menu.hidden) renderMenu();
     }
@@ -61,6 +61,8 @@
     menu.style.top = `${top}px`;
     menu.style.maxHeight = `max(0px, calc(100% - ${top + 8}px))`;
     const toolbar = (state.settings?.layout === 'classic' ? 82 : 48) + (state.bookmarksBarVisible ? 28 : 0);
+    prompt.style.top = `${toolbar + 8}px`;
+    prompt.style.maxHeight = `max(0px, calc(100% - ${toolbar + 16}px))`;
     findBox.style.top = `${toolbar + 8}px`;
     findBox.style.maxHeight = `max(0px, calc(100% - ${toolbar + 16}px))`;
   }
@@ -72,7 +74,7 @@
     // Request native bounds before exposing or focusing client-area content.
     await expandSurface();
     if (request !== revision) { updateSurface(); return; }
-    site = snapshot; probing = Boolean(site.origin && !site.mainLoading && !site.readerActive); menu.hidden = shield.hidden = false; status.hidden = true;
+    level = 'main'; picking = ''; menuSignature = ''; site = snapshot; probing = Boolean(site.origin && !site.mainLoading && !site.readerActive); menu.hidden = shield.hidden = false; status.hidden = true;
     anchor?.setAttribute('aria-expanded', 'true'); renderMenu(); position();
     menu.querySelector('button:not(:disabled)')?.focus();
     if (site.origin && !site.mainLoading && !site.readerActive) {
@@ -88,54 +90,121 @@
     control.value = String(value); control.onchange = () => Promise.resolve(change(control.value)).catch(error);
     row.append(el('span', '', label), control); return row;
   }
+  const names = {geolocation:'Геолокация',camera:'Камера',microphone:'Микрофон',notifications:'Уведомления',sound:'Звук',popups:'Всплывающие окна',downloads:'Загрузки'};
+  const paths = {
+    geolocation:'M10 18s6-6 6-11a6 6 0 1 0-12 0c0 5 6 11 6 11Z M12 7a2 2 0 1 1-4 0 2 2 0 0 1 4 0',
+    camera:'M3 5h10v10H3z M13 8l4-2v8l-4-2',
+    microphone:'M7 4a3 3 0 0 1 6 0v6a3 3 0 0 1-6 0z M4 9v1a6 6 0 0 0 12 0V9 M10 16v3 M7 19h6',
+    notifications:'M4 14c2-2 1-4 2-7a4 4 0 0 1 8 0c1 3 0 5 2 7H4 M8 17a2 2 0 0 0 4 0 M10 2V1',
+    sound:'M3 8h3l4-4v12l-4-4H3z M13 6c3 2 3 6 0 8 M15 3c5 4 5 10 0 14',
+    popups:'M11 3h6v6 M17 3l-8 8 M7 4H3v13h13v-4',
+    downloads:'M10 2v11 M6 9l4 4 4-4 M3 17h14',
+    reader:'M4 2h12v16H4z M7 6h6 M7 9h6 M7 12h4',
+    find:'M13 8a5 5 0 1 1-10 0 5 5 0 0 1 10 0 M12 12l5 5',
+    zoom:'M13 8a5 5 0 1 1-10 0 5 5 0 0 1 10 0 M12 12l5 5 M5 8h6 M8 5v6',
+    settings:'M3 5h14 M3 10h14 M3 15h14 M7 3v4 M13 8v4 M8 13v4',
+    shield:'M10 2l7 3v5c0 4-7 8-7 8S3 14 3 10V5z',
+    trash:'M3 5h14 M7 5V2h6v3 M5 5l1 13h8l1-13 M8 8v7 M12 8v7',
+    reset:'M3 7a7 7 0 1 1 0 6 M3 2v5h5',
+    back:'M11 4l-6 6 6 6 M5 10h12',
+    chevron:'M8 5l5 5-5 5',
+    globe:'M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0 M2 10h16 M10 2c-5 5-5 11 0 16 M10 2c5 5 5 11 0 16',
+    close:'M5 5l10 10 M15 5L5 15'
+  };
+  function glyph(name) {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 20 20'); svg.setAttribute('aria-hidden', 'true'); svg.classList.add('site-icon');
+    const path = document.createElementNS(svg.namespaceURI, 'path'); path.setAttribute('d', paths[name] || paths.globe); svg.append(path); return svg;
+  }
+  function row(text, name, fn, value = '', chevron = false) {
+    const b = button('', fn, 'site-row'); b.setAttribute('aria-label', text);
+    b.append(glyph(name), el('span', 'site-row-label', text));
+    if (value) b.append(el('span', 'site-row-value', value));
+    if (chevron) b.append(glyph('chevron')); return b;
+  }
+  function toggle(label, checked, change, name) {
+    const wrap = el('div', 'site-row'); if (name) wrap.append(glyph(name)); wrap.append(el('span', 'site-row-label', label));
+    const b = button('', () => change(!checked), 'soulu-site-toggle'); b.setAttribute('role', 'switch');
+    b.setAttribute('aria-checked', String(checked)); b.setAttribute('aria-label', label); wrap.append(b); return wrap;
+  }
+  const divider = () => el('hr', 'site-divider');
+  function navigateLevel(next, permission = '') {
+    const backwards = next === 'main' || (next === 'settings' && level !== 'main');
+    level = next; picking = permission; menuSignature = ''; renderMenu(); position();
+    if (!matchMedia('(prefers-reduced-motion: reduce)').matches) content.animate(
+      [{opacity:0,transform:`translateX(${backwards ? -6 : 6}px)`},{opacity:1,transform:'translateX(0)'}],
+      {duration:180,easing:'cubic-bezier(.22,1,.36,1)'});
+    content.querySelector('button:not(:disabled)')?.focus();
+  }
+  function permissionValue(name) {
+    const override = site.rules.sites?.[site.domain]?.[name];
+    return override === undefined ? 'По умолчанию' : name === 'sound' ? ['Разрешено','Приглушено','Запрещено'][override] : ['Разрешено','Спрашивать','Запрещено'][override];
+  }
   function renderMenu() {
     if (!site) return;
-    const signature = JSON.stringify([probing, ...['tabId','url','generation','origin','domain','favicon','secureConnection','readerActive','readerAvailable','mainLoading','zoom','rules'].map(name => site[name]), site.adblock?.ready, site.adblock?.active, site.adblock?.blockedRequests]);
+    const signature = JSON.stringify([level,picking,probing,...['tabId','url','generation','origin','domain','favicon','secureConnection','readerActive','readerAvailable','mainLoading','zoom','rules'].map(name => site[name]),site.adblock?.ready,site.adblock?.active,site.adblock?.blockedRequests]);
     if (content.childElementCount && menuSignature === signature) return;
     menuSignature = signature;
-    const expanded = content.querySelector('details')?.open, focused = content.contains(document.activeElement), focusedLabel = document.activeElement?.getAttribute('aria-label');
-    content.replaceChildren();
-    const head = el('header', 'site-heading'), icon = el('img');
-    // Only a web favicon or a local data bitmap is accepted; never markup.
-    if (safe.webURL(site.favicon, site.url) || /^data:image\/(png|jpeg|webp|x-icon);base64,/i.test(site.favicon || '')) {
-      icon.src = site.favicon; icon.alt = ''; icon.onerror = () => icon.remove(); head.append(icon);
+    const focusedLabel = content.contains(document.activeElement) && document.activeElement?.getAttribute('aria-label');
+    content.replaceChildren(); menu.dataset.level = level;
+    if (level !== 'main') {
+      const title = level === 'settings' ? 'Настройки сайта' : level === 'picker' ? names[picking] : level === 'clear' ? 'Очистить данные сайта?' : 'Сбросить настройки сайта?';
+      const header = row(title, 'back', () => navigateLevel(level === 'settings' ? 'main' : 'settings')); header.classList.add('site-back'); content.append(header);
+      content.append(el('small', 'site-hint site-domain', site.domain), divider());
+      if (level === 'settings') {
+        for (const [name, label] of Object.entries(names)) if (Object.hasOwn(site.rules.defaults, name)) {
+          const b = row(label, name, () => navigateLevel('picker', name), permissionValue(name), true); b.dataset.permission = name; content.append(b);
+        }
+        content.append(divider(), row('Очистить данные сайта…', 'trash', () => navigateLevel('clear')),
+          row('Сбросить настройки сайта', 'reset', () => navigateLevel('reset')));
+      } else if (level === 'picker') {
+        const current = site.rules.sites?.[site.domain]?.[picking] ?? -1;
+        const labels = picking === 'sound' ? ['Разрешить','Приглушить','Запретить'] : ['Разрешить','Спрашивать','Запретить'];
+        for (const [value, label] of [[-1,'По умолчанию'], ...labels.map((v, i) => [i, v])]) {
+          const b = button(label, async () => { await act('permission', {permission:picking,value}); navigateLevel('settings'); }, 'site-row site-choice');
+          b.dataset.value = value; b.setAttribute('aria-pressed', String(current === value));
+          if (current === value) b.append(el('span', 'site-check', '✓')); content.append(b);
+        }
+        const defaults = site.rules.defaults[picking]; content.append(el('small', 'site-hint', `По умолчанию: ${labels[defaults]}`));
+      } else {
+        content.append(el('p', 'site-confirm-text', level === 'clear'
+          ? `Удалить localStorage, sessionStorage, IndexedDB, Cache Storage и service workers для ${site.origin}? Cookies, HTTP-кэш, пароли и другие сайты сохранятся.`
+          : 'Удалить исключения разрешений и рекламы для этого домена? Будут применены общие настройки. Данные сайта сохранятся.'));
+        const actions = el('div', 'site-confirm-actions');
+        actions.append(button('Отмена', () => navigateLevel('settings')));
+        const confirm = button(level === 'clear' ? 'Очистить' : 'Сбросить', async () => {
+          const action = level; confirm.disabled = true;
+          try { const result = await act(action, action === 'clear' ? {confirmed:true} : {});
+            navigateLevel('settings'); status.textContent = action === 'clear' && result?.cleared ? 'Данные сайта очищены. Cookies и HTTP-кэш сохранены.' : 'Настройки сайта сброшены.'; status.hidden = false;
+          } finally { confirm.disabled = false; }
+        }, 'site-primary'); confirm.dataset.confirm = level; actions.append(confirm); content.append(actions);
+      }
+    } else {
+      const head = el('header', 'site-heading'), identity = el('div', 'site-identity'); identity.append(glyph('globe'));
+      if (safe.webURL(site.favicon, site.url) || /^data:image\/(png|jpeg|webp|x-icon);base64,/i.test(site.favicon || '')) {
+        const icon = el('img'); icon.src = site.favicon; icon.alt = ''; icon.onload = () => identity.firstChild?.classList.add('site-fallback-hidden'); icon.onerror = () => icon.remove(); identity.append(icon);
+      }
+      const info = el('div'); info.append(el('strong', '', site.domain || 'Внутренняя страница'), el('small', 'site-url', site.url));
+      info.append(el('small', '', site.origin?.startsWith('https:') ? (site.secureConnection ? 'HTTPS · защищённое соединение' : 'HTTPS · защита не подтверждена') : site.origin ? 'HTTP · незашифрованное соединение' : 'Настройки сайта недоступны'));
+      head.append(identity, info); content.append(head);
+      const read = row(site.readerActive ? 'Выйти из режима чтения' : 'Показать режим чтения', 'reader', async () => { await act(site.readerActive ? 'reader.exit' : 'reader.enter'); close(); });
+      read.classList.add('site-reader-action'); read.dataset.readerAction = ''; read.disabled = !site.readerActive && !site.readerAvailable; content.append(read);
+      if (read.disabled) content.append(el('small', 'site-hint', site.mainLoading ? 'Дождитесь загрузки страницы' : probing ? 'Проверяем статью…' : 'На этой странице статья не определена'));
+      const find = row('Найти на странице · Ctrl+F', 'find', async () => { close(); await act('find'); }); find.disabled = !site.origin; content.append(find);
+      const zoom = el('div', 'site-row site-zoom'); zoom.append(glyph('zoom'), el('span', 'site-row-label', 'Масштаб'));
+      for (const [command, label, text] of [['out','Уменьшить масштаб','−'],['reset','Сбросить масштаб',`${site.zoom || 100}%`],['in','Увеличить масштаб','+']]) {
+        const b = button(text, () => act('zoom', {command})); b.disabled = !site.origin; b.setAttribute('aria-label', label); zoom.append(b);
+      }
+      content.append(zoom);
+      if (site.origin && site.rules) {
+        content.append(divider(), row('Настройки сайта…', 'settings', () => navigateLevel('settings'), '', true));
+        const blocking = site.rules.blocking, override = blocking.sites[site.domain], checked = override ?? blocking.enabled;
+        content.append(toggle('Блокировка рекламы на этом сайте', Boolean(checked), checked => act('blocking', {value:checked ? 1 : 0}), 'shield'));
+        const protection = site.adblock;
+        content.append(el('small', 'site-hint site-blocking-hint', protection && !protection.ready ? 'Фильтры недоступны' : `${override === undefined ? 'Глобально' : 'Для сайта'} ${checked ? 'включена' : 'выключена'}${protection?.active ? ` · Заблокировано: ${protection.blockedRequests || 0}` : ''}`));
+      }
     }
-    const info = el('div'); info.append(el('strong', '', site.domain || 'Внутренняя страница'), el('small', '', site.origin || site.url));
-    info.append(el('small', '', site.origin?.startsWith('https:') ? (site.secureConnection ? 'HTTPS · защищённое соединение' : 'HTTPS · защита соединения не подтверждена') : site.origin ? 'HTTP · соединение не зашифровано' : 'Настройки сайта недоступны'));
-    head.append(info); content.append(head);
-    const read = button(site.readerActive ? 'Выйти из режима чтения' : 'Показать режим чтения', async () => { await act(site.readerActive ? 'reader.exit' : 'reader.enter'); close(); });
-    read.dataset.readerAction = ''; read.disabled = !site.readerActive && !site.readerAvailable;
-    content.append(read);
-    if (!site.readerActive && !site.readerAvailable) content.append(el('small', 'site-hint', site.mainLoading ? 'Дождитесь загрузки страницы' : probing ? 'Проверяем, подходит ли страница для чтения…' : 'На этой странице статья не определена.'));
-    const zoom = el('div', 'site-zoom');
-    zoom.append(el('span', '', 'Масштаб'), button('−', () => act('zoom', {command: 'out'})), button(`${site.zoom || 100}%`, () => act('zoom', {command: 'reset'})), button('+', () => act('zoom', {command: 'in'})));
-    for (const b of zoom.querySelectorAll('button')) b.disabled = !site.origin;
-    zoom.querySelectorAll('button')[1].title = 'Сбросить к 100%'; content.append(zoom);
-    const find = button('Найти на странице · Ctrl+F', async () => { close(); await act('find'); }); find.disabled = !site.origin; content.append(find);
-    if (!site.origin || !site.rules) return;
-    const rules = site.rules, details = el('details', 'site-permissions'); details.append(el('summary', '', 'Настройки сайта · разрешения'));
-    details.open = Boolean(expanded);
-    const names = {geolocation:'Геолокация',camera:'Камера',microphone:'Микрофон',notifications:'Уведомления',sound:'Звук',popups:'Всплывающие окна',downloads:'Загрузки'};
-    for (const [name, label] of Object.entries(names)) {
-      const labels = name === 'sound' ? ['Разрешить', 'Приглушить', 'Блокировать'] : ['Разрешить', 'Спрашивать', 'Запретить'];
-      details.append(select(label, [[-1, `По умолчанию: ${labels[rules.defaults[name]]}`], ...labels.map((s, i) => [i, s])], rules.sites?.[site.domain]?.[name] ?? -1, value => act('permission', {permission:name, value:Number(value)})));
-    }
-    details.append(button('Подробное управление', () => { close(); return api.openSettingsWindow(); })); content.append(details);
-    const blocking = rules.blocking, override = blocking.sites[site.domain], checked = override ?? blocking.enabled;
-    const toggle = el('label', 'site-control'), check = el('input'); check.type = 'checkbox'; check.checked = Boolean(checked);
-    check.onchange = () => act('blocking', {value:check.checked ? 1 : 0}).catch(error);
-    toggle.append(el('span', '', 'Блокировка рекламы на этом сайте'), check); content.append(toggle);
-    content.append(el('small', 'site-hint', `Глобально: ${blocking.enabled ? 'включена' : 'выключена'} · ${override === undefined ? 'по умолчанию' : 'исключение сайта'}`));
-    const protection = site.adblock;
-    if (protection) content.append(el('small', 'site-hint', !protection.ready
-      ? 'Фильтры недоступны — защита не активна'
-      : `${protection.active ? 'Защита активна' : 'Защита выключена'} · Заблокировано: ${protection.blockedRequests || 0}`));
-    if (override !== undefined) content.append(button('Для рекламы: по умолчанию', () => act('blocking', {value:2})));
-    content.append(button('Данные сайта…', async () => {
-      const result = await act('clear'); if (result?.cleared) { status.textContent = 'Хранилища origin очищены, включая sessionStorage. Cookies и HTTP-кэш сохранены.'; status.hidden = false; }
-    }), button('Сбросить настройки сайта', () => act('reset')));
-    content.append(el('small', 'site-hint', 'Сброс удаляет только исключения разрешений и рекламы для этого домена.'));
-    if (focused) { const target = focusedLabel && [...content.querySelectorAll('[aria-label]')].find(n => n.getAttribute('aria-label') === focusedLabel); (target || content.querySelector('button:not(:disabled)'))?.focus(); }
+    if (focusedLabel) [...content.querySelectorAll('[aria-label]')].find(n => n.getAttribute('aria-label') === focusedLabel)?.focus();
   }
   function preferences(changes) {
     const snapshot = site;
@@ -175,17 +244,60 @@
     if (settings.childElementCount && preferencesSignature === signature) return;
     preferencesSignature = signature;
     const wasFocused = settings.contains(document.activeElement), label = document.activeElement?.getAttribute('aria-label');
-    settings.replaceChildren(select('Тема', [['light','Светлая'],['sepia','Сепия'],['dark','Тёмная']], prefs.theme, theme => preferences({theme})),
-      select('Шрифт', [['sans','Sans-serif'],['serif','Serif'],['system','Системный']], prefs.font, font => preferences({font})),
-      select('Ширина', [[0,'Узкая'],[1,'Средняя'],[2,'Широкая']], prefs.width, width => preferences({width:Number(width)})),
-      select('Интервал', [[0,'Обычный'],[1,'Свободный'],[2,'Широкий']], prefs.spacing, spacing => preferences({spacing:Number(spacing)})));
-    const size = el('div', 'site-control'); size.append(el('span', '', `Текст · ${prefs.size}`));
+    settings.replaceChildren(el('h2', 'reader-palette-title', 'Оформление · Aa'));
+    const themes = el('div', 'reader-swatches'); themes.setAttribute('role', 'group'); themes.setAttribute('aria-label', 'Тема статьи');
+    for (const [theme, label] of [['light','Светлая'],['sepia','Тёплая'],['gray','Серая'],['dark','Тёмная']]) {
+      const b = button('', () => preferences({theme}), 'reader-swatch'); b.dataset.theme = theme;
+      b.title = label; b.setAttribute('aria-label', label); b.setAttribute('aria-pressed', String(prefs.theme === theme)); themes.append(b);
+    }
+    settings.append(el('span', 'reader-palette-label', 'Тема'), themes, divider());
+    settings.append(select('Шрифт', [['serif','Georgia'],['sans','Arial'],['system','Системный (Segoe UI)']], prefs.font, font => preferences({font})));
+    const size = el('div', 'site-control reader-size'); size.append(el('span', '', 'Размер текста'));
+    const controls = el('div', 'reader-segments');
     const minus = button('A−', () => preferences({size:Math.max(14, site.preferences.size - 2)})), plus = button('A+', () => preferences({size:Math.min(32, site.preferences.size + 2)}));
-    minus.disabled = prefs.size <= 14; plus.disabled = prefs.size >= 32; size.append(minus, plus); settings.append(size);
-    const images = el('label', 'site-control'), check = el('input'); check.type = 'checkbox'; check.checked = prefs.images;
-    check.setAttribute('aria-label', 'Изображения'); check.onchange = () => preferences({images:check.checked}).catch(error);
-    images.append(el('span', '', 'Изображения'), check); settings.append(images);
+    minus.setAttribute('aria-label', 'Уменьшить размер текста'); plus.setAttribute('aria-label', 'Увеличить размер текста');
+    minus.disabled = prefs.size <= 14; plus.disabled = prefs.size >= 32;
+    controls.append(minus, el('output', '', String(prefs.size)), plus); size.append(controls); settings.append(size, divider());
+    for (const [name, title, labels] of [['width','Ширина',['Узкая','Средняя','Широкая']],['spacing','Интервал',['Плотный','Обычный','Свободный']]]) {
+      const group = el('div', 'reader-segments reader-layout'); group.setAttribute('role', 'group'); group.setAttribute('aria-label', title);
+      for (let i = 0; i < 3; i++) {
+        const b = button('', () => preferences({[name]:i}), 'reader-layout-option'); b.dataset[name] = i;
+        b.setAttribute('aria-label', `${title}: ${labels[i]}`); b.title = labels[i]; b.setAttribute('aria-pressed', String(prefs[name] === i));
+        const lines = el('span', 'reader-lines'); for (let j = 0; j < 3; j++) lines.append(el('i')); b.append(lines); group.append(b);
+      }
+      settings.append(el('span', 'reader-palette-label', title), group);
+    }
+    settings.append(divider(), toggle('Изображения', prefs.images, images => preferences({images})));
     if (wasFocused && label) [...settings.querySelectorAll('[aria-label]')].find(n => n.getAttribute('aria-label') === label)?.focus();
+  }
+  const prompt = el('section', 'soulu-permission-prompt'); prompt.hidden = true;
+  prompt.setAttribute('role', 'dialog'); prompt.setAttribute('aria-label', 'Разрешение сайта'); document.body.append(prompt);
+  async function respond(decision) {
+    const id = promptId; if (!id) return;
+    for (const b of prompt.querySelectorAll('button')) b.disabled = true;
+    try { await api.respondPermission({id, decision}); }
+    catch (e) { if (promptId === id) error(e); }
+    finally { await renderPrompt(await api.getState()); }
+  }
+  async function renderPrompt(next) {
+    const request = next.permissionPrompt;
+    if (!request) { promptId = 0; prompt.hidden = true; await api.setPopover(false, 'permissions'); return; }
+    const fresh = promptId !== request.id; promptId = request.id;
+    if (fresh) {
+      close(); settings.hidden = true; style.setAttribute('aria-expanded', 'false');
+      const header = el('header', 'site-heading'); const identity = el('div');
+      identity.append(el('strong', '', request.domain), el('small', '', request.origin));
+      const dismiss = button('', () => respond('dismiss'), 'site-prompt-dismiss'); dismiss.setAttribute('aria-label', 'Закрыть запрос'); dismiss.append(glyph('close'));
+      header.append(glyph(request.permissions[0]), identity, dismiss);
+      const message = el('p', 'site-prompt-message', request.permissions.includes('popups')
+        ? 'Разрешить всплывающие окна? После выбора повторите действие на сайте.'
+        : `Запрашивает доступ: ${request.permissions.map(n => names[n]?.toLowerCase() || n).join(', ')}`);
+      const actions = el('div', 'site-confirm-actions'); actions.append(button('Запретить', () => respond('block')), button('Разрешить', () => respond('allow'), 'site-primary'));
+      prompt.replaceChildren(header, message, actions);
+      await expandSurface('permissions'); if (promptId !== request.id) return;
+      prompt.hidden = false; position(); prompt.querySelector('button')?.focus();
+    }
+    for (const b of prompt.querySelectorAll('button')) b.disabled = false;
   }
   function link(event, mode) {
     const a = event.target.closest('.reader-body a[href]'); if (!a) return;
@@ -211,19 +323,22 @@
   findInput.oninput = () => api.find(findInput.value); findInput.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); api.find(findInput.value, !e.shiftKey); } };
   api.onRequestFind(async () => { await expandSurface(); findBox.hidden = false; close(); position(); findInput.focus(); findInput.select(); });
   document.addEventListener('pointerdown', e => {
+    if (!prompt.hidden && !prompt.contains(e.target)) respond('dismiss');
     if (linkMenu && !linkMenu.contains(e.target)) { closeLink(); updateSurface(); }
     if (!settings.hidden && !settings.contains(e.target) && e.target !== style) { settings.hidden = true; style.setAttribute('aria-expanded', 'false'); }
   });
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') { if (!menu.hidden) { e.preventDefault(); close(true); } else if (!findBox.hidden) closeFind(); else if (!settings.hidden) { settings.hidden = true; style.setAttribute('aria-expanded', 'false'); } else closeLink(); }
-    if (e.key === 'Tab' && !menu.hidden) {
-      const items = [...menu.querySelectorAll('button:not(:disabled),select,summary,input')].filter(n => n.getClientRects().length);
+    if (e.key === 'Escape' && !prompt.hidden) { e.preventDefault(); respond('dismiss'); return; }
+    if (e.key === 'Escape') { if (!menu.hidden) { e.preventDefault(); if (level === 'main') close(true); else navigateLevel(level === 'settings' ? 'main' : 'settings'); } else if (!findBox.hidden) closeFind(); else if (!settings.hidden) { settings.hidden = true; style.setAttribute('aria-expanded', 'false'); } else closeLink(); }
+    if (e.key === 'Tab' && (!menu.hidden || !prompt.hidden || !settings.hidden)) {
+      const surface = !prompt.hidden ? prompt : !menu.hidden ? menu : settings;
+      const items = [...surface.querySelectorAll('button:not(:disabled),select,input')].filter(n => n.getClientRects().length);
       if (e.shiftKey && document.activeElement === items[0]) { e.preventDefault(); items.at(-1)?.focus(); }
       else if (!e.shiftKey && document.activeElement === items.at(-1)) { e.preventDefault(); items[0]?.focus(); }
     }
   });
   async function sync(next) {
-    state = next; const readerTop = (state.settings?.layout === 'classic' ? 82 : 48) + (state.bookmarksBarVisible ? 28 : 0);
+    state = next; await renderPrompt(next); const readerTop = (state.settings?.layout === 'classic' ? 82 : 48) + (state.bookmarksBarVisible ? 28 : 0);
     reader.style.top = `${readerTop}px`; reader.style.setProperty('--reader-top', `${readerTop}px`);
     reader.style.left = state.bookmarksSidebarVisible ? '276px' : '0';
     const nextKey = `${state.activeTabId}|${state.page?.url || 'about:blank'}|${state.page?.generation}`;

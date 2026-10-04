@@ -19,7 +19,7 @@ on:
         default: ""
         type: string
   push:
-    branches: [main, codex/settings-overlay, codex/cef-stable-update, codex/beta-motion, codex/beta-typography, codex/beta-toolbar, codex/beta-adblock]
+    branches: [main, codex/settings-overlay, codex/cef-stable-update, codex/beta-motion, codex/beta-typography, codex/beta-toolbar, codex/beta-adblock, codex/beta-site-reader]
     tags: [beta-1.0.53]
     paths:
       - "cef/**"
@@ -243,6 +243,23 @@ jobs:
           path: |
             browser/artifacts/adblock*.json
             browser/artifacts/adblock-public/
+          if-no-files-found: ignore
+
+      - name: Test Soulu site permissions and reading palette
+        shell: pwsh
+        run: |
+          python -m pip install --disable-pip-version-check websocket-client pillow
+          python browser/scripts/test-cef-site-surfaces.py "$env:build_dir/Soulu.exe" browser/artifacts/site-surfaces.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Upload site surface evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Soulu-site-surfaces-${{ github.sha }}
+          path: |
+            browser/artifacts/site-surfaces.json
+            browser/artifacts/site-surfaces-visuals/
           if-no-files-found: ignore
 
       - name: Test native web platform, GPU, media and downloads

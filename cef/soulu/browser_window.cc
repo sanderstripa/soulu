@@ -654,15 +654,39 @@ std::shared_ptr<SitePolicy> BrowserWindow::PolicyForTab(int id) {
   if(!policy)policy=std::make_shared<SitePolicy>(profile);
   return policy;
 }
+void BrowserWindow::RequestSitePermissions(int id,const std::string& input,
+    const std::vector<std::string>& permissions,std::function<void(bool)> done,uint64_t cef_request) {
+  CEF_REQUIRE_UI_THREAD();
+  auto* tab=FindTab(id);auto policy=PolicyForTab(id);const auto origin=WebOrigin(input);
+  if(!tab||!policy||origin.empty()||permissions.empty()||id!=active_tab_id_||closing_){done(false);return;}
+  bool ask=false;
+  for(const auto& name:permissions){int rule=policy->Rule(origin,name);
+    if(rule==2){done(false);return;}if(rule==1)ask=true;}
+  if(!ask){done(true);return;}
+  if(permission_requests_.size()>=8){done(false);return;}
+  permission_requests_.push_back({next_permission_id_++,id,tab->document_generation,
+      cef_request,tab->url,origin,permissions,std::move(done)});
+  Layout();EmitState();
+}
+void BrowserWindow::CancelSitePermissions(int id,uint64_t cef_request,bool notify) {
+  std::vector<PermissionRequest> cancelled;
+  for(auto it=permission_requests_.begin();it!=permission_requests_.end();){
+    if((!id||it->tab_id==id)&&(!cef_request||it->cef_request==cef_request)){
+      cancelled.push_back(std::move(*it));it=permission_requests_.erase(it);
+    }else ++it;
+  }
+  for(auto& request:cancelled)if(notify)request.done(false);
+  if(!cancelled.empty()){Layout();EmitState();}
+}
 bool BrowserWindow::AllowSite(int id,const std::string& origin,const std::string& permission) {
   auto policy=PolicyForTab(id);if(!policy||WebOrigin(origin).empty())return false;
-  int rule=policy->Rule(origin,permission);if(rule==0)return true;if(rule==2)return false;
-  const std::map<std::string,std::wstring> labels={{"geolocation",L"геолокацию"},
-    {"camera",L"камеру"},{"microphone",L"микрофон"},{"notifications",L"уведомления"},
-    {"popups",L"всплывающее окно"},{"downloads",L"загрузку файла"}};
-  auto label=labels.find(permission);if(label==labels.end())return false;
-  const auto text=CefString(WebOrigin(origin)).ToWString()+L" запрашивает "+label->second+L". Разрешить один раз?";
-  return TypographyMessageBox(hwnd_,text.c_str(),L"Разрешение сайта — Soulu",MB_YESNO|MB_ICONQUESTION|MB_DEFBUTTON2)==IDYES;
+  const int rule=policy->Rule(origin,permission);
+  if(rule==1){
+    // CEF's synchronous popup gate cannot keep the opener alive while awaiting UI.
+    // Save the choice for the site's next attempt; do not manufacture a new window.
+    RequestSitePermissions(id,origin,{permission},[](bool){});
+  }
+  return rule==0;
 }
 void BrowserWindow::ApplySiteSound() {
   for(auto& tab:tabs_)if(tab.browser){auto policy=PolicyForTab(tab.id);
@@ -1127,7 +1151,7 @@ void BrowserWindow::SwitchTab(int id) {
     settings_preview_=nullptr;settings_loaded_=nullptr;settings_staged_=nullptr;
     active_profile_id_=tab->profile_id;LoadProfileSettings();RefreshSettingsProfile();
   }
-  if (active_tab_id_ != id) CaptureThumbnail();
+  if (active_tab_id_ != id) { CancelSitePermissions(active_tab_id_); CaptureThumbnail(); }
   active_tab_id_ = id;
   if(!tab->incognito)last_normal_active_[tab->profile_id]=id;
   Layout();
@@ -1135,6 +1159,7 @@ void BrowserWindow::SwitchTab(int id) {
 }
 
 void BrowserWindow::CloseTab(int id) {
+  CancelSitePermissions(id);
   auto it = std::find_if(tabs_.begin(), tabs_.end(),
       [id](const Tab& tab) { return tab.id == id; });
   if (it == tabs_.end()) return;
@@ -1159,6 +1184,7 @@ void BrowserWindow::CloseTab(int id) {
 void BrowserWindow::BrowserClosed(CefRefPtr<CefBrowser> browser, int tab_id,
                                   bool shell) {
 
+  CancelSitePermissions(tab_id);
   if (shell) { if (surface_) surface_->Detach(); shell_ = nullptr; }
   else {
     auto* tab = FindTab(tab_id);
@@ -1348,7 +1374,7 @@ BrowserWindow::Geometry BrowserWindow::CurrentGeometry() const {
   g.sidebar = sidebar_visible_ && bookmarks_sidebar_ ? px(276) : 0;
   g.panel = px(std::max(0, right_panel_width_));
   const auto* active=const_cast<BrowserWindow*>(this)->ActiveTab();
-  g.shell_height = (active&&active->reader_active) || popover_visible_ || overview_visible_ || sidebar_visible_ || sidebar_motion_ || g.panel > 0 ? g.height :
+  g.shell_height = (active&&active->reader_active) || !permission_requests_.empty() || popover_visible_ || overview_visible_ || sidebar_visible_ || sidebar_motion_ || g.panel > 0 ? g.height :
       std::min(g.height, std::max(g.toolbar, px(suggestions_height_)));
   g.content = CefRect(g.sidebar, g.toolbar,
       std::max(1, g.width - g.sidebar - g.panel), std::max(1, g.height - g.toolbar));
@@ -1430,6 +1456,16 @@ void BrowserWindow::ApplyContentTheme() {
 
 CefRefPtr<CefDictionaryValue> BrowserWindow::State() const {
   auto state = CefDictionaryValue::Create();
+  if(!permission_requests_.empty()&&!settings_overlay_){
+    const auto& request=permission_requests_.front();
+    if(request.tab_id==active_tab_id_){auto prompt=CefDictionaryValue::Create();
+      prompt->SetInt("id",request.id);prompt->SetInt("tabId",request.tab_id);
+      prompt->SetInt("generation",request.generation);prompt->SetString("origin",request.origin);
+      prompt->SetString("domain",SiteDomain(request.origin));auto names=CefListValue::Create();
+      for(size_t i=0;i<request.permissions.size();++i)names->SetString(i,request.permissions[i]);
+      prompt->SetList("permissions",names);state->SetDictionary("permissionPrompt",prompt);
+    }
+  }
   const auto client = CurrentGeometry();
   state->SetInt("clientHeight", static_cast<int>(std::ceil(client.height / client.scale)));
   state->SetBool("settingsOverlayOpen", settings_overlay_ != nullptr);
@@ -1539,6 +1575,7 @@ void BrowserWindow::EmitState() { Emit("state", Wrap(State())); }
 void BrowserWindow::RequestFind() { if (settings_overlay_) { FocusSettings(); return; } if(surface_)surface_->Focus();Emit("requestFind",EmptyValue()); }
 
 void BrowserWindow::ReaderDocumentNavigation(int id) {
+  CancelSitePermissions(id);
   if(auto* tab=FindTab(id)){++tab->document_generation;tab->main_loading=true;tab->reader_active=false;tab->reader_article=nullptr;}
   Layout();EmitState();
 }
@@ -1556,7 +1593,7 @@ CefRefPtr<CefDictionaryValue> BrowserWindow::ReaderPreferences(const Tab& tab) {
   auto saved=tab.incognito?nullptr:ReadJson(ProfileRoot(key)/L"soulu-reader.json");
   if(saved&&saved->GetType()==VTYPE_DICTIONARY){auto d=saved->GetDictionary();
     const auto theme=d->GetString("theme").ToString(),font=d->GetString("font").ToString();
-    if(theme=="light"||theme=="sepia"||theme=="dark")prefs->SetString("theme",theme);
+    if(theme=="light"||theme=="sepia"||theme=="gray"||theme=="dark")prefs->SetString("theme",theme);
     if(font=="sans"||font=="serif"||font=="system")prefs->SetString("font",font);
     if(d->HasKey("size"))prefs->SetInt("size",std::clamp(d->GetInt("size"),14,32));
     if(d->HasKey("width"))prefs->SetInt("width",std::clamp(d->GetInt("width"),0,2));
@@ -1637,7 +1674,7 @@ bool BrowserWindow::HandleSiteAction(const std::string& action,CefRefPtr<CefValu
     CefDictionaryValue::KeyList keys;changes->GetKeys(keys);
     for(const auto& key:keys){auto value=changes->GetValue(key);const auto name=key.ToString();bool ok=false;
       if(name=="theme"||name=="font"){auto str=value->GetString().ToString();ok=value->GetType()==VTYPE_STRING&&
-        (name=="theme"?(str=="light"||str=="sepia"||str=="dark"):(str=="sans"||str=="serif"||str=="system"));}
+        (name=="theme"?(str=="light"||str=="sepia"||str=="gray"||str=="dark"):(str=="sans"||str=="serif"||str=="system"));}
       else if(name=="images")ok=value->GetType()==VTYPE_BOOL;
       else if(name=="size"||name=="width"||name=="spacing")ok=value->GetType()==VTYPE_INT&&
         (name=="size"?(value->GetInt()>=14&&value->GetInt()<=32):(value->GetInt()>=0&&value->GetInt()<=2));
@@ -1673,21 +1710,21 @@ bool BrowserWindow::HandleSiteAction(const std::string& action,CefRefPtr<CefValu
   }
   if(action=="browser.site.find"){RequestFind();ReplyEmpty(callback);return true;}
   if(action=="browser.site.clear"){
-    const std::wstring text=L"Очистить хранилища сайта "+CefString(origin).ToWString()+
-      L" в текущем профиле?\n\nБудут удалены localStorage, sessionStorage, IndexedDB, Cache Storage и service workers только этого origin. Cookies и HTTP-кэш сохранятся. Пароли, закладки и другие сайты не затрагиваются.";
-    const int id=tab->id,generation=tab->document_generation;const auto url=tab->url;
-    if(TypographyMessageBox(hwnd_,text.c_str(),L"Данные сайта",MB_YESNO|MB_ICONWARNING|MB_DEFBUTTON2)!=IDYES){callback->Success("{\"cleared\":false}");return true;}
-    tab=ActiveTab();if(!tab||tab->id!=id||tab->url!=url||tab->document_generation!=generation){callback->Failure(409,"Страница изменилась");return true;}
+    if(data->GetType("confirmed")!=VTYPE_BOOL||!data->GetBool("confirmed")){
+      callback->Failure(400,"Подтвердите очистку данных сайта");return true;}
     CefRefPtr<SiteStorageJob> job=new SiteStorageJob(callback);job->Start(tab->browser,origin);return true;
   }
   auto policy=PolicyForTab(tab->id);bool ok=false;
+  const bool previous_blocking=policy&&policy->Blocking(tab->url);
   if(action=="browser.site.permission")ok=policy&&policy->Set(tab->url,data->GetString("permission"),data->GetInt("value"));
   else if(action=="browser.site.blocking")ok=policy&&policy->SetBlocking(tab->url,data->GetInt("value"));
   else if(action=="browser.site.reset")ok=policy&&policy->ResetSite(tab->url);
   else {callback->Failure(400,"Неизвестное действие сайта");return true;}
   if(!ok){callback->Failure(500,"Правило сайта не сохранено");return true;}
   ApplySiteSound();SyncSitePolicy(tab->id,tab->url);
-  if(action=="browser.site.blocking")tab->browser->ReloadIgnoreCache();
+  if(action=="browser.site.blocking"||(action=="browser.site.reset"&&policy->Blocking(tab->url)!=previous_blocking))
+    tab->browser->ReloadIgnoreCache();
+  EmitState();
   Reply(callback,SiteSnapshot());return true;
 }
 
@@ -1734,6 +1771,28 @@ void BrowserWindow::HandleBridge(const std::string& request,
       callback->Failure(409,"Страница изменилась.");return;
     }
     CefRefPtr<SiteStorageJob> job = new SiteStorageJob(callback);job->Start(tab->browser,origin);return;
+  }
+  if(action=="browser.permission.respond"){
+    auto data=payload&&payload->GetType()==VTYPE_DICTIONARY?payload->GetDictionary():nullptr;
+    if(!data||permission_requests_.empty()||data->GetInt("id")!=permission_requests_.front().id){
+      callback->Failure(409,"Запрос разрешения устарел");return;}
+    auto request=std::move(permission_requests_.front());permission_requests_.erase(permission_requests_.begin());
+    auto* tab=FindTab(request.tab_id);bool valid=tab&&tab->id==active_tab_id_&&
+      tab->url==request.url&&tab->document_generation==request.generation;
+    const auto decision=data->GetString("decision").ToString();
+    bool allowed=valid&&decision=="allow";auto policy=PolicyForTab(request.tab_id);
+    if(valid&&(decision=="allow"||decision=="block")&&policy){
+      // A combined media request is saved atomically in the existing policy model.
+      auto next=policy->Snapshot();auto sites=next->GetDictionary("sites");
+      const auto domain=SiteDomain(request.origin);auto rules=sites->GetDictionary(domain);
+      if(!rules){sites->SetDictionary(domain,CefDictionaryValue::Create());rules=sites->GetDictionary(domain);}
+      for(const auto& name:request.permissions)if(policy->Rule(request.origin,name)==1)
+        rules->SetInt(name,allowed?0:2);
+      if(!policy->Replace(next)){allowed=false;request.done(false);Layout();EmitState();
+        callback->Failure(500,"Решение не сохранено");return;}
+      SyncSitePolicy(request.tab_id,request.origin);
+    }
+    request.done(allowed);Layout();EmitState();ReplyEmpty(callback);return;
   }
   if(HandleSiteAction(action,payload,callback))return;
 
@@ -2234,6 +2293,7 @@ void BrowserWindow::CloseAll() {
   if (closing_) return;
   SaveSession();
   closing_ = true;
+  CancelSitePermissions(0);
   // Destroying an Alloy child can synchronously call BrowserClosed and erase
   // tabs_. Close a snapshot so no browser is skipped by iterator invalidation.
   std::vector<CefRefPtr<CefBrowser>> browsers;

@@ -57,6 +57,7 @@
     setRightPanel: width => invoke("browser.setRightPanel", width),
     setSuggestionsHeight: height => invoke("browser.setSuggestionsHeight", height),
     pageMenu: () => invoke("browser.pageMenu"),
+    respondPermission: value => invoke("browser.permission.respond", value),
     getCurrentSite: () => invoke("browser.site.get"),
     siteAction: (action, value) => invoke("browser.site." + action, value),
     testFindShortcut: () => invoke("browser.test.findShortcut"),

@@ -154,16 +154,19 @@ with tempfile.TemporaryDirectory(prefix='soulu-reader-', ignore_cleanup_errors=T
             s.evaluate(shell,'browserShell.setSettings('+json.dumps({'layout':layout})+')')
             wait(lambda:s.evaluate(shell,'document.body.dataset.layout')==layout)
             s.evaluate(shell,'browserShell.pageMenu()');wait(lambda:visible_surface('.site-popover'))
-            s.evaluate(shell,"(()=>{const n=document.querySelector('.site-permissions');if(!n.open)n.querySelector('summary').click()})()")
-            assert_check(visible_surface('.site-popover'),layout+' permissions expansion stays in client')
-            exercise_select('.site-permissions select',layout+' permissions')
-            s.evaluate(shell,"(()=>{const n=document.querySelector('.site-permissions select');n.value='2';n.dispatchEvent(new Event('change'))})()")
-            time.sleep(.2)
+            assert_check(s.evaluate(shell,"!document.querySelector('.site-popover select,.site-popover details')"),layout+' compact main without permission controls')
+            s.evaluate(shell,"document.querySelector('[aria-label=\"Настройки сайта…\"]').click()")
+            assert_check(visible_surface('.site-popover'),layout+' nested settings stays in client')
+            s.evaluate(shell,"document.querySelector('[data-permission=geolocation]').click()")
+            assert_check(s.evaluate(shell,"document.querySelectorAll('.site-choice').length===4"),layout+' compact permission picker')
+            s.evaluate(shell,"document.querySelector('.site-choice[data-value=\"2\"]').click()")
+            wait(lambda:s.evaluate(shell,"document.querySelector('.site-popover').dataset.level==='settings'"))
             assert_check(visible_surface('.site-popover'),layout+' permission rerender stays in client')
+            s.evaluate(shell,"document.querySelector('.site-back').click()")
             s.evaluate(shell,"document.querySelector('.site-zoom button:last-child').click()")
             time.sleep(.2)
             assert_check(visible_surface('.site-popover'),layout+' zoom rerender stays in client')
-            s.evaluate(shell,"document.querySelector('.site-menu-content>label input').click()")
+            s.evaluate(shell,"document.querySelector('.site-menu-content [role=switch]').click()")
             time.sleep(.2)
             assert_check(visible_surface('.site-popover'),layout+' adblock rerender stays in client')
             s.evaluate(shell,"[...document.querySelectorAll('.site-menu-content>button')].find(n=>n.textContent.includes('Ctrl+F')).click()")
@@ -198,7 +201,7 @@ with tempfile.TemporaryDirectory(prefix='soulu-reader-', ignore_cleanup_errors=T
         assert_check('127.0.0.1' not in current()['rules']['sites'] and '127.0.0.1' not in current()['rules']['blocking']['sites'], 'reset both models')
         action('permission', {'permission':'camera','value':2})
         action('reader.enter')
-        for theme in ('light','sepia','dark'):
+        for theme in ('light','sepia','gray','dark'):
             action('reader.preferences', {'preferences':{'theme':theme}})
             wait(lambda:s.evaluate(shell,"document.querySelector('.reader-view').dataset.theme")==theme)
             assert_check(s.evaluate(shell,"document.querySelector('.reader-view').dataset.theme")==theme, 'theme '+theme)
@@ -289,22 +292,12 @@ with tempfile.TemporaryDirectory(prefix='soulu-reader-', ignore_cleanup_errors=T
         other_ws=s.websocket.create_connection(other_target['webSocketDebuggerUrl'],timeout=30,origin=s.BASE);seed(other_ws)
         s.evaluate(shell,'browserShell.switchTab('+str(original['tabId'])+')')
         wait(lambda:current()['tabId']==original['tabId'])
-        def confirm():
-            user=ctypes.windll.user32;user.GetDlgItem.restype=ctypes.c_void_p
-            def find():
-                found=[]
-                @ctypes.WINFUNCTYPE(ctypes.c_bool,ctypes.c_void_p,ctypes.c_void_p)
-                def visit(hwnd,_):
-                    pid=ctypes.c_ulong();user.GetWindowThreadProcessId(hwnd,ctypes.byref(pid))
-                    title=ctypes.create_unicode_buffer(128);user.GetWindowTextW(hwnd,title,128)
-                    if pid.value==process.pid and title.value=='Данные сайта':found.append(hwnd)
-                    return True
-                user.EnumWindows(visit,0);return found[0] if found else None
-            hwnd=wait(find);control=user.GetDlgItem(ctypes.c_void_p(hwnd),6)
-            assert control;user.SendMessageW(ctypes.c_void_p(control),0x00F5,0,0)  # BM_CLICK / IDYES
-        worker=threading.Thread(target=confirm);worker.start()
-        cleared=action('clear');worker.join(timeout=10)
-        assert_check(cleared['cleared'], 'native confirmed storage cleanup')
+        s.evaluate(shell,'browserShell.pageMenu()');wait(lambda:visible_surface('.site-popover'))
+        s.evaluate(shell,"document.querySelector('[aria-label=\"Настройки сайта…\"]').click();document.querySelector('[aria-label=\"Очистить данные сайта…\"]').click()")
+        assert_check(s.evaluate(shell,"document.querySelector('.site-confirm-text').textContent.includes('Cookies')"),'clear confirmation exact scope')
+        s.evaluate(shell,"document.querySelector('[data-confirm=clear]').click()")
+        wait(lambda:s.evaluate(shell,"document.querySelector('.site-status').textContent.includes('очищены')"))
+        assert_check(True, 'Soulu confirmed storage cleanup')
         assert_check(s.evaluate(page,"localStorage.getItem('keep')===null&&document.cookie.includes('keep=yes')&&sessionStorage.getItem('keep')===null"), 'clear DOM storage and retain cookies')
         assert_check(s.evaluate(page,"indexedDB.databases().then(ds=>!ds.some(d=>d.name==='site-reader'))"), 'clear indexeddb')
         assert_check(s.evaluate(page,"caches.keys().then(keys=>!keys.includes('reader-cache'))"), 'clear cache storage')
