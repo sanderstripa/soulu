@@ -1820,23 +1820,23 @@ void BrowserWindow::HandleBridge(const std::string& request,
     auto data=payload&&payload->GetType()==VTYPE_DICTIONARY?payload->GetDictionary():nullptr;
     if(!data||permission_requests_.empty()||data->GetInt("id")!=permission_requests_.front().id){
       callback->Failure(409,"Запрос разрешения устарел");return;}
-    auto request=std::move(permission_requests_.front());permission_requests_.erase(permission_requests_.begin());
-    auto* tab=FindTab(request.tab_id);bool valid=tab&&tab->id==active_tab_id_&&
-      tab->url==request.url&&tab->document_generation==request.generation;
+    auto pending=std::move(permission_requests_.front());permission_requests_.erase(permission_requests_.begin());
+    auto* tab=FindTab(pending.tab_id);bool valid=tab&&tab->id==active_tab_id_&&
+      tab->url==pending.url&&tab->document_generation==pending.generation;
     const auto decision=data->GetString("decision").ToString();
-    bool allowed=valid&&decision=="allow";auto policy=PolicyForTab(request.tab_id);
+    bool allowed=valid&&decision=="allow";auto policy=PolicyForTab(pending.tab_id);
     if(valid&&(decision=="allow"||decision=="block")&&policy){
       // A combined media request is saved atomically in the existing policy model.
       auto next=policy->Snapshot();auto sites=next->GetDictionary("sites");
-      const auto domain=SiteDomain(request.origin);auto rules=sites->GetDictionary(domain);
+      const auto domain=SiteDomain(pending.origin);auto rules=sites->GetDictionary(domain);
       if(!rules){sites->SetDictionary(domain,CefDictionaryValue::Create());rules=sites->GetDictionary(domain);}
-      for(const auto& name:request.permissions)if(policy->Rule(request.origin,name)==1)
+      for(const auto& name:pending.permissions)if(policy->Rule(pending.origin,name)==1)
         rules->SetInt(name,allowed?0:2);
-      if(!policy->Replace(next)){allowed=false;request.done(false);Layout();EmitState();
+      if(!policy->Replace(next)){allowed=false;pending.done(false);Layout();EmitState();
         callback->Failure(500,"Решение не сохранено");return;}
-      SyncSitePolicy(request.tab_id,request.origin);
+      SyncSitePolicy(pending.tab_id,pending.origin);
     }
-    request.done(allowed);RefreshSitePermissions();Layout();EmitState();ReplyEmpty(callback);return;
+    pending.done(allowed);RefreshSitePermissions();Layout();EmitState();ReplyEmpty(callback);return;
   }
   if(HandleSiteAction(action,payload,callback))return;
 
