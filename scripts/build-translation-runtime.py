@@ -9,7 +9,9 @@ def package(url,integrity):
   return {m.name:archive.extractfile(m).read() for m in archive.getmembers() if m.isfile()}
 b=package(*PACKAGES[0][1:]);t=package(*PACKAGES[1][1:])
 worker=b['package/worker/translator-worker.js'].decode();glue=b['package/worker/bergamot-translator-worker.js'].decode();wasm=base64.b64encode(b['package/worker/bergamot-translator-worker.wasm']).decode()
-bootstrap='const wasm=Uint8Array.from(atob('+json.dumps(wasm)+'),c=>c.charCodeAt(0));\nself.fetch=async()=>new Response(wasm,{headers:{"Content-Type":"application/wasm"}});\nself.importScripts=()=>{(0,eval)('+json.dumps(glue)+');};\n'+worker
+worker=worker.replace("new URL('./bergamot-translator-worker.wasm', self.location)","'soulu-wasm'")
+worker=worker.replace("self.importScripts('bergamot-translator-worker.js');",'(function(Module){'+glue+'})(Module);')
+bootstrap='const wasm=Uint8Array.from(atob('+json.dumps(wasm)+'),c=>c.charCodeAt(0));\nself.fetch=async()=>new Response(wasm,{headers:{"Content-Type":"application/wasm"}});\n'+worker
 main=b['package/translator.js'].decode().replace('export class ','class ')
 main=main.replace("new Worker(new URL('./worker/translator-worker.js', import.meta.url))",'new Worker(workerURL)')
 main=main.replace("new URL(","new URL(")

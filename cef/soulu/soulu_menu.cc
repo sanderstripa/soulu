@@ -119,14 +119,14 @@ LRESULT CALLBACK Procedure(HWND window,UINT message,WPARAM w,LPARAM l){
 Panel* Open(Session& s,MenuModel& model,POINT at,Panel* parent){
   auto panel=std::make_unique<Panel>();panel->session=&s;panel->model=&model;panel->parent=parent;
   int width=s.Px(240),y=s.Px(6);auto dc=GetDC(s.owner);auto font=SelectObject(dc,TypographyFont(typography::compactControl,s.dpi));
-  for(auto& item:model){item.label=MenuLabel(item.label);SIZE size={};GetTextExtentPoint32W(dc,item.label.c_str(),static_cast<int>(item.label.size()),&size);width=std::max(width,size.cx+s.Px(item.accelerator.empty()?58:194));}
+  for(auto& item:model){item.label=MenuLabel(item.label);SIZE size={};GetTextExtentPoint32W(dc,item.label.c_str(),static_cast<int>(item.label.size()),&size);width=std::max(width,static_cast<int>(size.cx)+s.Px(item.accelerator.empty()?58:194));}
   SelectObject(dc,font);ReleaseDC(s.owner,dc);panel->width=std::min(width,s.Px(560));
   for(auto& item:model){int height=s.Px(item.type==MenuItemType::Separator?9:32);panel->rows.push_back({s.Px(6),y,panel->width-s.Px(6),y+height});y+=height;}
   MONITORINFO monitor={sizeof(monitor)};GetMonitorInfoW(MonitorFromPoint(at,MONITOR_DEFAULTTONEAREST),&monitor);auto work=monitor.rcWork;
   panel->width=std::min(panel->width,static_cast<int>(work.right-work.left));panel->height=std::min(y+s.Px(6),static_cast<int>(work.bottom-work.top)-s.Px(8));
   if(parent&&at.x+panel->width>work.right){RECT rect={};GetWindowRect(parent->window,&rect);at.x=rect.left-panel->width+s.Px(3);}
-  at.x=std::clamp(at.x,static_cast<int>(work.left),static_cast<int>(work.right)-panel->width);
-  at.y=std::clamp(at.y,static_cast<int>(work.top),static_cast<int>(work.bottom)-panel->height);
+  at.x=std::clamp(static_cast<int>(at.x),static_cast<int>(work.left),static_cast<int>(work.right)-panel->width);
+  at.y=std::clamp(static_cast<int>(at.y),static_cast<int>(work.top),static_cast<int>(work.bottom)-panel->height);
   HWND window=CreateWindowExW(WS_EX_TOOLWINDOW|WS_EX_TOPMOST,L"SouluMenuHost",L"Soulu",WS_POPUP,at.x,at.y,panel->width,panel->height,s.owner,nullptr,GetModuleHandleW(nullptr),panel.get());
   if(!window)return nullptr;
   SetWindowRgn(window,CreateRoundRectRgn(0,0,panel->width+1,panel->height+1,s.Px(14),s.Px(14)),FALSE);

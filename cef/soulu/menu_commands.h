@@ -7,5 +7,5 @@ enum MenuCommand {
   kPageSave,kPageReader,kPageTranslate,kPageQR,kInspect,
   kMediaPlay,kMediaMute,kMediaLoop,kMediaControls,kMediaSave,kMediaCopy,
 };
-static_assert(kMediaCopy<=MENU_ID_USER_LAST);
+static_assert(static_cast<int>(kMediaCopy)<=static_cast<int>(MENU_ID_USER_LAST));
 }

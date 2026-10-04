@@ -8,7 +8,7 @@ namespace soulu {
 namespace {
 CefRefPtr<CefValue> Value(CefRefPtr<CefDictionaryValue> dictionary){auto value=CefValue::Create();value->SetDictionary(dictionary);return value;}
 class MenuCallback final:public CefMessageRouterBrowserSide::Callback {
- public:void Success(const CefString&) override{} void Failure(int,const CefString&) override{}
+ public:void Success(const CefString&) override{} void Success(const void*,size_t) override{} void Failure(int,const CefString&) override{}
  private:IMPLEMENT_REFCOUNTING(MenuCallback);
 };
 }
