@@ -35,6 +35,10 @@ try:
     wait(lambda:s.evaluate(shell,"Boolean(document.querySelector('.soulu-translate-button'))"))
     s.evaluate(shell,"document.querySelector('.soulu-translate-button').click()")
     wait(lambda:s.evaluate(shell,"!document.querySelector('.soulu-translation').hidden"))
+    s.evaluate(shell,"(()=>{const select=document.querySelector('.soulu-translation select');const option=document.createElement('option');option.value='zh';option.textContent='Unsupported fixture';select.append(option);select.value='zh';[...document.querySelectorAll('.soulu-translation button')].find(b=>b.textContent==='Перевести').click()})()")
+    wait(lambda:s.evaluate(shell,"document.querySelector('.soulu-translation [role=status]').textContent.includes('не поддерживается')"))
+    assert s.evaluate(page,'document.getElementById("text").textContent')==original,'Unsupported UI request modified the page'
+    s.evaluate(shell,"document.querySelector('.soulu-translation select').value='en'")
     s.evaluate(shell,"[...document.querySelectorAll('.soulu-translation button')].find(b=>b.textContent==='Перевести').click()")
     wait(lambda:s.evaluate(page,'document.getElementById("text").textContent')!=original,150)
     wait(lambda:any('\u0400'<=c<='\u04ff' for c in s.evaluate(page,'document.getElementById("paragraph").textContent')),30)

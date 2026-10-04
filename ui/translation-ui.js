@@ -12,7 +12,7 @@
   function position(){const icon=document.querySelector('.soulu-translate-button');const rect=icon?.getBoundingClientRect();const top=Math.max(8,Math.min((rect?.bottom||48)+8,innerHeight-120));panel.style.top=top+'px';panel.style.maxHeight=Math.max(100,innerHeight-top-12)+'px';}
   window.addEventListener('resize',position);
   function close(){panel.hidden=true;api.setPopover(false,'translation');api.setSuggestionsHeight(0);document.querySelector('.soulu-translate-button')?.focus();}
-  function button(text,action){const b=element('button',text);b.type='button';b.onclick=()=>Promise.resolve().then(action).catch(()=>status.textContent=tr('error'));return b;}
+  function button(text,action){const b=element('button',text);b.type='button';b.onclick=()=>Promise.resolve().then(action).catch(error=>status.textContent=tr(error.message==='unsupported'?'unsupported':'error'));return b;}
   function select(value){const s=element('select');if(value&&!languages[value]){const o=element('option',value);o.value=value;s.append(o);}for(const lang of Object.keys(languages)){const o=element('option',languages[lang][state.settings?.language==='en'?'en':'ru']);o.value=lang;s.append(o);}s.value=value;return s;}
   async function preference(patch){prefs=await api.translation('preferences',{...site,...patch});const detected=probes.get(`${site.tabId}:${site.generation}:${site.url}`);if(detected&&typeof detected==='object'){detected.target=prefs.target;detected.never=(prefs.never||[]).includes(site.origin);}updateIcon();}
   async function restore(job){
