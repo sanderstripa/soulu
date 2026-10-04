@@ -14,6 +14,8 @@ seven compact permission rows, Clear Site Data and Reset Site Settings; its
 fixture height is 502 DIP. Small windows can scroll inside a bounded panel.
 Panels stay below the full toolbar: y=56 DIP in Main, y=90 DIP in Classic, plus
 28 DIP when the bookmarks bar is visible. Favicon failure uses a globe fallback.
+Cards use the existing opaque theme surface so live webpage text does not show
+through the separate OSR layer.
 
 Each row opens a value picker: Default, Allow, Ask and Block. Sound preserves
 Allow, Mute and Block. Default removes the override and shows the effective global

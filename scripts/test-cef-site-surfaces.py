@@ -120,6 +120,15 @@ def main():
             reply('block');second=wait(lambda:(p if (p:=prompt()) and p['id']!=first['id'] else None));reply('block')
             wait(lambda:s.evaluate(page,'window.queueCamera')=='blocked' and s.evaluate(page,'window.queueNotification')=='denied')
             check(True,'concurrent media and notification queue completes once')
+            action('permission',{'permission':'geolocation','value':1})
+            trigger("window.geoResult=null;navigator.geolocation.getCurrentPosition(()=>window.geoResult='allowed',e=>window.geoResult=e.code,{timeout:10000})")
+            item=wait(prompt);check(item['permissions']==['geolocation'],'real geolocation callback')
+            reply('block');wait(lambda:s.evaluate(page,'window.geoResult')==1)
+            check(True,'geolocation block reaches API')
+            action('permission',{'permission':'popups','value':1})
+            trigger("window.open('/popup','soulu-fixture','width=400,height=400')")
+            item=wait(prompt);check(item['permissions']==['popups'],'real popup gate prompt')
+            reply('block');check(len(E('browserShell.getState().then(s=>s.tabs)'))==1,'blocked popup retains opener only')
             # Exercise actual UI in both layouts and every browser theme.
             for layout in ('compact','classic'):
                 for theme in ('light','dark','system'):

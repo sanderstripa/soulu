@@ -1,7 +1,7 @@
 .site-popover[hidden],.site-shield[hidden],.reader-view[hidden],.reader-settings[hidden],.site-find[hidden],.soulu-permission-prompt[hidden]{display:none}
 .site-shield{position:fixed;inset:0;z-index:119;background:rgba(0,0,0,.01)}
 .soulu-permission-shield[hidden]{display:none}.soulu-permission-shield{position:fixed;inset:0;z-index:129;background:rgba(0,0,0,.01)}
-.site-popover,.reader-link-menu,.site-find,.reader-settings,.soulu-permission-prompt{box-sizing:border-box;background:var(--panel,var(--surface));color:var(--text);border:1px solid var(--line);border-radius:16px;box-shadow:0 12px 36px var(--shadow,#0003);font:var(--type-body)}
+.site-popover,.reader-link-menu,.site-find,.reader-settings,.soulu-permission-prompt{box-sizing:border-box;background:var(--solid,var(--panel));color:var(--text);border:1px solid var(--line);border-radius:16px;box-shadow:0 12px 36px var(--shadow,#0003);font:var(--type-body)}
 .site-popover{position:fixed;z-index:120;width:min(408px,calc(100vw - 16px));padding:12px;overflow:auto;overscroll-behavior:contain}
 .site-popover button,.reader-toolbar button,.reader-settings button,.reader-link-menu button,.site-find button,.soulu-permission-prompt button{font:var(--type-body);color:inherit;background:transparent;border:0;border-radius:9px;padding:9px 10px;cursor:pointer;text-align:left}
 .site-popover button:hover,.reader-link-menu button:hover,.soulu-permission-prompt button:hover,.reader-settings button:hover,.reader-toolbar button:hover{background:var(--soft)}
