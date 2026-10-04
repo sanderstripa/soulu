@@ -946,6 +946,7 @@ bool BrowserWindow::IsSettingsUrl(const std::string& url) const {
       url == canonical || url.rfind(canonical + "#", 0) == 0 || url.rfind(canonical + "?", 0) == 0;
 }
 void BrowserWindow::OpenSettingsOverlay() {
+  CancelSitePermissions(active_tab_id_);
   if (closing_) return;
   if (settings_overlay_) { FocusSettings(); return; }
   settings_previous_focus_ = GetFocus();
@@ -1836,7 +1837,10 @@ void BrowserWindow::HandleBridge(const std::string& request,
         callback->Failure(500,"Решение не сохранено");return;}
       SyncSitePolicy(pending.tab_id,pending.origin);
     }
-    pending.done(allowed);RefreshSitePermissions();Layout();EmitState();ReplyEmpty(callback);return;
+    pending.done(allowed);RefreshSitePermissions();Layout();EmitState();
+    if(permission_requests_.empty())if(auto* current=ActiveTab();current&&current->browser)
+      current->browser->GetHost()->SetFocus(true);
+    ReplyEmpty(callback);return;
   }
   if(HandleSiteAction(action,payload,callback))return;
 

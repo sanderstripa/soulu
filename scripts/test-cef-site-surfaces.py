@@ -10,6 +10,7 @@ import tempfile
 import threading
 import time
 import base64
+sys.stdout.reconfigure(encoding='utf-8')
 
 spec=importlib.util.spec_from_file_location('storage',Path(__file__).with_name('test-cef-storage.py'))
 s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
@@ -50,7 +51,7 @@ def main():
             p=subprocess.Popen([sys.argv[1],'--no-proxy-server','--use-fake-device-for-media-stream'],env=env)
             target=wait(lambda:next((t for t in s.targets() if '/ui/index.html' in t.get('url','')),None))
             ws=s.websocket.create_connection(target['webSocketDebuggerUrl'],timeout=30,origin=s.BASE)
-            wait(lambda:s.evaluate(ws,"typeof browserShell.respondPermission==='function'&&!!document.querySelector('.site-popover')"))
+            wait(lambda:s.evaluate(ws,"typeof window.browserShell?.respondPermission==='function'&&!!document.querySelector('.site-popover')"))
             return p,ws,s.page_socket()
         def E(script):return s.evaluate(shell,script)
         def current():return E('browserShell.getCurrentSite()')
@@ -83,6 +84,10 @@ def main():
             wait(lambda:s.evaluate(page,'window.notificationResult')=='denied')
             check(current()['rules']['sites']['127.0.0.1']['notifications']==2,'prompt Block persists canonical override')
             action('permission',{'permission':'notifications','value':-1})
+            # Chromium suppresses repeat notification prompts within a document
+            # after a denial. A new document exercises the next legitimate request.
+            s.navigate(page,origin+'/after-block');wait(lambda:not current()['mainLoading'])
+            check(s.evaluate(page,'Notification.permission')=='default','reset notification permission reaches new document')
             trigger("window.notificationResult=null;Notification.requestPermission().then(v=>window.notificationResult=v)")
             wait(prompt);reply('allow');wait(lambda:s.evaluate(page,'window.notificationResult')=='granted')
             check(s.evaluate(page,"(()=>{try{const n=new Notification('Soulu controlled test',{silent:true});n.close();return true}catch{return false}})()"),'allowed Notification constructor accepted')
@@ -101,6 +106,20 @@ def main():
             stale=E('browserShell.respondPermission('+json.dumps({'id':item['id'],'decision':'allow'})+').then(()=>false,()=>true)')
             check(stale,'navigation rejects stale consent')
             action('permission',{'permission':'notifications','value':0})
+            original=current()
+            E('browserShell.newIncognito()');wait(lambda:E('browserShell.getState().then(s=>s.incognito)'))
+            private=current()
+            trigger("window.backgroundResult=null;navigator.mediaDevices.getUserMedia({video:true}).then(v=>{v.getTracks().forEach(t=>t.stop());window.backgroundResult='allowed'},()=>window.backgroundResult='blocked')")
+            wait(lambda:s.evaluate(page,'window.backgroundResult')=='blocked')
+            check(not prompt(),'background request never overlays foreground tab')
+            E('browserShell.closeTab('+str(private['tabId'])+')');wait(lambda:current()['tabId']==original['tabId'])
+            # Independent requests are serialized, with a single visible card.
+            action('permission',{'permission':'notifications','value':-1})
+            trigger("window.queueCamera=null;window.queueNotification=null;navigator.mediaDevices.getUserMedia({video:true}).then(v=>{v.getTracks().forEach(t=>t.stop());window.queueCamera='allowed'},()=>window.queueCamera='blocked');Notification.requestPermission().then(v=>window.queueNotification=v)")
+            first=wait(prompt);check(len(E("[...document.querySelectorAll('.soulu-permission-prompt:not([hidden])')].map(n=>n.tagName)"))<=1,'one card for concurrent requests')
+            reply('block');second=wait(lambda:(p if (p:=prompt()) and p['id']!=first['id'] else None));reply('block')
+            wait(lambda:s.evaluate(page,'window.queueCamera')=='blocked' and s.evaluate(page,'window.queueNotification')=='denied')
+            check(True,'concurrent media and notification queue completes once')
             # Exercise actual UI in both layouts and every browser theme.
             for layout in ('compact','classic'):
                 for theme in ('light','dark','system'):
@@ -122,6 +141,31 @@ def main():
                     E("document.querySelector('[data-reader-action]').click()")
                     wait(lambda:current()['readerActive']);E("document.querySelector('.reader-toolbar button:last-child').click()")
                     check(E("document.querySelectorAll('.reader-swatch').length===4&&document.querySelectorAll('.reader-settings select').length===1&&document.querySelectorAll('.reader-settings [role=switch]').length===1"),'visual palette controls '+layout+'/'+theme)
+                    if layout=='compact' and theme=='light':
+                        fonts=current()['readerFonts'];report['readerFonts']=fonts
+                        for font in fonts:
+                            E("(()=>{const n=document.querySelector('.reader-settings select');n.value="+json.dumps(font['id'])+";n.dispatchEvent(new Event('change'))})()")
+                            wait(lambda:current()['preferences']['font']==font['id'])
+                            family=E("getComputedStyle(document.querySelector('.reader-article')).fontFamily")
+                            check(('system-ui' if font['id']=='system' else font['label']) in family,'concrete article font '+font['label'])
+                            check('Onest' in bounds('.reader-settings')['font'],'font selection preserves UI '+font['label'])
+                        E("(()=>{const n=document.querySelector('[aria-label=\"Увеличить размер текста\"]');n.click();n.click()})()")
+                        wait(lambda:current()['preferences']['size']==24)
+                        check(True,'rapid A+ uses latest preference')
+                        E("(()=>{const n=document.querySelector('[aria-label=\"Уменьшить размер текста\"]');n.click();n.click()})()")
+                        wait(lambda:current()['preferences']['size']==20)
+                        for value,width in [(0,560),(1,720),(2,900)]:
+                            E("document.querySelector('.reader-layout-option[data-width=\""+str(value)+"\"]').click()")
+                            wait(lambda:current()['preferences']['width']==value)
+                            check(E("parseFloat(getComputedStyle(document.querySelector('.reader-article')).maxWidth)")==width,'visual width '+str(value))
+                        for value,line in [(0,1.5),(1,1.75),(2,2)]:
+                            E("document.querySelector('.reader-layout-option[data-spacing=\""+str(value)+"\"]').click()")
+                            wait(lambda:current()['preferences']['spacing']==value)
+                            check(E("(()=>{const c=getComputedStyle(document.querySelector('.reader-article'));return parseFloat(c.lineHeight)/parseFloat(c.fontSize)})()")==line,'visual spacing '+str(value))
+                        E("document.querySelector('.reader-settings [role=switch]').click()")
+                        wait(lambda:not current()['preferences']['images']);check(True,'images switch writes preference')
+                        E("document.querySelector('.reader-settings [role=switch]').click()")
+                        wait(lambda:current()['preferences']['images'])
                     for article_theme in ('light','sepia','gray','dark'):
                         E("document.querySelector('.reader-swatch[data-theme="+article_theme+"]').click()")
                         wait(lambda:current()['preferences']['theme']==article_theme)

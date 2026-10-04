@@ -15,6 +15,9 @@ import time
 spec = importlib.util.spec_from_file_location('storage', Path(__file__).with_name('test-cef-storage.py'))
 s = importlib.util.module_from_spec(spec); spec.loader.exec_module(s)
 checks = []
+os.environ['NO_PROXY'] = 'localhost,127.0.0.1,::1'
+# Measure native window pixels without Python's DPI virtualization.
+ctypes.windll.user32.SetProcessDpiAwarenessContext(ctypes.c_void_p(-4))
 
 def wait(fn, timeout=25):
     deadline = time.monotonic() + timeout
@@ -132,10 +135,11 @@ with tempfile.TemporaryDirectory(prefix='soulu-reader-', ignore_cleanup_errors=T
             hwnd = handles[0]
             user32.GetDpiForWindow.argtypes = [ctypes.c_void_p]
             user32.PostMessageW.argtypes = [ctypes.c_void_p, ctypes.c_uint, ctypes.c_size_t, ctypes.c_ssize_t]
-            user32.PostMessageW(hwnd,0x7,0,0)
-            user32.PostMessageW(hwnd,0x100,32,0)
-            user32.PostMessageW(hwnd,0x102,32,0)
-            user32.PostMessageW(hwnd,0x101,32,0)
+            # Dispatch a trusted click to the CEF surface. Posting WM_SETFOCUS
+            # does not transfer Windows focus when another window is foreground.
+            rect = s.evaluate(shell,"(()=>{const r=document.querySelector("+json.dumps(selector)+").getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()")
+            s.command(shell,'Input.dispatchMouseEvent',dict(rect,type='mousePressed',button='left',clickCount=1))
+            s.command(shell,'Input.dispatchMouseEvent',dict(rect,type='mouseReleased',button='left',clickCount=1))
             try:
                 state = wait(lambda: (p if (p:=popup_state())['popupVisible'] and p['popupPaintCount']>before else None))
             except AssertionError:
@@ -146,8 +150,8 @@ with tempfile.TemporaryDirectory(prefix='soulu-reader-', ignore_cleanup_errors=T
             s.evaluate(shell,'browserShell.getSettings().then(settings=>browserShell.setSettings({theme:settings.theme}))')
             time.sleep(.2)
             assert_check(popup_state()['popupVisible'],name+' unchanged state preserves native select')
-            user32.PostMessageW(hwnd,0x100,27,0)
-            user32.PostMessageW(hwnd,0x101,27,0)
+            s.command(shell,'Input.dispatchKeyEvent',{'type':'keyDown','key':'Escape','windowsVirtualKeyCode':27})
+            s.command(shell,'Input.dispatchKeyEvent',{'type':'keyUp','key':'Escape','windowsVirtualKeyCode':27})
             wait(lambda:not popup_state()['popupVisible'])
             assert_check(True,name+' native select dismiss restores surface')
         for layout in ('compact','classic'):

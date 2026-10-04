@@ -1,4 +1,10 @@
-# Current site and Reader Mode — Preview 42
+# Site controls and Reader Mode
+
+The current interface and permission lifecycle are described in
+[SITE_CONTROLS.md](SITE_CONTROLS.md). The implementation notes below describe the
+original Preview 42 extraction/storage foundation; its old UI, font list and
+engine numbers are historical. Current CEF is 154.0.33+ga03e714 and Chromium is
+154.0.8037.94, unchanged by this interface block.
 
 The existing address-bar page action opens a compact OSR-shell popover in both
 layouts. The existing native popover flag expands the shell surface without

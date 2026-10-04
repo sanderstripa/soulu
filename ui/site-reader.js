@@ -272,10 +272,12 @@
     settings.append(divider(), toggle('Изображения', prefs.images, () => preferences(p => ({images:!p.images}))));
     if (wasFocused && label) [...settings.querySelectorAll('[aria-label]')].find(n => n.getAttribute('aria-label') === label)?.focus();
   }
-  const prompt = el('section', 'soulu-permission-prompt'); prompt.hidden = true;
-  prompt.setAttribute('role', 'dialog'); prompt.setAttribute('aria-label', 'Разрешение сайта'); document.body.append(prompt);
-  async function respond(decision) {
-    const id = promptId; if (!id) return;
+  const promptShield = el('div', 'soulu-permission-shield'), prompt = el('section', 'soulu-permission-prompt');
+  prompt.hidden = promptShield.hidden = true;
+  prompt.setAttribute('role', 'dialog'); prompt.setAttribute('aria-modal', 'true');
+  prompt.setAttribute('aria-label', 'Разрешение сайта'); document.body.append(promptShield, prompt);
+  async function respond(decision, id = promptId) {
+    if (!id || id !== promptId) return;
     for (const b of prompt.querySelectorAll('button')) b.disabled = true;
     try { await api.respondPermission({id, decision}); }
     catch (e) { if (promptId === id) error(e); }
@@ -283,21 +285,25 @@
   }
   async function renderPrompt(next) {
     const request = next.permissionPrompt;
-    if (!request) { promptId = 0; prompt.hidden = true; await api.setPopover(false, 'permissions'); return; }
+    if (!request) {
+      const wasOpen = Boolean(promptId); promptId = 0; prompt.hidden = promptShield.hidden = true;
+      if (wasOpen) await api.setPopover(false, 'permissions'); return;
+    }
     const fresh = promptId !== request.id; promptId = request.id;
     if (fresh) {
+      prompt.hidden = true;
       close(); settings.hidden = true; style.setAttribute('aria-expanded', 'false');
       const header = el('header', 'site-heading'); const identity = el('div');
       identity.append(el('strong', '', request.domain), el('small', '', request.origin));
-      const dismiss = button('', () => respond('dismiss'), 'site-prompt-dismiss'); dismiss.setAttribute('aria-label', 'Закрыть запрос'); dismiss.append(glyph('close'));
+      const dismiss = button('', () => respond('dismiss', request.id), 'site-prompt-dismiss'); dismiss.setAttribute('aria-label', 'Закрыть запрос'); dismiss.append(glyph('close'));
       header.append(glyph(request.permissions[0]), identity, dismiss);
       const message = el('p', 'site-prompt-message', request.permissions.includes('popups')
         ? 'Разрешить всплывающие окна? После выбора повторите действие на сайте.'
         : `Запрашивает доступ: ${request.permissions.map(n => names[n]?.toLowerCase() || n).join(', ')}`);
-      const actions = el('div', 'site-confirm-actions'); actions.append(button('Запретить', () => respond('block')), button('Разрешить', () => respond('allow'), 'site-primary'));
+      const actions = el('div', 'site-confirm-actions'); actions.append(button('Запретить', () => respond('block', request.id)), button('Разрешить', () => respond('allow', request.id), 'site-primary'));
       prompt.replaceChildren(header, message, actions);
       await expandSurface('permissions'); if (promptId !== request.id) return;
-      prompt.hidden = false; position(); prompt.querySelector('button')?.focus();
+      prompt.hidden = promptShield.hidden = false; position(); prompt.querySelector('button')?.focus();
     }
     for (const b of prompt.querySelectorAll('button')) b.disabled = false;
   }
