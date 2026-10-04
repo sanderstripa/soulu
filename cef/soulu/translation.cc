@@ -7,7 +7,7 @@
 
 namespace soulu {
 namespace {
-CefRefPtr<CefValue> Value(CefRefPtr<CefDictionaryValue> dictionary){auto value=CefValue::Create();value->SetDictionary(dictionary);return value;}
+CefRefPtr<CefValue> Value(CefRefPtr<CefDictionaryValue> dictionary){auto value=CefValue::Create();value->SetDictionary(dictionary->Copy(false));return value;}
 class MenuCallback final:public CefMessageRouterBrowserSide::Callback {
  public:void Success(const CefString&) override{} void Success(const void*,size_t) override{} void Failure(int,const CefString&) override{}
  private:IMPLEMENT_REFCOUNTING(MenuCallback);
@@ -56,7 +56,7 @@ bool BrowserWindow::HandleTranslationBridge(const std::string& action,CefRefPtr<
       if(next->GetSize()>500){callback->Failure(400,"Preference limit reached");return true;}updated->SetList(name,next);
     }
     if(tab->incognito)tab->translation_preferences=updated;
-    else {settings_->SetString("translationTarget",updated->GetString("target"));settings_->SetDictionary("translation",updated);if(!SaveSettings()){callback->Failure(500,"Preferences could not be saved");return true;}}
+    else {settings_->SetString("translationTarget",updated->GetString("target"));settings_->SetDictionary("translation",updated->Copy(false));if(!SaveSettings()){callback->Failure(500,"Preferences could not be saved");return true;}}
     callback->Success(CefWriteJSON(Value(updated),JSON_WRITER_DEFAULT));return true;
   }
   // Translation can run in a background tab, but only an explicit browser UI

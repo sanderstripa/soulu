@@ -254,12 +254,7 @@ void BrowserClient::OnBeforeContextMenu(CefRefPtr<CefBrowser> browser,CefRefPtr<
   CEF_REQUIRE_UI_THREAD();const bool en=owner_->MenuEnglish();
   auto label=[&](const char* ru,const char* english){return en?english:ru;};
   // Preserve CEF editing and spellchecking, including enabled states.
-  if(params->IsEditable()||(params->GetEditStateFlags()&CM_EDITFLAG_CAN_SELECT_ALL)){
-    if(!params->IsEditable()){
-      model->Clear();model->AddItem(MENU_ID_COPY,label("Копировать","Copy"));
-      model->SetEnabled(MENU_ID_COPY,(params->GetEditStateFlags()&CM_EDITFLAG_CAN_COPY)!=0);
-      model->AddItem(MENU_ID_SELECT_ALL,label("Выделить всё","Select all"));
-    }
+  if(params->IsEditable()){
     const std::tuple<int,const char*,const char*> labels[]={
       {MENU_ID_UNDO,"Отменить","Undo"},{MENU_ID_REDO,"Повторить","Redo"},
       {MENU_ID_CUT,"Вырезать","Cut"},{MENU_ID_COPY,"Копировать","Copy"},
@@ -341,9 +336,20 @@ bool BrowserClient::RunContextMenu(CefRefPtr<CefBrowser> browser,
   POINT point={params->GetXCoord(),params->GetYCoord()};
   ClientToScreen(browser->GetHost()->GetWindowHandle(),&point);
   CefRefPtr<BrowserClient> keep_alive(this);
-  const int command=ShowSouluMenu(owner_->hwnd(),point,std::move(snapshot),{owner_->MenuDark()});
-  if (command) callback->Continue(command, EVENTFLAG_NONE);
-  else callback->Cancel();
+  auto show=[keep_alive,browser,callback,point,snapshot=std::move(snapshot)](CefRefPtr<CefDictionaryValue> hit) mutable {
+    if(!browser->IsValid()||!IsWindow(keep_alive->owner_->hwnd())){callback->Cancel();return;}
+    if(hit&&hit->GetBool("readonly")){
+      const bool en=keep_alive->owner_->MenuEnglish();snapshot.clear();
+      snapshot.push_back(MenuItem{MENU_ID_COPY,en?L"Copy":L"Копировать"});snapshot.back().accelerator=L"Ctrl+C";snapshot.back().enabled=hit->GetBool("selected");
+      snapshot.push_back(MenuItem{MENU_ID_SELECT_ALL,en?L"Select all":L"Выделить всё"});snapshot.back().accelerator=L"Ctrl+A";
+    }
+    const int command=ShowSouluMenu(keep_alive->owner_->hwnd(),point,std::move(snapshot),{keep_alive->owner_->MenuDark()});
+    if(command)callback->Continue(command,EVENTFLAG_NONE);else callback->Cancel();
+  };
+  if(!params->IsEditable()&&(params->GetEditStateFlags()&CM_EDITFLAG_CAN_SELECT_ALL)){
+    const std::string expression="(()=>{const e=document.elementFromPoint("+std::to_string(params->GetXCoord())+","+std::to_string(params->GetYCoord())+");return {readonly:!!(e&&e.matches('input,textarea')&&e.readOnly&&!e.disabled),selected:!!(e&&e.selectionEnd>e.selectionStart)}})()";
+    EvaluateTranslationPage(browser,browser->GetMainFrame()->GetURL(),expression,std::move(show));
+  }else show(nullptr);
   return true;
 }
 

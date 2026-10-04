@@ -67,6 +67,8 @@ try:
     s.command(shell,'Network.emulateNetworkConditions',{'offline':False,'latency':0,'downloadThroughput':-1,'uploadThroughput':-1})
     german=s.evaluate(shell,'translationEngine.translate("de","ru","Das ist eine deutsche Seite über den lokalen Übersetzer und den Browser.")')
     assert any('\u0400'<=c<='\u04ff' for c in german),german
+    english=s.evaluate(shell,'translationEngine.translate("ru","en","Это русская страница о локальном переводе и настройках браузера.")')
+    assert any('a'<=c.lower()<='z' for c in english),english
     assert s.evaluate(shell,'SouluTranslate.detect("Это русская страница о локальном переводе и настройках браузера.","en")')=='ru'
     assert s.evaluate(shell,'translationEngine.translate("ru","ru","Русская страница")')=='Русская страница'
     assert s.evaluate(shell,'translationEngine.translate("zh","ru","unsupported").then(()=>false,()=>true)')
@@ -123,7 +125,7 @@ try:
         if first:s.evaluate(shell,'browserShell.translation("preferences",{...privateSnapshot,target:"en",always:true,source:"de",never:true})')
         s.evaluate(shell,'browserShell.closeTab(privateSnapshot.tabId)')
     report={'native_bridge':'passed','toolbar_full_page':'passed','real_wasm_translation':'passed','german_pivot':'passed','russian_same_language':'passed','unsupported_language':'passed','wrong_html_language':'passed','forms_code':'passed','dynamic_content':'passed','long_page':'passed','restore_repeat':'passed','cached_offline_worker':'passed','cached_offline_restart':'passed','preferences_restart':'passed','stale_navigation':'passed','spa_restore':'passed','model_http_requests':len(model_requests),'model_http_methods':'GET only'}
-    report.update(profile_preferences='isolated',incognito_preferences='discarded')
+    report.update(profile_preferences='isolated',incognito_preferences='discarded',russian_to_english='passed')
     (out/'translation-evidence.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8');print(json.dumps(report),flush=True)
     page.close();shell.close();s.close_normally(process)
 finally:

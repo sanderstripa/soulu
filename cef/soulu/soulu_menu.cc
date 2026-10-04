@@ -171,7 +171,8 @@ LRESULT CALLBACK Procedure(HWND window,UINT message,WPARAM w,LPARAM l){
   if(message==WM_KEYDOWN){p->keyboard=true;InvalidateRect(window,nullptr,FALSE);switch(w){
     case VK_DOWN:Step(*p,1);break;case VK_UP:Step(*p,-1);break;
     case VK_HOME:Step(*p,1,true);break;case VK_END:Step(*p,-1,true);break;
-    case VK_RETURN:case VK_SPACE:Activate(*p,true);break;case VK_RIGHT:Activate(*p,true);break;
+    case VK_RETURN:case VK_SPACE:Activate(*p,true);break;
+    case VK_RIGHT:if(p->selected>=0&&!(*p->model)[p->selected].children.empty())Activate(*p,true);break;
     case VK_LEFT:if(p->parent){auto* parent=p->parent;CloseAfter(s,parent);SetFocus(parent->window);}break;
     case VK_ESCAPE:if(p->parent){auto* parent=p->parent;CloseAfter(s,parent);SetFocus(parent->window);}else s.done=true;break;
   }return 0;}

@@ -62,6 +62,18 @@ try:
                                 time.sleep(.08);ImageGrab.grab(bbox=(bounds.left,bounds.top,bounds.right,bounds.bottom),all_screens=True).save(out/f'{dpi}-{language}-{layout}-{theme}-{context}.png')
                             u.PostMessageW(hwnd,0x100,0x1B,0);wait(lambda:not menus())
                             checks.append(dict(dpi=dpi,language=language,layout=layout,theme=theme,context=context,labels=labels,width=bounds.right-bounds.left,height=bounds.bottom-bounds.top))
+            # Exercise recursive models and disabled-item skipping at a screen edge.
+            model=[dict(command=1,label='Disabled',enabled=False),dict(type='submenu',label='R&D submenu',children=[dict(command=7,label='Nested action')]),dict(type='separator'),dict(type='check',command=4,label='Checked',checked=True),dict(type='radio',command=5,label='Radio',checked=True)]
+            s.evaluate(shell,'window.nativeMenuResult=null;browserShell.showMenu('+json.dumps(model)+',10000,10000).then(v=>nativeMenuResult=v);void 0')
+            root_menu=wait(lambda:next(iter(menus()),None));rows=access.rows(root_menu)
+            assert rows[0]['state']&1 and rows[1]['label']=='R&D submenu',rows
+            assert rows[3]['state']&16 and rows[4]['state']&16,rows
+            u.PostMessageW(root_menu,0x100,0x24,0);u.PostMessageW(root_menu,0x100,0x27,0)
+            child=wait(lambda:next((h for h in menus() if h!=root_menu),None))
+            assert any(r['label']=='Nested action' for r in access.rows(child))
+            u.PostMessageW(child,0x100,0x0D,0);wait(lambda:not menus())
+            assert wait(lambda:s.evaluate(shell,'nativeMenuResult'))==7
+            checks.append(dict(dpi=dpi,context='recursive',disabled_skipping=True,checked_radio=True,edge_placement=True,command=7))
             page.close();shell.close();s.close_normally(process);process=None
     (out/'menu-evidence.json').write_text(json.dumps(dict(passed=True,scale_mode='native layout/font DPI override in dedicated test process',checks=checks),ensure_ascii=False,indent=2),encoding='utf-8')
     print(f'PASS: {len(checks)} native context/locale/layout/theme/scale combinations; accessibility labels/roles, keyboard dismissal and screenshots',flush=True)

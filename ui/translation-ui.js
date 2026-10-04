@@ -74,7 +74,7 @@
     if(!icon){icon=element('button');icon.type='button';icon.className='soulu-translate-button';icon.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h12M9 3v2M6 5c0 6 4 10 8 11M13 5c0 6-4 10-8 11M14 21l4-10 4 10M15.5 17h5"/></svg>';icon.onclick=()=>open().catch(()=>{});host.append(icon);}
     icon.title=tr('title');icon.setAttribute('aria-label',tr('title'));icon.dataset.translated=String([...jobs.values()].some(j=>j.site.tabId===tab.id&&j.state==='translated'));
   }
-  api.onState(async s=>{
+  async function handleState(s){
     const old=state.activeTabId,oldPage=state.page;state=s;if(old!==s.activeTabId||oldPage?.generation!==s.page?.generation||oldPage?.url!==s.page?.url){revision++;close();}
     const ids=new Set((s.tabs||[]).map(t=>t.id));
     for(const [id,job] of jobs){const tab=s.tabs?.find(t=>t.id===job.site.tabId);
@@ -86,8 +86,9 @@
     try{const snap=await api.getCurrentSite(),probe=await api.translation('probe',snap),from=service.detect(probe.sample,probe.lang),p=await api.translation('preferences',snap);
       probes.set(probeKey,{from,target:p.target,never:(p.never||[]).includes(snap.origin)});updateIcon();
       if((p.always||[]).includes(from)&&!(p.never||[]).includes(snap.origin)&&from!==p.target)await run(snap,from,p.target);
-    }catch{}
-  });
+    }catch{probes.delete(probeKey);setTimeout(()=>{if(state.activeTabId===tab.id)api.getState().then(handleState).catch(()=>{});},500);}
+  }
+  api.onState(handleState);
   api.onTranslateRequest(async snapshot=>{await open(snapshot);const p=await api.translation('probe',snapshot),from=service.detect(p.sample,p.lang);try{await run(snapshot,from,prefs.target||'ru');}catch{status.textContent=tr('unsupported');}});
   api.onQRRequest(snapshot=>{
     close();if(!/^https?:\/\//i.test(snapshot.url)||typeof window.qrcode!=='function')return;
