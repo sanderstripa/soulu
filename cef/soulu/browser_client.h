@@ -1,7 +1,6 @@
 #pragma once
 
 #include <map>
-#include <atomic>
 #include <mutex>
 
 #include "include/cef_client.h"
@@ -24,7 +23,6 @@ class BrowserClient final : public CefClient,
                             public CefLoadHandler,
                             public CefRequestHandler,
                             public CefPermissionHandler,
-                            public CefResourceRequestHandler,
                             public CefContextMenuHandler,
                             public CefKeyboardHandler,
                             public CefJSDialogHandler {
@@ -52,10 +50,6 @@ class BrowserClient final : public CefClient,
   CefRefPtr<CefResourceRequestHandler> GetResourceRequestHandler(
       CefRefPtr<CefBrowser>, CefRefPtr<CefFrame>, CefRefPtr<CefRequest>,
       bool, bool, const CefString&, bool&) override;
-  ReturnValue OnBeforeResourceLoad(CefRefPtr<CefBrowser>, CefRefPtr<CefFrame>,
-      CefRefPtr<CefRequest>, CefRefPtr<CefCallback>) override;
-  void OnResourceRedirect(CefRefPtr<CefBrowser>,CefRefPtr<CefFrame>,
-      CefRefPtr<CefRequest>,CefRefPtr<CefResponse>,CefString&) override;
   bool OnRequestMediaAccessPermission(CefRefPtr<CefBrowser>, CefRefPtr<CefFrame>,
       const CefString&, uint32_t, CefRefPtr<CefMediaAccessCallback>) override;
   bool OnShowPermissionPrompt(CefRefPtr<CefBrowser>, uint64_t, const CefString&,
@@ -105,10 +99,12 @@ class BrowserClient final : public CefClient,
                          CefRefPtr<CefDownloadItemCallback> callback) override;
 
  private:
-  bool FilterResource(CefRefPtr<CefFrame>,CefRefPtr<CefRequest>,const std::string&);
+  friend class AdBlockResourceHandler;
+  bool FilterResource(CefRefPtr<CefRequest>,const std::string& url,
+      const std::string& top,const std::string& source,uint64_t generation,bool& recorded);
   std::mutex adblock_mutex_;
   std::string adblock_top_;
-  uint64_t adblock_blocked_ = 0, adblock_checked_ = 0;
+  uint64_t adblock_blocked_ = 0, adblock_checked_ = 0, adblock_generation_ = 0;
   CefRefPtr<CefListValue> adblock_hits_ = CefListValue::Create();
   CefRefPtr<BrowserWindow> owner_;
   const BrowserRole role_;

@@ -88,10 +88,11 @@ fn atomic_replace(from: &Path, to: &Path) -> Result<(), String> { fs::rename(fro
 fn update(path: &Path) -> Result<(), String> {
     let client = reqwest::blocking::Client::builder().timeout(Duration::from_secs(30))
         .connect_timeout(Duration::from_secs(10)).https_only(true)
+        .user_agent("Soulu-AdBlock/1")
         .redirect(reqwest::redirect::Policy::none()).build().map_err(|e| e.to_string())?;
     let mut lists = Vec::new();
     for source in SOURCES {
-        let response = client.get(source).send().map_err(|e| e.to_string())?
+        let response = client.get(source).send().map_err(|e| format!("{e:?}"))?
             .error_for_status().map_err(|e| e.to_string())?;
         if !response.status().is_success() { return Err("Filter redirect rejected".into()); }
         let kind = response.headers().get(reqwest::header::CONTENT_TYPE)

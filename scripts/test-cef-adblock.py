@@ -68,7 +68,7 @@ out=Path(sys.argv[2]);out.parent.mkdir(parents=True,exist_ok=True)
 with tempfile.TemporaryDirectory(prefix='soulu-adblock-',ignore_cleanup_errors=True) as root:
     rules=Path(root)/'fixture.txt'
     rules.write_text('''||ads.fixture.test^$script,image,subdocument,xmlhttprequest
-@@||ads.fixture.test/allow.js$script
+@@||ads.fixture.test^*allow.js$script
 ##.soulu-ad-slot
 ##.soulu-except
 site-a.test#@#.soulu-except
@@ -113,7 +113,10 @@ site-a.test#@#.soulu-except
         assert visible(page,'.soulu-ad-slot') and fetch_ad(page)
         with lock:off=list(requests)
         blocking('',1);visit(page,a+'/on')
-        assert s.evaluate(page,'window.fixtureLoads===2'),'normal/exception scripts or cancellation incorrect'
+        loads=s.evaluate(page,'window.fixtureLoads');evidence['initial_on_loads']=loads
+        evidence['initial_runtime']=actual_snapshot()
+        with lock:evidence['initial_on_server_requests']=list(requests)
+        assert loads==2,f'normal/exception scripts or cancellation incorrect: {loads}'
         assert s.evaluate(page,"document.querySelector('#normal-image').naturalWidth===1&&document.querySelector('#ad-image').naturalWidth===0")
         assert not fetch_ad(page),'XHR/fetch bypassed request filtering'
         wait(lambda:not visible(page,'.soulu-ad-slot'));assert visible(page,'.soulu-except')

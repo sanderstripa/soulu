@@ -126,38 +126,51 @@ void BrowserClient::RefreshAdBlock(CefRefPtr<CefBrowser> browser) {
   for(const auto& id:ids)if(auto frame=browser->GetFrameByIdentifier(id))
     frame->SendProcessMessage(PID_RENDERER,CefProcessMessage::Create("soulu.adblock.refresh"));
 }
+class AdBlockResourceHandler final : public CefResourceRequestHandler {
+ public:
+  AdBlockResourceHandler(CefRefPtr<BrowserClient> client,std::string top,std::string source,uint64_t generation)
+    :client_(client),top_(std::move(top)),source_(std::move(source)),generation_(generation){}
+  ReturnValue OnBeforeResourceLoad(CefRefPtr<CefBrowser>,CefRefPtr<CefFrame>,
+      CefRefPtr<CefRequest> request,CefRefPtr<CefCallback>) override {
+    CEF_REQUIRE_IO_THREAD();
+    return client_->FilterResource(request,request->GetURL(),top_,source_,generation_,recorded_)?RV_CANCEL:RV_CONTINUE;
+  }
+  void OnResourceRedirect(CefRefPtr<CefBrowser>,CefRefPtr<CefFrame>,
+      CefRefPtr<CefRequest> request,CefRefPtr<CefResponse>,CefString& new_url) override {
+    CEF_REQUIRE_IO_THREAD();
+    // Chromium refuses an HTTP-to-data redirect before contacting its target.
+    if(client_->FilterResource(request,new_url,top_,source_,generation_,recorded_))new_url="data:,";
+  }
+ private:
+  CefRefPtr<BrowserClient> client_;const std::string top_,source_;const uint64_t generation_;
+  bool recorded_=false;
+  IMPLEMENT_REFCOUNTING(AdBlockResourceHandler);
+};
 CefRefPtr<CefResourceRequestHandler> BrowserClient::GetResourceRequestHandler(
-    CefRefPtr<CefBrowser>,CefRefPtr<CefFrame>,CefRefPtr<CefRequest> request,
-    bool,bool download,const CefString&,bool&) {
-  // Include iframe navigations, fetch/XHR, media, and worker-originated requests.
-  // User navigation/downloads retain their separate browser policies.
-  return role_==BrowserRole::kContent&&!download&&request->GetResourceType()!=RT_MAIN_FRAME?this:nullptr;
-}
-BrowserClient::ReturnValue BrowserClient::OnBeforeResourceLoad(CefRefPtr<CefBrowser>,
-    CefRefPtr<CefFrame> frame,CefRefPtr<CefRequest> request,CefRefPtr<CefCallback>) {
+    CefRefPtr<CefBrowser>,CefRefPtr<CefFrame> frame,CefRefPtr<CefRequest> request,
+    bool,bool download,const CefString& initiator,bool&) {
   CEF_REQUIRE_IO_THREAD();
-  return FilterResource(frame,request,request->GetURL())?RV_CANCEL:RV_CONTINUE;
+  if(role_!=BrowserRole::kContent||download||request->GetResourceType()==RT_MAIN_FRAME)return nullptr;
+  std::string top;uint64_t generation;
+  {std::lock_guard lock(adblock_mutex_);top=adblock_top_;generation=adblock_generation_;}
+  std::string source=initiator;
+  if(WebOrigin(source).empty())source=frame?frame->GetURL().ToString():top;
+  if(WebOrigin(source).empty())source=top;
+  // Each request keeps its document context across redirects/rapid navigation.
+  // The engine remains shared; this object only stores a few context fields.
+  return new AdBlockResourceHandler(this,top,source,generation);
 }
-void BrowserClient::OnResourceRedirect(CefRefPtr<CefBrowser>,CefRefPtr<CefFrame> frame,
-    CefRefPtr<CefRequest> request,CefRefPtr<CefResponse>,CefString& new_url) {
-  CEF_REQUIRE_IO_THREAD();
-  // Chromium rejects the unsafe HTTP-to-data redirect before contacting its target.
-  // This is the redirect callback's pre-network equivalent of RV_CANCEL.
-  if(FilterResource(frame,request,new_url))new_url="data:,";
-}
-bool BrowserClient::FilterResource(CefRefPtr<CefFrame> frame,CefRefPtr<CefRequest> request,const std::string& url) {
-  if(!policy_)return false;
-  std::string top;{std::lock_guard lock(adblock_mutex_);top=adblock_top_;}
-  if(!policy_->Blocking(top)||WebOrigin(top).empty()||WebOrigin(url).empty())return false;
-  std::string source=frame?frame->GetURL().ToString():top;
-  if(WebOrigin(source).empty()||request->GetResourceType()==RT_SUB_FRAME)source=top;
+bool BrowserClient::FilterResource(CefRefPtr<CefRequest> request,const std::string& url,
+    const std::string& top,const std::string& source,uint64_t generation,bool& recorded) {
+  if(!policy_||!policy_->Blocking(top)||WebOrigin(top).empty()||WebOrigin(url).empty())return false;
   std::string rule;
   const bool blocked=MatchAdBlock(url,source,request->GetResourceType(),request->GetMethod(),&rule);
-  {std::lock_guard lock(adblock_mutex_);if(top==adblock_top_){++adblock_checked_;
-    if(blocked){++adblock_blocked_;
+  {std::lock_guard lock(adblock_mutex_);if(generation==adblock_generation_){++adblock_checked_;
+    if(blocked&&!recorded){++adblock_blocked_;recorded=true;
       // Detailed hits are bounded and available only in an explicit test/debug process.
       wchar_t debug[12]={};if(GetEnvironmentVariableW(L"SOULU_UI_TEST_PORT",debug,12)&&adblock_hits_->GetSize()<200){
         auto hit=CefDictionaryValue::Create();hit->SetString("site",SiteDomain(top));
+        hit->SetString("requestId",std::to_string(request->GetIdentifier()));
         hit->SetString("url",url);hit->SetInt("type",request->GetResourceType());hit->SetString("rule",rule);
         hit->SetDouble("timestamp",static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count()));
         adblock_hits_->SetDictionary(adblock_hits_->GetSize(),hit);}}}}
@@ -199,7 +212,7 @@ bool BrowserClient::OnBeforeBrowse(CefRefPtr<CefBrowser> browser,CefRefPtr<CefFr
   CEF_REQUIRE_UI_THREAD();if(router_)router_->OnBeforeBrowse(browser,frame);
   if(role_!=BrowserRole::kShell&&frame->IsMain()){
     {std::lock_guard lock(adblock_mutex_);adblock_top_=request->GetURL();
-      adblock_blocked_=0;adblock_checked_=0;adblock_hits_->Clear();}
+      ++adblock_generation_;adblock_blocked_=0;adblock_checked_=0;adblock_hits_->Clear();}
     owner_->ResetHistoryVisit(tab_id_);
     owner_->ReaderDocumentNavigation(tab_id_);owner_->SyncSitePolicy(tab_id_,request->GetURL());
   }

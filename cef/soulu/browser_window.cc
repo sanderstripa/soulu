@@ -1043,11 +1043,14 @@ void BrowserWindow::NewTab(const std::string& url, bool incognito,
   const bool dark = settings_->GetString("theme") == "dark" || (settings_->GetString("theme") == "system" && IsWindowsDarkMode());
   browser_settings.background_color = dark && tab.url!="soulu://onboarding" ? CefColorSetARGB(255,8,9,11) : CefColorSetARGB(255,250,250,250);
   const BrowserRole role = BrowserRole::kContent;
+  // Resolve/create the private context and its copied policy before the client
+  // captures that policy; function-argument evaluation order is unspecified.
+  auto request_context=context?context:ContextForNewTab(incognito);
   const bool created = CefBrowserHost::CreateBrowser(
       info, new BrowserClient(this, role, id),
       InternalUrl(tab.url), browser_settings,
       [&](){auto extra=CefDictionaryValue::Create();extra->SetBool("souluIncognito",incognito);return extra;}(),
-      context ? context : ContextForNewTab(incognito));
+      request_context);
   if (!created) {
     AbortPopup(id);
     active_tab_id_ = previous_active;
