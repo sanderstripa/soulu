@@ -1,3 +1,4 @@
+#include "examples/soulu/soulu_menu.h"
 #include "examples/soulu/typography_native.h"
 #include "examples/soulu/browser_window.h"
 #include "examples/soulu/reader_preferences.h"
@@ -485,6 +486,12 @@ void BrowserWindow::LoadProfileSettings() {
   SaveSettings();ApplyWindowAppearance();ApplyContentTheme();
 }
 
+bool BrowserWindow::MenuDark() const {
+  const auto theme=EffectiveSettings()->GetString("theme").ToString();
+  return theme=="dark"||(theme=="system"&&IsWindowsDarkMode());
+}
+bool BrowserWindow::MenuEnglish() const {return EffectiveSettings()->GetString("language")=="en";}
+
 void BrowserWindow::Create() {
   CEF_REQUIRE_UI_THREAD();
   CefRefPtr<BrowserWindow> window = new BrowserWindow();
@@ -521,6 +528,7 @@ bool BrowserWindow::CreateNativeWindow() {
                               WS_MAXIMIZEBOX | WS_SYSMENU,
                           x, y, width, height, nullptr, nullptr, wc.hInstance, this);
   if (!hwnd_) return false;
+  windows_.push_back(this);
 
   WNDCLASSEXW edgeClass={sizeof(edgeClass)};
   edgeClass.lpfnWndProc=ResizeProc;edgeClass.hInstance=wc.hInstance;
@@ -1140,6 +1148,10 @@ void BrowserWindow::AttachShell(CefRefPtr<CefBrowser> browser) {
   shell_ = browser;
   surface_->Attach(browser);
   InitializeProfiles();
+  if(!secondary_url_.empty()){
+    NewTab(secondary_url_,secondary_incognito_,true,secondary_context_,secondary_profile_);
+    secondary_url_.clear();secondary_context_=nullptr;Layout();return;
+  }
   if (NeedsOnboarding() || !RestoreSession()) NewTab(PageUrl("startup", settings_));
   CefCommandLine::ArgumentList arguments;
   CefCommandLine::GetGlobalCommandLine()->GetArguments(arguments);
@@ -1195,6 +1207,7 @@ std::string BrowserWindow::VisibleProfileId() const {
 }
 
 void BrowserWindow::SwitchTab(int id) {
+  DismissSouluMenus(hwnd_);
   auto* tab=FindTab(id);if(!tab)return;
   if(!tab->incognito&&tab->profile_id!=active_profile_id_){
     if(settings_dirty_){GuardSettingsClose(settings_session_id_);return;}
@@ -1209,6 +1222,7 @@ void BrowserWindow::SwitchTab(int id) {
 }
 
 void BrowserWindow::CloseTab(int id) {
+  DismissSouluMenus(hwnd_);
   CancelSitePermissions(id);
   auto it = std::find_if(tabs_.begin(), tabs_.end(),
       [id](const Tab& tab) { return tab.id == id; });
@@ -1262,6 +1276,24 @@ void BrowserWindow::FocusAddress() {
       "setTimeout(()=>window.__souluEmit&&window.__souluEmit('focusAddress',null),0)";
   shell_->GetMainFrame()->ExecuteJavaScript(
       script, shell_->GetMainFrame()->GetURL(), 0);
+}
+
+void BrowserWindow::SearchSelection(int id,CefRefPtr<CefBrowser> source,const std::string& text){
+  if(text.empty()||text.size()>16384)return;
+  const std::string engine=EffectiveSettings()->GetString("searchEngine");
+  const std::string base=engine=="yandex"?"https://yandex.ru/search/?text=":engine=="bing"?"https://www.bing.com/search?q=":engine=="duckduckgo"?"https://duckduckgo.com/?q=":"https://www.google.com/search?q=";
+  OpenTabFrom(id,source,base+CefURIEncode(text,true).ToString(),false);
+}
+void BrowserWindow::OpenLinkWindow(int id,CefRefPtr<CefBrowser> source,const std::string& url,bool incognito){
+  auto* tab=FindTab(id);if(!tab||!tab->browser||!tab->browser->IsSame(source)||WebOrigin(url).empty())return;
+  CefRefPtr<BrowserWindow> window=new BrowserWindow();
+  window->profiles_=profiles_;window->active_profile_id_=active_profile_id_;window->settings_=settings_->Copy(false);
+  window->bookmarks_=bookmarks_;window->policies_=policies_;window->vpn_settings_=vpn_settings_;
+  window->secondary_url_=url;window->secondary_incognito_=incognito||tab->incognito;
+  window->secondary_profile_=window->secondary_incognito_?"__incognito__":tab->profile_id;
+  window->secondary_context_=window->secondary_incognito_?ContextForNewTab(true):source->GetHost()->GetRequestContext();
+  if(window->secondary_incognito_)window->incognito_context_=window->secondary_context_;
+  if(window->CreateNativeWindow())window->CreateShellBrowser();
 }
 
 void BrowserWindow::Navigate(const std::string& value) {
@@ -1625,8 +1657,9 @@ void BrowserWindow::EmitState() { Emit("state", Wrap(State())); }
 void BrowserWindow::RequestFind() { if (settings_overlay_) { FocusSettings(); return; } if(surface_)surface_->Focus();Emit("requestFind",EmptyValue()); }
 
 void BrowserWindow::ReaderDocumentNavigation(int id) {
+  DismissSouluMenus(hwnd_);
   CancelSitePermissions(id);
-  if(auto* tab=FindTab(id)){++tab->document_generation;tab->main_loading=true;tab->reader_active=false;tab->reader_article=nullptr;}
+  if(auto* tab=FindTab(id)){++tab->document_generation;++tab->translation_generation;tab->translation_active=false;tab->main_loading=true;tab->reader_active=false;tab->reader_article=nullptr;}
   Layout();EmitState();
 }
 void BrowserWindow::ReaderDocumentLoaded(int id) {
@@ -1799,6 +1832,22 @@ void BrowserWindow::HandleBridge(const std::string& request,
   auto root = parsed->GetDictionary();
   const std::string action = root->GetString("action");
   auto payload = root->GetValue("payload");
+  if(action=="browser.menu.show"){
+    if(settings_source||!payload||payload->GetType()!=VTYPE_DICTIONARY){callback->Failure(403,"Menu host unavailable");return;}
+    auto data=payload->GetDictionary();auto items=data->GetList("items");
+    if(!items||items->GetSize()>100){callback->Failure(400,"Invalid menu model");return;}
+    MenuModel model;
+    for(size_t i=0;i<items->GetSize();++i){auto item=items->GetDictionary(i);
+      if(!item||item->GetString("label").length()>512||item->GetInt("command")<=0){callback->Failure(400,"Invalid menu item");return;}
+      MenuItem row;row.command=item->GetInt("command");row.label=item->GetString("label").ToWString();
+      row.enabled=!item->HasKey("enabled")||item->GetBool("enabled");row.checked=item->GetBool("checked");
+      if(row.checked)row.type=MenuItemType::Check;model.push_back(std::move(row));
+    }
+    const auto scale=CurrentGeometry().scale;
+    POINT anchor={static_cast<LONG>(data->GetInt("x")*scale),static_cast<LONG>(data->GetInt("y")*scale)};ClientToScreen(hwnd_,&anchor);
+    auto result=CefValue::Create();result->SetInt(ShowSouluMenu(hwnd_,anchor,std::move(model),{MenuDark()}));Reply(callback,result);return;
+  }
+  if(action.rfind("browser.translate.",0)==0){if(settings_source){callback->Failure(403,"Unavailable from settings");return;}if(HandleTranslationBridge(action,payload,callback))return;}
   if (action == "browser.settings.siteSnapshot" || action == "browser.settings.clearSite") {
     auto data = payload && payload->GetType() == VTYPE_DICTIONARY ? payload->GetDictionary() : nullptr;
     auto* tab = data ? FindTab(data->GetInt("tabId")) : nullptr;
@@ -2282,17 +2331,13 @@ void BrowserWindow::HandleBridge(const std::string& request,
   }
   else if (action == "window.toolbarMenu") {
     POINT point = {}; GetCursorPos(&point);
-    HMENU menu = CreatePopupMenu();
-    AppendMenuW(menu, MF_STRING, 1, L"Настройки");
-    AppendMenuW(menu, MF_STRING, 2, L"Загрузки");
-    AppendMenuW(menu, MF_STRING, 5, L"История\tCtrl+H");
-    AppendMenuW(menu, MF_STRING, 6, L"Очистить данные браузера…\tCtrl+Shift+Delete");
-    AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuW(menu, MF_STRING, 3, L"Новая вкладка");
-    AppendMenuW(menu, MF_STRING, 4, L"Новая вкладка инкогнито");
-    const int command = TypographyTrackPopupMenu(menu, TPM_RETURNCMD | TPM_RIGHTBUTTON,
-                                       point.x, point.y, 0, hwnd_, nullptr);
-    DestroyMenu(menu);
+    const bool en=MenuEnglish();
+    MenuModel model={{1,en?L"Settings":L"Настройки"},{2,en?L"Downloads":L"Загрузки"},
+      {5,en?L"History":L"История",L"Ctrl+H"},
+      {6,en?L"Clear browsing data…":L"Очистить данные браузера…",L"Ctrl+Shift+Delete"},
+      MenuItem::Separator(),{3,en?L"New tab":L"Новая вкладка"},
+      {4,en?L"New incognito tab":L"Новая вкладка инкогнито"}};
+    const int command=ShowSouluMenu(hwnd_,point,std::move(model),{MenuDark()});
     if (command == 5) OpenHistory();
     else if (command == 6) OpenHistory(true);
     else if (command == 1) OpenSettingsOverlay();
@@ -2302,15 +2347,14 @@ void BrowserWindow::HandleBridge(const std::string& request,
   }
   else if (action == "browser.pageMenu") {
     POINT point = {}; GetCursorPos(&point);
-    HMENU menu = CreatePopupMenu();
-    AppendMenuW(menu, MF_STRING, 1, L"Копировать адрес");
-    AppendMenuW(menu, MF_STRING, 3, L"Найти на странице");
+    const bool en=MenuEnglish();
+    MenuModel model={{1,en?L"Copy address":L"Копировать адрес"},
+      {3,en?L"Find in page":L"Найти на странице",L"Ctrl+F"}};
     auto* current=ActiveTab();auto policy=current?PolicyForTab(current->id):nullptr;
-    if(current&&policy&&!WebOrigin(current->url).empty())AppendMenuW(menu,MF_STRING,4,
-      policy->Blocking(current->url)?L"Отключить блокировку рекламы на этом сайте":L"Включить блокировку рекламы на этом сайте");
-    const int command = TypographyTrackPopupMenu(menu, TPM_RETURNCMD | TPM_RIGHTBUTTON,
-                                       point.x, point.y, 0, hwnd_, nullptr);
-    DestroyMenu(menu);
+    if(current&&policy&&!WebOrigin(current->url).empty())model.push_back({4,
+      policy->Blocking(current->url)?(en?L"Disable ad blocking on this site":L"Отключить блокировку рекламы на этом сайте"):
+      (en?L"Enable ad blocking on this site":L"Включить блокировку рекламы на этом сайте")});
+    const int command=ShowSouluMenu(hwnd_,point,std::move(model),{MenuDark()});
     if (command == 1) {
       if (auto* t = ActiveTab(); t && OpenClipboard(hwnd_)) {
         EmptyClipboard(); const std::wstring wide = CefString(t->url).ToWString();
@@ -2338,6 +2382,7 @@ void BrowserWindow::HandleBridge(const std::string& request,
 }
 
 void BrowserWindow::CloseAll() {
+  DismissSouluMenus(hwnd_);
   if(clearing_data_){close_after_clear_=true;return;}
   if (settings_overlay_) { settings_close_all_ = true; GuardSettingsClose(kSettingsSession, true); return; }
   if(importing_){close_after_import_=true;return;}
@@ -2477,7 +2522,10 @@ LRESULT CALLBACK BrowserWindow::WindowProc(HWND hwnd, UINT message, WPARAM wpara
     case WM_DWMCOMPOSITIONCHANGED: self->ApplyWindowAppearance(); return 0;
     case WM_SETTINGCHANGE: self->ApplyWindowAppearance(); self->ApplyContentTheme(); break;
     case WM_CLOSE: TypographyCancelOwnedDialogs(hwnd);self->CloseAll();return 0;
-    case WM_DESTROY: ReleaseFrostedBackdrop(hwnd); CefQuitMessageLoop(); return 0;
+    case WM_DESTROY:
+      ReleaseFrostedBackdrop(hwnd);windows_.erase(std::remove(windows_.begin(),windows_.end(),self),windows_.end());
+      if(current_==self)current_=windows_.empty()?nullptr:windows_.back();
+      if(windows_.empty())CefQuitMessageLoop();return 0;
     case WM_NCDESTROY:
       SetWindowLongPtr(hwnd, GWLP_USERDATA, 0); self->hwnd_ = nullptr; self->Release(); break;
   }

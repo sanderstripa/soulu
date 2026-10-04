@@ -48,7 +48,23 @@
   document.addEventListener('pointercancel',finishDrag);
   document.addEventListener('click',e=>{if(consumeClick){e.preventDefault();e.stopImmediatePropagation();}},true);
   async function move(id,target){if(!id||id===target.id)return;const moving=rows.find(r=>r.id===id);if(!moving||descendants(id).has(target.id))return;const next=rows.map(r=>({...r})), copy=next.find(r=>r.id===id);copy.parentId=target.type==='folder'?target.id:(target.parentId||0);const siblings=next.filter(r=>r.id!==id&&(r.parentId||0)===copy.parentId).sort((a,b)=>(a.order||0)-(b.order||0));const index=target.type==='folder'?siblings.length:siblings.findIndex(r=>r.id===target.id);siblings.splice(index,0,copy);siblings.forEach((r,i)=>r.order=i);await persist(next);}
-  function context(row,event){document.querySelector('.bookmark-context')?.remove();const ctx=el('div','bookmark-context');ctx.append(button('Открыть',()=>{ctx.remove();return row.type==='folder'?openMenu(row.id):api.openBookmark(row.url);}));if(row.type!=='folder'){ctx.append(button('Открыть в новой вкладке',()=>{ctx.remove();return api.openTab(row.url);}),button('Открыть в фоновой вкладке',()=>{ctx.remove();return api.openTab(row.url,true);}));}ctx.append(button('Редактировать',()=>{ctx.remove();return edit(row);}),button(row.hideTitle?'Показать подпись':'Скрыть подпись',()=>{ctx.remove();return persist(rows.map(r=>r.id===row.id?{...r,hideTitle:!r.hideTitle}:r));}),button('Переместить в корень',()=>{ctx.remove();return persist(rows.map(r=>r.id===row.id?{...r,parentId:0,order:rows.length}:r));}),button('Удалить',()=>{ctx.remove();const ids=descendants(row.id);if(row.type==='folder'&&ids.size>1&&!confirm('Удалить папку со всеми закладками?'))return;return persist(rows.filter(r=>!ids.has(r.id)));}));document.body.append(ctx);updatePopover();ctx.addEventListener('click',updatePopover);ctx.style.left=Math.min(event.clientX,innerWidth-270)+'px';ctx.style.top=Math.max(48,Math.min(event.clientY,innerHeight-280))+'px';api.setSuggestionsHeight(Math.min(innerHeight,Math.max(event.clientY+280,menu.hidden?0:menu.getBoundingClientRect().bottom)));}
+  async function context(row,event){
+    const en=state.settings?.language==='en',commands=[],items=[];
+    const add=(ru,english,run)=>{commands.push(run);items.push({command:commands.length,label:en?english:ru});};
+    add('Открыть','Open',()=>row.type==='folder'?openMenu(row.id):api.openBookmark(row.url));
+    if(row.type!=='folder'){
+      add('Открыть в новой вкладке','Open in new tab',()=>api.openTab(row.url));
+      add('Открыть в фоновой вкладке','Open in background tab',()=>api.openTab(row.url,true));
+    }
+    add('Редактировать','Edit',()=>edit(row));
+    add(row.hideTitle?'Показать подпись':'Скрыть подпись',row.hideTitle?'Show label':'Hide label',()=>persist(rows.map(r=>r.id===row.id?{...r,hideTitle:!r.hideTitle}:r)));
+    add('Переместить в корень','Move to root',()=>persist(rows.map(r=>r.id===row.id?{...r,parentId:0,order:rows.length}:r)));
+    add('Удалить','Delete',()=>{const ids=descendants(row.id);if(row.type==='folder'&&ids.size>1&&!confirm(en?'Delete folder and its bookmarks?':'Удалить папку со всеми закладками?'))return;return persist(rows.filter(r=>!ids.has(r.id)));});
+    const rect=event.currentTarget?.getBoundingClientRect();
+    const command=await api.showMenu(items,event.clientX||rect?.left||0,event.clientY||rect?.bottom||48);
+    if(command>0&&commands[command-1])await commands[command-1]();
+  }
+
   async function edit(row){const title=prompt('Название',row.title||'');if(title===null)return;let url=row.url;if(row.type!=='folder'){url=prompt('URL',url||'');if(url===null)return;if(!/^https?:\/\//i.test(url)){alert('Введите HTTP или HTTPS URL');return;}}await persist(rows.map(r=>r.id===row.id?{...r,title,url,updatedAt:Date.now()}:r));}
   async function folder(){const title=prompt('Название папки');if(!title?.trim())return;await persist([...rows,{id:nextId(),type:'folder',title:title.trim(),parentId:parent,order:children(parent).length,createdAt:Date.now()}]);}
   async function add(){const before=new Set(rows.map(r=>r.id));rows=await api.addBookmark();if(parent)await persist(rows.map(r=>before.has(r.id)?r:{...r,parentId:parent,order:children(parent).length}));else render();}

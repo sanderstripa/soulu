@@ -1,6 +1,11 @@
 # Soulu native CEF shell. This directory is copied into cef-project/examples
 # by the Windows workflow, so it intentionally uses cef-project's helpers.
 set(SOULU_SRCS
+  soulu_menu.h
+  soulu_menu.cc
+  isolated_page_job.h
+  isolated_page_job.cc
+  translation.cc
   app_factory.h
   app_browser.cc
   app_renderer.cc

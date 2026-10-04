@@ -32,6 +32,10 @@
   // not shrink the OSR host while another still owns client-area content.
   const popovers = new Set();
   window.browserShell = {
+    showMenu: (items,x,y) => invoke("browser.menu.show",{items,x:Math.round(x),y:Math.round(y)}),
+    translation: (action,payload) => invoke("browser.translate."+action,payload),
+    onTranslateRequest: callback => subscribe("translateRequest",callback),
+    onQRRequest: callback => subscribe("qrRequest",callback),
     openHistory: (clear = false) => invoke("browser.history.open", clear),
     navigate: value => invoke("browser.navigate", value),
     home: () => invoke("browser.home"),

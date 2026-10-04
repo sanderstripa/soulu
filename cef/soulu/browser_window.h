@@ -59,6 +59,16 @@ class BrowserWindow final : public CefBaseRefCounted {
                     CefRefPtr<CefMessageRouterBrowserSide::Callback> callback, bool settings_source = false);
 
   HWND hwnd() const { return hwnd_; }
+  bool MenuDark() const;
+  bool MenuEnglish() const;
+  bool MenuReaderAvailable(int id) const;
+  void MenuReader(int id);
+  void MenuTranslate(int id);
+  void MenuQR(int id);
+  void SearchSelection(int id,CefRefPtr<CefBrowser> source,const std::string& text);
+  void OpenLinkWindow(int id,CefRefPtr<CefBrowser> source,const std::string& url,bool incognito);
+  bool HandleTranslationBridge(const std::string& action,CefRefPtr<CefValue> payload,
+      CefRefPtr<CefMessageRouterBrowserSide::Callback> callback);
   CefRefPtr<ShellSurface> surface() const { return surface_; }
   void ApplyContentTheme();
   void OpenIncognitoLink(int source_id, CefRefPtr<CefBrowser> source,
@@ -118,6 +128,9 @@ class BrowserWindow final : public CefBaseRefCounted {
     bool reader_active = false;
     bool main_loading = false;
     int document_generation = 0;
+    int translation_generation = 0;
+    bool translation_active = false;
+    CefRefPtr<CefDictionaryValue> translation_preferences;
     CefRefPtr<CefDictionaryValue> reader_article;
   };
 
@@ -130,6 +143,10 @@ class BrowserWindow final : public CefBaseRefCounted {
   BrowserWindow();
   ~BrowserWindow() override { if(current_==this)current_=nullptr; }
   inline static BrowserWindow* current_ = nullptr;
+  inline static std::vector<BrowserWindow*> windows_;
+  std::string secondary_url_,secondary_profile_;
+  bool secondary_incognito_=false;
+  CefRefPtr<CefRequestContext> secondary_context_;
   std::string pending_external_url_;
   static LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam);
   bool CreateNativeWindow();

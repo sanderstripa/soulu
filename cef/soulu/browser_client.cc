@@ -1,3 +1,6 @@
+#include "examples/soulu/menu_commands.h"
+#include "examples/soulu/isolated_page_job.h"
+#include "examples/soulu/soulu_menu.h"
 #include "examples/soulu/typography_native.h"
 #include "examples/soulu/browser_client.h"
 #include "examples/soulu/adblock_bridge.h"
@@ -6,6 +9,8 @@
 
 #include <string>
 #include <cstring>
+#include <tuple>
+#include "include/cef_image.h"
 
 #include "examples/soulu/browser_window.h"
 #include "include/wrapper/cef_helpers.h"
@@ -47,12 +52,19 @@ void BrowserClient::OnResetDialogState(CefRefPtr<CefBrowser>){
 }
 
 namespace {
-enum LinkCommand {
-  kLinkForeground = MENU_ID_USER_FIRST,
-  kLinkBackground,
-  kLinkIncognito,
-  kLinkSave,
-  kLinkCopy,
+class CopyImage final:public CefDownloadImageCallback {
+ public:explicit CopyImage(HWND owner):owner_(owner){}
+  void OnDownloadImageFinished(const CefString&,int,CefRefPtr<CefImage> image) override {
+    if(!image||!IsWindow(owner_))return;int width=0,height=0;
+    auto bitmap=image->GetAsBitmap(1.0f,CEF_COLOR_TYPE_BGRA_8888,CEF_ALPHA_TYPE_OPAQUE,width,height);
+    if(!bitmap||width<=0||height<=0||bitmap->GetSize()>128*1024*1024)return;
+    auto memory=GlobalAlloc(GMEM_MOVEABLE,sizeof(BITMAPINFOHEADER)+bitmap->GetSize());if(!memory)return;
+    auto* bytes=static_cast<unsigned char*>(GlobalLock(memory));if(!bytes){GlobalFree(memory);return;}
+    BITMAPINFOHEADER header={};header.biSize=sizeof(header);header.biWidth=width;header.biHeight=-height;header.biPlanes=1;header.biBitCount=32;header.biCompression=BI_RGB;
+    memcpy(bytes,&header,sizeof(header));bitmap->GetData(bytes+sizeof(header),bitmap->GetSize(),0);GlobalUnlock(memory);
+    if(OpenClipboard(owner_)){EmptyClipboard();if(SetClipboardData(CF_DIB,memory))memory=nullptr;CloseClipboard();}if(memory)GlobalFree(memory);
+  }
+ private:HWND owner_;IMPLEMENT_REFCOUNTING(CopyImage);
 };
 
 bool DownloadableLink(const std::string& url) {
@@ -96,8 +108,14 @@ BrowserClient::BrowserClient(CefRefPtr<BrowserWindow> owner, BrowserRole role, i
     : owner_(owner), role_(role), tab_id_(tab_id),
       policy_(role!=BrowserRole::kShell?owner->PolicyForTab(tab_id):nullptr) {}
 
-bool BrowserClient::OnPreKeyEvent(CefRefPtr<CefBrowser>,const CefKeyEvent& event,CefEventHandle,bool*) {
+bool BrowserClient::OnPreKeyEvent(CefRefPtr<CefBrowser> browser,const CefKeyEvent& event,CefEventHandle,bool*) {
   if (role_ == BrowserRole::kSettings) return false;
+  if(role_==BrowserRole::kContent&&event.type==KEYEVENT_RAWKEYDOWN){
+    if((event.modifiers&EVENTFLAG_CONTROL_DOWN)&&!(event.modifiers&EVENTFLAG_ALT_DOWN)){
+      switch(event.windows_key_code){case 'R':browser->Reload();return true;case 'P':browser->GetHost()->Print();return true;case 'S':if(DownloadableLink(browser->GetMainFrame()->GetURL()))browser->GetHost()->StartDownload(browser->GetMainFrame()->GetURL());return true;case 'U':browser->GetMainFrame()->ViewSource();return true;}
+    }
+    if(event.modifiers&EVENTFLAG_ALT_DOWN){if(event.windows_key_code==VK_LEFT){browser->GoBack();return true;}if(event.windows_key_code==VK_RIGHT){browser->GoForward();return true;}}
+  }
   if (owner_->SettingsOverlayActive()) { owner_->FocusSettings(); return true; }
   if(event.type==KEYEVENT_RAWKEYDOWN&&(event.modifiers&EVENTFLAG_CONTROL_DOWN)&&!(event.modifiers&EVENTFLAG_ALT_DOWN)) {
     if(event.windows_key_code=='H'){owner_->OpenHistory();return true;}
@@ -231,45 +249,92 @@ bool BrowserClient::OnBeforeBrowse(CefRefPtr<CefBrowser> browser,CefRefPtr<CefFr
   return false;
 }
 
-void BrowserClient::OnBeforeContextMenu(CefRefPtr<CefBrowser>, CefRefPtr<CefFrame>,
-    CefRefPtr<CefContextMenuParams> params, CefRefPtr<CefMenuModel> model) {
-  CEF_REQUIRE_UI_THREAD();
-  if (role_ != BrowserRole::kContent || params->GetLinkUrl().empty()) return;
+void BrowserClient::OnBeforeContextMenu(CefRefPtr<CefBrowser> browser,CefRefPtr<CefFrame> frame,
+    CefRefPtr<CefContextMenuParams> params,CefRefPtr<CefMenuModel> model){
+  CEF_REQUIRE_UI_THREAD();const bool en=owner_->MenuEnglish();
+  auto label=[&](const char* ru,const char* english){return en?english:ru;};
+  // Preserve CEF editing and spellchecking, including enabled states.
+  if(params->IsEditable()){
+    const std::tuple<int,const char*,const char*> labels[]={
+      {MENU_ID_UNDO,"Отменить","Undo"},{MENU_ID_REDO,"Повторить","Redo"},
+      {MENU_ID_CUT,"Вырезать","Cut"},{MENU_ID_COPY,"Копировать","Copy"},
+      {MENU_ID_PASTE,"Вставить","Paste"},{MENU_ID_SELECT_ALL,"Выделить всё","Select all"},
+      {MENU_ID_DELETE,"Удалить","Delete"}};
+    for(const auto& [id,ru,english]:labels)if(model->GetIndexOf(id)>=0)model->SetLabel(id,label(ru,english));
+    return;
+  }
+  const bool internal=owner_->IsTrustedUi(frame->GetURL())||owner_->IsHomeUi(frame->GetURL())||owner_->IsHistoryUi(frame->GetURL())||owner_->IsOnboardingUi(frame->GetURL());
   model->Clear();
-  model->AddItem(kLinkForeground, "Открыть ссылку в новой вкладке");
-  model->AddItem(kLinkBackground, "Открыть ссылку в фоновой вкладке");
-  model->AddItem(kLinkIncognito, "Открыть ссылку в режиме инкогнито");
-  const bool web_link = DownloadableLink(params->GetLinkUrl());
-  model->SetEnabled(kLinkForeground, web_link);
-  model->SetEnabled(kLinkBackground, web_link);
-  model->SetEnabled(kLinkIncognito, web_link);
-  if (DownloadableLink(params->GetLinkUrl()))
-    model->AddItem(kLinkSave, "Сохранить ссылку как…");
-  model->AddItem(kLinkCopy, "Копировать адрес ссылки");
+  if(internal){if(!params->GetSelectionText().empty())model->AddItem(MENU_ID_COPY,label("Копировать","Copy"));return;}
+  auto add=[&](int id,const char* ru,const char* english,bool enabled=true){model->AddItem(id,label(ru,english));model->SetEnabled(id,enabled);};
+  const auto link=params->GetLinkUrl().ToString(),source=params->GetSourceUrl().ToString();
+  if(!link.empty()){
+    const bool web=DownloadableLink(link);
+    add(kLinkForeground,"Открыть ссылку в новой вкладке","Open link in new tab",web);
+    add(kLinkBackground,"Открыть ссылку в фоновой вкладке","Open link in background tab",web);
+    add(kLinkWindow,"Открыть ссылку в новом окне","Open link in new window",web);
+    add(kLinkIncognito,"Открыть ссылку в окне инкогнито","Open link in incognito window",web);
+    model->AddSeparator();add(kLinkSave,"Сохранить ссылку как…","Save link as…",web);add(kLinkCopy,"Копировать адрес ссылки","Copy link address");
+  }
+  const bool image=params->GetMediaType()==CM_MEDIATYPE_IMAGE;
+  if(image){
+    if(model->GetCount())model->AddSeparator();
+    add(kImageOpen,"Открыть изображение в новой вкладке","Open image in new tab",DownloadableLink(source));
+    add(kImageSave,"Сохранить изображение как…","Save image as…",DownloadableLink(source));
+    add(kImageCopy,"Копировать изображение","Copy image",params->HasImageContents());
+    add(kImageCopyAddress,"Копировать адрес изображения","Copy image address",!source.empty());
+  }
+  if(params->GetMediaType()==CM_MEDIATYPE_VIDEO||params->GetMediaType()==CM_MEDIATYPE_AUDIO){
+    if(model->GetCount())model->AddSeparator();
+    const auto flags=params->GetMediaStateFlags();
+    add(kMediaPlay,(flags&CM_MEDIAFLAG_PAUSED)?"Воспроизвести":"Пауза",(flags&CM_MEDIAFLAG_PAUSED)?"Play":"Pause");
+    add(kMediaMute,(flags&CM_MEDIAFLAG_MUTED)?"Включить звук":"Выключить звук",(flags&CM_MEDIAFLAG_MUTED)?"Unmute":"Mute",(flags&CM_MEDIAFLAG_HAS_AUDIO)!=0);
+    model->AddCheckItem(kMediaLoop,label("Повторять","Loop"));model->SetChecked(kMediaLoop,(flags&CM_MEDIAFLAG_LOOP)!=0);
+    model->AddCheckItem(kMediaControls,label("Показывать элементы управления","Show controls"));model->SetChecked(kMediaControls,(flags&CM_MEDIAFLAG_CONTROLS)!=0);
+    add(kMediaSave,"Сохранить медиа как…","Save media as…",DownloadableLink(source));add(kMediaCopy,"Копировать адрес медиа","Copy media address",!source.empty());
+  }
+  if(!params->GetSelectionText().empty()){
+    if(model->GetCount())model->AddSeparator();add(MENU_ID_COPY,"Копировать","Copy");
+    std::string selected=params->GetSelectionText().ToString();if(selected.size()>80)selected=selected.substr(0,77)+"…";
+    model->AddItem(kSelectionSearch,std::string(en?"Search for “":"Искать «")+selected+(en?"”":"»"));
+  }
+  if(!model->GetCount()){
+    add(MENU_ID_BACK,"Назад","Back",browser->CanGoBack());add(MENU_ID_FORWARD,"Вперёд","Forward",browser->CanGoForward());
+    add(MENU_ID_RELOAD,"Перезагрузить","Reload");model->AddSeparator();
+    add(kPageSave,"Сохранить как…","Save as…",DownloadableLink(params->GetPageUrl()));add(MENU_ID_PRINT,"Печать…","Print…");
+    if(owner_->MenuReaderAvailable(tab_id_))add(kPageReader,"Открыть в режиме чтения","Open in Reader mode");
+    model->AddSeparator();add(kPageQR,"Создать QR-код этой страницы","Create page QR code",DownloadableLink(params->GetPageUrl()));
+    add(kPageTranslate,en?"Перевести на английский":"Перевести на русский",en?"Translate to English":"Translate to Russian",DownloadableLink(params->GetPageUrl()));
+    model->AddSeparator();add(MENU_ID_VIEW_SOURCE,"Просмотр кода страницы","View page source");
+  }
+  if(model->GetCount())model->AddSeparator();add(kInspect,"Просмотреть код","Inspect");
 }
 
 bool BrowserClient::RunContextMenu(CefRefPtr<CefBrowser> browser,
     CefRefPtr<CefFrame>, CefRefPtr<CefContextMenuParams> params,
     CefRefPtr<CefMenuModel> model, CefRefPtr<CefRunContextMenuCallback> callback) {
   CEF_REQUIRE_UI_THREAD();
-  if (role_ != BrowserRole::kContent) return false;
-  HMENU menu = CreatePopupMenu();
-  if (!menu) { callback->Cancel(); return true; }
-  auto populate=[&](auto&& recurse,HMENU target,CefRefPtr<CefMenuModel> source)->void{
+  // All browser roles use the browser-owned host; their CEF models retain context-specific commands.
+  // Copy CEF's transient model before entering a nested menu loop.
+  auto copy=[&](auto&& recurse,CefRefPtr<CefMenuModel> source)->MenuModel {
+    MenuModel result;
     for(size_t i=0;i<source->GetCount();++i){
-      if(source->GetTypeAt(i)==MENUITEMTYPE_SEPARATOR){AppendMenuW(target,MF_SEPARATOR,0,nullptr);continue;}
-      const auto label=source->GetLabelAt(i).ToWString();
-      UINT flags=MF_STRING|(source->IsEnabledAt(i)?0:MF_GRAYED)|(source->IsCheckedAt(i)?MF_CHECKED:0);
-      if(auto child=source->GetSubMenuAt(i)){HMENU nested=CreatePopupMenu();recurse(recurse,nested,child);AppendMenuW(target,flags|MF_POPUP,reinterpret_cast<UINT_PTR>(nested),label.c_str());}
-      else AppendMenuW(target,flags,source->GetCommandIdAt(i),label.c_str());
-    }
+      if(source->GetTypeAt(i)==MENUITEMTYPE_SEPARATOR){result.push_back(MenuItem::Separator());continue;}
+      MenuItem item;item.command=source->GetCommandIdAt(i);item.label=source->GetLabelAt(i).ToWString();
+      auto tab=item.label.find(L'\t');if(tab!=std::wstring::npos){item.accelerator=item.label.substr(tab+1);item.label.resize(tab);}
+      switch(item.command){case MENU_ID_BACK:item.accelerator=L"Alt+←";break;case MENU_ID_FORWARD:item.accelerator=L"Alt+→";break;case MENU_ID_RELOAD:item.accelerator=L"Ctrl+R";break;case MENU_ID_PRINT:item.accelerator=L"Ctrl+P";break;case MENU_ID_VIEW_SOURCE:item.accelerator=L"Ctrl+U";break;case kPageSave:item.accelerator=L"Ctrl+S";break;case MENU_ID_COPY:item.accelerator=L"Ctrl+C";break;case MENU_ID_CUT:item.accelerator=L"Ctrl+X";break;case MENU_ID_PASTE:item.accelerator=L"Ctrl+V";break;case MENU_ID_SELECT_ALL:item.accelerator=L"Ctrl+A";break;}
+      item.enabled=source->IsEnabledAt(i);item.checked=source->IsCheckedAt(i);
+      if(source->GetTypeAt(i)==MENUITEMTYPE_CHECK)item.type=MenuItemType::Check;
+      if(source->GetTypeAt(i)==MENUITEMTYPE_RADIO)item.type=MenuItemType::Radio;
+      if(auto child=source->GetSubMenuAt(i)){item.type=MenuItemType::Submenu;item.children=recurse(recurse,child);}
+      result.push_back(std::move(item));
+    }return result;
   };
-  populate(populate,menu,model);
-  POINT point = {params->GetXCoord(), params->GetYCoord()};
-  ClientToScreen(browser->GetHost()->GetWindowHandle(), &point);
-  const int command = TypographyTrackPopupMenu(menu, TPM_RETURNCMD | TPM_RIGHTBUTTON,
-      point.x, point.y, 0, owner_->hwnd(), nullptr);
-  DestroyMenu(menu);
+  auto snapshot=copy(copy,model);
+  POINT point={params->GetXCoord(),params->GetYCoord()};
+  ClientToScreen(browser->GetHost()->GetWindowHandle(),&point);
+  CefRefPtr<BrowserClient> keep_alive(this);
+  const int command=ShowSouluMenu(owner_->hwnd(),point,std::move(snapshot),{owner_->MenuDark()});
   if (command) callback->Continue(command, EVENTFLAG_NONE);
   else callback->Cancel();
   return true;
@@ -279,7 +344,25 @@ bool BrowserClient::OnContextMenuCommand(CefRefPtr<CefBrowser> browser,
     CefRefPtr<CefFrame>, CefRefPtr<CefContextMenuParams> params,
     int command, EventFlags) {
   CEF_REQUIRE_UI_THREAD();
-  if (role_ != BrowserRole::kContent || params->GetLinkUrl().empty()) return false;
+  if(role_!=BrowserRole::kContent)return false;
+  if(command==kPageTranslate){owner_->MenuTranslate(tab_id_);return true;}
+  if(command==kPageQR){owner_->MenuQR(tab_id_);return true;}
+  if(command==kPageReader){owner_->MenuReader(tab_id_);return true;}
+  if(command==kPageSave){if(DownloadableLink(params->GetPageUrl()))browser->GetHost()->StartDownload(params->GetPageUrl());return true;}
+  if(command==kSelectionSearch){owner_->SearchSelection(tab_id_,browser,params->GetSelectionText());return true;}
+  if(command==kInspect){CefWindowInfo info;info.SetAsPopup(owner_->hwnd(),"Soulu Developer Tools");CefBrowserSettings settings;browser->GetHost()->ShowDevTools(info,nullptr,settings,CefPoint(params->GetXCoord(),params->GetYCoord()));return true;}
+  if(command==kImageOpen||command==kImageSave||command==kMediaSave){const std::string source=params->GetSourceUrl();if(DownloadableLink(source)){if(command==kImageOpen)owner_->OpenTabFrom(tab_id_,browser,source,false);else browser->GetHost()->StartDownload(source);}return true;}
+  if(command==kImageCopy){browser->GetHost()->DownloadImage(params->GetSourceUrl(),false,0,false,new CopyImage(owner_->hwnd()));return true;}
+  if(command>=kMediaPlay&&command<=kMediaControls){
+    std::string code="(()=>{const element=document.elementFromPoint("+std::to_string(params->GetXCoord())+","+std::to_string(params->GetYCoord())+");const m=element?.closest('video,audio');if(!m)return {};";
+    if(command==kMediaPlay)code+="if(m.paused)m.play().catch(()=>{});else m.pause();";
+    else if(command==kMediaMute)code+="m.muted=!m.muted;";
+    else if(command==kMediaLoop)code+="m.loop=!m.loop;";
+    else code+="m.controls=!m.controls;";
+    code+="return {changed:true};})()";EvaluateTranslationPage(browser,browser->GetMainFrame()->GetURL(),code,[](auto){});return true;
+  }
+  if(command==kLinkWindow){owner_->OpenLinkWindow(tab_id_,browser,params->GetLinkUrl(),false);return true;}
+  if(params->GetLinkUrl().empty()&&command!=kImageCopyAddress&&command!=kMediaCopy)return false;
   const std::string url = params->GetLinkUrl();
   switch (command) {
     case kLinkForeground:
@@ -288,13 +371,15 @@ bool BrowserClient::OnContextMenuCommand(CefRefPtr<CefBrowser> browser,
         owner_->OpenTabFrom(tab_id_, browser, url, command == kLinkBackground);
       return true;
     case kLinkIncognito:
-      if (DownloadableLink(url)) owner_->OpenIncognitoLink(tab_id_, browser, url);
+      if (DownloadableLink(url)) owner_->OpenLinkWindow(tab_id_, browser, url, true);
       return true;
     case kLinkSave:
       if (DownloadableLink(url)) browser->GetHost()->StartDownload(url);
       return true;
+    case kImageCopyAddress:
+    case kMediaCopy:
     case kLinkCopy: {
-      const std::wstring wide = params->GetLinkUrl().ToWString();
+      const std::wstring wide = command==kLinkCopy?params->GetLinkUrl().ToWString():params->GetSourceUrl().ToWString();
       HGLOBAL memory = GlobalAlloc(GMEM_MOVEABLE, (wide.size() + 1) * sizeof(wchar_t));
       if (!memory) return true;
       void* buffer = GlobalLock(memory);

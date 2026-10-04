@@ -19,7 +19,7 @@ on:
         default: ""
         type: string
   push:
-    branches: [main, codex/settings-overlay, codex/cef-stable-update, codex/beta-motion, codex/beta-typography, codex/beta-toolbar, codex/beta-adblock, codex/beta-site-reader]
+    branches: [main, codex/settings-overlay, codex/cef-stable-update, codex/beta-motion, codex/beta-typography, codex/beta-toolbar, codex/beta-adblock, codex/beta-site-reader, codex/menu-translate]
     tags: [beta-1.0.54]
     paths:
       - "cef/**"
@@ -109,6 +109,12 @@ jobs:
           python -m pip install --disable-pip-version-check fonttools
           New-Item -ItemType Directory -Force browser/artifacts | Out-Null
           python browser/scripts/check-typography.py browser/artifacts/typography-static.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Build integrity-pinned local translation runtime
+        shell: pwsh
+        run: |
+          python browser/scripts/build-translation-runtime.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Add Soulu target and assets

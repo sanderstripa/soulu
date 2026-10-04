@@ -56,13 +56,6 @@ struct Dialog {
   int Line()const{return Px(static_cast<int>(typography::body.lineHeight));}
 };
 thread_local std::vector<Dialog*> activeDialogs;
-struct MenuText {
-  // MSAAMENUINFO layout lets Windows expose owner-drawn labels to accessibility.
-  DWORD signature=0xAA0DF00D,length=0;LPWSTR accessibleText=nullptr;
-  HMENU menu;UINT position,type;ULONG_PTR data;UINT dpi;
-  std::wstring label,shortcut,accessibleLabel;bool submenu;
-};
-thread_local std::vector<MenuText*> activeMenuText;
 std::vector<std::wstring> Wrap(HDC dc,const std::wstring& text,int width){
   std::vector<std::wstring> lines;
   size_t position=0;
@@ -191,6 +184,7 @@ int Show(Dialog& state){
   return result<0?IDCANCEL:result;
 }
 }
+HFONT TypographyFont(typography::Metrics role,UINT dpi){return Service().Get(role,dpi);}
 int TypographyMessageBox(HWND owner,const wchar_t* text,const wchar_t* title,UINT flags,const void* tag){
   Dialog state;state.owner=owner;state.text=text?text:L"";state.title=title?title:L"Soulu";state.flags=flags;state.tag=tag;return Show(state);
 }
@@ -206,62 +200,5 @@ void TypographyCancelOwnedDialogs(HWND owner){
   auto dialogs=activeDialogs;
   for(auto* dialog:dialogs)if(dialog->window&&(dialog->owner==owner||IsChild(owner,dialog->owner)||GetAncestor(dialog->owner,GA_ROOTOWNER)==owner))EndDialog(dialog->window,IDCANCEL);
 }
-int TypographyTrackPopupMenu(HMENU menu,UINT flags,int x,int y,int reserved,HWND owner,const RECT* bounds){
-  if(!Service().ready)return 0;
-  UINT dpi=GetDpiForWindow(owner);if(!dpi)dpi=96;
-  std::vector<std::unique_ptr<MenuText>> entries;
-  auto prepare=[&](auto&& recurse,HMENU current)->void{
-    for(int i=0;i<GetMenuItemCount(current);++i){
-      wchar_t label[2048]={};MENUITEMINFOW info={sizeof(info)};
-      info.fMask=MIIM_FTYPE|MIIM_DATA|MIIM_STRING|MIIM_SUBMENU;info.dwTypeData=label;info.cch=2047;
-      if(!GetMenuItemInfoW(current,i,TRUE,&info))continue;
-      if(info.hSubMenu)recurse(recurse,info.hSubMenu);
-      if(info.fType&(MFT_SEPARATOR|MFT_OWNERDRAW))continue;
-      auto item=std::make_unique<MenuText>();item->menu=current;item->position=i;item->type=info.fType;item->data=info.dwItemData;
-      item->dpi=dpi;item->label=label;item->submenu=info.hSubMenu!=nullptr;
-      auto tab=item->label.find(L'\t');if(tab!=std::wstring::npos){item->shortcut=item->label.substr(tab+1);item->label.resize(tab);}
-      item->accessibleLabel=label;item->length=static_cast<DWORD>(item->accessibleLabel.size());item->accessibleText=item->accessibleLabel.data();
-      info.fMask=MIIM_FTYPE|MIIM_DATA;info.fType|=MFT_OWNERDRAW;info.dwItemData=reinterpret_cast<ULONG_PTR>(item.get());
-      if(SetMenuItemInfoW(current,i,TRUE,&info)){activeMenuText.push_back(item.get());entries.push_back(std::move(item));}
-    }
-  };
-  prepare(prepare,menu);
-  const int result=static_cast<int>(TrackPopupMenu(menu,flags,x,y,reserved,owner,bounds));
-  for(auto& item:entries){
-    MENUITEMINFOW info={sizeof(info)};info.fMask=MIIM_FTYPE|MIIM_DATA;info.fType=item->type;info.dwItemData=item->data;
-    SetMenuItemInfoW(item->menu,item->position,TRUE,&info);
-    activeMenuText.erase(std::remove(activeMenuText.begin(),activeMenuText.end(),item.get()),activeMenuText.end());
-  }
-  return result;
-}
-bool TypographyMenuMessage(UINT message,LPARAM parameter){
-  if(message!=WM_MEASUREITEM&&message!=WM_DRAWITEM)return false;
-  auto* measure=reinterpret_cast<MEASUREITEMSTRUCT*>(parameter);
-  auto* draw=reinterpret_cast<DRAWITEMSTRUCT*>(parameter);
-  if((message==WM_MEASUREITEM?measure->CtlType:draw->CtlType)!=ODT_MENU)return false;
-  auto* item=reinterpret_cast<MenuText*>(message==WM_MEASUREITEM?measure->itemData:draw->itemData);
-  if(std::find(activeMenuText.begin(),activeMenuText.end(),item)==activeMenuText.end())return false;
-  auto px=[&](int value){return MulDiv(value,item->dpi,96);};
-  if(message==WM_MEASUREITEM){
-    HDC dc=GetDC(nullptr);auto old=SelectObject(dc,Service().Get(typography::compactControl,item->dpi));SIZE label={},shortcut={};
-    GetTextExtentPoint32W(dc,item->label.c_str(),static_cast<int>(item->label.size()),&label);
-    GetTextExtentPoint32W(dc,item->shortcut.c_str(),static_cast<int>(item->shortcut.size()),&shortcut);
-    measure->itemWidth=label.cx+shortcut.cx+px(item->shortcut.empty()?48:80);measure->itemHeight=px(static_cast<int>(typography::compactControl.lineHeight)+12);
-    SelectObject(dc,old);ReleaseDC(nullptr,dc);return true;
-  }
-  HDC dc=draw->hDC;const bool selected=(draw->itemState&ODS_SELECTED)!=0,disabled=(draw->itemState&(ODS_DISABLED|ODS_GRAYED))!=0;
-  FillRect(dc,&draw->rcItem,GetSysColorBrush(selected?COLOR_HIGHLIGHT:COLOR_MENU));
-  auto background=SetBkMode(dc,TRANSPARENT);auto color=SetTextColor(dc,GetSysColor(disabled?COLOR_GRAYTEXT:selected?COLOR_HIGHLIGHTTEXT:COLOR_MENUTEXT));
-  const int lineHeight=px(static_cast<int>(typography::compactControl.lineHeight));
-  RECT line=draw->rcItem;line.left+=px(28);line.right-=px(20);line.top+=(line.bottom-line.top-lineHeight)/2;line.bottom=line.top+lineHeight;
-  DrawLine(dc,item->label,line,typography::compactControl,item->dpi);
-  if(!item->shortcut.empty()){
-    auto old=SelectObject(dc,Service().Get(typography::compactControl,item->dpi));SIZE size={};
-    GetTextExtentPoint32W(dc,item->shortcut.c_str(),static_cast<int>(item->shortcut.size()),&size);SelectObject(dc,old);
-    line.left=line.right-size.cx;DrawLine(dc,item->shortcut,line,typography::compactControl,item->dpi);
-  }
-  if(draw->itemState&ODS_CHECKED){RECT check=draw->rcItem;check.left+=px(5);check.right=check.left+px(16);check.top+=(check.bottom-check.top-px(16))/2;check.bottom=check.top+px(16);DrawFrameControl(dc,&check,DFC_MENU,DFCS_MENUCHECK|(disabled?DFCS_INACTIVE:0));}
-  if(item->submenu){RECT arrow=draw->rcItem;arrow.right-=px(4);arrow.left=arrow.right-px(12);arrow.top+=(arrow.bottom-arrow.top-px(12))/2;arrow.bottom=arrow.top+px(12);DrawFrameControl(dc,&arrow,DFC_MENU,DFCS_MENUARROW|(disabled?DFCS_INACTIVE:0));}
-  SetTextColor(dc,color);SetBkMode(dc,background);return true;
-}
+bool TypographyMenuMessage(UINT,LPARAM){return false;}
 }
