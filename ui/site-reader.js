@@ -292,6 +292,7 @@
     const fresh = promptId !== request.id; promptId = request.id;
     if (fresh) {
       prompt.hidden = true;
+      prompt.dataset.requestId = String(request.id);
       close(); settings.hidden = true; style.setAttribute('aria-expanded', 'false');
       const header = el('header', 'site-heading'); const identity = el('div');
       identity.append(el('strong', '', request.domain), el('small', '', request.origin));

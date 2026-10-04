@@ -62,7 +62,11 @@ def main():
             return s.command(page,'Runtime.evaluate',{'expression':script,'userGesture':True,'returnByValue':True})
         def prompt():return E('browserShell.getState().then(s=>s.permissionPrompt||null)')
         def reply(decision):
-            item=wait(prompt);return E('browserShell.respondPermission('+json.dumps({'id':item['id'],'decision':decision})+')')
+            item=wait(prompt)
+            wait(lambda:E("(()=>{const n=document.querySelector('.soulu-permission-prompt');return !n.hidden&&n.dataset.requestId==="+json.dumps(str(item['id']))+"})()"))
+            selector={'allow':'.site-primary','block':'.site-confirm-actions button:first-child','dismiss':'.site-prompt-dismiss'}[decision]
+            E("document.querySelector('.soulu-permission-prompt "+selector+"').click()")
+            return wait(lambda:not (p:=prompt()) or p['id']!=item['id'])
         def bounds(selector):
             return E('(()=>{const n=document.querySelector('+json.dumps(selector)+');const r=n.getBoundingClientRect();return {hidden:n.hidden,x:r.x,y:r.y,w:r.width,h:r.height,viewport:innerHeight,scroll:n.scrollHeight>n.clientHeight+1,font:getComputedStyle(n).fontFamily}})()')
         def capture(name):
