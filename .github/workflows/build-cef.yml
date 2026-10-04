@@ -14,7 +14,7 @@ on:
         default: false
         type: boolean
       manual_checks_sha:
-        description: SHA verified for real Google/Ozon auth after restart, YouTube playback and remaining manual regression checks (real VPN check waived by user for Beta 1.0.55)
+        description: SHA verified for real Google auth after restart, YouTube playback and remaining manual regression checks (Ozon and real VPN checks waived by user for Beta 1.0.55)
         required: false
         default: ""
         type: string
@@ -1059,7 +1059,7 @@ jobs:
           MANUAL_CHECKS_SHA: ${{ inputs.manual_checks_sha }}
         run: |
           if ($env:MANUAL_CHECKS_SHA -cne $env:GITHUB_SHA) {
-            throw 'Publication blocked: real authenticated sessions, YouTube playback and remaining manual checks (real VPN check waived by user for Beta 1.0.55) must be verified for this exact SHA'
+            throw 'Publication blocked: real authenticated sessions, YouTube playback and remaining manual checks (Ozon and real VPN checks waived by user for Beta 1.0.55) must be verified for this exact SHA'
           }
           $sites = Get-Content browser/artifacts/sites-evidence.json -Raw | ConvertFrom-Json
           if (@($sites).Count -ne 7 -or @($sites | Where-Object { !$_.opened }).Count) {

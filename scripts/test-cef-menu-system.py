@@ -7,7 +7,10 @@ os.environ['NO_PROXY']='127.0.0.1,localhost';os.environ['SOULU_REGRESSION_SKIP_F
 u=ctypes.windll.user32
 u.PostMessageW.argtypes=[ctypes.c_void_p,ctypes.c_uint,ctypes.c_size_t,ctypes.c_ssize_t]
 class Rect(ctypes.Structure):_fields_=[(n,ctypes.c_long) for n in ['left','top','right','bottom']]
+class MonitorInfo(ctypes.Structure):_fields_=[('size',ctypes.c_ulong),('monitor',Rect),('work',Rect),('flags',ctypes.c_ulong)]
 u.GetWindowRect.argtypes=[ctypes.c_void_p,ctypes.POINTER(Rect)]
+u.MonitorFromWindow.argtypes=[ctypes.c_void_p,ctypes.c_ulong];u.MonitorFromWindow.restype=ctypes.c_void_p
+u.GetMonitorInfoW.argtypes=[ctypes.c_void_p,ctypes.POINTER(MonitorInfo)]
 class Fixture(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path=='/pixel.png':body=base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aNGkAAAAASUVORK5CYII=');kind='image/png'
@@ -46,12 +49,14 @@ try:
                     for theme in ['light','dark']:
                         s.evaluate(shell,'browserShell.setSettings('+json.dumps(dict(language=language,layout=layout,theme=theme))+')');time.sleep(.1)
                         for context in ['blank','link','image','linked','selection','editable','readonly','media']:
-                            box=s.evaluate(page,"""(()=>{getSelection().removeAllRanges();const e=document.getElementById(%s);e.scrollIntoView({block:'center'});if(e.id==='selection'){const r=document.createRange();r.selectNodeContents(e);getSelection().addRange(r);}const r=e.getBoundingClientRect();return {x:r.x+Math.min(r.width/2,20),y:r.y+r.height/2}})()"""%json.dumps(context))
+                            box=s.evaluate(page,"""(()=>{getSelection().removeAllRanges();const e=document.getElementById(%s);e.scrollIntoView({block:'center'});if(e.id==='selection'){const r=document.createRange();r.selectNodeContents(e);getSelection().addRange(r);}const r=e.getBoundingClientRect();return {x:r.x+Math.min(r.width/2,20),y:r.y+(e.id==='media'?12:r.height/2)}})()"""%json.dumps(context))
                             for event in ['mouseMoved','mousePressed','mouseReleased']:
                                 params=dict(type=event,**box)
                                 if event!='mouseMoved':params.update(button='right',clickCount=1)
                                 s.sequence+=1;page.send(json.dumps(dict(id=s.sequence,method='Input.dispatchMouseEvent',params=params)))
-                            hwnd=wait(lambda:next(iter(menus()),None));rows=access.rows(hwnd);labels=[r['label'] for r in rows if r['label']]
+                            try:hwnd=wait(lambda:next(iter(menus()),None))
+                            except AssertionError:raise AssertionError(f'Menu did not open: {dpi} {language} {layout} {theme} {context}')
+                            rows=access.rows(hwnd);labels=[r['label'] for r in rows if r['label']]
                             assert labels and all(r['role_result']==0 for r in rows),rows
                             expected={'blank':['QR','Перевести' if language=='ru' else 'Translate'],'link':['ссылк' if language=='ru' else 'link'],'image':['изображени' if language=='ru' else 'image'],'linked':['ссылк' if language=='ru' else 'link','изображени' if language=='ru' else 'image'],'selection':['Копировать' if language=='ru' else 'Copy'],'editable':['Вставить' if language=='ru' else 'Paste'],'readonly':['Копировать' if language=='ru' else 'Copy'],'media':['Повторять' if language=='ru' else 'Loop']}[context]
                             assert all(any(text in label for label in labels) for text in expected),(context,labels)
@@ -71,6 +76,11 @@ try:
             u.PostMessageW(root_menu,0x100,0x24,0);u.PostMessageW(root_menu,0x100,0x27,0)
             child=wait(lambda:next((h for h in menus() if h!=root_menu),None))
             assert any(r['label']=='Nested action' for r in access.rows(child))
+            for h in [root_menu,child]:
+                bounds=Rect();u.GetWindowRect(h,ctypes.byref(bounds));monitor=MonitorInfo();monitor.size=ctypes.sizeof(monitor)
+                assert u.GetMonitorInfoW(u.MonitorFromWindow(h,2),ctypes.byref(monitor))
+                assert monitor.work.left<=bounds.left<bounds.right<=monitor.work.right and monitor.work.top<=bounds.top<bounds.bottom<=monitor.work.bottom
+            u.PostMessageW(child,0x100,0x27,0);time.sleep(.05);assert menus(),'Right arrow executed a leaf action'
             u.PostMessageW(child,0x100,0x0D,0);wait(lambda:not menus())
             assert wait(lambda:s.evaluate(shell,'nativeMenuResult'))==7
             checks.append(dict(dpi=dpi,context='recursive',disabled_skipping=True,checked_radio=True,edge_placement=True,command=7))

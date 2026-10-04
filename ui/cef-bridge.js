@@ -34,6 +34,7 @@
   window.browserShell = {
     showMenu: (items,x,y) => invoke("browser.menu.show",{items,x:Math.round(x),y:Math.round(y)}),
     translation: (action,payload) => invoke("browser.translate."+action,payload),
+    translationCache: (operation,sha256) => invoke("browser.translate.cache."+operation,{sha256}),
     onTranslateRequest: callback => subscribe("translateRequest",callback),
     onQRRequest: callback => subscribe("qrRequest",callback),
     openHistory: (clear = false) => invoke("browser.history.open", clear),

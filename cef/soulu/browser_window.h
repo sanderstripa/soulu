@@ -61,6 +61,7 @@ class BrowserWindow final : public CefBaseRefCounted {
   HWND hwnd() const { return hwnd_; }
   bool MenuDark() const;
   bool MenuEnglish() const;
+  bool MenuTabActive(int id) const { return !closing_ && (id == 0 || id == active_tab_id_); }
   std::string MenuTranslationTarget(int id) const;
   bool MenuReaderAvailable(int id) const;
   void MenuReader(int id);

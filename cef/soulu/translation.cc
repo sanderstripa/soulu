@@ -36,6 +36,7 @@ bool BrowserWindow::HandleTranslationBridge(const std::string& action,CefRefPtr<
   if(action.rfind("browser.translate.",0)!=0)return false;
   auto data=payload&&payload->GetType()==VTYPE_DICTIONARY?payload->GetDictionary():nullptr;
   if(action=="browser.translate.model"){DownloadTranslationModel(data?data->GetString("sha256").ToString():"",callback);return true;}
+  if(action.rfind("browser.translate.cache.",0)==0){TranslationModelCache(action.substr(24),data?data->GetString("sha256").ToString():"",callback);return true;}
   auto* tab=data?FindTab(data->GetInt("tabId")):nullptr;
   if(!tab||!tab->browser||tab->main_loading||tab->translation_resetting||tab->reader_active||
      data->GetString("url")!=tab->url||data->GetInt("generation")!=tab->document_generation){callback->Failure(409,"Page changed");return true;}

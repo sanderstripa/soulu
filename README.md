@@ -37,7 +37,7 @@ Light and dark themes are supported, as well as Windows-style frosted transparen
 
 The browser uses Chromium through Chromium Embedded Framework (CEF), while the native Soulu shell handles the window, interface, and Windows integration.
 
-Soulu Beta 1.0.50 uses stable CEF 154.0.33 / Chromium 154.0.8037.94.
+Soulu Beta 1.0.55 retains stable CEF 154.0.33 / Chromium 154.0.8037.94.
 See [CEF_UPGRADE.md](CEF_UPGRADE.md) for dependency provenance, runtime checks
 and the mandatory release gates.
 
@@ -75,6 +75,27 @@ profile history, open visits and delete entries. **Ctrl+Shift+Delete** opens the
 clearing dialog. History supports six time ranges; cookies/site data and cache
 are explicitly cleared for all time. Private visits are never recorded.
 See [HISTORY.md](HISTORY.md) for backend details and limitations.
+
+### Native menus and local translation
+
+Browser menus share Soulu's native Onest menu surface, including web-page,
+link, image, media, editing, tab, bookmark and toolbar menus. It follows the
+browser theme, supports nested menus and keyboard navigation, and exposes
+labels and states to Windows accessibility services.
+
+Choose **Translate to Russian** in a page menu or use the translation button
+on a foreign-language page. Soulu Translate processes visible page text locally
+in a Bergamot WASM worker. The first use downloads the required Mozilla model;
+verified models are cached for offline use after a browser restart. Supported
+routes are English → Russian, Russian → English and German → English, with
+German → Russian through English. Unsupported routes are reported explicitly.
+
+**Show original** restores text without reloading. Form values, editable text
+and code are excluded. Always/never rules are saved per profile; private-tab
+rules are discarded when that private tab closes. Only model files are fetched
+from Mozilla's public model bucket; page text is not sent to a translation API.
+See [MENU_TRANSLATE.md](MENU_TRANSLATE.md) for architecture, provenance,
+limitations and verification commands.
 
 ## Download
 

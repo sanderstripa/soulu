@@ -89,6 +89,14 @@ try:
     s.navigate(page,f'http://127.0.0.1:{server.server_port}/next');time.sleep(.3)
     assert s.evaluate(shell,'browserShell.translation("apply",{...translationSnapshot,token:translationToken,rows:[]}).then(()=>false,()=>true)'),'Stale result accepted'
     s.evaluate(shell,'translationEngine.delete()')
+    cache_root=pathlib.Path(profile.name)/'Soulu/User Data/Translation/Models/v1'
+    assert cache_root.is_dir() and list(cache_root.glob('*.model')),'Models were not cached outside profile storage'
+    manifest=json.loads((pathlib.Path(__file__).resolve().parents[1]/'ui/translation-models.json').read_text(encoding='utf-8'))
+    damaged=next(pair for pair in manifest['pairs'] if pair['from']=='ru' and pair['to']=='en')['files']['lexicalShortlist']['sha256']
+    (cache_root/(damaged+'.model')).write_bytes(b'corrupt model fixture')
+    assert s.evaluate(shell,'browserShell.translationCache("read",'+json.dumps(damaged)+').then(b=>b.byteLength===0)'),'Corrupted model cache was accepted'
+    assert not (cache_root/(damaged+'.model')).exists(),'Corrupted model cache was retained'
+    (cache_root/'stale-regression.model').write_bytes(b'old model fixture')
     s.evaluate(shell,'(async()=>{const snapshot=await browserShell.getCurrentSite();await browserShell.translation("preferences",{...snapshot,target:"ru",always:true,source:"en",never:true})})()')
     page.close();shell.close();s.close_normally(process)
     # A normal process restart must retain verified model buffers and preferences.
@@ -105,6 +113,7 @@ try:
     s.command(shell,'Network.enable');s.command(shell,'Network.emulateNetworkConditions',{'offline':True,'latency':0,'downloadThroughput':0,'uploadThroughput':0})
     result=s.evaluate(shell,'window.modelTransport=browserShell.translation;browserShell.translation=(a,p)=>a==="model"?Promise.reject(Error("Offline model transport")):modelTransport(a,p);window.translationEngine=new SouluTranslate.LocalTranslator();translationEngine.translate("en","ru","The local translator works offline after a complete browser restart.")')
     assert any('\u0400'<=c<='\u04ff' for c in result),result
+    assert not (cache_root/'stale-regression.model').exists(),'Stale model cache was retained'
     s.evaluate(shell,'browserShell.translation=modelTransport;translationEngine.delete()')
     s.command(shell,'Network.emulateNetworkConditions',{'offline':False,'latency':0,'downloadThroughput':-1,'uploadThroughput':-1})
     base_profile=s.evaluate(shell,'browserShell.getState()')['activeProfileId']
@@ -114,7 +123,6 @@ try:
     other=s.evaluate(shell,'(async()=>{const snapshot=await browserShell.getCurrentSite();return browserShell.translation("preferences",snapshot)})()')
     assert not other['always'] and not other['never'],other
     s.evaluate(shell,'browserShell.switchProfile('+json.dumps(base_profile)+')')
-    s.evaluate(shell,'browserShell.deleteProfile('+json.dumps(created)+')')
     for first in [True,False]:
         s.evaluate(shell,'browserShell.newIncognito()')
         s.evaluate(shell,'browserShell.navigate('+json.dumps(f'http://127.0.0.1:{server.server_port}/private')+')')
@@ -125,7 +133,7 @@ try:
         if first:s.evaluate(shell,'browserShell.translation("preferences",{...privateSnapshot,target:"en",always:true,source:"de",never:true})')
         s.evaluate(shell,'browserShell.closeTab(privateSnapshot.tabId)')
     report={'native_bridge':'passed','toolbar_full_page':'passed','real_wasm_translation':'passed','german_pivot':'passed','russian_same_language':'passed','unsupported_language':'passed','wrong_html_language':'passed','forms_code':'passed','dynamic_content':'passed','long_page':'passed','restore_repeat':'passed','cached_offline_worker':'passed','cached_offline_restart':'passed','preferences_restart':'passed','stale_navigation':'passed','spa_restore':'passed','model_http_requests':len(model_requests),'model_http_methods':'GET only'}
-    report.update(profile_preferences='isolated',incognito_preferences='discarded',russian_to_english='passed')
+    report.update(profile_preferences='isolated',incognito_preferences='discarded',russian_to_english='passed',stale_model_cleanup='passed',damaged_model_cleanup='passed',model_storage='shared native cache outside profiles')
     (out/'translation-evidence.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8');print(json.dumps(report),flush=True)
     page.close();shell.close();s.close_normally(process)
 finally:

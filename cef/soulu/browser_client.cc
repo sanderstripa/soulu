@@ -336,8 +336,9 @@ bool BrowserClient::RunContextMenu(CefRefPtr<CefBrowser> browser,
   POINT point={params->GetXCoord(),params->GetYCoord()};
   ClientToScreen(browser->GetHost()->GetWindowHandle(),&point);
   CefRefPtr<BrowserClient> keep_alive(this);
-  auto show=[keep_alive,browser,callback,point,snapshot=std::move(snapshot)](CefRefPtr<CefDictionaryValue> hit) mutable {
-    if(!browser->IsValid()||!IsWindow(keep_alive->owner_->hwnd())){callback->Cancel();return;}
+  const std::string menu_url=browser->GetMainFrame()->GetURL();
+  auto show=[keep_alive,browser,callback,point,menu_url,snapshot=std::move(snapshot)](CefRefPtr<CefDictionaryValue> hit) mutable {
+    if(!browser->IsValid()||browser->GetMainFrame()->GetURL()!=menu_url||!keep_alive->owner_->MenuTabActive(keep_alive->tab_id_)||!IsWindow(keep_alive->owner_->hwnd())){callback->Cancel();return;}
     if(hit&&hit->GetBool("readonly")){
       const bool en=keep_alive->owner_->MenuEnglish();snapshot.clear();
       snapshot.push_back(MenuItem{MENU_ID_COPY,en?L"Copy":L"Копировать"});snapshot.back().accelerator=L"Ctrl+C";snapshot.back().enabled=hit->GetBool("selected");

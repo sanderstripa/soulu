@@ -16,14 +16,29 @@
   function db(){return database??=new Promise((resolve,reject)=>{
     const request=indexedDB.open('soulu-translation-models',1);
     request.onupgradeneeded=()=>request.result.createObjectStore('models');
-    request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(Error('cache'));
+    request.onsuccess=()=>{
+      const database=request.result,valid=new Set(pairs.flatMap(pair=>Object.values(pair.files).map(file=>file.sha256)));
+      const tx=database.transaction('models','readwrite'),cursor=tx.objectStore('models').openCursor();
+      cursor.onsuccess=()=>{const row=cursor.result;if(!row)return;if(!valid.has(row.key))row.delete();row.continue();};
+      tx.oncomplete=()=>resolve(database);tx.onerror=()=>reject(Error('cache'));
+    };request.onerror=()=>reject(Error('cache'));
   });}
-  async function cached(key){const database=await db();return new Promise((resolve,reject)=>{
+  async function cached(key){
+    if(window.browserShell?.translationCache){const response=await window.browserShell.translationCache('read',key);const bytes=response instanceof ArrayBuffer?response:response?.buffer;return bytes?.byteLength?bytes:null;}
+    const database=await db();return new Promise((resolve,reject)=>{
     const request=database.transaction('models').objectStore('models').get(key);
     request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(Error('cache'));
   });}
-  async function store(key,value){const database=await db();return new Promise((resolve,reject)=>{
+  async function store(key,value){
+    if(window.browserShell?.translationCache)return window.browserShell.translationCache('approve',key);
+    const database=await db();return new Promise((resolve,reject)=>{
     const tx=database.transaction('models','readwrite');tx.objectStore('models').put(value,key);
+    tx.oncomplete=()=>resolve();tx.onerror=()=>reject(Error('cache'));
+  });}
+  async function discard(key){
+    if(window.browserShell?.translationCache)return window.browserShell.translationCache('drop',key);
+    const database=await db();return new Promise((resolve,reject)=>{
+    const tx=database.transaction('models','readwrite');tx.objectStore('models').delete(key);
     tx.oncomplete=()=>resolve();tx.onerror=()=>reject(Error('cache'));
   });}
   async function verify(bytes,file){
@@ -31,9 +46,17 @@
     const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),x=>x.toString(16).padStart(2,'0')).join('');
     return hash===file.sha256;
   }
+  async function decode(bytes,file){
+    const head=new Uint8Array(bytes,0,Math.min(2,bytes.byteLength));
+    if(head[0]!==0x1f||head[1]!==0x8b)return bytes;
+    const reader=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip')).getReader(),chunks=[];let length=0;
+    for(;;){const {done,value}=await reader.read();if(done)break;length+=value.byteLength;
+      if(length>file.size){await reader.cancel();throw Error('integrity');}chunks.push(value);}
+    const output=new Uint8Array(length);let offset=0;for(const chunk of chunks){output.set(chunk,offset);offset+=chunk.length;}return output.buffer;
+  }
   async function load(file,signal,status){
     let bytes=await cached(file.sha256);
-    if(bytes&&await verify(bytes,file))return bytes;
+    if(bytes){try{bytes=await decode(bytes,file);if(await verify(bytes,file))return bytes;}catch{}await discard(file.sha256);}
     if(signal.aborted)throw Error('cancelled');
     const url=new URL(file.url);
     if(url.protocol!=='https:'||url.hostname!=='storage.googleapis.com'||
@@ -47,16 +70,9 @@
       if(!response.ok||Number(response.headers.get('Content-Length'))>100000000)throw Error('download');
       bytes=await response.arrayBuffer();
     }
-    const head=new Uint8Array(bytes,0,Math.min(2,bytes.byteLength));
-    if(head[0]===0x1f&&head[1]===0x8b){
-      const stream=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
-      const reader=stream.getReader(),chunks=[];let length=0;
-      for(;;){const {done,value}=await reader.read();if(done)break;length+=value.byteLength;
-        if(length>file.size){await reader.cancel();throw Error('integrity');}chunks.push(value);}
-      const output=new Uint8Array(length);let offset=0;for(const chunk of chunks){output.set(chunk,offset);offset+=chunk.length;}bytes=output.buffer;
-    }
-    if(signal.aborted)throw Error('cancelled');
-    if(!await verify(bytes,file))throw Error('integrity');
+    try{bytes=await decode(bytes,file);}catch(error){await discard(file.sha256);throw error;}
+    if(signal.aborted){await discard(file.sha256);throw Error('cancelled');}
+    if(!await verify(bytes,file)){await discard(file.sha256);throw Error('integrity');}
     await store(file.sha256,bytes);return bytes;
   }
   class Backing extends window.SouluBergamot.TranslatorBacking {

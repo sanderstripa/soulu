@@ -26,6 +26,7 @@ struct Panel {
   MenuModel* model=nullptr;
   Panel* parent=nullptr;
   int selected=-1,pressed=-1,width=0,height=0,offset=0;bool keyboard=false;
+  POINT lastMouse={-1,-1};
   std::vector<RECT> rows;
 };
 struct Session {
@@ -159,16 +160,16 @@ LRESULT CALLBACK Procedure(HWND window,UINT message,WPARAM w,LPARAM l){
   if(message==WM_MOUSEMOVE||message==WM_LBUTTONDOWN||message==WM_LBUTTONUP||message==WM_RBUTTONUP){
     POINT point={GET_X_LPARAM(l),GET_Y_LPARAM(l)+p->offset};int hit=-1;
     for(size_t i=0;i<p->rows.size();++i)if(PtInRect(&p->rows[i],point)&&Selectable((*p->model)[i])){hit=static_cast<int>(i);break;}
-    if(message==WM_MOUSEMOVE)p->keyboard=false;
+    if(message==WM_MOUSEMOVE){if(p->keyboard&&point.x==p->lastMouse.x&&point.y==p->lastMouse.y)return 0;p->lastMouse=point;p->keyboard=false;}
     if(message==WM_LBUTTONDOWN){p->pressed=hit;if(hit>=0){Select(*p,hit);SetCapture(window);}InvalidateRect(window,nullptr,FALSE);return 0;}
     if(message==WM_LBUTTONUP){ReleaseCapture();if(hit<0){p->pressed=-1;InvalidateRect(window,nullptr,FALSE);}}
-    if(hit<0&&message==WM_MOUSEMOVE){KillTimer(window,1);Select(*p,-1);}
+    if(hit<0&&message==WM_MOUSEMOVE){KillTimer(window,1);if(p->selected<0||(*p->model)[p->selected].children.empty())Select(*p,-1);}
     if(hit>=0){Select(*p,hit);if(message!=WM_MOUSEMOVE){if(p->pressed<0||p->pressed==hit)Activate(*p);p->pressed=-1;InvalidateRect(window,nullptr,FALSE);}else if(!(*p->model)[hit].children.empty())SetTimer(window,1,180,nullptr);}
     return 0;
   }
   if(message==WM_TIMER){KillTimer(window,1);POINT point={};GetCursorPos(&point);RECT r={};GetWindowRect(window,&r);if(PtInRect(&r,point))Activate(*p);return 0;}
   if(message==WM_MOUSEWHEEL){int extent=p->rows.empty()?0:p->rows.back().bottom+s.Px(6);p->offset=std::clamp(p->offset-GET_WHEEL_DELTA_WPARAM(w)/WHEEL_DELTA*s.Px(90),0,std::max(0,extent-p->height));InvalidateRect(window,nullptr,FALSE);return 0;}
-  if(message==WM_KEYDOWN){p->keyboard=true;InvalidateRect(window,nullptr,FALSE);switch(w){
+  if(message==WM_KEYDOWN){p->keyboard=true;GetCursorPos(&p->lastMouse);ScreenToClient(window,&p->lastMouse);p->lastMouse.y+=p->offset;InvalidateRect(window,nullptr,FALSE);switch(w){
     case VK_DOWN:Step(*p,1);break;case VK_UP:Step(*p,-1);break;
     case VK_HOME:Step(*p,1,true);break;case VK_END:Step(*p,-1,true);break;
     case VK_RETURN:case VK_SPACE:Activate(*p,true);break;
