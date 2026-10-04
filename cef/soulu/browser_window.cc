@@ -373,6 +373,7 @@ BrowserWindow::BrowserWindow()
   settings_->SetString("layout", "compact");
   settings_->SetString("theme", "system");
   settings_->SetString("language", "ru");
+  settings_->SetString("translationTarget", "ru");
   settings_->SetBool("mattePanel", true);
   settings_->SetString("searchEngine", "google");
   settings_->SetString("addressOpenMode", "current");

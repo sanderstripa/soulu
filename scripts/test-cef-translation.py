@@ -9,6 +9,8 @@ class Fixture(http.server.BaseHTTPRequestHandler):
     def log_message(self,*args):pass
 server=http.server.ThreadingHTTPServer(('127.0.0.1',s.free_port()),Fixture)
 threading.Thread(target=server.serve_forever,daemon=True).start()
+import os
+os.environ['NO_PROXY']='127.0.0.1,localhost'
 process=s.launch(sys.argv[1])
 def wait(fn,timeout=30):
     end=time.monotonic()+timeout

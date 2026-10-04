@@ -423,7 +423,7 @@ jobs:
         if: (inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.54'))
         shell: pwsh
         run: |
-          python -m pip install --disable-pip-version-check websocket-client pillow dxcam
+          python -m pip install --disable-pip-version-check websocket-client pillow dxcam comtypes
           $exe = Get-ChildItem cef-build -Recurse -Filter Soulu.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
           & ./browser/scripts/verify-cef-engine.ps1 -BuildDir $exe.Directory.FullName -ReportPath browser/artifacts/engine-version.json
           "build_dir=$($exe.Directory.FullName)" >> $env:GITHUB_ENV
@@ -562,7 +562,7 @@ jobs:
         continue-on-error: true
         shell: pwsh
         run: |
-          python -m pip install --disable-pip-version-check websocket-client pillow dxcam
+          python -m pip install --disable-pip-version-check websocket-client pillow dxcam comtypes
           $personalize='HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize'
           New-Item $personalize -Force | Out-Null
           Set-ItemProperty $personalize EnableTransparency 1 -Type DWord

@@ -105,6 +105,15 @@ add_custom_command(TARGET ${EXAMPLE_TARGET} POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_directory
           "${CMAKE_CURRENT_SOURCE_DIR}/adblock/notices"
           "$<TARGET_FILE_DIR:${EXAMPLE_TARGET}>/licenses/adblock"
+  COMMAND ${CMAKE_COMMAND} -E copy_directory
+          "${CMAKE_CURRENT_SOURCE_DIR}/assets/ui/third_party/notices"
+          "$<TARGET_FILE_DIR:${EXAMPLE_TARGET}>/licenses/translation"
+  COMMAND ${CMAKE_COMMAND} -E copy
+          "${CMAKE_CURRENT_SOURCE_DIR}/assets/ui/third_party/bergamot.LICENSE"
+          "$<TARGET_FILE_DIR:${EXAMPLE_TARGET}>/licenses/translation/bergamot.LICENSE"
+  COMMAND ${CMAKE_COMMAND} -E copy
+          "${CMAKE_CURRENT_SOURCE_DIR}/assets/ui/third_party/tinyld.LICENSE"
+          "$<TARGET_FILE_DIR:${EXAMPLE_TARGET}>/licenses/translation/tinyld.LICENSE"
   VERBATIM)
 
 # Preview 25 snapshot publishing keeps ordinary CEF validation unchanged.

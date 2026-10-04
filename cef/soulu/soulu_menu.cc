@@ -75,38 +75,39 @@ void Activate(Panel& p,bool first=false){
 // MSAA exposes native menu rows without a document or browser bridge.
 // HWND lookup prevents an assistive client from retaining a dead Panel pointer.
 class AccessibleMenu final:public IAccessible {
- public: explicit AccessibleMenu(HWND hwnd):window_(hwnd){}
+ public: explicit AccessibleMenu(HWND hwnd):window_(hwnd){ITypeLib* library=nullptr;if(SUCCEEDED(LoadTypeLibEx(L"oleacc.dll",REGKIND_NONE,&library))){library->GetTypeInfoOfGuid(IID_IAccessible,&type_);library->Release();}}
+  ~AccessibleMenu(){if(type_)type_->Release();}
   HRESULT STDMETHODCALLTYPE QueryInterface(REFIID iid,void** out) override {if(!out)return E_POINTER;*out=nullptr;if(iid==IID_IUnknown||iid==IID_IDispatch||iid==IID_IAccessible){*out=static_cast<IAccessible*>(this);AddRef();return S_OK;}return E_NOINTERFACE;}
   ULONG STDMETHODCALLTYPE AddRef() override{return ++refs_;}
   ULONG STDMETHODCALLTYPE Release() override{auto refs=--refs_;if(!refs)delete this;return refs;}
-  HRESULT STDMETHODCALLTYPE GetTypeInfoCount(UINT* n) override{if(!n)return E_POINTER;*n=0;return S_OK;}
-  HRESULT STDMETHODCALLTYPE GetTypeInfo(UINT,LCID,ITypeInfo**) override{return E_NOTIMPL;}
-  HRESULT STDMETHODCALLTYPE GetIDsOfNames(REFIID,LPOLESTR*,UINT,LCID,DISPID*) override{return E_NOTIMPL;}
-  HRESULT STDMETHODCALLTYPE Invoke(DISPID,REFIID,LCID,WORD,DISPPARAMS*,VARIANT*,EXCEPINFO*,UINT*) override{return E_NOTIMPL;}
+  HRESULT STDMETHODCALLTYPE GetTypeInfoCount(UINT* n) override{if(!n)return E_POINTER;*n=type_?1:0;return S_OK;}
+  HRESULT STDMETHODCALLTYPE GetTypeInfo(UINT index,LCID,ITypeInfo** out) override{if(!out)return E_POINTER;*out=nullptr;if(index||!type_)return DISP_E_BADINDEX;*out=type_;type_->AddRef();return S_OK;}
+  HRESULT STDMETHODCALLTYPE GetIDsOfNames(REFIID,LPOLESTR* names,UINT count,LCID,DISPID* ids) override{return type_?DispGetIDsOfNames(type_,names,count,ids):E_NOTIMPL;}
+  HRESULT STDMETHODCALLTYPE Invoke(DISPID id,REFIID,LCID,WORD flags,DISPPARAMS* params,VARIANT* result,EXCEPINFO* error,UINT* argument) override{return type_?DispInvoke(static_cast<IAccessible*>(this),type_,id,flags,params,result,error,argument):E_NOTIMPL;}
   HRESULT STDMETHODCALLTYPE get_accParent(IDispatch** out) override{if(!out)return E_POINTER;*out=nullptr;return S_FALSE;}
   HRESULT STDMETHODCALLTYPE get_accChildCount(long* n) override{if(!n)return E_POINTER;auto p=Get();*n=p?static_cast<long>(p->model->size()):0;return S_OK;}
   HRESULT STDMETHODCALLTYPE get_accChild(VARIANT,IDispatch** out) override{if(!out)return E_POINTER;*out=nullptr;return S_FALSE;}
   HRESULT STDMETHODCALLTYPE get_accName(VARIANT child,BSTR* out) override{if(!out)return E_POINTER;auto item=Item(child);*out=SysAllocString(item?item->label.c_str():L"Soulu");return S_OK;}
   HRESULT STDMETHODCALLTYPE get_accValue(VARIANT,BSTR* out) override{if(!out)return E_POINTER;*out=nullptr;return S_FALSE;}
   HRESULT STDMETHODCALLTYPE get_accDescription(VARIANT,BSTR* out) override{return get_accValue({},out);}
-  HRESULT STDMETHODCALLTYPE get_accRole(VARIANT child,VARIANT* out) override{if(!out)return E_POINTER;VariantInit(out);out->vt=VT_I4;auto item=Item(child);out->lVal=!item?ROLE_SYSTEM_MENUPOPUP:item->type==MenuItemType::Separator?ROLE_SYSTEM_SEPARATOR:ROLE_SYSTEM_MENUITEM;return S_OK;}
-  HRESULT STDMETHODCALLTYPE get_accState(VARIANT child,VARIANT* out) override{if(!out)return E_POINTER;VariantInit(out);out->vt=VT_I4;auto p=Get();auto item=Item(child);out->lVal=!p?STATE_SYSTEM_UNAVAILABLE:0;if(item){if(!item->enabled)out->lVal|=STATE_SYSTEM_UNAVAILABLE;else out->lVal|=STATE_SYSTEM_FOCUSABLE;if(item->checked)out->lVal|=STATE_SYSTEM_CHECKED;if(!item->children.empty())out->lVal|=STATE_SYSTEM_HASPOPUP;if(child.lVal==p->selected+1)out->lVal|=STATE_SYSTEM_FOCUSED;}return S_OK;}
+  HRESULT STDMETHODCALLTYPE get_accRole(VARIANT child,VARIANT* out) override{if(!out)return E_POINTER;*out=VARIANT{};out->vt=VT_I4;auto item=Item(child);out->lVal=!item?ROLE_SYSTEM_MENUPOPUP:item->type==MenuItemType::Separator?ROLE_SYSTEM_SEPARATOR:ROLE_SYSTEM_MENUITEM;return S_OK;}
+  HRESULT STDMETHODCALLTYPE get_accState(VARIANT child,VARIANT* out) override{if(!out)return E_POINTER;*out=VARIANT{};out->vt=VT_I4;auto p=Get();auto item=Item(child);out->lVal=!p?STATE_SYSTEM_UNAVAILABLE:0;if(item){if(!item->enabled)out->lVal|=STATE_SYSTEM_UNAVAILABLE;else out->lVal|=STATE_SYSTEM_FOCUSABLE;if(item->checked)out->lVal|=STATE_SYSTEM_CHECKED;if(!item->children.empty())out->lVal|=STATE_SYSTEM_HASPOPUP;if(child.lVal==p->selected+1)out->lVal|=STATE_SYSTEM_FOCUSED;}return S_OK;}
   HRESULT STDMETHODCALLTYPE get_accHelp(VARIANT,BSTR* out) override{return get_accValue({},out);}
   HRESULT STDMETHODCALLTYPE get_accHelpTopic(BSTR* out,VARIANT,long* topic) override{if(out)*out=nullptr;if(topic)*topic=0;return S_FALSE;}
   HRESULT STDMETHODCALLTYPE get_accKeyboardShortcut(VARIANT child,BSTR* out) override{if(!out)return E_POINTER;auto item=Item(child);*out=item?SysAllocString(item->accelerator.c_str()):nullptr;return item?S_OK:S_FALSE;}
-  HRESULT STDMETHODCALLTYPE get_accFocus(VARIANT* out) override{if(!out)return E_POINTER;VariantInit(out);auto p=Get();if(!p)return S_FALSE;out->vt=VT_I4;out->lVal=p->selected+1;return S_OK;}
+  HRESULT STDMETHODCALLTYPE get_accFocus(VARIANT* out) override{if(!out)return E_POINTER;*out=VARIANT{};auto p=Get();if(!p)return S_FALSE;out->vt=VT_I4;out->lVal=p->selected+1;return S_OK;}
   HRESULT STDMETHODCALLTYPE get_accSelection(VARIANT* out) override{return get_accFocus(out);}
   HRESULT STDMETHODCALLTYPE get_accDefaultAction(VARIANT child,BSTR* out) override{if(!out)return E_POINTER;*out=Item(child)?SysAllocString(L"Activate"):nullptr;return *out?S_OK:S_FALSE;}
   HRESULT STDMETHODCALLTYPE accSelect(long flags,VARIANT child) override{auto p=Get();auto item=Item(child);if(!p||!item||!Selectable(*item))return E_INVALIDARG;if(flags&(SELFLAG_TAKEFOCUS|SELFLAG_TAKESELECTION)){Select(*p,child.lVal-1);SetFocus(window_);return S_OK;}return E_INVALIDARG;}
   HRESULT STDMETHODCALLTYPE accLocation(long* x,long* y,long* width,long* height,VARIANT child) override{if(!x||!y||!width||!height)return E_POINTER;auto p=Get();if(!p)return S_FALSE;RECT r={};GetWindowRect(window_,&r);if(Item(child)){auto row=p->rows[child.lVal-1];OffsetRect(&row,r.left,r.top-p->offset);r=row;}*x=r.left;*y=r.top;*width=r.right-r.left;*height=r.bottom-r.top;return S_OK;}
-  HRESULT STDMETHODCALLTYPE accNavigate(long direction,VARIANT from,VARIANT* out) override{if(!out)return E_POINTER;VariantInit(out);auto p=Get();if(!p)return S_FALSE;long id=from.vt==VT_I4?from.lVal:0;long next=direction==NAVDIR_FIRSTCHILD?1:direction==NAVDIR_LASTCHILD?static_cast<long>(p->model->size()):direction==NAVDIR_NEXT?id+1:direction==NAVDIR_PREVIOUS?id-1:0;if(next<1||next>static_cast<long>(p->model->size()))return S_FALSE;out->vt=VT_I4;out->lVal=next;return S_OK;}
-  HRESULT STDMETHODCALLTYPE accHitTest(long x,long y,VARIANT* out) override{if(!out)return E_POINTER;VariantInit(out);auto p=Get();if(!p)return S_FALSE;POINT point={x,y};ScreenToClient(window_,&point);point.y+=p->offset;for(size_t i=0;i<p->rows.size();++i)if(PtInRect(&p->rows[i],point)){out->vt=VT_I4;out->lVal=static_cast<long>(i+1);return S_OK;}return S_FALSE;}
+  HRESULT STDMETHODCALLTYPE accNavigate(long direction,VARIANT from,VARIANT* out) override{if(!out)return E_POINTER;*out=VARIANT{};auto p=Get();if(!p)return S_FALSE;long id=from.vt==VT_I4?from.lVal:0;long next=direction==NAVDIR_FIRSTCHILD?1:direction==NAVDIR_LASTCHILD?static_cast<long>(p->model->size()):direction==NAVDIR_NEXT?id+1:direction==NAVDIR_PREVIOUS?id-1:0;if(next<1||next>static_cast<long>(p->model->size()))return S_FALSE;out->vt=VT_I4;out->lVal=next;return S_OK;}
+  HRESULT STDMETHODCALLTYPE accHitTest(long x,long y,VARIANT* out) override{if(!out)return E_POINTER;*out=VARIANT{};auto p=Get();if(!p)return S_FALSE;POINT point={x,y};ScreenToClient(window_,&point);point.y+=p->offset;for(size_t i=0;i<p->rows.size();++i)if(PtInRect(&p->rows[i],point)){out->vt=VT_I4;out->lVal=static_cast<long>(i+1);return S_OK;}return S_FALSE;}
   HRESULT STDMETHODCALLTYPE accDoDefaultAction(VARIANT child) override{auto p=Get();auto item=Item(child);if(!p||!item||!Selectable(*item))return E_INVALIDARG;Select(*p,child.lVal-1);Activate(*p,true);return S_OK;}
   HRESULT STDMETHODCALLTYPE put_accName(VARIANT,BSTR) override{return E_NOTIMPL;}
   HRESULT STDMETHODCALLTYPE put_accValue(VARIANT,BSTR) override{return E_NOTIMPL;}
  private:Panel* Get(){return IsWindow(window_)?reinterpret_cast<Panel*>(GetWindowLongPtrW(window_,GWLP_USERDATA)):nullptr;}
   MenuItem* Item(VARIANT child){auto p=Get();return p&&child.vt==VT_I4&&child.lVal>0&&child.lVal<=static_cast<long>(p->model->size())?&(*p->model)[child.lVal-1]:nullptr;}
-  HWND window_;ULONG refs_=1;
+  HWND window_;ULONG refs_=1;ITypeInfo* type_=nullptr;
 };
 void Rounded(HDC dc,RECT r,COLORREF color,int radius){
   auto brush=CreateSolidBrush(color);auto oldBrush=SelectObject(dc,brush);auto oldPen=SelectObject(dc,GetStockObject(NULL_PEN));

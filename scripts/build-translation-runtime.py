@@ -15,7 +15,6 @@ worker=worker.replace("self.importScripts('bergamot-translator-worker.js');",'(f
 bootstrap='const wasm=Uint8Array.from(atob('+json.dumps(wasm)+'),c=>c.charCodeAt(0));\nself.fetch=async()=>new Response(wasm,{headers:{"Content-Type":"application/wasm"}});\n'+worker
 main=b['package/translator.js'].decode().replace('export class ','class ')
 main=main.replace("new Worker(new URL('./worker/translator-worker.js', import.meta.url))",'new Worker(workerURL)')
-main=main.replace("new URL(","new URL(")
 assert 'import.meta' not in main
 out=ROOT/'ui/third_party/bergamot-runtime.js'
 out.write_text('// Generated from integrity-pinned official @browsermt/bergamot-translator 0.4.9. MPL-2.0.\n(()=>{const workerURL=URL.createObjectURL(new Blob(['+json.dumps(bootstrap)+'],{type:"text/javascript"}));\n'+main+'\nwindow.SouluBergamot={BatchTranslator,TranslatorBacking,CancelledError};})();\n',encoding='utf-8')

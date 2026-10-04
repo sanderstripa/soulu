@@ -93,7 +93,11 @@ try:
             s.sequence+=1
             content.send(json.dumps({'id':s.sequence,'method':'Input.dispatchMouseEvent','params':params}))
         hwnd=wait(lambda:next(iter(windows(True)),None))
-        labels=['foreground','background','window','incognito','save','copy','inspect']
+        spec=importlib.util.spec_from_file_location('menu_accessibility',pathlib.Path(__file__).with_name('native-menu-accessibility.py'))
+        access=importlib.util.module_from_spec(spec);spec.loader.exec_module(access)
+        accessible=access.rows(hwnd);labels=[row['label'] for row in accessible if row['label']]
+        assert len(labels)==7 and all(labels),accessible
+        if index==0:print(json.dumps(accessible[0],ensure_ascii=False),flush=True)
         if len(sys.argv)>2:
             directory=pathlib.Path(sys.argv[2]);directory.mkdir(parents=True,exist_ok=True)
             bounds=Rect();u.GetWindowRect(ctypes.c_void_p(hwnd),ctypes.byref(bounds));time.sleep(.35)

@@ -317,10 +317,10 @@
   article.oncontextmenu = e => {
     const a = e.target.closest('.reader-body a[href]'); if (!a) return;
     e.preventDefault(); closeLink(); const snapshot = site, target = safe.webURL(a.getAttribute('href'), snapshot.url);
-    linkMenu = el('section', 'reader-link-menu');
-    for (const [mode, text] of [['new','Открыть в новой вкладке'],['background','Открыть в фоновой вкладке'],['incognito','Открыть в инкогнито']]) linkMenu.append(button(text, () => { closeLink(); updateSurface(); return act('reader.link', {target, mode}, snapshot); }));
-    linkMenu.style.left = `${Math.max(8, Math.min(e.clientX, innerWidth - 280))}px`; linkMenu.style.top = `${Math.min(e.clientY, innerHeight - 140)}px`;
-    document.body.append(linkMenu); updateSurface(); linkMenu.querySelector('button')?.focus();
+    const english=state.settings?.language==='en';
+    const choices=[['new','Открыть в новой вкладке','Open in new tab'],['background','Открыть в фоновой вкладке','Open in background tab'],['incognito','Открыть в инкогнито','Open in incognito']];
+    api.showMenu(choices.map((choice,index)=>({command:index+1,label:choice[english?2:1]})),e.clientX,e.clientY)
+      .then(command=>command&&act('reader.link',{target,mode:choices[command-1][0]},snapshot)).catch(error);
   };
   const findBox = el('section', 'site-find'), findInput = el('input'); findBox.hidden = true;
   findInput.setAttribute('aria-label', 'Найти на странице'); findInput.placeholder = 'Найти на странице';

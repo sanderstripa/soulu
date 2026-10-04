@@ -40,7 +40,8 @@ bool BrowserWindow::HandleTranslationBridge(const std::string& action,CefRefPtr<
     auto preferences=tab->incognito?tab->translation_preferences:settings_->GetDictionary("translation");
     if(!preferences){preferences=CefDictionaryValue::Create();preferences->SetString("target",MenuEnglish()?"en":"ru");preferences->SetList("always",CefListValue::Create());preferences->SetList("never",CefListValue::Create());}
     auto updated=preferences->Copy(false);
-    if(data->HasKey("target")){auto target=data->GetString("target").ToString();if(target!="en"&&target!="ru"&&target!="de"){callback->Failure(400,"Unsupported target");return true;}updated->SetString("target",target);}
+    if(!tab->incognito)updated->SetString("target",settings_->GetString("translationTarget"));
+    if(data->HasKey("target")){auto target=data->GetString("target").ToString();if(target!="en"&&target!="ru"){callback->Failure(400,"Unsupported target");return true;}updated->SetString("target",target);}
     for(const auto& name:{"always","never"})if(data->HasKey(name)){
       if(data->GetType(name)!=VTYPE_BOOL){callback->Failure(400,"Invalid preference");return true;}
       const std::string item=std::string(name)=="always"?data->GetString("source").ToString():WebOrigin(tab->url);
@@ -51,7 +52,7 @@ bool BrowserWindow::HandleTranslationBridge(const std::string& action,CefRefPtr<
       if(next->GetSize()>500){callback->Failure(400,"Preference limit reached");return true;}updated->SetList(name,next);
     }
     if(tab->incognito)tab->translation_preferences=updated;
-    else {settings_->SetDictionary("translation",updated);if(!SaveSettings()){callback->Failure(500,"Preferences could not be saved");return true;}}
+    else {settings_->SetString("translationTarget",updated->GetString("target"));settings_->SetDictionary("translation",updated);if(!SaveSettings()){callback->Failure(500,"Preferences could not be saved");return true;}}
     callback->Success(CefWriteJSON(Value(updated),JSON_WRITER_DEFAULT));return true;
   }
   // Translation can run in a background tab, but only an explicit browser UI

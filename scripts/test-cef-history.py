@@ -115,7 +115,7 @@ def main():
                 @ctypes.WINFUNCTYPE(ctypes.c_bool,ctypes.c_void_p,ctypes.c_void_p)
                 def collect(hwnd,_):
                     pid=ctypes.c_ulong();u.GetWindowThreadProcessId(hwnd,ctypes.byref(pid));kind=ctypes.create_unicode_buffer(80);u.GetClassNameW(ctypes.c_void_p(hwnd),kind,80)
-                    if pid.value==process.pid and kind.value=='#32768':found.append(hwnd)
+                    if pid.value==process.pid and kind.value=='SouluMenuHost':found.append(hwnd)
                     return True
                 u.EnumWindows(collect,0);return found[0] if found else None
             box=s.evaluate(shell,"(()=>{const n=document.querySelector('.browser-toolbar');const r=n.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+2}})()")
@@ -123,12 +123,13 @@ def main():
                 params=dict(type=event,x=box['x'],y=box['y'])
                 if event!='mouseMoved':params.update(button='right',clickCount=1)
                 s.sequence+=1;shell.send(json.dumps(dict(id=s.sequence,method='Input.dispatchMouseEvent',params=params)))
-            hwnd=wait(menu_window);menu=u.SendMessageW(hwnd,0x01E1,0,0);labels=[]
-            for i in range(u.GetMenuItemCount(menu)):
-                label=ctypes.create_unicode_buffer(256);u.GetMenuStringW(menu,i,label,256,0x400);labels.append(label.value)
-            check(any(label.startswith('История') for label in labels),'Actual top-toolbar context menu contains History')
-            index=next(i for i,label in enumerate(labels) if label.startswith('История'));rect=Rect();check(u.GetMenuItemRect(None,menu,index,ctypes.byref(rect)),'History menu item has a native hit target')
-            u.SetCursorPos((rect.left+rect.right)//2,(rect.top+rect.bottom)//2);time.sleep(.1);u.mouse_event(0x0002,0,0,0,0);u.mouse_event(0x0004,0,0,0,0)
+            hwnd=wait(menu_window)
+            # Native host routes Home/Down/Enter to its model, skipping separators.
+            u.PostMessageW.argtypes=[ctypes.c_void_p,ctypes.c_uint,ctypes.c_size_t,ctypes.c_ssize_t]
+            u.PostMessageW(hwnd,0x100,0x24,0)
+            u.PostMessageW(hwnd,0x100,0x28,0)
+            u.PostMessageW(hwnd,0x100,0x28,0)
+            u.PostMessageW(hwnd,0x100,0x0D,0)
             wait(lambda:not menu_window());check(wait(lambda:state()['activeTabId']==bridge(history,'state')['tabId']),'Selecting History from the actual native menu opens its internal page')
             history_id=bridge(history,'state')['tabId'];count=len(state()['tabs'])
             bridge(history,'open',dict(url=origin+'/from-history',newTab=True))

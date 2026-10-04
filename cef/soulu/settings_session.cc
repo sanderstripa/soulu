@@ -103,7 +103,7 @@ bool BrowserWindow::ApplySettingsSession(std::string& error) {
   }
   const std::pair<const char*,std::vector<std::string>> enums[]={
     {"historyDefaultFilter",{"all","today","yesterday","week","older"}},
-    {"theme",{"system","light","dark"}},{"language",{"ru","en"}},
+    {"theme",{"system","light","dark"}},{"language",{"ru","en"}},{"translationTarget",{"ru","en"}},
     {"layout",{"compact","classic"}},{"searchEngine",{"google","yandex","bing","duckduckgo"}},
     {"addressPosition",{"left","center"}},{"extensionsPosition",{"left","right"}},
     {"downloadsMode",{"always","dynamic"}},{"addressOpenMode",{"current","newIfOccupied"}},

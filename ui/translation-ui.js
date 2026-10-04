@@ -2,7 +2,7 @@
   'use strict';
   const api=window.browserShell,service=window.SouluTranslate;if(!api||!service)return;
   const jobs=new Map(),probes=new Map();let state={},site=null,revision=0,engine=null,activeJob=null,prefs={target:'ru',always:[],never:[]};
-  const copy={ru:{title:'Soulu Translate',translate:'Перевести',original:'Показать оригинал',cancel:'Отменить',close:'Закрыть',source:'Язык страницы',target:'Язык перевода',local:'Текст страницы остаётся на устройстве. Модели загружаются один раз.',downloading:'Загрузка языковой модели…',translating:'Перевод страницы…',translated:'Страница переведена',unsupported:'Эта языковая пара пока не поддерживается',error:'Не удалось перевести страницу. Проверьте сеть при первой загрузке модели и повторите.',always:'Всегда переводить этот язык',never:'Никогда не переводить этот сайт',qr:'QR-код страницы',copy:'Копировать адрес'},en:{title:'Soulu Translate',translate:'Translate',original:'Show original',cancel:'Cancel',close:'Close',source:'Page language',target:'Translate to',local:'Page text stays on your device. Models are downloaded once.',downloading:'Downloading language model…',translating:'Translating page…',translated:'Page translated',unsupported:'This language pair is not supported yet',error:'Translation failed. Check your connection for the first model download and try again.',always:'Always translate this language',never:'Never translate this site',qr:'Page QR code',copy:'Copy address'}};
+  const copy={ru:{title:'Soulu Translate',translate:'Перевести',original:'Показать оригинал',cancel:'Отменить',close:'Закрыть',source:'Язык страницы',target:'Язык перевода',local:'Текст страницы остаётся на устройстве. Модели загружаются один раз.',downloading:'Загрузка языковой модели…',translating:'Перевод страницы…',translated:'Страница переведена',same:'Страница уже на выбранном языке',unsupported:'Эта языковая пара пока не поддерживается',error:'Не удалось перевести страницу. Проверьте сеть при первой загрузке модели и повторите.',always:'Всегда переводить этот язык',never:'Никогда не переводить этот сайт',qr:'QR-код страницы',copy:'Копировать адрес'},en:{title:'Soulu Translate',translate:'Translate',original:'Show original',cancel:'Cancel',close:'Close',source:'Page language',target:'Translate to',local:'Page text stays on your device. Models are downloaded once.',downloading:'Downloading language model…',translating:'Translating page…',translated:'Page translated',same:'The page is already in the selected language',unsupported:'This language pair is not supported yet',error:'Translation failed. Check your connection for the first model download and try again.',always:'Always translate this language',never:'Never translate this site',qr:'Page QR code',copy:'Copy address'}};
   const tr=key=>(copy[state.settings?.language==='en'?'en':'ru'])[key];
   const element=(tag,text)=>{const el=document.createElement(tag);if(text!==undefined)el.textContent=text;return el;};
   const panel=element('section');panel.className='soulu-translation';panel.hidden=true;panel.setAttribute('role','dialog');panel.setAttribute('aria-label','Soulu Translate');document.body.append(panel);
@@ -11,7 +11,7 @@
   const languages={en:{ru:'Английский',en:'English'},ru:{ru:'Русский',en:'Russian'},de:{ru:'Немецкий',en:'German'}};
   function close(){panel.hidden=true;api.setPopover(false,'translation');api.setSuggestionsHeight(0);document.querySelector('.soulu-translate-button')?.focus();}
   function button(text,action){const b=element('button',text);b.type='button';b.onclick=()=>Promise.resolve().then(action).catch(()=>status.textContent=tr('error'));return b;}
-  function select(value){const s=element('select');for(const lang of Object.keys(languages)){const o=element('option',languages[lang][state.settings?.language==='en'?'en':'ru']);o.value=lang;s.append(o);}s.value=value;return s;}
+  function select(value){const s=element('select');if(value&&!languages[value]){const o=element('option',value);o.value=value;s.append(o);}for(const lang of Object.keys(languages)){const o=element('option',languages[lang][state.settings?.language==='en'?'en':'ru']);o.value=lang;s.append(o);}s.value=value;return s;}
   async function preference(patch){prefs=await api.translation('preferences',{...site,...patch});}
   async function restore(job){
     if(!job)return;job.cancelled=true;clearTimeout(job.timer);engine?.cancel(job.key);
@@ -19,7 +19,7 @@
     if(activeJob===job)activeJob=null;status.textContent='';updateIcon();
   }
   async function run(snapshot,from,to){
-    service.resolve(from,to);const id=key(snapshot);await restore(jobs.get(id));
+    service.resolve(from,to);if(service.normalize(from)===service.normalize(to)){status.textContent=tr('same');return;}const id=key(snapshot);await restore(jobs.get(id));
     const {token}=await api.translation('begin',snapshot);
     const job={key:id,site:snapshot,token,from,to,cancelled:false,state:'translating'};jobs.set(id,job);activeJob=job;
     engine??=new service.LocalTranslator(value=>{if(!panel.hidden)status.textContent=tr(value);});
@@ -49,7 +49,7 @@
     prefs=await api.translation('preferences',site);if(ticket!==revision)return;
     panel.classList.remove("soulu-qr");panel.replaceChildren(element('h2',tr('title')));
     const sourceLabel=element('label',tr('source')),from=select(source||'en');sourceLabel.append(from);
-    const targetLabel=element('label',tr('target')),to=select(prefs.target||state.settings?.language||'ru');targetLabel.append(to);
+    const targetLabel=element('label',tr('target')),to=select(prefs.target||state.settings?.language||'ru');to.querySelector('option[value=de]')?.remove();targetLabel.append(to);
     panel.append(sourceLabel,targetLabel,element('p',tr('local')),status);
     const translate=button(tr('translate'),async()=>{await preference({target:to.value});await run(site,from.value,to.value);});
     panel.append(translate,button(tr('original'),()=>restore(jobs.get(key(site)))),button(tr('cancel'),()=>restore(jobs.get(key(site)))));
@@ -64,7 +64,9 @@
   function updateIcon(){
     const tab=state.tabs?.find(t=>t.id===state.activeTabId);if(!tab)return;
     const host=document.querySelector(state.settings?.layout==='classic'?'.classic-address-pill':'.compact-active-tab');if(!host)return;
-    const valid=/^https?:|^file:/i.test(tab.url)&&!tab.url.includes('/ui/');
+    const detected=probes.get(`${tab.id}:${tab.url}`);
+    const translated=[...jobs.values()].some(j=>j.site.tabId===tab.id);
+    const valid=/^https?:|^file:/i.test(tab.url)&&!tab.url.includes('/ui/')&&(translated||(detected?.from&&detected.from!==detected.target&&!detected.never));
     let icon=host.querySelector('.soulu-translate-button');
     if(!valid){icon?.remove();return;}
     if(!icon){icon=element('button');icon.type='button';icon.className='soulu-translate-button';icon.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h12M9 3v2M6 5c0 6 4 10 8 11M13 5c0 6-4 10-8 11M14 21l4-10 4 10M15.5 17h5"/></svg>';icon.onclick=()=>open().catch(()=>{});host.append(icon);}
@@ -80,6 +82,7 @@
     const tab=s.tabs?.find(t=>t.id===s.activeTabId);if(!tab||tab.loading||!/^https?:/i.test(tab.url))return;
     const probeKey=`${tab.id}:${tab.url}`;if(probes.has(probeKey))return;probes.set(probeKey,true);
     try{const snap=await api.getCurrentSite(),probe=await api.translation('probe',snap),from=service.detect(probe.sample,probe.lang),p=await api.translation('preferences',snap);
+      probes.set(probeKey,{from,target:p.target,never:(p.never||[]).includes(snap.origin)});updateIcon();
       if((p.always||[]).includes(from)&&!(p.never||[]).includes(snap.origin)&&from!==p.target)await run(snap,from,p.target);
     }catch{}
   });
