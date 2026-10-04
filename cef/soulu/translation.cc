@@ -37,7 +37,7 @@ bool BrowserWindow::HandleTranslationBridge(const std::string& action,CefRefPtr<
   auto data=payload&&payload->GetType()==VTYPE_DICTIONARY?payload->GetDictionary():nullptr;
   if(action=="browser.translate.model"){DownloadTranslationModel(data?data->GetString("sha256").ToString():"",callback);return true;}
   auto* tab=data?FindTab(data->GetInt("tabId")):nullptr;
-  if(!tab||!tab->browser||tab->main_loading||tab->reader_active||
+  if(!tab||!tab->browser||tab->main_loading||tab->translation_resetting||tab->reader_active||
      data->GetString("url")!=tab->url||data->GetInt("generation")!=tab->document_generation){callback->Failure(409,"Page changed");return true;}
   if(action=="browser.translate.preferences"){
     if(!tab->incognito&&tab->profile_id!=active_profile_id_){callback->Failure(409,"Profile changed");return true;}
@@ -85,7 +85,7 @@ bool BrowserWindow::HandleTranslationBridge(const std::string& action,CefRefPtr<
     auto rows=data->GetList("rows");
     if(!tab->translation_active||!rows||rows->GetSize()>32){callback->Failure(400,"Invalid translation batch");return true;}
     for(size_t i=0;i<rows->GetSize();++i){auto row=rows->GetDictionary(i);
-      if(!row||row->GetType("id")!=VTYPE_INT||row->GetType("text")!=VTYPE_STRING||row->GetString("text").length()>32000){callback->Failure(400,"Invalid translation result");return true;}}
+      if(!row||row->GetType("id")!=VTYPE_INT||row->GetType("text")!=VTYPE_STRING||row->GetString("text").length()>512000){callback->Failure(400,"Invalid translation result");return true;}}
     auto value=CefValue::Create();value->SetList(rows->Copy());script+="globalThis.__souluTranslate.apply("+CefWriteJSON(value,JSON_WRITER_DEFAULT).ToString()+")";
   }else{callback->Failure(400,"Unknown translation action");return true;}
   CefRefPtr<BrowserWindow> self=this;const bool restore=action=="browser.translate.restore",probe=action=="browser.translate.probe";

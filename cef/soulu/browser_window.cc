@@ -1334,9 +1334,12 @@ void BrowserWindow::UpdateAddress(int id, const std::string& url) {
   if (auto* tab = FindTab(id)) {
     const std::string next = IsHistoryUi(url) ? "soulu://history" : url == InternalUrl("about:blank") ? "about:blank" : (url == InternalUrl("soulu://home") ? "soulu://home" : (IsOnboardingUi(url)?"soulu://onboarding":url));
     if (next != tab->url) {
-      if(tab->translation_active&&tab->browser)EvaluateTranslationPage(tab->browser,url,
-        "globalThis.__souluTranslate?globalThis.__souluTranslate.restore():({restored:true})",[](CefRefPtr<CefDictionaryValue>){});
-      ++tab->translation_generation;tab->translation_active=false;
+      const bool reset=tab->translation_active||tab->translation_resetting;
+      ++tab->translation_generation;tab->translation_active=false;tab->translation_resetting=reset;
+      if(reset&&tab->browser){CefRefPtr<BrowserWindow> self=this;const int token=tab->translation_generation;
+        EvaluateTranslationPage(tab->browser,url,"globalThis.__souluTranslate?globalThis.__souluTranslate.restore():({restored:true})",
+          [self,id,token](CefRefPtr<CefDictionaryValue>){if(auto* current=self->FindTab(id);current&&current->translation_generation==token){current->translation_resetting=false;if(!self->closing_){self->Layout();self->EmitState();}}});
+      }
       tab->thumbnail.clear();++tab->document_generation;tab->reader_active=false;tab->reader_article=nullptr;
     }
     tab->url = next;
@@ -1572,6 +1575,7 @@ CefRefPtr<CefDictionaryValue> BrowserWindow::State() const {
     auto row = CefDictionaryValue::Create();
     row->SetInt("id", tab.id);
     row->SetInt("generation",tab.document_generation);
+    row->SetBool("translationResetting",tab.translation_resetting);
     const bool is_settings = tab.url.find("/ui/settings.html") != std::string::npos;
     row->SetString("title", is_settings
         ? (EffectiveSettings()->GetString("language") == "en" ? "Settings" : "Настройки")
@@ -1667,7 +1671,7 @@ void BrowserWindow::RequestFind() { if (settings_overlay_) { FocusSettings(); re
 void BrowserWindow::ReaderDocumentNavigation(int id) {
   DismissSouluMenus(hwnd_);
   CancelSitePermissions(id);
-  if(auto* tab=FindTab(id)){++tab->document_generation;++tab->translation_generation;tab->translation_active=false;tab->main_loading=true;tab->reader_active=false;tab->reader_article=nullptr;}
+  if(auto* tab=FindTab(id)){++tab->document_generation;++tab->translation_generation;tab->translation_active=false;tab->translation_resetting=false;tab->main_loading=true;tab->reader_active=false;tab->reader_article=nullptr;}
   Layout();EmitState();
 }
 void BrowserWindow::ReaderDocumentLoaded(int id) {

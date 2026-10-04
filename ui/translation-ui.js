@@ -14,7 +14,7 @@
   function close(){panel.hidden=true;api.setPopover(false,'translation');api.setSuggestionsHeight(0);document.querySelector('.soulu-translate-button')?.focus();}
   function button(text,action){const b=element('button',text);b.type='button';b.onclick=()=>Promise.resolve().then(action).catch(()=>status.textContent=tr('error'));return b;}
   function select(value){const s=element('select');if(value&&!languages[value]){const o=element('option',value);o.value=value;s.append(o);}for(const lang of Object.keys(languages)){const o=element('option',languages[lang][state.settings?.language==='en'?'en':'ru']);o.value=lang;s.append(o);}s.value=value;return s;}
-  async function preference(patch){prefs=await api.translation('preferences',{...site,...patch});}
+  async function preference(patch){prefs=await api.translation('preferences',{...site,...patch});const detected=probes.get(`${site.tabId}:${site.generation}:${site.url}`);if(detected&&typeof detected==='object'){detected.target=prefs.target;detected.never=(prefs.never||[]).includes(site.origin);}updateIcon();}
   async function restore(job){
     if(!job)return;job.cancelled=true;clearTimeout(job.timer);engine?.cancel(job.key);
     await api.translation('restore',{...job.site,token:job.token});jobs.delete(job.key);
@@ -75,13 +75,13 @@
     icon.title=tr('title');icon.setAttribute('aria-label',tr('title'));icon.dataset.translated=String([...jobs.values()].some(j=>j.site.tabId===tab.id&&j.state==='translated'));
   }
   api.onState(async s=>{
-    const old=state.activeTabId;state=s;if(old!==s.activeTabId){revision++;close();}
+    const old=state.activeTabId,oldPage=state.page;state=s;if(old!==s.activeTabId||oldPage?.generation!==s.page?.generation||oldPage?.url!==s.page?.url){revision++;close();}
     const ids=new Set((s.tabs||[]).map(t=>t.id));
     for(const [id,job] of jobs){const tab=s.tabs?.find(t=>t.id===job.site.tabId);
       if(!ids.has(job.site.tabId)||!tab||tab.url!==job.site.url||tab.generation!==job.site.generation||tab.loading){restore(job).catch(()=>jobs.delete(id));}
     }
     requestAnimationFrame(updateIcon);
-    const tab=s.tabs?.find(t=>t.id===s.activeTabId);if(!tab||tab.loading||!/^https?:/i.test(tab.url))return;
+    const tab=s.tabs?.find(t=>t.id===s.activeTabId);if(!tab||tab.loading||tab.translationResetting||!/^https?:/i.test(tab.url))return;
     const probeKey=`${tab.id}:${tab.generation}:${tab.url}`;if(probes.has(probeKey))return;probes.set(probeKey,true);if(probes.size>1000)probes.delete(probes.keys().next().value);
     try{const snap=await api.getCurrentSite(),probe=await api.translation('probe',snap),from=service.detect(probe.sample,probe.lang),p=await api.translation('preferences',snap);
       probes.set(probeKey,{from,target:p.target,never:(p.never||[]).includes(snap.origin)});updateIcon();
@@ -92,9 +92,9 @@
   api.onQRRequest(snapshot=>{
     close();if(!/^https?:\/\//i.test(snapshot.url)||typeof window.qrcode!=='function')return;
     const qr=window.qrcode(0,'M');qr.addData(snapshot.url,'Byte');qr.make();const count=qr.getModuleCount(),scale=Math.max(2,Math.floor(240/(count+8)));
-    const canvas=element('canvas');canvas.width=canvas.height=(count+8)*scale;const dc=canvas.getContext('2d');dc.fillStyle='#fff';dc.fillRect(0,0,canvas.width,canvas.height);dc.fillStyle='#000';
+    const canvas=element('canvas');canvas.setAttribute('role','img');canvas.setAttribute('aria-label',tr('qr')+': '+snapshot.url);canvas.width=canvas.height=(count+8)*scale;const dc=canvas.getContext('2d');dc.fillStyle='#fff';dc.fillRect(0,0,canvas.width,canvas.height);dc.fillStyle='#000';
     for(let y=0;y<count;y++)for(let x=0;x<count;x++)if(qr.isDark(y,x))dc.fillRect((x+4)*scale,(y+4)*scale,scale,scale);
-    panel.replaceChildren(element('h2',tr('qr')),canvas,element('p',snapshot.url),button(tr('copy'),()=>navigator.clipboard.writeText(snapshot.url)),button(tr('close'),close));panel.classList.add('soulu-qr');panel.hidden=false;position();api.setPopover(true,'translation');api.setSuggestionsHeight(innerHeight);
+    panel.replaceChildren(element('h2',tr('qr')),canvas,element('p',snapshot.url),button(tr('copy'),()=>api.shareMenu()),button(tr('close'),close));panel.classList.add('soulu-qr');panel.hidden=false;position();api.setPopover(true,'translation');api.setSuggestionsHeight(innerHeight);
   });
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!panel.hidden){e.preventDefault();close();}});
   document.addEventListener('pointerdown',e=>{if(!panel.hidden&&!panel.contains(e.target)&&!e.target.closest('.soulu-translate-button'))close();});

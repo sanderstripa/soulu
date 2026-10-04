@@ -7,7 +7,7 @@ Package JavaScript source revision: 8cc5d0495479c9ec56eafafd6bcd7fb5b929ca98.
 Embedded binary identifies itself as v0.4.5+4917c11; full source revision:
 https://github.com/browsermt/bergamot-translator/tree/4917c1124e394acd8deb78100b7c81a69999ffe8
 Marian source: e88c1aa5d5c5622cb52c7df09fbb7c3d7f4b5b5a (MIT).
-Sentence splitter: 49fde6df7ee9199aedb9571be800448192e3515c (MIT).
+Sentence splitter: 49fde6df7ee9199aedb9571be800448192e3515c (Apache-2.0 C++ code; LGPL-2.1 prefix data).
 SentencePiece: 3ffdc0065a03cadd9d0e5e123aaf9b6ea7ffb05d (Apache-2.0).
 intgemm: be3053515a8a04d19c6959a370eaf8b5a6eab686 (MIT).
 Other upstream notices in this directory retain their original authors.

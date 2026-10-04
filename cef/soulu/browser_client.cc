@@ -254,7 +254,12 @@ void BrowserClient::OnBeforeContextMenu(CefRefPtr<CefBrowser> browser,CefRefPtr<
   CEF_REQUIRE_UI_THREAD();const bool en=owner_->MenuEnglish();
   auto label=[&](const char* ru,const char* english){return en?english:ru;};
   // Preserve CEF editing and spellchecking, including enabled states.
-  if(params->IsEditable()){
+  if(params->IsEditable()||(params->GetEditStateFlags()&CM_EDITFLAG_CAN_SELECT_ALL)){
+    if(!params->IsEditable()){
+      model->Clear();model->AddItem(MENU_ID_COPY,label("Копировать","Copy"));
+      model->SetEnabled(MENU_ID_COPY,(params->GetEditStateFlags()&CM_EDITFLAG_CAN_COPY)!=0);
+      model->AddItem(MENU_ID_SELECT_ALL,label("Выделить всё","Select all"));
+    }
     const std::tuple<int,const char*,const char*> labels[]={
       {MENU_ID_UNDO,"Отменить","Undo"},{MENU_ID_REDO,"Повторить","Redo"},
       {MENU_ID_CUT,"Вырезать","Cut"},{MENU_ID_COPY,"Копировать","Copy"},

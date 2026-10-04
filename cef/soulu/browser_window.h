@@ -131,6 +131,7 @@ class BrowserWindow final : public CefBaseRefCounted {
     int document_generation = 0;
     int translation_generation = 0;
     bool translation_active = false;
+    bool translation_resetting = false;
     CefRefPtr<CefDictionaryValue> translation_preferences;
     CefRefPtr<CefDictionaryValue> reader_article;
   };

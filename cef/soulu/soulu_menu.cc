@@ -25,7 +25,7 @@ struct Panel {
   HWND window=nullptr;
   MenuModel* model=nullptr;
   Panel* parent=nullptr;
-  int selected=-1, width=0, height=0, offset=0;
+  int selected=-1,pressed=-1,width=0,height=0,offset=0;bool keyboard=false;
   std::vector<RECT> rows;
 };
 struct Session {
@@ -41,6 +41,7 @@ struct Session {
   COLORREF Text()const{return appearance.dark?RGB(238,238,239):RGB(28,29,32);}
   COLORREF Muted()const{return appearance.dark?RGB(150,151,157):RGB(104,106,113);}
   COLORREF Hover()const{return appearance.dark?RGB(37,38,43):RGB(242,243,245);}
+  COLORREF Pressed()const{return appearance.dark?RGB(54,56,64):RGB(228,230,235);}
   COLORREF Line()const{return appearance.dark?RGB(48,49,54):RGB(232,233,235);}
 };
 thread_local Session* active=nullptr;
@@ -143,7 +144,10 @@ LRESULT CALLBACK Procedure(HWND window,UINT message,WPARAM w,LPARAM l){
     for(size_t i=0;i<p->model->size();++i){
       auto& item=(*p->model)[i];RECT row=p->rows[i];OffsetRect(&row,0,-p->offset);
       if(item.type==MenuItemType::Separator){RECT line={s.Px(12),(row.top+row.bottom)/2,p->width-s.Px(12),(row.top+row.bottom)/2+1};auto b=CreateSolidBrush(s.Line());FillRect(dc,&line,b);DeleteObject(b);continue;}
-      if(static_cast<int>(i)==p->selected)Rounded(dc,row,s.Hover(),s.Px(8));
+      if(static_cast<int>(i)==p->selected){
+        Rounded(dc,row,static_cast<int>(i)==p->pressed?s.Pressed():s.Hover(),s.Px(8));
+        if(p->keyboard){auto pen=CreatePen(PS_SOLID,s.Px(1),s.Muted());auto old=SelectObject(dc,pen);auto brush=SelectObject(dc,GetStockObject(NULL_BRUSH));RoundRect(dc,row.left,row.top,row.right,row.bottom,s.Px(8),s.Px(8));SelectObject(dc,brush);SelectObject(dc,old);DeleteObject(pen);}
+      }
       SetTextColor(dc,item.enabled?s.Text():s.Muted());RECT label=row;label.left+=s.Px(26);label.right-=s.Px(20);
       if(!item.accelerator.empty()){RECT shortcut=label;shortcut.left=shortcut.right-s.Px(124);SetTextColor(dc,s.Muted());DrawTextW(dc,item.accelerator.c_str(),-1,&shortcut,DT_RIGHT|DT_VCENTER|DT_SINGLELINE|DT_NOPREFIX);label.right=shortcut.left-s.Px(12);SetTextColor(dc,item.enabled?s.Text():s.Muted());}
       DrawTextW(dc,item.label.c_str(),-1,&label,DT_LEFT|DT_VCENTER|DT_SINGLELINE|DT_END_ELLIPSIS|DT_NOPREFIX);
@@ -152,16 +156,19 @@ LRESULT CALLBACK Procedure(HWND window,UINT message,WPARAM w,LPARAM l){
     }
     RestoreDC(dc,saved);SelectObject(dc,oldFont);BitBlt(target,0,0,p->width,p->height,dc,0,0,SRCCOPY);SelectObject(dc,oldBitmap);DeleteObject(bitmap);DeleteDC(dc);EndPaint(window,&paint);return 0;
   }
-  if(message==WM_MOUSEMOVE||message==WM_LBUTTONUP||message==WM_RBUTTONUP){
+  if(message==WM_MOUSEMOVE||message==WM_LBUTTONDOWN||message==WM_LBUTTONUP||message==WM_RBUTTONUP){
     POINT point={GET_X_LPARAM(l),GET_Y_LPARAM(l)+p->offset};int hit=-1;
     for(size_t i=0;i<p->rows.size();++i)if(PtInRect(&p->rows[i],point)&&Selectable((*p->model)[i])){hit=static_cast<int>(i);break;}
+    if(message==WM_MOUSEMOVE)p->keyboard=false;
+    if(message==WM_LBUTTONDOWN){p->pressed=hit;if(hit>=0){Select(*p,hit);SetCapture(window);}InvalidateRect(window,nullptr,FALSE);return 0;}
+    if(message==WM_LBUTTONUP){ReleaseCapture();if(hit<0){p->pressed=-1;InvalidateRect(window,nullptr,FALSE);}}
     if(hit<0&&message==WM_MOUSEMOVE){KillTimer(window,1);Select(*p,-1);}
-    if(hit>=0){Select(*p,hit);if(message!=WM_MOUSEMOVE)Activate(*p);else if(!(*p->model)[hit].children.empty())SetTimer(window,1,180,nullptr);}
+    if(hit>=0){Select(*p,hit);if(message!=WM_MOUSEMOVE){if(p->pressed<0||p->pressed==hit)Activate(*p);p->pressed=-1;InvalidateRect(window,nullptr,FALSE);}else if(!(*p->model)[hit].children.empty())SetTimer(window,1,180,nullptr);}
     return 0;
   }
   if(message==WM_TIMER){KillTimer(window,1);POINT point={};GetCursorPos(&point);RECT r={};GetWindowRect(window,&r);if(PtInRect(&r,point))Activate(*p);return 0;}
   if(message==WM_MOUSEWHEEL){int extent=p->rows.empty()?0:p->rows.back().bottom+s.Px(6);p->offset=std::clamp(p->offset-GET_WHEEL_DELTA_WPARAM(w)/WHEEL_DELTA*s.Px(90),0,std::max(0,extent-p->height));InvalidateRect(window,nullptr,FALSE);return 0;}
-  if(message==WM_KEYDOWN){switch(w){
+  if(message==WM_KEYDOWN){p->keyboard=true;InvalidateRect(window,nullptr,FALSE);switch(w){
     case VK_DOWN:Step(*p,1);break;case VK_UP:Step(*p,-1);break;
     case VK_HOME:Step(*p,1,true);break;case VK_END:Step(*p,-1,true);break;
     case VK_RETURN:case VK_SPACE:Activate(*p,true);break;case VK_RIGHT:Activate(*p,true);break;
