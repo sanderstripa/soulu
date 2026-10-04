@@ -251,7 +251,7 @@
       b.title = label; b.setAttribute('aria-label', label); b.setAttribute('aria-pressed', String(prefs.theme === theme)); themes.append(b);
     }
     settings.append(el('span', 'reader-palette-label', 'Тема'), themes, divider());
-    settings.append(select('Шрифт', [['serif','Georgia'],['sans','Arial'],['system','Системный (Segoe UI)']], prefs.font, font => preferences({font})));
+    settings.append(select('Шрифт', site.readerFonts?.map(f => [f.id, f.label]) || [['serif','Georgia'],['sans','Arial'],['system','Системный (Segoe UI)']], prefs.font, font => preferences({font})));
     const size = el('div', 'site-control reader-size'); size.append(el('span', '', 'Размер текста'));
     const controls = el('div', 'reader-segments');
     const minus = button('A−', () => preferences({size:Math.max(14, site.preferences.size - 2)})), plus = button('A+', () => preferences({size:Math.min(32, site.preferences.size + 2)}));

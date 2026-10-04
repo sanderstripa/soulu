@@ -86,6 +86,7 @@ class BrowserWindow final : public CefBaseRefCounted {
       const std::vector<std::string>& permissions, std::function<void(bool)> done,
       uint64_t cef_request = 0);
   void CancelSitePermissions(int id, uint64_t cef_request = 0, bool notify = true);
+  void RefreshSitePermissions();
   void ApplySiteSound();
   void RequestFind();
   void ReaderDocumentNavigation(int id);

@@ -49,3 +49,10 @@
 .reader-view[data-images=false] :is(img,figcaption){display:none}.reader-link-menu{z-index:121;width:264px}.reader-link-menu button{display:block;width:100%}
 .reader-view[data-size="14"]{--reader-size:14px}.reader-view[data-size="15"]{--reader-size:15px}.reader-view[data-size="16"]{--reader-size:16px}.reader-view[data-size="17"]{--reader-size:17px}.reader-view[data-size="18"]{--reader-size:18px}.reader-view[data-size="19"]{--reader-size:19px}.reader-view[data-size="21"]{--reader-size:21px}.reader-view[data-size="22"]{--reader-size:22px}.reader-view[data-size="23"]{--reader-size:23px}.reader-view[data-size="24"]{--reader-size:24px}.reader-view[data-size="25"]{--reader-size:25px}.reader-view[data-size="26"]{--reader-size:26px}.reader-view[data-size="27"]{--reader-size:27px}.reader-view[data-size="28"]{--reader-size:28px}.reader-view[data-size="29"]{--reader-size:29px}.reader-view[data-size="30"]{--reader-size:30px}.reader-view[data-size="31"]{--reader-size:31px}.reader-view[data-size="32"]{--reader-size:32px}
 @media(max-width:600px){.reader-article{padding:28px 18px 70px}.reader-article h1{font-size:1.65em}.reader-toolbar>span{display:none}}
+
+.reader-view[data-font=cambria] .reader-article{font-family:"Cambria",Georgia,serif}
+.reader-view[data-font=calibri] .reader-article{font-family:"Calibri",Georgia,serif}
+.reader-view[data-font=times] .reader-article{font-family:"Times New Roman",Georgia,serif}
+.reader-view[data-font=palatino] .reader-article{font-family:"Palatino Linotype",Georgia,serif}
+.reader-view[data-font=verdana] .reader-article{font-family:"Verdana",Georgia,serif}
+.reader-view[data-font=trebuchet] .reader-article{font-family:"Trebuchet MS",Georgia,serif}

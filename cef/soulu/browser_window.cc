@@ -35,6 +35,28 @@
 
 namespace soulu {
 namespace {
+int CALLBACK FoundReaderFace(const LOGFONTW*,const TEXTMETRICW*,DWORD,LPARAM data) {
+  *reinterpret_cast<bool*>(data)=true;return 0;
+}
+const std::vector<std::pair<std::string,std::string>>& ReaderFonts() {
+  static const auto fonts=[] {
+    std::vector<std::pair<std::string,std::string>> result={{"serif","Georgia"},{"sans","Arial"},{"system","Системный (Segoe UI)"}};
+    const std::pair<const char*,const wchar_t*> candidates[]={
+      {"cambria",L"Cambria"},{"calibri",L"Calibri"},{"times",L"Times New Roman"},
+      {"palatino",L"Palatino Linotype"},{"verdana",L"Verdana"},{"trebuchet",L"Trebuchet MS"}};
+    HDC dc=GetDC(nullptr);
+    if(dc){for(const auto& [id,face]:candidates){LOGFONTW query={};query.lfCharSet=DEFAULT_CHARSET;
+      wcsncpy_s(query.lfFaceName,face,_TRUNCATE);bool found=false;
+      EnumFontFamiliesExW(dc,&query,FoundReaderFace,reinterpret_cast<LPARAM>(&found),0);
+      if(found)result.emplace_back(id,CefString(face).ToString());}
+      ReleaseDC(nullptr,dc);}
+    return result;
+  }();return fonts;
+}
+bool ReaderFontSupported(const std::string& font) {
+  for(const auto& item:ReaderFonts())if(item.first==font)return true;
+  return false;
+}
 class FunctionTask final : public CefTask {
  public:
   explicit FunctionTask(std::function<void()> function):function_(std::move(function)){}
@@ -677,6 +699,21 @@ void BrowserWindow::CancelSitePermissions(int id,uint64_t cef_request,bool notif
   }
   for(auto& request:cancelled)if(notify)request.done(false);
   if(!cancelled.empty()){Layout();EmitState();}
+}
+void BrowserWindow::RefreshSitePermissions() {
+  std::vector<std::pair<PermissionRequest,bool>> completed;
+  for(auto it=permission_requests_.begin();it!=permission_requests_.end();){
+    auto* tab=FindTab(it->tab_id);auto policy=PolicyForTab(it->tab_id);
+    bool valid=tab&&policy&&tab->id==active_tab_id_&&tab->url==it->url&&
+      tab->document_generation==it->generation;
+    bool ask=false,blocked=!valid;
+    if(valid)for(const auto& name:it->permissions){int value=policy->Rule(it->origin,name);
+      ask|=value==1;blocked|=value==2;}
+    if(blocked||!ask){completed.emplace_back(std::move(*it),!blocked);
+      it=permission_requests_.erase(it);}else ++it;
+  }
+  // Remove entries before invoking CEF; completion can synchronously dismiss a prompt.
+  for(auto& [request,allowed]:completed)request.done(allowed);
 }
 bool BrowserWindow::AllowSite(int id,const std::string& origin,const std::string& permission) {
   auto policy=PolicyForTab(id);if(!policy||WebOrigin(origin).empty())return false;
@@ -1594,7 +1631,7 @@ CefRefPtr<CefDictionaryValue> BrowserWindow::ReaderPreferences(const Tab& tab) {
   if(saved&&saved->GetType()==VTYPE_DICTIONARY){auto d=saved->GetDictionary();
     const auto theme=d->GetString("theme").ToString(),font=d->GetString("font").ToString();
     if(theme=="light"||theme=="sepia"||theme=="gray"||theme=="dark")prefs->SetString("theme",theme);
-    if(font=="sans"||font=="serif"||font=="system")prefs->SetString("font",font);
+    if(ReaderFontSupported(font))prefs->SetString("font",font);
     if(d->HasKey("size"))prefs->SetInt("size",std::clamp(d->GetInt("size"),14,32));
     if(d->HasKey("width"))prefs->SetInt("width",std::clamp(d->GetInt("width"),0,2));
     if(d->HasKey("spacing"))prefs->SetInt("spacing",std::clamp(d->GetInt("spacing"),0,2));
@@ -1615,6 +1652,10 @@ CefRefPtr<CefDictionaryValue> BrowserWindow::SiteSnapshot(int id) {
   result->SetBool("readerAvailable",tab->reader_article!=nullptr&&!tab->main_loading);
   if(tab->reader_active&&tab->reader_article)result->SetDictionary("article",tab->reader_article->Copy(false));
   result->SetDictionary("preferences",ReaderPreferences(*tab));
+  auto fonts=CefListValue::Create();
+  for(const auto& [id,label]:ReaderFonts()){auto item=CefDictionaryValue::Create();
+    item->SetString("id",id);item->SetString("label",label);fonts->SetDictionary(fonts->GetSize(),item);}
+  result->SetList("readerFonts",fonts);
   if(tab->browser)result->SetInt("zoom",static_cast<int>(std::round(100*std::pow(1.2,tab->browser->GetHost()->GetZoomLevel()))));
   auto policy=PolicyForTab(tab->id);if(policy)result->SetDictionary("rules",policy->Snapshot());
   if(tab->browser){auto client=static_cast<BrowserClient*>(tab->browser->GetHost()->GetClient().get());
@@ -1674,7 +1715,7 @@ bool BrowserWindow::HandleSiteAction(const std::string& action,CefRefPtr<CefValu
     CefDictionaryValue::KeyList keys;changes->GetKeys(keys);
     for(const auto& key:keys){auto value=changes->GetValue(key);const auto name=key.ToString();bool ok=false;
       if(name=="theme"||name=="font"){auto str=value->GetString().ToString();ok=value->GetType()==VTYPE_STRING&&
-        (name=="theme"?(str=="light"||str=="sepia"||str=="gray"||str=="dark"):(str=="sans"||str=="serif"||str=="system"));}
+        (name=="theme"?(str=="light"||str=="sepia"||str=="gray"||str=="dark"):ReaderFontSupported(str));}
       else if(name=="images")ok=value->GetType()==VTYPE_BOOL;
       else if(name=="size"||name=="width"||name=="spacing")ok=value->GetType()==VTYPE_INT&&
         (name=="size"?(value->GetInt()>=14&&value->GetInt()<=32):(value->GetInt()>=0&&value->GetInt()<=2));
@@ -1792,7 +1833,7 @@ void BrowserWindow::HandleBridge(const std::string& request,
         callback->Failure(500,"Решение не сохранено");return;}
       SyncSitePolicy(request.tab_id,request.origin);
     }
-    request.done(allowed);Layout();EmitState();ReplyEmpty(callback);return;
+    request.done(allowed);RefreshSitePermissions();Layout();EmitState();ReplyEmpty(callback);return;
   }
   if(HandleSiteAction(action,payload,callback))return;
 
