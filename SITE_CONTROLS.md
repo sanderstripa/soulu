@@ -46,7 +46,8 @@ At most eight requests are queued. Combined media requests share one card.
 Each entry binds tab ID, URL, document generation, requesting origin and CEF
 request ID. Already decided queued requests complete without duplicate prompts.
 Navigation, tab switching, tab close and shutdown cancel pending requests.
-Background requests cannot overlay the active document. CEF dismissal removes
+Background requests cannot overlay the active document. An already saved Allow
+still works in background tabs without a consent card. CEF dismissal removes
 its entry without completing an invalid callback twice. Stale IDs cannot grant
 access. Unsupported masks are refused rather than assigned fake controls.
 

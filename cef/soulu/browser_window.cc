@@ -689,11 +689,14 @@ void BrowserWindow::RequestSitePermissions(int id,const std::string& input,
     const std::vector<std::string>& permissions,std::function<void(bool)> done,uint64_t cef_request) {
   CEF_REQUIRE_UI_THREAD();
   auto* tab=FindTab(id);auto policy=PolicyForTab(id);const auto origin=WebOrigin(input);
-  if(!tab||!policy||origin.empty()||permissions.empty()||id!=active_tab_id_||closing_){done(false);return;}
+  if(!tab||!policy||origin.empty()||permissions.empty()||closing_){done(false);return;}
   bool ask=false;
   for(const auto& name:permissions){int rule=policy->Rule(origin,name);
     if(rule==2){done(false);return;}if(rule==1)ask=true;}
   if(!ask){done(true);return;}
+  // A saved grant also applies in background tabs. Only new consent requires
+  // the requesting tab to be active; never show it over another document.
+  if(id!=active_tab_id_){done(false);return;}
   if(permission_requests_.size()>=8){done(false);return;}
   permission_requests_.push_back({next_permission_id_++,id,tab->document_generation,
       cef_request,tab->url,origin,permissions,std::move(done)});
