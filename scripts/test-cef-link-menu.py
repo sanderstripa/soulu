@@ -150,7 +150,7 @@ try:
         copied=ctypes.wstring_at(ptr)
         k.GlobalUnlock(handle)
     finally:u.CloseClipboard()
-    assert copied==origin+'/link',copied
+    assert copied==origin+'/link','Native Copy Link did not produce the expected fixture URL'
     assert s.command(content,'Page.getNavigationHistory')==history
     print(json.dumps({'menu':labels,'foreground':'passed','background':'passed',
         'incognito_cookie_isolation':'passed','copy_link':'passed','top_level_windows':1,

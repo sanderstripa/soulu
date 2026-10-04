@@ -219,6 +219,8 @@ jobs:
         run: |
           python browser/scripts/test-cef-adblock-update.py "$env:build_dir/Soulu.exe" browser/artifacts/adblock-update.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python browser/scripts/test-cef-adblock-live-update.py "$env:build_dir/Soulu.exe" browser/artifacts/adblock-live-update.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test AdBlock across tabs and repeated navigation
         shell: pwsh

@@ -134,6 +134,9 @@ asserts that cancelled script/image/iframe/fetch/redirect requests never reached
 the HTTP fixture server; normal resources and exception rules do reach it.
 It additionally tests official EasyList, cosmetics/CSP/SPA, OFF/ON, per-site,
 profile isolation, incognito, restart and offline corrupt-cache fallback.
+`scripts/test-cef-adblock-live-update.py` holds an HTTPS CONNECT tunnel until a
+real CEF content page is active, then verifies the official update and continued
+blocking of new requests. TLS remains end to end; no certificate is installed.
 The fixture-rule path/update suppression is accessible only in an explicitly
 gated diagnostic process; no fixture domains are hardcoded in production rules.
 
