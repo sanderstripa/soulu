@@ -52,15 +52,15 @@
     return result;
   }
   function position() {
+    const toolbar = (state.settings?.layout === 'classic' ? 82 : 48) + (state.bookmarksBarVisible ? 28 : 0);
     const rect = anchor?.isConnected ? anchor.getBoundingClientRect() : {left: 12, bottom: state.settings?.layout === 'classic' ? 82 : 48};
     // The closed OSR viewport is only toolbar-height. Do not use that height
     // to move a newly opened surface above its anchor. CSS tracks the expanded
     // viewport and supplies scrolling for long/nested content.
-    const top = Math.max(8, rect.bottom + 8);
+    const top = Math.max(toolbar + 8, rect.bottom + 8);
     menu.style.left = `${Math.max(8, Math.min(rect.left, innerWidth - menu.offsetWidth - 8))}px`;
     menu.style.top = `${top}px`;
     menu.style.maxHeight = `max(0px, calc(100% - ${top + 8}px))`;
-    const toolbar = (state.settings?.layout === 'classic' ? 82 : 48) + (state.bookmarksBarVisible ? 28 : 0);
     prompt.style.top = `${toolbar + 8}px`;
     prompt.style.maxHeight = `max(0px, calc(100% - ${toolbar + 16}px))`;
     findBox.style.top = `${toolbar + 8}px`;
@@ -208,7 +208,9 @@
   }
   function preferences(changes) {
     const snapshot = site;
-    saving = saving.catch(() => {}).then(() => act('reader.preferences', {preferences:changes}, snapshot));
+    saving = saving.catch(() => {}).then(() => act('reader.preferences', {
+      preferences:typeof changes === 'function' ? changes(site?.preferences || snapshot.preferences) : changes
+    }, snapshot));
     return saving;
   }
   function renderReader() {
@@ -254,7 +256,7 @@
     settings.append(select('Шрифт', site.readerFonts?.map(f => [f.id, f.label]) || [['serif','Georgia'],['sans','Arial'],['system','Системный (Segoe UI)']], prefs.font, font => preferences({font})));
     const size = el('div', 'site-control reader-size'); size.append(el('span', '', 'Размер текста'));
     const controls = el('div', 'reader-segments');
-    const minus = button('A−', () => preferences({size:Math.max(14, site.preferences.size - 2)})), plus = button('A+', () => preferences({size:Math.min(32, site.preferences.size + 2)}));
+    const minus = button('A−', () => preferences(p => ({size:Math.max(14, p.size - 2)}))), plus = button('A+', () => preferences(p => ({size:Math.min(32, p.size + 2)})));
     minus.setAttribute('aria-label', 'Уменьшить размер текста'); plus.setAttribute('aria-label', 'Увеличить размер текста');
     minus.disabled = prefs.size <= 14; plus.disabled = prefs.size >= 32;
     controls.append(minus, el('output', '', String(prefs.size)), plus); size.append(controls); settings.append(size, divider());
@@ -267,7 +269,7 @@
       }
       settings.append(el('span', 'reader-palette-label', title), group);
     }
-    settings.append(divider(), toggle('Изображения', prefs.images, images => preferences({images})));
+    settings.append(divider(), toggle('Изображения', prefs.images, () => preferences(p => ({images:!p.images}))));
     if (wasFocused && label) [...settings.querySelectorAll('[aria-label]')].find(n => n.getAttribute('aria-label') === label)?.focus();
   }
   const prompt = el('section', 'soulu-permission-prompt'); prompt.hidden = true;

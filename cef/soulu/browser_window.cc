@@ -1,5 +1,6 @@
 #include "examples/soulu/typography_native.h"
 #include "examples/soulu/browser_window.h"
+#include "examples/soulu/reader_preferences.h"
 #include "examples/soulu/app_version.h"
 #include "examples/soulu/motion.h"
 #include "include/cef_app.h"
@@ -53,7 +54,7 @@ const std::vector<std::pair<std::string,std::string>>& ReaderFonts() {
     return result;
   }();return fonts;
 }
-bool ReaderFontSupported(const std::string& font) {
+bool ReaderFontAvailable(const std::string& font) {
   for(const auto& item:ReaderFonts())if(item.first==font)return true;
   return false;
 }
@@ -349,6 +350,14 @@ bool IsWindowsDarkMode() {
                L"AppsUseLightTheme", RRF_RT_REG_DWORD, nullptr, &value, &size);
   return value == 0;
 }
+}
+
+bool IsReaderFontSupported(const std::string& font) {return ReaderFontAvailable(font);}
+CefRefPtr<CefListValue> ReaderFontChoices() {
+  auto fonts=CefListValue::Create();
+  for(const auto& [id,label]:ReaderFonts()){auto item=CefDictionaryValue::Create();
+    item->SetString("id",id);item->SetString("label",label);fonts->SetDictionary(fonts->GetSize(),item);}
+  return fonts;
 }
 
 BrowserWindow::BrowserWindow()
@@ -1630,8 +1639,8 @@ CefRefPtr<CefDictionaryValue> BrowserWindow::ReaderPreferences(const Tab& tab) {
   auto saved=tab.incognito?nullptr:ReadJson(ProfileRoot(key)/L"soulu-reader.json");
   if(saved&&saved->GetType()==VTYPE_DICTIONARY){auto d=saved->GetDictionary();
     const auto theme=d->GetString("theme").ToString(),font=d->GetString("font").ToString();
-    if(theme=="light"||theme=="sepia"||theme=="gray"||theme=="dark")prefs->SetString("theme",theme);
-    if(ReaderFontSupported(font))prefs->SetString("font",font);
+    if(IsReaderThemeSupported(theme))prefs->SetString("theme",theme);
+    if(IsReaderFontSupported(font))prefs->SetString("font",font);
     if(d->HasKey("size"))prefs->SetInt("size",std::clamp(d->GetInt("size"),14,32));
     if(d->HasKey("width"))prefs->SetInt("width",std::clamp(d->GetInt("width"),0,2));
     if(d->HasKey("spacing"))prefs->SetInt("spacing",std::clamp(d->GetInt("spacing"),0,2));
@@ -1652,10 +1661,7 @@ CefRefPtr<CefDictionaryValue> BrowserWindow::SiteSnapshot(int id) {
   result->SetBool("readerAvailable",tab->reader_article!=nullptr&&!tab->main_loading);
   if(tab->reader_active&&tab->reader_article)result->SetDictionary("article",tab->reader_article->Copy(false));
   result->SetDictionary("preferences",ReaderPreferences(*tab));
-  auto fonts=CefListValue::Create();
-  for(const auto& [id,label]:ReaderFonts()){auto item=CefDictionaryValue::Create();
-    item->SetString("id",id);item->SetString("label",label);fonts->SetDictionary(fonts->GetSize(),item);}
-  result->SetList("readerFonts",fonts);
+  result->SetList("readerFonts",ReaderFontChoices());
   if(tab->browser)result->SetInt("zoom",static_cast<int>(std::round(100*std::pow(1.2,tab->browser->GetHost()->GetZoomLevel()))));
   auto policy=PolicyForTab(tab->id);if(policy)result->SetDictionary("rules",policy->Snapshot());
   if(tab->browser){auto client=static_cast<BrowserClient*>(tab->browser->GetHost()->GetClient().get());
@@ -1715,7 +1721,7 @@ bool BrowserWindow::HandleSiteAction(const std::string& action,CefRefPtr<CefValu
     CefDictionaryValue::KeyList keys;changes->GetKeys(keys);
     for(const auto& key:keys){auto value=changes->GetValue(key);const auto name=key.ToString();bool ok=false;
       if(name=="theme"||name=="font"){auto str=value->GetString().ToString();ok=value->GetType()==VTYPE_STRING&&
-        (name=="theme"?(str=="light"||str=="sepia"||str=="gray"||str=="dark"):ReaderFontSupported(str));}
+        (name=="theme"?IsReaderThemeSupported(str):IsReaderFontSupported(str));}
       else if(name=="images")ok=value->GetType()==VTYPE_BOOL;
       else if(name=="size"||name=="width"||name=="spacing")ok=value->GetType()==VTYPE_INT&&
         (name=="size"?(value->GetInt()>=14&&value->GetInt()<=32):(value->GetInt()>=0&&value->GetInt()<=2));
@@ -1802,11 +1808,8 @@ void BrowserWindow::HandleBridge(const std::string& request,
     if (data->GetString("url") != url || data->GetInt("generation") != generation) {
       callback->Failure(409,"Страница изменилась.");return;
     }
-    const std::wstring message = L"Очистить хранилища сайта " + CefString(origin).ToWString() +
-      L"? Cookies, HTTP-кэш, пароли и закладки сохранятся.";
-    if (TypographyMessageBox(settings_overlay_->hwnd(),message.c_str(),L"Данные сайта",MB_YESNO|MB_ICONWARNING|MB_DEFBUTTON2) != IDYES) {
-      callback->Success("{\"cleared\":false}");return;
-    }
+    if(data->GetType("confirmed")!=VTYPE_BOOL||!data->GetBool("confirmed")){
+      callback->Failure(400,"Подтвердите очистку данных сайта.");return;}
     tab = FindTab(id);
     if (!tab || tab->profile_id != active_profile_id_ || tab->url != url || tab->document_generation != generation) {
       callback->Failure(409,"Страница изменилась.");return;

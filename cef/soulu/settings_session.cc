@@ -1,4 +1,5 @@
 #include "examples/soulu/browser_window.h"
+#include "examples/soulu/reader_preferences.h"
 #include "examples/soulu/frosted_backdrop.h"
 #include "include/cef_parser.h"
 #include "include/wrapper/cef_helpers.h"
@@ -23,8 +24,8 @@ bool PreviewKey(const std::string& key) {
 bool ValidReader(CefRefPtr<CefDictionaryValue> d) {
   if(!d)return false;
   const std::string theme=d->GetString("theme"),font=d->GetString("font");
-  return (theme=="light"||theme=="sepia"||theme=="dark")&&
-    (font=="system"||font=="sans"||font=="serif")&&d->GetType("images")==VTYPE_BOOL&&
+  return IsReaderThemeSupported(theme)&&
+    IsReaderFontSupported(font)&&d->GetType("images")==VTYPE_BOOL&&
     d->GetType("size")==VTYPE_INT&&d->GetInt("size")>=14&&d->GetInt("size")<=32&&
     d->GetType("width")==VTYPE_INT&&d->GetInt("width")>=0&&d->GetInt("width")<=2&&
     d->GetType("spacing")==VTYPE_INT&&d->GetInt("spacing")>=0&&d->GetInt("spacing")<=2;
@@ -46,6 +47,7 @@ CefRefPtr<CefDictionaryValue> BrowserWindow::SettingsSnapshot() {
   data->SetDictionary("rules",policy->Snapshot());
   Tab profile;profile.profile_id=active_profile_id_;
   data->SetDictionary("reader",ReaderPreferences(profile));
+  data->SetList("readerFonts",ReaderFontChoices());
   data->SetDictionary("vpn",vpn_settings_->Copy(false));
   return data;
 }

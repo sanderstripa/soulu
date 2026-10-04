@@ -59,7 +59,7 @@ with tempfile.TemporaryDirectory(prefix='soulu-reader-public-',ignore_cleanup_er
     s.evaluate(shell,"document.querySelector('.reader-body img').scrollIntoView()")
     wait(lambda:s.evaluate(shell,"[...document.querySelectorAll('.reader-body img')].some(i=>i.complete&&i.naturalWidth>0)"),30)
     s.evaluate(shell,"document.querySelector('.reader-view').scrollTop=0")
-   for theme in ('light','sepia','dark'):
+   for theme in ('light','sepia','gray','dark'):
     action('reader.preferences',{'preferences':{'theme':theme}})
     wait(lambda:s.evaluate(shell,"document.querySelector('.reader-view').dataset.theme")==theme)
     picture=s.command(shell,'Page.captureScreenshot',{'format':'png'})['data']

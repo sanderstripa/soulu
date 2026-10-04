@@ -50,7 +50,7 @@ def main():
             p=subprocess.Popen([sys.argv[1],'--no-proxy-server','--use-fake-device-for-media-stream'],env=env)
             target=wait(lambda:next((t for t in s.targets() if '/ui/index.html' in t.get('url','')),None))
             ws=s.websocket.create_connection(target['webSocketDebuggerUrl'],timeout=30,origin=s.BASE)
-            wait(lambda:s.evaluate(ws,"typeof browserShell.respondPermission==='function'"))
+            wait(lambda:s.evaluate(ws,"typeof browserShell.respondPermission==='function'&&!!document.querySelector('.site-popover')"))
             return p,ws,s.page_socket()
         def E(script):return s.evaluate(shell,script)
         def current():return E('browserShell.getCurrentSite()')
@@ -105,6 +105,7 @@ def main():
             for layout in ('compact','classic'):
                 for theme in ('light','dark','system'):
                     E('browserShell.setSettings('+json.dumps({'layout':layout,'theme':theme})+')')
+                    wait(lambda:E('document.body.dataset.layout')==layout and E('document.body.dataset.theme')==theme)
                     E('browserShell.pageMenu()');wait(lambda:not bounds('.site-popover')['hidden'])
                     wait(lambda:current()['readerAvailable'])
                     r=bounds('.site-popover');check(not r['scroll'] and r['h']<440 and r['y']+r['h']<=r['viewport'] and 'Onest' in r['font'],layout+'/'+theme+' compact main bounds')
