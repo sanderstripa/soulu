@@ -20,4 +20,6 @@ Voice requires the existing native Home microphone permission and honors Windows
 
 Local recognition has a 60-second inference deadline, checked by the backend abort callback. A deadline failure returns the ordinary unavailable state, frees the model and clears the captured samples; a user cancellation remains distinct.
 
+Native tab thumbnails capture the existing viewport without a screenshot clip/scale override. Chromium temporarily changes and later restores the view size for clipped screenshots; that restoration can race a tab switch and a native Main/Classic layout change, leaving Home at the former viewport height. Overview still scales the image, and the existing 2 MB per-image / 24 MB aggregate limits remain. See Chromium's [PageHandler capture/restoration implementation](https://chromium.googlesource.com/chromium/src/+/refs/heads/main/content/browser/devtools/protocol/page_handler.cc). The retained native layout suite checks real viewport dimensions after tab switching and mode changes.
+
 The engine remains CEF 154.0.33+ga03e714 / Chromium 154.0.8037.94.

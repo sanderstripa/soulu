@@ -1468,12 +1468,12 @@ void BrowserWindow::CaptureThumbnail() {
   if(!tab || !tab->browser || IsIconic(hwnd_)) return;
   HWND child=tab->browser->GetHost()->GetWindowHandle(); RECT r={}; GetClientRect(child,&r);
   if(!IsWindowVisible(child) || r.right<2 || r.bottom<2) return;
-  const double dpi=GetDpiForWindow(hwnd_)/96.0;
   auto params=CefDictionaryValue::Create();params->SetString("format","jpeg");params->SetInt("quality",70);
   params->SetBool("fromSurface",true);params->SetBool("captureBeyondViewport",false);
-  auto clip=CefDictionaryValue::Create();clip->SetDouble("x",0);clip->SetDouble("y",0);
-  clip->SetDouble("width",r.right/dpi);clip->SetDouble("height",r.bottom/dpi);
-  clip->SetDouble("scale",std::min(1.0,480.0*dpi/r.right));params->SetDictionary("clip",clip);
+  // A clip makes Chromium temporarily resize/emulate this viewport and later
+  // restore its old size. A tab switch or native layout change can race that
+  // restoration. Capture the existing viewport; the Overview image scales it.
+  // StoreThumbnail retains its per-image and aggregate memory limits.
   tab->thumbnail_registration=tab->browser->GetHost()->AddDevToolsMessageObserver(new ThumbnailObserver(this,tab->id,tab->url));
   tab->browser->GetHost()->ExecuteDevToolsMethod(900001,"Page.captureScreenshot",params);
 }
