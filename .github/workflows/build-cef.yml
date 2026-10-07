@@ -984,8 +984,8 @@ jobs:
           "Physical mouse-click, extraction drag and persistent finish checks passed."
           # Replace the test installation with the actual published Beta 1.0.56
           # runtime, then upgrade it with this final-main installer.
-          $previousZip = Join-Path $env:RUNNER_TEMP 'soulu-beta-1.0.55.zip'
-          Invoke-WebRequest 'https://github.com/sanderstripa/soulu/releases/download/beta-1.0.55/Soulu-Beta-1.0.56-x64.zip' -OutFile $previousZip
+          $previousZip = Join-Path $env:RUNNER_TEMP 'soulu-beta-1.0.56.zip'
+          Invoke-WebRequest 'https://github.com/sanderstripa/soulu/releases/download/Beta1.0.56/Soulu-Beta-1.0.56-x64.zip' -OutFile $previousZip
           if ((Get-FileHash -LiteralPath $previousZip -Algorithm SHA256).Hash.ToLowerInvariant() -cne '0e132747b26bc74ed1ecfb62adac8a29902c96481fa2b72378eb3aea76563b5e') { throw 'Previous Beta archive checksum mismatch' }
           Expand-Archive -LiteralPath $previousZip -DestinationPath $installedDirectory -Force
           $previousReport = Join-Path $env:RUNNER_TEMP 'soulu-previous-engine.json'
