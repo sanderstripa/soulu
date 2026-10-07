@@ -27,10 +27,10 @@
 .site-confirm-text{padding:6px 10px;overflow-wrap:anywhere;color:var(--muted);font:var(--type-body)}.site-confirm-actions{display:flex;justify-content:flex-end;gap:8px;padding:8px 4px 2px}
 .site-confirm-actions .site-primary{background:#1677ff;color:#fff}.site-confirm-actions .site-primary:hover{background:#0868ed}
 .site-find{position:fixed;z-index:120;top:56px;right:8px;max-width:calc(100% - 16px);overflow:auto;display:flex;gap:4px;padding:6px}.site-find input{color:inherit;background:var(--field);border:1px solid var(--line);border-radius:6px;padding:7px;min-width:80px;flex:1}
-.reader-view{position:fixed;inset:48px 0 0;z-index:35;overflow:auto;background:#faf9f6;color:#252622;--reader-size:20px;--reader-width:720px;--reader-spacing:1.75}
+.reader-view{position:fixed;inset:var(--content-top) 0 0;z-index:35;overflow:auto;background:#faf9f6;color:#252622;--reader-size:20px;--reader-width:720px;--reader-spacing:1.75}
 .reader-view[data-theme=sepia]{background:#f2e8d5;color:#493e30}.reader-view[data-theme=gray]{background:#e6e7e9;color:#282c32}.reader-view[data-theme=dark]{background:#1c2023;color:#dedfdc}
 .reader-toolbar{position:sticky;top:0;display:flex;justify-content:space-between;align-items:center;padding:8px 16px;gap:10px;background:var(--panel);color:var(--text);border-bottom:1px solid var(--line);z-index:2;font:var(--type-compact)}
-.reader-settings{position:fixed;top:calc(var(--reader-top,48px) + 54px);right:14px;width:min(326px,calc(100% - 24px));max-height:calc(100% - var(--reader-top,48px) - 62px);overflow:auto;padding:16px;z-index:3}
+.reader-settings{position:fixed;top:calc(var(--reader-top,var(--content-top)) + 54px);right:14px;width:min(326px,calc(100% - 24px));max-height:calc(100% - var(--reader-top,var(--content-top)) - 62px);overflow:auto;padding:16px;z-index:3}
 .reader-palette-title{font:var(--type-control);margin:0 0 16px}.reader-palette-label{display:block;font:var(--type-body);margin:12px 0 8px}.reader-swatches{display:flex;justify-content:space-around;gap:12px;padding:4px 0 8px}
 .reader-swatches .reader-swatch{width:40px;height:40px;border:1px solid #8885;border-radius:50%;padding:0;background:#faf9f6}.reader-swatches .reader-swatch[data-theme=sepia]{background:#f2e8d5}.reader-swatches .reader-swatch[data-theme=gray]{background:#e6e7e9}.reader-swatches .reader-swatch[data-theme=dark]{background:#1c2023}
 .reader-swatch[aria-pressed=true]{outline:2px solid #1677ff;outline-offset:3px}

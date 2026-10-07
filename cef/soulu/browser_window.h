@@ -41,6 +41,8 @@ class BrowserWindow final : public CefBaseRefCounted {
   void HandleHomeBridge(int id, const std::string& request,
       CefRefPtr<CefMessageRouterBrowserSide::Callback> callback);
   bool HandlePageShortcut(int id, int key, bool control, bool alt);
+  bool HandleFullscreenKey(int key);
+  void ContentFullscreen(int id, bool fullscreen);
   bool BufferHomeInput(const CefKeyEvent& event);
   void RefreshHomePages(int id = 0);
   void MigrateHomePreferences(CefRefPtr<CefDictionaryValue> saved);
@@ -206,6 +208,14 @@ class BrowserWindow final : public CefBaseRefCounted {
   void Navigate(const std::string& value);
   void FocusAddress();
   void Layout();
+  void UpdateFullscreen();
+  void FitFullscreenMonitor();
+  bool Fullscreen() const { return browser_fullscreen_ || content_fullscreen_id_ != 0; }
+  bool browser_fullscreen_ = false;
+  int content_fullscreen_id_ = 0;
+  bool fullscreen_applied_ = false;
+  WINDOWPLACEMENT fullscreen_placement_ = {sizeof(WINDOWPLACEMENT)};
+  LONG_PTR fullscreen_style_ = 0;
   struct Geometry {
     int width, height, toolbar, shell_height, sidebar, panel;
     float scale;

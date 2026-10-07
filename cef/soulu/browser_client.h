@@ -46,6 +46,7 @@ class BrowserClient final : public CefClient,
   CefRefPtr<CefDictionaryValue> AdBlockSnapshot();
   void RefreshAdBlock(CefRefPtr<CefBrowser> browser);
   bool OnTooltip(CefRefPtr<CefBrowser>,CefString&) override;
+  void OnFullscreenModeChange(CefRefPtr<CefBrowser>, bool fullscreen) override;
   bool OnPreKeyEvent(CefRefPtr<CefBrowser>, const CefKeyEvent&, CefEventHandle, bool*) override;
   CefRefPtr<CefResourceRequestHandler> GetResourceRequestHandler(
       CefRefPtr<CefBrowser>, CefRefPtr<CefFrame>, CefRefPtr<CefRequest>,

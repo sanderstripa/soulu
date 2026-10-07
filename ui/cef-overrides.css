@@ -26,7 +26,7 @@ html.cef-runtime body[data-matte="true"] .toolbar {
 
 html.cef-runtime .compact-toolbar,
 html.cef-runtime .compact-toolbar-surface {
-  height: 48px;
+  height: var(--geometry-main-toolbar);
 }
 
 html.cef-runtime .compact-toolbar-surface {
@@ -35,13 +35,13 @@ html.cef-runtime .compact-toolbar-surface {
 }
 
 html.cef-runtime .compact-center-cluster {
-  min-height: 36px;
+  min-height: var(--geometry-main-container);
 }
 
 html.cef-runtime .compact-tab-flow {
-  height: 36px;
+  height: var(--geometry-main-container);
   padding: 2px 3px;
-  border-radius: 18px;
+  border-radius: calc(var(--geometry-main-container) / 2);
 }
 
 html.cef-runtime .compact-tab {
@@ -52,13 +52,13 @@ html.cef-runtime .compact-tab {
 }
 
 html.cef-runtime .compact-active-tab {
-  height: 30px;
-  border-radius: 15px;
+  height: var(--geometry-main-capsule);
+  border-radius: calc(var(--geometry-main-capsule) / 2);
   overflow: visible;
 }
 
 html.cef-runtime .compact-active-tab .active-address {
-  height: 28px;
+  height: calc(var(--geometry-main-capsule) - 2px);
 }
 
 html.cef-runtime .compact-active-tab:has(.reload-action.loading)::after,

@@ -51,9 +51,15 @@
     }
     return result;
   }
+  function chromeHeight(includeBookmarks = true) {
+    if (state.fullscreen) return 0;
+    const css = getComputedStyle(document.documentElement);
+    const height = parseFloat(css.getPropertyValue(state.settings?.layout === 'classic' ? '--geometry-classic-toolbar' : '--geometry-main-toolbar'));
+    return height + (includeBookmarks && state.bookmarksBarVisible ? parseFloat(css.getPropertyValue('--geometry-bookmarks')) : 0);
+  }
   function position() {
-    const toolbar = (state.settings?.layout === 'classic' ? 82 : 48) + (state.bookmarksBarVisible ? 28 : 0);
-    const rect = anchor?.isConnected ? anchor.getBoundingClientRect() : {left: 12, bottom: state.settings?.layout === 'classic' ? 82 : 48};
+    const toolbar = chromeHeight();
+    const rect = anchor?.isConnected ? anchor.getBoundingClientRect() : {left: 12, bottom: chromeHeight(false)};
     // The closed OSR viewport is only toolbar-height. Do not use that height
     // to move a newly opened surface above its anchor. CSS tracks the expanded
     // viewport and supplies scrolling for long/nested content.
@@ -347,7 +353,7 @@
     }
   });
   async function sync(next) {
-    state = next; await renderPrompt(next); const readerTop = (state.settings?.layout === 'classic' ? 82 : 48) + (state.bookmarksBarVisible ? 28 : 0);
+    state = next; await renderPrompt(next); const readerTop = chromeHeight();
     reader.style.top = `${readerTop}px`; reader.style.setProperty('--reader-top', `${readerTop}px`);
     reader.style.left = state.bookmarksSidebarVisible ? '276px' : '0';
     const nextKey = `${state.activeTabId}|${state.page?.url || 'about:blank'}|${state.page?.generation}`;

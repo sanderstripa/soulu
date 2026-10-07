@@ -61,7 +61,7 @@
     add('Переместить в корень','Move to root',()=>persist(rows.map(r=>r.id===row.id?{...r,parentId:0,order:rows.length}:r)));
     add('Удалить','Delete',()=>{const ids=descendants(row.id);if(row.type==='folder'&&ids.size>1&&!confirm(en?'Delete folder and its bookmarks?':'Удалить папку со всеми закладками?'))return;return persist(rows.filter(r=>!ids.has(r.id)));});
     const rect=event.currentTarget?.getBoundingClientRect();
-    const command=await api.showMenu(items,event.clientX||rect?.left||0,event.clientY||rect?.bottom||48);
+    const command=await api.showMenu(items,event.clientX||rect?.left||0,event.clientY||rect?.bottom||document.querySelector(".browser-toolbar:not([hidden])")?.getBoundingClientRect().bottom||0);
     if(command>0&&commands[command-1])await commands[command-1]();
   }
 

@@ -1,4 +1,4 @@
-"""Real native context menus across themes, layouts, locales and four native scales."""
+"""Real native context menus across themes, layouts, locales and five native scales."""
 import base64, ctypes, http.server, importlib.util, json, os, pathlib, subprocess, sys, tempfile, threading, time
 def module(name,file):
     spec=importlib.util.spec_from_file_location(name,pathlib.Path(__file__).with_name(file));m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m);return m
@@ -6,6 +6,12 @@ s=module('storage','test-cef-storage.py');access=module('accessibility','native-
 os.environ['NO_PROXY']='127.0.0.1,localhost';os.environ['SOULU_REGRESSION_SKIP_FIRST_RUN']='1'
 u=ctypes.windll.user32
 u.PostMessageW.argtypes=[ctypes.c_void_p,ctypes.c_uint,ctypes.c_size_t,ctypes.c_ssize_t]
+u.SendMessageW.argtypes=[ctypes.c_void_p,ctypes.c_uint,ctypes.c_size_t,ctypes.c_ssize_t]
+u.SendMessageW.restype=ctypes.c_ssize_t
+g=ctypes.windll.gdi32
+g.GetObjectW.argtypes=[ctypes.c_void_p,ctypes.c_int,ctypes.c_void_p]
+class LOGFONT(ctypes.Structure):
+    _fields_=[(name,ctypes.c_long) for name in ('height','width','escapement','orientation','weight')]+[(name,ctypes.c_byte) for name in ('italic','underline','strikeout','charset','outprecision','clipprecision','quality','pitch')]+[('face',ctypes.c_wchar*32)]
 class Rect(ctypes.Structure):_fields_=[(n,ctypes.c_long) for n in ['left','top','right','bottom']]
 class MonitorInfo(ctypes.Structure):_fields_=[('size',ctypes.c_ulong),('monitor',Rect),('work',Rect),('flags',ctypes.c_ulong)]
 u.GetWindowRect.argtypes=[ctypes.c_void_p,ctypes.POINTER(Rect)]
@@ -30,7 +36,7 @@ def wait(fn,timeout=25):
     raise AssertionError('Native menu state timed out')
 process=None
 try:
-    for dpi in [96,120,144,192]:
+    for dpi in [96,120,144,168,192]:
         with tempfile.TemporaryDirectory(prefix='soulu-menu-',ignore_cleanup_errors=True) as profile:
             env=dict(os.environ,LOCALAPPDATA=profile,SOULU_UI_TEST_PORT=str(s.DEBUG_PORT),SOULU_MENU_TEST_DPI=str(dpi))
             process=subprocess.Popen([str(pathlib.Path(sys.argv[1]).resolve())],env=env)
@@ -46,7 +52,7 @@ try:
                 u.EnumWindows(visit,0);return result
             for language in ['ru','en']:
                 for layout in ['compact','classic']:
-                    for theme in ['light','dark']:
+                    for theme in ['light','dark','system']:
                         s.evaluate(shell,'browserShell.setSettings('+json.dumps(dict(language=language,layout=layout,theme=theme))+')');time.sleep(.1)
                         for context in ['blank','link','image','linked','selection','editable','readonly','media']:
                             box=s.evaluate(page,"""(()=>{getSelection().removeAllRanges();const e=document.getElementById(%s);e.scrollIntoView({block:'center'});if(e.id==='selection'){const r=document.createRange();r.selectNodeContents(e);getSelection().addRange(r);}const r=e.getBoundingClientRect();return {x:r.x+Math.min(r.width/2,20),y:r.y+(e.id==='media'?12:r.height/2)}})()"""%json.dumps(context))
@@ -58,6 +64,10 @@ try:
                             except AssertionError:raise AssertionError(f'Menu did not open: {dpi} {language} {layout} {theme} {context}')
                             rows=access.rows(hwnd);labels=[r['label'] for r in rows if r['label']]
                             assert labels and all(r['role_result']==0 for r in rows),rows
+                            font=LOGFONT();handle=u.SendMessageW(hwnd,0x31,0,0)
+                            assert g.GetObjectW(handle,ctypes.sizeof(font),ctypes.byref(font))
+                            assert font.face=='Onest Medium' and font.weight==500 and font.height==-round(12*dpi/96),(font.face,font.weight,font.height,dpi)
+                            assert all(abs(r['rect'][3]-30*dpi/96)<=1 for r in rows if r['role']==12),rows
                             expected={'blank':['QR','Перевести' if language=='ru' else 'Translate'],'link':['ссылк' if language=='ru' else 'link'],'image':['изображени' if language=='ru' else 'image'],'linked':['ссылк' if language=='ru' else 'link','изображени' if language=='ru' else 'image'],'selection':['Копировать' if language=='ru' else 'Copy'],'editable':['Вставить' if language=='ru' else 'Paste'],'readonly':['Копировать' if language=='ru' else 'Copy'],'media':['Повторять' if language=='ru' else 'Loop']}[context]
                             assert all(any(text in label for label in labels) for text in expected),(context,labels)
                             bounds=Rect();u.GetWindowRect(hwnd,ctypes.byref(bounds));assert bounds.right>bounds.left and bounds.bottom>bounds.top

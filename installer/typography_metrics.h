@@ -14,4 +14,5 @@ inline constexpr Metrics control{14.0f,20.0f,500};
 inline constexpr Metrics compact{13.0f,18.0f,400};
 inline constexpr Metrics compactControl{13.0f,18.0f,500};
 inline constexpr Metrics caption{12.0f,16.0f,400};
+inline constexpr Metrics menu{12.0f,16.0f,500};
 }

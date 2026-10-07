@@ -149,14 +149,14 @@ def check(label, sidebar=False, screenshot=False):
         content = child_rect(host)
         left = round(276 * scale) if sidebar else 0
         layout = evaluate(shell, 'document.body.dataset.layout')
-        base_height = 82 if layout == 'classic' else 48
+        base_height = 82 if layout == 'classic' else 58
         bar_visible = evaluate(shell, 'document.body.dataset.bookmarksBar === "true"')
         toolbar_height = base_height + (28 if bar_visible else 0)
         top = round(toolbar_height * scale)
         assert content == [left, top, width - left, height - top], (label, content, width, height)
         assert toolbar == [0, 0, width, height if sidebar else top], (label, toolbar)
         dom = evaluate(shell, '({w:innerWidth,h:innerHeight,dpr:devicePixelRatio,toolbar:document.querySelector(document.body.dataset.layout==="classic"?".classic-toolbar":".compact-toolbar").getBoundingClientRect().height})')
-        # Compact mode keeps the bar as a sibling of its 48px header.
+        # Compact mode keeps the bar as a sibling of its 58 DIP header.
         header_height = toolbar_height if layout == 'classic' else base_height
         assert abs(dom['toolbar'] - header_height) <= 1, (label, dom)
         if bar_visible:

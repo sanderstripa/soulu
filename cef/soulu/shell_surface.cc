@@ -1,4 +1,5 @@
 #include "examples/soulu/shell_surface.h"
+#include "examples/soulu/geometry.h"
 #include <windowsx.h>
 #include <algorithm>
 #include <cmath>
@@ -13,7 +14,7 @@ ShellSurface::ShellSurface(HWND parent) : parent_(parent) {
   wc.style = CS_DBLCLKS;
   RegisterClassExW(&wc);
   hwnd_ = CreateWindowExW(WS_EX_LAYERED, wc.lpszClassName, L"Soulu toolbar",
-      WS_CHILD | WS_VISIBLE | WS_TABSTOP, 0, 0, 1, 48, parent, nullptr, wc.hInstance, this);
+      WS_CHILD | WS_VISIBLE | WS_TABSTOP, 0, 0, 1, geometry::mainToolbar, parent, nullptr, wc.hInstance, this);
 }
 ShellSurface::~ShellSurface() {
   if (IsWindow(hwnd_)) DestroyWindow(hwnd_);
@@ -43,6 +44,13 @@ void ShellSurface::CommitResize() {
 }
 void ShellSurface::Focus() { SetFocus(hwnd_); if (browser_) browser_->GetHost()->SetFocus(true); }
 void ShellSurface::Cursor(HCURSOR cursor) { cursor_ = cursor; SetCursor(cursor ? cursor : LoadCursor(nullptr, IDC_ARROW)); }
+bool ShellSurface::MaximizeHit(POINT client) const {
+  return maximize_rect_.width > 0 && maximize_rect_.height > 0 &&
+      client.x >= std::round(maximize_rect_.x * scale_) &&
+      client.y >= std::round(maximize_rect_.y * scale_) &&
+      client.x < std::round((maximize_rect_.x + maximize_rect_.width) * scale_) &&
+      client.y < std::round((maximize_rect_.y + maximize_rect_.height) * scale_);
+}
 void ShellSurface::GetViewRect(CefRefPtr<CefBrowser>, CefRect& rect) {
   rect = CefRect(0, 0, std::max(1, static_cast<int>(std::ceil(width_ / scale_))),
                        std::max(1, static_cast<int>(std::ceil(height_ / scale_))));
@@ -192,6 +200,13 @@ LRESULT CALLBACK ShellSurface::Proc(HWND hwnd, UINT message, WPARAM wp, LPARAM l
   if (!self || !self->browser_) return DefWindowProcW(hwnd, message, wp, lp);
   auto host = self->browser_->GetHost();
   switch (message) {
+    case WM_NCHITTEST: {
+      POINT point = {GET_X_LPARAM(lp), GET_Y_LPARAM(lp)};
+      ScreenToClient(hwnd, &point);
+      // Let the root's real HTMAXBUTTON participate in Windows 11 Snap Layouts.
+      if (self->MaximizeHit(point)) return HTTRANSPARENT;
+      break;
+    }
     case WM_ERASEBKGND: return 1;
     case WM_SETCURSOR: SetCursor(self->cursor_ ? self->cursor_ : LoadCursor(nullptr, IDC_ARROW)); return TRUE;
     case WM_SETFOCUS: host->SetFocus(true); return 0;

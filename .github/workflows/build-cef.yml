@@ -19,7 +19,7 @@ on:
         default: ""
         type: string
   push:
-    branches: [main, codex/settings-overlay, codex/cef-stable-update, codex/beta-motion, codex/beta-typography, codex/beta-toolbar, codex/beta-adblock, codex/beta-site-reader, codex/menu-translate, codex/home-final]
+    branches: [main, codex/settings-overlay, codex/cef-stable-update, codex/beta-motion, codex/beta-typography, codex/beta-toolbar, codex/beta-adblock, codex/beta-site-reader, codex/menu-translate, codex/home-final, codex/window-polish]
     tags: [beta-1.0.56]
     paths:
       - "cef/**"
@@ -54,6 +54,14 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: browser
+
+      - name: Verify canonical generated geometry and typography
+        shell: pwsh
+        run: |
+          python browser/scripts/generate-geometry.py --check
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python browser/scripts/generate-typography.py --check
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Checkout official CEF project
         uses: actions/checkout@v4
@@ -238,6 +246,14 @@ jobs:
           name: Soulu-home-early-${{ github.sha }}
           path: browser/artifacts/home-early/
           if-no-files-found: ignore
+
+      - name: Test work-area input bounds and fullscreen restore in real Win32 CEF
+        shell: pwsh
+        run: |
+          python -m pip install --disable-pip-version-check websocket-client pillow
+          $env:SOULU_UI_TEST_PORT = '9223'
+          python browser/scripts/test-cef-window-states.py "$env:build_dir/Soulu.exe" browser/artifacts/window-states
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test local full-page translation in native CEF
         shell: pwsh

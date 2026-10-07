@@ -97,6 +97,7 @@
     manageGoogleAccounts: () => invoke("browser.google.manage"),
     minimize: () => invoke("window.minimize"),
     maximize: () => invoke("window.maximize"),
+    setCaptionBounds: rect => invoke("window.captionBounds", rect),
     close: () => invoke("window.close"),
     dragStart: (clicks = 1) => invoke("window.beginDrag", clicks),
     toolbarMenu: () => invoke("window.toolbarMenu"),

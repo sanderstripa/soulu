@@ -2,6 +2,7 @@
 #include "examples/soulu/isolated_page_job.h"
 #include "examples/soulu/typography_native.h"
 #include "examples/soulu/browser_window.h"
+#include "examples/soulu/geometry.h"
 #include "examples/soulu/home_system.h"
 #include "examples/soulu/home_weather.h"
 #include "examples/soulu/reader_preferences.h"
@@ -12,6 +13,7 @@
 #include "include/cef_devtools_message_observer.h"
 
 #include <windowsx.h>
+#include <shellapi.h>
 #include <ws2tcpip.h>
 
 #include <algorithm>
@@ -40,6 +42,22 @@
 
 namespace soulu {
 namespace {
+RECT MaximizedWorkArea(const MONITORINFO& monitor) {
+  RECT work = monitor.rcWork;
+  // An auto-hidden appbar may leave rcWork equal to rcMonitor. Preserve only
+  // its one-physical-pixel activation edge, not an invented taskbar height.
+  for (UINT edge : {ABE_LEFT, ABE_TOP, ABE_RIGHT, ABE_BOTTOM}) {
+    APPBARDATA bar = {sizeof(bar)};
+    bar.uEdge = edge;
+    bar.rc = monitor.rcMonitor;
+    if (!SHAppBarMessage(ABM_GETAUTOHIDEBAREX, &bar)) continue;
+    if (edge == ABE_LEFT && work.left == monitor.rcMonitor.left) ++work.left;
+    if (edge == ABE_TOP && work.top == monitor.rcMonitor.top) ++work.top;
+    if (edge == ABE_RIGHT && work.right == monitor.rcMonitor.right) --work.right;
+    if (edge == ABE_BOTTOM && work.bottom == monitor.rcMonitor.bottom) --work.bottom;
+  }
+  return work;
+}
 int CALLBACK FoundReaderFace(const LOGFONTW*,const TEXTMETRICW*,DWORD,LPARAM data) {
   *reinterpret_cast<bool*>(data)=true;return 0;
 }
@@ -844,7 +862,7 @@ void BrowserWindow::ApplyWindowAppearance() {
   const BOOL dark = theme == "dark" || (theme == "system" && IsWindowsDarkMode());
   DwmSetWindowAttribute(hwnd_, 20, &dark, sizeof(dark));
 
-  const DWORD corner=2, noBorder=0xFFFFFFFE, noBackdrop=1;
+  const DWORD corner=Fullscreen()?1:2, noBorder=0xFFFFFFFE, noBackdrop=1;
   DwmSetWindowAttribute(hwnd_,33,&corner,sizeof(corner));
   DwmSetWindowAttribute(hwnd_,34,&noBorder,sizeof(noBorder));
   DwmSetWindowAttribute(hwnd_,38,&noBackdrop,sizeof(noBackdrop));
@@ -1228,6 +1246,12 @@ std::string BrowserWindow::VisibleProfileId() const {
 void BrowserWindow::SwitchTab(int id) {
   DismissSouluMenus(hwnd_);
   auto* tab=FindTab(id);if(!tab)return;
+  if (content_fullscreen_id_ && content_fullscreen_id_ != id) {
+    if (auto* old = FindTab(content_fullscreen_id_); old && old->browser)
+      old->browser->GetHost()->ExitFullscreen(!browser_fullscreen_);
+    content_fullscreen_id_ = 0;
+    UpdateFullscreen();
+  }
   if(!tab->incognito&&tab->profile_id!=active_profile_id_){
     if(settings_dirty_){GuardSettingsClose(settings_session_id_);return;}
     settings_preview_=nullptr;settings_loaded_=nullptr;settings_staged_=nullptr;
@@ -1276,6 +1300,10 @@ void BrowserWindow::BrowserClosed(CefRefPtr<CefBrowser> browser, int tab_id,
     auto* tab = FindTab(tab_id);
     // A popup/DevTools browser must never remove its opener's tab.
     if (!tab || !tab->browser || !tab->browser->IsSame(browser)) return;
+    if (content_fullscreen_id_ == tab_id) {
+      content_fullscreen_id_ = 0;
+      if (!closing_) UpdateFullscreen();
+    }
     const bool incognito = tab->incognito;
     const std::string profile = tab->profile_id;
     tabs_.erase(std::remove_if(tabs_.begin(), tabs_.end(),
@@ -1291,6 +1319,15 @@ void BrowserWindow::BrowserClosed(CefRefPtr<CefBrowser> browser, int tab_id,
 }
 
 void BrowserWindow::FocusAddress() {
+  if (Fullscreen()) {
+    if (content_fullscreen_id_) {
+      if (auto* tab = FindTab(content_fullscreen_id_); tab && tab->browser)
+        tab->browser->GetHost()->ExitFullscreen(true);
+      content_fullscreen_id_ = 0;
+    }
+    browser_fullscreen_ = false;
+    UpdateFullscreen();
+  }
   if(auto* tab=ActiveTab()){tab->focus_home_on_load=false;tab->pending_home_input.clear();tab->pending_home_submit=false;}
   if (settings_overlay_) { FocusSettings(); return; }
   if (!shell_ || !shell_->GetMainFrame()) return;
@@ -1478,6 +1515,81 @@ void BrowserWindow::CaptureThumbnail() {
   tab->browser->GetHost()->ExecuteDevToolsMethod(900001,"Page.captureScreenshot",params);
 }
 
+bool BrowserWindow::HandleFullscreenKey(int key) {
+  if (key == VK_F11) {
+    browser_fullscreen_ = !browser_fullscreen_;
+    if (!browser_fullscreen_ && content_fullscreen_id_) {
+      if (auto* tab = FindTab(content_fullscreen_id_); tab && tab->browser)
+        tab->browser->GetHost()->ExitFullscreen(true);
+      content_fullscreen_id_ = 0;
+    }
+    UpdateFullscreen();
+    return true;
+  }
+  if (key == VK_ESCAPE && content_fullscreen_id_) {
+    if (auto* tab = FindTab(content_fullscreen_id_); tab && tab->browser)
+      tab->browser->GetHost()->ExitFullscreen(!browser_fullscreen_);
+    return true;
+  }
+  if (key == VK_ESCAPE && browser_fullscreen_) {
+    browser_fullscreen_ = false;
+    UpdateFullscreen();
+    return true;
+  }
+  return false;
+}
+
+void BrowserWindow::ContentFullscreen(int id, bool fullscreen) {
+  CEF_REQUIRE_UI_THREAD();
+  if (fullscreen && id != active_tab_id_) return;
+  if (fullscreen) content_fullscreen_id_ = id;
+  else if (content_fullscreen_id_ == id) content_fullscreen_id_ = 0;
+  UpdateFullscreen();
+}
+
+void BrowserWindow::FitFullscreenMonitor() {
+  MONITORINFO monitor = {sizeof(monitor)};
+  if (!GetMonitorInfoW(MonitorFromWindow(hwnd_, MONITOR_DEFAULTTONEAREST), &monitor)) return;
+  const auto& r = monitor.rcMonitor;
+  SetWindowPos(hwnd_, nullptr, r.left, r.top, r.right-r.left, r.bottom-r.top,
+      SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED | SWP_NOCOPYBITS);
+}
+
+void BrowserWindow::UpdateFullscreen() {
+  CEF_REQUIRE_UI_THREAD();
+  const bool fullscreen = Fullscreen();
+  if (fullscreen != fullscreen_applied_) {
+    DismissSouluMenus(hwnd_);
+    if (fullscreen) {
+      fullscreen_placement_.length = sizeof(WINDOWPLACEMENT);
+      if (!GetWindowPlacement(hwnd_, &fullscreen_placement_)) return;
+      fullscreen_style_ = GetWindowLongPtrW(hwnd_, GWL_STYLE);
+      fullscreen_applied_ = true;
+      // Preserve the original placement once across nested HTML5/F11 changes.
+      // Keep the window on its current monitor even when restoring a zoomed HWND.
+      MONITORINFO monitor = {sizeof(monitor)};
+      GetMonitorInfoW(MonitorFromWindow(hwnd_, MONITOR_DEFAULTTONEAREST), &monitor);
+      ShowWindow(hwnd_, SW_RESTORE);
+      SetWindowLongPtrW(hwnd_, GWL_STYLE,
+          fullscreen_style_ & ~(WS_THICKFRAME | WS_MAXIMIZEBOX | WS_MINIMIZEBOX | WS_MAXIMIZE));
+      const auto& r = monitor.rcMonitor;
+      SetWindowPos(hwnd_, nullptr, r.left, r.top, r.right-r.left, r.bottom-r.top,
+          SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED | SWP_NOCOPYBITS);
+    } else {
+      fullscreen_applied_ = false;
+      SetWindowLongPtrW(hwnd_, GWL_STYLE, fullscreen_style_ & ~WS_MAXIMIZE);
+      SetWindowPlacement(hwnd_, &fullscreen_placement_);
+      SetWindowPos(hwnd_, nullptr, 0, 0, 0, 0,
+          SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+    }
+  }
+  ApplyWindowAppearance();
+  Layout();
+  EmitState();
+  if (auto* tab = ActiveTab(); fullscreen && tab && tab->browser)
+    tab->browser->GetHost()->SetFocus(true);
+}
+
 BrowserWindow::Geometry BrowserWindow::CurrentGeometry() const {
   RECT client = {}; GetClientRect(hwnd_, &client);
   const float scale = GetDpiForWindow(hwnd_) / 96.0f;
@@ -1486,9 +1598,11 @@ BrowserWindow::Geometry BrowserWindow::CurrentGeometry() const {
   g.scale = scale;
   g.width = std::max(1L, client.right - client.left);
   g.height = std::max(1L, client.bottom - client.top);
-  g.toolbar = px((EffectiveSettings()->GetString("layout") == "classic" ? 82 : 48) + (BookmarksBarVisible() ? 28 : 0));
+  g.toolbar = px((EffectiveSettings()->GetString("layout") == "classic" ? geometry::classicToolbar : geometry::mainToolbar) + (BookmarksBarVisible() ? geometry::bookmarks : 0));
+  if (Fullscreen()) g.toolbar = 0;
   g.sidebar = sidebar_visible_ && bookmarks_sidebar_ ? px(276) : 0;
   g.panel = px(std::max(0, right_panel_width_));
+  if (Fullscreen()) g.sidebar = g.panel = 0;
   const auto* active=const_cast<BrowserWindow*>(this)->ActiveTab();
   g.shell_height = (active&&active->reader_active) || !permission_requests_.empty() || popover_visible_ || overview_visible_ || sidebar_visible_ || sidebar_motion_ || g.panel > 0 ? g.height :
       std::min(g.height, std::max(g.toolbar, px(suggestions_height_)));
@@ -1517,18 +1631,20 @@ void BrowserWindow::Layout() {
   }
   if (surface_) {
     surface_->PrepareResize(g.width, g.shell_height, g.scale);
+    const auto* active = ActiveTab();
+    const bool shell_visible = !Fullscreen() || (active && active->reader_active) || !permission_requests_.empty();
     positions.push_back({surface_->hwnd(), resize_border_ ? resize_border_ : HWND_TOP,
-        0, 0, g.width, g.shell_height, flags | SWP_SHOWWINDOW});
+        0, 0, g.width, g.shell_height, flags | (shell_visible ? SWP_SHOWWINDOW : SWP_HIDEWINDOW)});
   }
   if(resize_border_){
-    if(!IsZoomed(hwnd_)){
+    if(!IsZoomed(hwnd_) && !Fullscreen()){
       const int edge=static_cast<int>(std::round(6 * g.scale));
       HRGN ring=CreateRectRgn(0,0,g.width,g.height),inside=CreateRectRgn(edge,edge,g.width-edge,g.height-edge);
       CombineRgn(ring,ring,inside,RGN_DIFF);DeleteObject(inside);
       SetWindowRgn(resize_border_,ring,FALSE);
     }
     positions.push_back({resize_border_, HWND_TOP, 0, 0, g.width, g.height,
-        flags | (IsZoomed(hwnd_) ? SWP_HIDEWINDOW : SWP_SHOWWINDOW)});
+        flags | (IsZoomed(hwnd_) || Fullscreen() ? SWP_HIDEWINDOW : SWP_SHOWWINDOW)});
   }
   // Bridge events (for example suggestion updates) can request layout without
   // changing geometry. Do not invalidate or reposition those surfaces again.
@@ -1625,6 +1741,7 @@ CefRefPtr<CefDictionaryValue> BrowserWindow::State() const {
   state->SetBool("bookmarksBarVisible", BookmarksBarVisible());
   state->SetList("bookmarks", ProfileBookmarks());
   state->SetBool("maximized", IsZoomed(hwnd_) != FALSE);
+  state->SetBool("fullscreen", Fullscreen());
   state->SetString("activeProfileId", active_profile_id_);
   state->SetBool("incognito", visible_profile == "__incognito__");
   auto profiles = CefListValue::Create();
@@ -2371,6 +2488,12 @@ void BrowserWindow::HandleBridge(const std::string& request,
     return Reply(callback, helper_result);
   }
   else if (action == "window.minimize") ShowWindow(hwnd_, SW_MINIMIZE);
+  else if (action == "window.captionBounds") {
+    auto data = payload->GetDictionary();
+    if (surface_ && data) surface_->SetMaximizeRect(CefRect(
+        data->GetInt("x"), data->GetInt("y"), std::max(0, data->GetInt("width")),
+        std::max(0, data->GetInt("height"))));
+  }
   else if (action == "window.maximize") ShowWindow(hwnd_, IsZoomed(hwnd_) ? SW_RESTORE : SW_MAXIMIZE);
   else if (action == "window.close") PostMessage(hwnd_, WM_CLOSE, 0, 0);
   else if (action == "window.beginDrag") {
@@ -2486,7 +2609,7 @@ LRESULT CALLBACK BrowserWindow::WindowProc(HWND hwnd, UINT message, WPARAM wpara
       if (wparam) {
         // A borderless maximized client must not extend into the invisible
         // thick-frame margin outside the monitor work area.
-        if (IsZoomed(hwnd)) {
+        if (IsZoomed(hwnd) && !self->Fullscreen()) {
           auto* params = reinterpret_cast<NCCALCSIZE_PARAMS*>(lparam);
           MONITORINFO monitor = {sizeof(monitor)};
           if (GetMonitorInfoW(MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST), &monitor))
@@ -2499,10 +2622,22 @@ LRESULT CALLBACK BrowserWindow::WindowProc(HWND hwnd, UINT message, WPARAM wpara
       auto* sizes = reinterpret_cast<MINMAXINFO*>(lparam);
       const UINT dpi = GetDpiForWindow(hwnd);
       sizes->ptMinTrackSize = {MulDiv(620, dpi, 96), MulDiv(420, dpi, 96)};
+      // Constrain the root/input HWND itself, not only its transparent client.
+      // Relative coordinates support taskbars on every edge and negative origins.
+      MONITORINFO monitor = {sizeof(monitor)};
+      if (!self->Fullscreen() && GetMonitorInfoW(MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST), &monitor)) {
+        const auto work = MaximizedWorkArea(monitor);
+        sizes->ptMaxPosition = {work.left - monitor.rcMonitor.left, work.top - monitor.rcMonitor.top};
+        sizes->ptMaxSize = {work.right - work.left, work.bottom - work.top};
+      }
       return 0;
     }
     case WM_NCHITTEST: {
-      if (IsZoomed(hwnd)) return HTCLIENT;
+      POINT point = {GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam)};
+      ScreenToClient(hwnd, &point);
+      if (!self->Fullscreen() && !self->settings_overlay_ && self->surface_ &&
+          self->surface_->MaximizeHit(point)) return HTMAXBUTTON;
+      if (IsZoomed(hwnd) || self->Fullscreen()) return HTCLIENT;
       const LRESULT hit = DefWindowProc(hwnd, message, wparam, lparam);
       if (hit != HTCLIENT) return hit;
       RECT r = {}; GetWindowRect(hwnd, &r);
@@ -2515,6 +2650,13 @@ LRESULT CALLBACK BrowserWindow::WindowProc(HWND hwnd, UINT message, WPARAM wpara
       if (top) return HTTOP; if (bottom) return HTBOTTOM;
       return HTCLIENT;
     }
+    case WM_NCMOUSEMOVE:
+      if (wparam == HTMAXBUTTON && self->surface_) {
+        POINT point = {GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam)};
+        ScreenToClient(self->surface_->hwnd(), &point);
+        SendMessageW(self->surface_->hwnd(), WM_MOUSEMOVE, 0, MAKELPARAM(point.x, point.y));
+      }
+      break;
     case WM_ERASEBKGND: {
       const std::string theme = self->EffectiveSettings()->GetString("theme");
       const bool dark = theme == "dark" ||
@@ -2538,6 +2680,8 @@ LRESULT CALLBACK BrowserWindow::WindowProc(HWND hwnd, UINT message, WPARAM wpara
       return 0;
     }
     case WM_SYSCOMMAND:
+      if (self->Fullscreen() && ((wparam & 0xFFF0) == SC_MAXIMIZE ||
+          (wparam & 0xFFF0) == SC_MOVE || (wparam & 0xFFF0) == SC_SIZE)) return 0;
       if ((wparam & 0xFFF0) == SC_MOVE || (wparam & 0xFFF0) == SC_SIZE) {
         // CEF 154 disables nestable Chromium work by default. Win32's move/
         // resize modal loop must continue processing renderer resize/paint.
@@ -2554,6 +2698,15 @@ LRESULT CALLBACK BrowserWindow::WindowProc(HWND hwnd, UINT message, WPARAM wpara
       return 0;
     case WM_EXITSIZEMOVE: self->Layout(); return 0;
     case WM_DPICHANGED: {
+      if (self->Fullscreen()) { self->FitFullscreenMonitor(); self->Layout(); return 0; }
+      MONITORINFO monitor = {sizeof(monitor)};
+      if (IsZoomed(hwnd) && GetMonitorInfoW(MonitorFromRect(reinterpret_cast<const RECT*>(lparam), MONITOR_DEFAULTTONEAREST), &monitor)) {
+        const auto work = MaximizedWorkArea(monitor);
+        SetWindowPos(hwnd, nullptr, work.left, work.top, work.right-work.left, work.bottom-work.top,
+            SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOCOPYBITS);
+        self->Layout();
+        return 0;
+      }
       const auto* rect = reinterpret_cast<const RECT*>(lparam);
       SetWindowPos(hwnd, nullptr, rect->left, rect->top,
                    rect->right - rect->left, rect->bottom - rect->top,
@@ -2561,6 +2714,10 @@ LRESULT CALLBACK BrowserWindow::WindowProc(HWND hwnd, UINT message, WPARAM wpara
       self->Layout();
       return 0;
     }
+    case WM_DISPLAYCHANGE:
+      if (self->Fullscreen()) self->FitFullscreenMonitor();
+      self->Layout();
+      return 0;
     case ShellSurface::kFirstFrame:
       self->shell_frame_ready_ = true;
       self->ShowWhenReady();

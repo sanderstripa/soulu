@@ -1,11 +1,12 @@
 /* One geometry policy for both layouts, including dynamically created actions. */
+body[data-layout=compact] { --toolbar-target:var(--geometry-main-target); --caption-height:var(--geometry-main-toolbar); }
 :root {
   --toolbar-target: 30px;
-  --toolbar-glyph: 16px;
+  --toolbar-glyph: var(--geometry-glyph);
   --toolbar-radius: 50%;
   --toolbar-stroke: 1;
   --toolbar-disabled: .32;
-  --caption-target: 42px;
+  --caption-target: var(--geometry-caption-width);
   --caption-hover: color-mix(in srgb, var(--text) 8%, transparent);
   --caption-pressed: color-mix(in srgb, var(--text) 14%, transparent);
   --caption-danger: color-mix(in srgb, #ef4964 22%, var(--solid));
@@ -38,7 +39,7 @@
 /* A caption keeps its full edge-accessible rectangle. Only the feedback is circular. */
 .browser-toolbar :is(.compact-window-button,.window-controls button):not(.navigation-toolbar-button) {
   position:relative;display:grid;place-items:center;flex:0 0 var(--caption-target);
-  width:var(--caption-target);height:48px;padding:0;border:0;border-radius:0;
+  width:var(--caption-target);height:var(--caption-height,var(--geometry-classic-caption));padding:0;border:0;border-radius:0;
   color:var(--text);background:transparent;transform:none;
 }
 .browser-toolbar :is(.compact-window-button,.window-controls button):not(.navigation-toolbar-button)::before {
@@ -53,3 +54,15 @@
 .browser-toolbar :is(.compact-window-button,.window-controls button):not(.navigation-toolbar-button) svg {position:relative;width:var(--toolbar-glyph);height:var(--toolbar-glyph);stroke-width:1;transform:none}
 .browser-toolbar :is(.compact-window-button,.window-controls button):focus-visible {outline:2px solid var(--blue);outline-offset:-3px}
 @media(prefers-reduced-motion:reduce){.browser-toolbar button,.browser-toolbar button::before{transition-duration:var(--motion-reduced)}}
+
+.compact-toolbar,.compact-toolbar-surface{height:var(--geometry-main-toolbar)}
+.compact-tab-flow{height:var(--geometry-main-container);border-radius:calc(var(--geometry-main-container) / 2)}
+.compact-active-tab{height:var(--geometry-main-capsule);border-radius:calc(var(--geometry-main-capsule) / 2)}
+.compact-active-tab .active-address{height:calc(var(--geometry-main-capsule) - 2px)}
+body{--chrome-height:var(--geometry-main-toolbar);--content-top:var(--chrome-height)}
+body[data-layout=classic]{--chrome-height:var(--geometry-classic-toolbar)}
+body[data-bookmarks-bar=true]{--content-top:calc(var(--chrome-height) + var(--geometry-bookmarks))}
+body[data-fullscreen=true]{--chrome-height:0px;--content-top:0px}
+body[data-fullscreen=true] :is(.browser-toolbar,.bookmarks-bar){display:none!important}
+.bookmarks-bar{top:var(--chrome-height)}
+body :is(.sidebar,.side-panel,.vpn-panel,.settings-panel,.bookmarks-menu,.tab-overview,.navigation-shield,.reader-view){top:var(--content-top)}

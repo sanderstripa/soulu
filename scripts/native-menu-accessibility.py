@@ -23,6 +23,8 @@ def rows(hwnd):
         role=Variant();state=Variant()
         role_result=method(13,Variant,ctypes.POINTER(Variant))(accessible,child,ctypes.byref(role))
         method(14,Variant,ctypes.POINTER(Variant))(accessible,child,ctypes.byref(state))
-        output.append({'label':label,'role':role.value,'state':state.value,'role_result':role_result,'role_type':role.vt})
+        bounds=[ctypes.c_long() for _ in range(4)]
+        assert method(22,*([ctypes.POINTER(ctypes.c_long)]*4),Variant)(accessible,*(ctypes.byref(v) for v in bounds),child)==0
+        output.append({'label':label,'role':role.value,'state':state.value,'role_result':role_result,'role_type':role.vt,'rect':[v.value for v in bounds]})
     ctypes.WINFUNCTYPE(ctypes.c_ulong,ctypes.c_void_p)(vtable[2])(accessible)
     ole.CoUninitialize();return output

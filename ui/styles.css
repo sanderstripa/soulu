@@ -96,7 +96,7 @@ body[data-address-position=left] .classic-address-wrap{justify-content:flex-star
 .classic-suggestions{top:42px}
 
 
-body[data-layout=compact] .classic-toolbar{display:none}body[data-layout=compact] .compact-toolbar{display:block}body[data-layout=compact] .sidebar,body[data-layout=compact] .side-panel,body[data-layout=compact] .vpn-panel,body[data-layout=compact] .settings-panel{top:54px}
+body[data-layout=compact] .classic-toolbar{display:none}body[data-layout=compact] .compact-toolbar{display:block}body[data-layout=compact] .sidebar,body[data-layout=compact] .side-panel,body[data-layout=compact] .vpn-panel,body[data-layout=compact] .settings-panel{top:var(--geometry-main-toolbar)}
 body[data-layout=classic] .compact-toolbar{display:none}body[data-layout=classic] .classic-toolbar{display:block}body[data-layout=classic] .sidebar,body[data-layout=classic] .side-panel,body[data-layout=classic] .vpn-panel,body[data-layout=classic] .settings-panel{top:82px}
 body[data-matte=true] .browser-toolbar{background:linear-gradient(112deg,color-mix(in srgb,var(--surface) 82%,#fff 18%),color-mix(in srgb,var(--surface) 70%,#a9c9e8 30%));backdrop-filter:saturate(145%) blur(22px)}
 
