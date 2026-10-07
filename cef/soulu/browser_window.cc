@@ -439,6 +439,7 @@ void BrowserWindow::LoadSettings() {
       settings_->SetString("startupMode", saved->GetString("startPageMode"));
       settings_->SetString("startupUrl", saved->GetString("startPageUrl"));
     }
+    if(saved->HasKey("homeWeatherCity")&&!saved->HasKey("homeWeatherMode")&&!saved->GetString("homeWeatherCity").empty())settings_->SetString("homeWeatherMode","configured");
     CefDictionaryValue::KeyList keys; saved->GetKeys(keys);
     for (const auto& key : keys) settings_->SetValue(key, saved->GetValue(key)->Copy());
   }
