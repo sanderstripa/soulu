@@ -1,5 +1,6 @@
 #include "examples/soulu/browser_window.h"
 #include "examples/soulu/home_weather.h"
+#include "examples/soulu/home_system.h"
 #include "include/cef_parser.h"
 #include "include/wrapper/cef_helpers.h"
 #include <algorithm>
@@ -67,9 +68,17 @@ CefRefPtr<CefDictionaryValue> BrowserWindow::PageSettings(const Tab& tab) const 
 }
 CefRefPtr<CefDictionaryValue> BrowserWindow::HomeState(const Tab& tab) const {
   auto config=PageSettings(tab), data=CefDictionaryValue::Create();
-  for(const char* key:{"theme","language","homeShowLogo","homeShowSearch","homeShowWeather",
-      "homeShowShortcuts","homeShowBackground","homeWeatherCity","homeShortcuts"})
+  for(const char* key:{"theme","language","homeProvider","homeWeatherMode","homeWeatherCity","homeWeatherUnits"})
     if(config->HasKey(key))data->SetValue(key,config->GetValue(key)->Copy());
+  if(!data->HasKey("homeProvider"))data->SetString("homeProvider","google");
+  auto favorites=CefListValue::Create();auto ids=config->GetList("homeFavoriteIds");
+  if(ids)for(size_t i=0;i<ids->GetSize();++i)for(size_t j=0;j<bookmarks_->GetSize();++j){
+    auto row=bookmarks_->GetDictionary(j);
+    if(row&&row->GetInt("id")==ids->GetInt(i)&&row->GetString("profileId")==
+       (tab.incognito?active_profile_id_:tab.profile_id)&&!WebUrl(row->GetString("url")).empty())
+      favorites->SetDictionary(favorites->GetSize(),row->Copy(false));
+  }
+  data->SetList("favorites",favorites);
   const std::string theme=config->GetString("theme");
   DWORD light=1,size=sizeof(light);
   RegGetValueW(HKEY_CURRENT_USER,L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
@@ -90,7 +99,11 @@ void BrowserWindow::ContentPageLoaded(int id) {
   auto* tab=FindTab(id);if(!tab||!tab->browser)return;
   auto frame=tab->browser->GetMainFrame();if(!frame)return;
   if(IsOnboardingUi(frame->GetURL())){if(id==active_tab_id_)tab->browser->GetHost()->SetFocus(true);return;}
-  if(IsHomeUi(frame->GetURL())){RefreshHomePages(id);return;}
+  if(IsHomeUi(frame->GetURL())){RefreshHomePages(id);
+    if(id==active_tab_id_&&!SettingsOverlayActive()){
+      tab->browser->GetHost()->SetFocus(true);
+      frame->ExecuteJavaScript("window.souluHomeFocus&&window.souluHomeFocus()",frame->GetURL(),0);
+    }return;}
   if(frame->GetURL()!=InternalUrl("about:blank"))return;
   const std::string theme=HomeState(*tab)->GetString("resolvedTheme");
   frame->ExecuteJavaScript("document.body.dataset.theme='"+theme+"';document.documentElement.style.background='"+
@@ -111,21 +124,53 @@ void BrowserWindow::HandleHomeBridge(int id,const std::string& request,
   if(action=="home.navigate"){
     if(!payload||payload->GetType()!=VTYPE_STRING){callback->Failure(400,"Text required");return;}
     // Use exactly the omnibox parser, with this document's profile search engine.
-    const auto previous=settings_;settings_=PageSettings(*tab);
+    const auto previous=settings_;settings_=PageSettings(*tab)->Copy(false);
+    settings_->SetString("searchEngine",settings_->GetString("homeProvider")=="perplexity"?"perplexity":"google");
     const auto url=NormalizeAddress(payload->GetString());settings_=previous;
     if(url!="soulu://home"&&url!="about:blank"&&WebUrl(url).empty()){
       callback->Failure(400,"Only web addresses or search queries are allowed");return;
     }
     ReplyEmpty(callback);tab->browser->GetMainFrame()->LoadURL(InternalUrl(url));return;
   }
+  if(action=="home.favorite"){
+    if(!payload||payload->GetType()!=VTYPE_DICTIONARY){callback->Failure(400,"Favorite required");return;}
+    const int mark=payload->GetDictionary()->GetInt("id");auto favorites=HomeState(*tab)->GetList("favorites");
+    for(size_t i=0;i<favorites->GetSize();++i){auto row=favorites->GetDictionary(i);if(row->GetInt("id")==mark){
+      ReplyEmpty(callback);NewTab(row->GetString("url"),tab->incognito,!payload->GetDictionary()->GetBool("background"),tab->browser->GetHost()->GetRequestContext(),tab->profile_id);return;}}
+    callback->Failure(404,"Favorite not found");return;
+  }
+  if(action=="home.voice.cancel"){++tab->home_voice_generation;HomeCancelVoice(tab->browser->GetIdentifier());ReplyEmpty(callback);return;}
+  if(action=="home.voice"){
+    const auto generation=tab->document_generation;const int voice=++tab->home_voice_generation;CefRefPtr<BrowserWindow> self=this;
+    RequestSitePermissions(id,"soulu://home",{"microphone"},[self,id,generation,voice,callback](bool allowed){
+      auto* current=self->FindTab(id);
+      if(!allowed||!current||!current->browser||current->document_generation!=generation||current->home_voice_generation!=voice){auto d=CefDictionaryValue::Create();d->SetString("status","denied");self->Reply(callback,d);return;}
+      HomeRecognize(current->browser->GetIdentifier(),self->PageSettings(*current)->GetString("language"),
+        [self,id,generation,callback](CefRefPtr<CefDictionaryValue> result){auto* t=self->FindTab(id);if(!t||!t->browser||t->document_generation!=generation){callback->Failure(410,"Document closed");return;}self->Reply(callback,result);});
+    });return;
+  }
   if(action=="home.weather"){
-    static const UnconfiguredHomeWeather provider;
-    Reply(callback,provider.Snapshot(PageSettings(*tab)->GetString("homeWeatherCity")));return;
+    auto config=PageSettings(*tab)->Copy(false);const auto profile=tab->profile_id;
+    const auto file=tab->incognito?std::filesystem::path():ProfileRoot(profile)/L"soulu-weather.json";
+    auto context=tab->browser->GetHost()->GetRequestContext();
+    auto done=[callback](CefRefPtr<CefDictionaryValue> data){callback->Success(CefWriteJSON(AsValue(data),JSON_WRITER_DEFAULT));};
+    if(config->GetString("homeWeatherMode")=="configured"){HomeWeather(profile,file,context,config,nullptr,done);return;}
+    // Never interrupt immediate typing with a location prompt on New Tab.
+    if(PolicyForTab(id)->Rule("soulu://home","geolocation")!=0){
+      HomeWeather(profile,file,context,config,nullptr,done);return;
+    }
+    CefRefPtr<BrowserWindow> self=this;const auto generation=tab->document_generation;
+    RequestSitePermissions(id,"soulu://home",{"geolocation"},[self,id,generation,profile,file,context,config,done](bool allowed){
+      auto* t=self->FindTab(id);if(!allowed||!t||t->document_generation!=generation){auto d=CefDictionaryValue::Create();d->SetString("status","unavailable");done(d);return;}
+      HomeLocate([profile,file,context,config,done](CefRefPtr<CefDictionaryValue> location){HomeWeather(profile,file,context,config,location,done);});
+    });return;
   }
   if(action!="home.set"||!payload||payload->GetType()!=VTYPE_DICTIONARY){
     callback->Failure(403,"Home action not allowed");return;
   }
   auto patch=payload->GetDictionary(),config=PageSettings(*tab)->Copy(false);
+  CefDictionaryValue::KeyList allowedKeys;patch->GetKeys(allowedKeys);
+  for(const auto& key:allowedKeys)if(key!="homeProvider"){callback->Failure(403,"Home setting not allowed");return;}
   std::string error;
   if(!ValidateHomePatch(patch,config,error)){callback->Failure(400,error);return;}
   if(tab->incognito)private_page_settings_=config;
@@ -141,7 +186,19 @@ bool BrowserWindow::ValidateHomePatch(CefRefPtr<CefDictionaryValue> patch,
   CefDictionaryValue::KeyList keys;patch->GetKeys(keys);
   for(const auto& key:keys){
     const std::string name=key;auto value=patch->GetValue(key);
-    if(name=="homeShortcuts"){
+    if(name=="homeProvider"||name=="homeWeatherMode"||name=="homeWeatherUnits"){
+      if(value->GetType()!=VTYPE_STRING){error="String required";return false;}
+      const std::string text=value->GetString();
+      if((name=="homeProvider"&&text!="google"&&text!="perplexity")||
+         (name=="homeWeatherMode"&&text!="automatic"&&text!="configured")||
+         (name=="homeWeatherUnits"&&text!="celsius"&&text!="fahrenheit")){error="Invalid Home choice";return false;}
+      config->SetValue(key,value->Copy());
+    }else if(name=="homeFavoriteIds"){
+      if(value->GetType()!=VTYPE_LIST||value->GetList()->GetSize()>100){error="Invalid favorites";return false;}
+      auto ids=value->GetList();std::set<int> unique;
+      for(size_t i=0;i<ids->GetSize();++i)if(ids->GetType(i)!=VTYPE_INT||ids->GetInt(i)<=0||!unique.insert(ids->GetInt(i)).second){error="Invalid favorite ID";return false;}
+      config->SetValue(key,value->Copy());
+    }else if(name=="homeShortcuts"){
       if(value->GetType()!=VTYPE_LIST||value->GetList()->GetSize()>12){error="At most 12 shortcuts";return false;}
       auto safe=CefListValue::Create(),rows=value->GetList();
       for(size_t i=0;i<rows->GetSize();++i){

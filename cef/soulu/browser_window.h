@@ -130,6 +130,7 @@ class BrowserWindow final : public CefBaseRefCounted {
     bool reader_active = false;
     bool main_loading = false;
     int document_generation = 0;
+    int home_voice_generation = 0;
     int translation_generation = 0;
     bool translation_active = false;
     bool translation_resetting = false;

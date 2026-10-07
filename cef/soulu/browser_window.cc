@@ -2,6 +2,8 @@
 #include "examples/soulu/isolated_page_job.h"
 #include "examples/soulu/typography_native.h"
 #include "examples/soulu/browser_window.h"
+#include "examples/soulu/home_system.h"
+#include "examples/soulu/home_weather.h"
 #include "examples/soulu/reader_preferences.h"
 #include "examples/soulu/app_version.h"
 #include "examples/soulu/motion.h"
@@ -396,6 +398,10 @@ BrowserWindow::BrowserWindow()
   for (const auto* key : {"homeShowLogo", "homeShowSearch", "homeShowWeather", "homeShowShortcuts", "homeShowBackground"})
     settings_->SetBool(key, true);
   settings_->SetString("homeWeatherCity", "");
+  settings_->SetString("homeProvider", "google");
+  settings_->SetString("homeWeatherMode", "automatic");
+  settings_->SetString("homeWeatherUnits", "celsius");
+  settings_->SetList("homeFavoriteIds", CefListValue::Create());
   settings_->SetList("homeShortcuts", CefListValue::Create());
   settings_->SetString("startPageMode", "blank");
   settings_->SetString("startPageUrl", "");
@@ -698,7 +704,7 @@ std::shared_ptr<SitePolicy> BrowserWindow::PolicyForTab(int id) {
 void BrowserWindow::RequestSitePermissions(int id,const std::string& input,
     const std::vector<std::string>& permissions,std::function<void(bool)> done,uint64_t cef_request) {
   CEF_REQUIRE_UI_THREAD();
-  auto* tab=FindTab(id);auto policy=PolicyForTab(id);const auto origin=WebOrigin(input);
+  auto* tab=FindTab(id);auto policy=PolicyForTab(id);const auto origin=input=="soulu://home"&&tab&&tab->browser&&IsHomeUi(tab->browser->GetMainFrame()->GetURL())?input:WebOrigin(input);
   if(!tab||!policy||origin.empty()||permissions.empty()||closing_){done(false);return;}
   bool ask=false;
   for(const auto& name:permissions){int rule=policy->Rule(origin,name);
@@ -786,7 +792,7 @@ void BrowserWindow::SyncSitePolicy(int id,const std::string& url) {
 }
 void BrowserWindow::ReleaseIncognito() {
   if(std::any_of(tabs_.begin(),tabs_.end(),[](const Tab& t){return t.incognito;}))return;
-  private_page_settings_=nullptr;
+  private_page_settings_=nullptr;ForgetPrivateHomeWeather();
   incognito_context_=nullptr;policies_.erase("__incognito__");reader_preferences_.erase("__incognito__");
   auto retained=CefListValue::Create();
   for(size_t i=0;i<bookmarks_->GetSize();++i){auto row=bookmarks_->GetDictionary(i);
@@ -1109,7 +1115,7 @@ void BrowserWindow::NewTab(const std::string& url, bool incognito,
   if(!incognito && foreground && (profile_id.empty()||profile_id==active_profile_id_) && NeedsOnboarding() &&
       std::none_of(tabs_.begin(),tabs_.end(),[this](const Tab& t){return !t.incognito&&t.profile_id==active_profile_id_;}))
     tab.url="soulu://onboarding";
-  tab.focus_address_on_attach = tab.url!="soulu://onboarding" && foreground && (url.empty() || tab.url=="about:blank" || tab.url=="soulu://home");
+  tab.focus_address_on_attach = foreground && tab.url=="about:blank";
   tab.incognito = incognito;
   tab.profile_id = profile_id.empty() ? (incognito ? "__incognito__" : active_profile_id_) : profile_id;
 
@@ -1143,7 +1149,7 @@ void BrowserWindow::NewTab(const std::string& url, bool incognito,
     return;
   }
   EmitState();
-  if (tab.url!="soulu://onboarding" && foreground && (url.empty() || tab.url == "about:blank" || tab.url == "soulu://home")) FocusAddress();
+  if (foreground && tab.url == "about:blank") FocusAddress();
 }
 
 void BrowserWindow::AttachShell(CefRefPtr<CefBrowser> browser) {
@@ -1159,7 +1165,7 @@ void BrowserWindow::AttachShell(CefRefPtr<CefBrowser> browser) {
   CefCommandLine::GetGlobalCommandLine()->GetArguments(arguments);
   for(const auto& argument:arguments)OpenExternal(argument.ToString());
   Layout();
-  if(!NeedsOnboarding())FocusAddress();
+  if(!NeedsOnboarding() && ActiveTab() && ActiveTab()->url=="about:blank")FocusAddress();
 }
 
 void BrowserWindow::AttachContent(int tab_id, CefRefPtr<CefBrowser> browser) {
@@ -1249,6 +1255,7 @@ void BrowserWindow::CloseTab(int id) {
 
 void BrowserWindow::BrowserClosed(CefRefPtr<CefBrowser> browser, int tab_id,
                                   bool shell) {
+  HomeCancelVoice(browser->GetIdentifier());
 
   CancelSitePermissions(tab_id);
   if (shell) { if (surface_) surface_->Detach(); shell_ = nullptr; }
@@ -1320,6 +1327,7 @@ std::string BrowserWindow::NormalizeAddress(const std::string& input) const {
     return "https://" + value;
   const std::string engine = settings_->GetString("searchEngine");
   const std::string base = engine == "yandex" ? "https://yandex.ru/search/?text=" :
+      engine == "perplexity" ? "https://www.perplexity.ai/search?s=o&q=" :
       engine == "bing" ? "https://www.bing.com/search?q=" :
       engine == "duckduckgo" ? "https://duckduckgo.com/?q=" : "https://www.google.com/search?q=";
   return base + CefURIEncode(value, true).ToString();
@@ -1340,7 +1348,8 @@ void BrowserWindow::UpdateAddress(int id, const std::string& url) {
         EvaluateTranslationPage(tab->browser,url,"globalThis.__souluTranslate?globalThis.__souluTranslate.restore():({restored:true})",
           [self,id,token](CefRefPtr<CefDictionaryValue>){if(auto* current=self->FindTab(id);current&&current->translation_generation==token){current->translation_resetting=false;if(!self->closing_){self->Layout();self->EmitState();}}});
       }
-      tab->thumbnail.clear();++tab->document_generation;tab->reader_active=false;tab->reader_article=nullptr;
+      tab->thumbnail.clear();HomeCancelVoice(tab->browser?tab->browser->GetIdentifier():0);
+      ++tab->document_generation;tab->reader_active=false;tab->reader_article=nullptr;
     }
     tab->url = next;
   }
@@ -1671,7 +1680,7 @@ void BrowserWindow::RequestFind() { if (settings_overlay_) { FocusSettings(); re
 void BrowserWindow::ReaderDocumentNavigation(int id) {
   DismissSouluMenus(hwnd_);
   CancelSitePermissions(id);
-  if(auto* tab=FindTab(id)){++tab->document_generation;++tab->translation_generation;tab->translation_active=false;tab->translation_resetting=false;tab->main_loading=true;tab->reader_active=false;tab->reader_article=nullptr;}
+  if(auto* tab=FindTab(id)){HomeCancelVoice(tab->browser?tab->browser->GetIdentifier():0);++tab->home_voice_generation;++tab->document_generation;++tab->translation_generation;tab->translation_active=false;tab->translation_resetting=false;tab->main_loading=true;tab->reader_active=false;tab->reader_article=nullptr;}
   Layout();EmitState();
 }
 void BrowserWindow::ReaderDocumentLoaded(int id) {

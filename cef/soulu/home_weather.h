@@ -1,23 +1,12 @@
 #pragma once
-#include <string>
 #include "include/cef_values.h"
-
+#include "include/cef_request_context.h"
+#include "examples/soulu/home_system.h"
+#include <filesystem>
 namespace soulu {
-// A provider returns cached state immediately. Future network refreshes must
-// run asynchronously; Home never waits for a provider or requests location.
-class HomeWeatherProvider {
- public:
-  virtual ~HomeWeatherProvider() = default;
-  virtual CefRefPtr<CefDictionaryValue> Snapshot(const std::string& city) const = 0;
-};
-class UnconfiguredHomeWeather final : public HomeWeatherProvider {
- public:
-  CefRefPtr<CefDictionaryValue> Snapshot(const std::string& city) const override {
-    auto data=CefDictionaryValue::Create();
-    data->SetString("status","unavailable");
-    data->SetString("reason","provider-not-configured");
-    data->SetString("city",city);
-    return data;
-  }
-};
+// All requests run through the tab's CEF context and therefore its proxy policy.
+void HomeWeather(const std::string& key,const std::filesystem::path& cache_file,
+ CefRefPtr<CefRequestContext> context,CefRefPtr<CefDictionaryValue> config,
+ CefRefPtr<CefDictionaryValue> location,HomeResult done);
+void ForgetPrivateHomeWeather();
 }

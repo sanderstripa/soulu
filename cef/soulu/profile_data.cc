@@ -89,6 +89,7 @@ std::string WebOrigin(const std::string& input) {
   return scheme+"://"+host+(port.empty()?"":":"+port);
 }
 std::string SiteDomain(const std::string& input) {
+  if(input=="soulu://home")return "soulu://home";
   std::string url=input.find("://")==std::string::npos?"https://"+input:input;
   if(WebOrigin(url).empty()) return "";
   CefURLParts parts; if(!CefParseURL(url,parts)) return "";

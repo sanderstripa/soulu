@@ -119,7 +119,7 @@ bool BrowserWindow::ApplySettingsSession(std::string& error) {
   }
   if(!ValidatePagePatch(pagePatch)){error="Проверьте HTTP/HTTPS-адреса страниц.";return false;}
   auto homePatch=CefDictionaryValue::Create();
-  for(const char* key:{"homeShortcuts","homeWeatherCity","homeShowLogo","homeShowSearch",
+  for(const char* key:{"homeProvider","homeWeatherMode","homeWeatherUnits","homeFavoriteIds","homeShortcuts","homeWeatherCity","homeShowLogo","homeShowSearch",
       "homeShowWeather","homeShowShortcuts","homeShowBackground"}){
     auto changed=config->GetValue(key),before=base->GetValue(key);
     if(changed&&(!before||!before->IsEqual(changed)))homePatch->SetValue(key,changed->Copy());

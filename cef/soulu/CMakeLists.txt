@@ -22,6 +22,9 @@ set(SOULU_SRCS
   settings_overlay.cc
   home_page.cc
   onboarding.cc
+  home_system.h
+  home_system.cc
+  home_weather.cc
   home_weather.h
   profile_data.h
   history_store.h
