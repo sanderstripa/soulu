@@ -129,10 +129,14 @@ def main():
             for provider in ('google','perplexity'):
                 home(h,'home.set',{'homeProvider':provider});call('setSettings',{'searchEngine':'bing'})
                 query='погода екатеринбург';home(h,'home.navigate',query)
-                prefix='https://www.google.com/search?q=' if provider=='google' else 'https://www.perplexity.ai/search?s=o&q='
-                wait(lambda:current_url().startswith(prefix))
                 from urllib.parse import parse_qs,urlparse
-                check(parse_qs(urlparse(current_url()).query)['q']==[query],provider+' native query encoding')
+                host='www.google.com' if provider=='google' else 'www.perplexity.ai'
+                # Perplexity currently redirects its official OpenSearch URL to /search/new.
+                def routed():
+                    parsed=urlparse(current_url())
+                    return parsed.scheme=='https' and parsed.netloc==host and parsed.path in ('/search','/search/new') and parse_qs(parsed.query).get('q')==[query]
+                wait(routed)
+                check(True,provider+' native query encoding and search route')
                 check(call('getSettings')['searchEngine']=='bing','Home choice preserves omnibox engine')
                 call('home');h=page()
             for value in ('openai.com','https://github.com',origin+'/enter'):

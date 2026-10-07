@@ -625,7 +625,13 @@ void BrowserWindow::CreateProfile(const std::string& name,
   auto saved=ReadJson(profile_path/L"soulu-settings.json");
   auto config=saved&&saved->GetType()==VTYPE_DICTIONARY?saved->GetDictionary()->Copy(false):initial_settings_->Copy(false);
   if(existing&&(!saved||saved->GetType()!=VTYPE_DICTIONARY)&&config->GetList("homeShortcuts")&&config->GetList("homeShortcuts")->GetSize())config->Remove("homeFavoriteIds");
-  if(!existing){config->SetString("homeProvider","google");config->SetList("homeFavoriteIds",CefListValue::Create());config->SetList("homeShortcuts",CefListValue::Create());config->SetString("homeWeatherCity","");config->SetString("homeWeatherMode","automatic");}
+  if(!existing){
+    // New profiles keep independent page intents after root legacy migration.
+    for(const auto* key:{"startupMode","newTabMode","homeMode"})config->SetString(key,"soulu");
+    for(const auto* key:{"startupUrl","newTabUrl","homeUrl","startPageUrl"})config->SetString(key,"");
+    config->SetString("startPageMode","soulu");
+    config->SetString("homeProvider","google");config->SetList("homeFavoriteIds",CefListValue::Create());config->SetList("homeShortcuts",CefListValue::Create());config->SetString("homeWeatherCity","");config->SetString("homeWeatherMode","automatic");
+  }
   if(!config->GetDictionary("onboarding")) {
     auto flow=CefDictionaryValue::Create();flow->SetString("status",existing?"skipped":"not_started");
     flow->SetInt("step",1);config->SetDictionary("onboarding",flow);

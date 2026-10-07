@@ -452,6 +452,10 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python browser/scripts/test-cef-home-design.py $exe.FullName browser/artifacts/home-design
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python browser/scripts/test-cef-home-focus.py $exe.FullName browser/artifacts/home-focus.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python browser/scripts/test-cef-home-migration.py $exe.FullName browser/artifacts/home-migration.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           foreach ($suite in @('bookmarks-overview', 'site-reader', 'profile-isolation', 'content-policy', 'navigation', 'link-menu', 'storage')) {
             $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP "soulu-native-$suite"
               if ($suite -eq 'link-menu') {
@@ -620,6 +624,11 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python browser/scripts/test-cef-home-design.py '${{ steps.package.outputs.build_dir }}/Soulu.exe' browser/artifacts/home-design
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python browser/scripts/test-cef-home-focus.py '${{ steps.package.outputs.build_dir }}/Soulu.exe' browser/artifacts/home-focus.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          python browser/scripts/test-cef-home-migration.py '${{ steps.package.outputs.build_dir }}/Soulu.exe' browser/artifacts/home-migration.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Upload Home verification evidence
         if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.55')) && (always()) }}
@@ -630,6 +639,8 @@ jobs:
             browser/artifacts/home-evidence.json
             browser/artifacts/home-design
             browser/artifacts/home-speech.json
+            browser/artifacts/home-focus.json
+            browser/artifacts/home-migration.json
           if-no-files-found: ignore
 
       - name: Test current-site popover and local Reader Mode in native CEF
