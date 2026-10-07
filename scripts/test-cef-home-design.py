@@ -74,6 +74,9 @@ def main():
    s.command(home,'Emulation.clearDeviceMetricsOverride');settings({'language':'ru','theme':'light','layout':'compact'})
    capture('light-main-normal',True);hwnd=wait(lambda:find_window(process.pid));u.ShowWindow(hwnd,3);time.sleep(.3);capture('light-main-maximized',True);u.ShowWindow(hwnd,9)
    settings({'theme':'dark'});capture('dark-main',True);settings({'theme':'light','layout':'classic'});capture('light-classic',True);settings({'layout':'compact'})
+   s.evaluate(shell,'browserShell.replaceBookmarks('+json.dumps([{'id':7101,'type':'url','title':'Документация','url':'https://www.python.org/','favicon':'','parentId':0,'order':0},{'id':7102,'type':'url','title':'Длинное название избранной закладки','url':'https://www.wikipedia.org/','favicon':'','parentId':0,'order':1}])+')')
+   settings({'homeFavoriteIds':[7102,7101]})
+   wait(lambda:s.evaluate(home,"document.querySelectorAll('#favoritesGrid a').length===2"))
    for name in ('provider','weather','favorites'):
     s.evaluate(home,"document.getElementById('"+name+"Toggle').click()")
     check(s.evaluate(home,"!document.getElementById('"+name+"Panel').hidden"),name+' panel opens')

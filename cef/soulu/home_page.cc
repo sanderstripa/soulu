@@ -164,7 +164,7 @@ void BrowserWindow::HandleHomeBridge(int id,const std::string& request,
     const auto generation=tab->document_generation;const int voice=++tab->home_voice_generation;CefRefPtr<BrowserWindow> self=this;
     RequestSitePermissions(id,"soulu://home",{"microphone"},[self,id,generation,voice,callback](bool allowed){
       auto* current=self->FindTab(id);
-      if(!allowed||!current||!current->browser||current->document_generation!=generation||current->home_voice_generation!=voice){auto d=CefDictionaryValue::Create();d->SetString("status","denied");self->Reply(callback,d);return;}
+      if(!allowed||!current||!current->browser||self->active_tab_id_!=id||!self->IsHomeUi(current->browser->GetMainFrame()->GetURL())||current->document_generation!=generation||current->home_voice_generation!=voice){auto d=CefDictionaryValue::Create();d->SetString("status","denied");self->Reply(callback,d);return;}
       HomeRecognize(current->browser->GetIdentifier(),self->PageSettings(*current)->GetString("language"),
         [self,id,generation,voice,callback](CefRefPtr<CefDictionaryValue> result){auto* t=self->FindTab(id);if(!t||!t->browser||t->document_generation!=generation||t->home_voice_generation!=voice){callback->Failure(410,"Voice request cancelled");return;}self->Reply(callback,result);});
     });return;

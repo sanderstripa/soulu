@@ -623,6 +623,7 @@ void BrowserWindow::CreateProfile(const std::string& name,
   profiles_.push_back(profile);
   auto saved=ReadJson(profile_path/L"soulu-settings.json");
   auto config=saved&&saved->GetType()==VTYPE_DICTIONARY?saved->GetDictionary()->Copy(false):initial_settings_->Copy(false);
+  if(existing&&(!saved||saved->GetType()!=VTYPE_DICTIONARY)&&config->GetList("homeShortcuts")&&config->GetList("homeShortcuts")->GetSize())config->Remove("homeFavoriteIds");
   if(!existing){config->SetString("homeProvider","google");config->SetList("homeFavoriteIds",CefListValue::Create());config->SetList("homeShortcuts",CefListValue::Create());config->SetString("homeWeatherCity","");config->SetString("homeWeatherMode","automatic");}
   if(!config->GetDictionary("onboarding")) {
     auto flow=CefDictionaryValue::Create();flow->SetString("status",existing?"skipped":"not_started");
@@ -1124,7 +1125,7 @@ void BrowserWindow::NewTab(const std::string& url, bool incognito,
 
   tabs_.push_back(tab);
   const int previous_active = active_tab_id_;
-  if (foreground) { if(auto* previous=FindTab(previous_active);previous&&previous->browser)HomeCancelVoice(previous->browser->GetIdentifier());CaptureThumbnail(); active_tab_id_ = id; if(!incognito)last_normal_active_[tab.profile_id]=id; }
+  if (foreground) { if(auto* previous=FindTab(previous_active);previous&&previous->browser)HomeCancelVoice(previous->browser->GetIdentifier());CancelSitePermissions(previous_active);CaptureThumbnail(); active_tab_id_ = id; if(!incognito)last_normal_active_[tab.profile_id]=id; }
 
   CefWindowInfo info;
   info.SetAsChild(hwnd_, CurrentGeometry().content);
