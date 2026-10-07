@@ -447,6 +447,9 @@ jobs:
           $env:SOULU_UI_TEST_PORT = '9223'
           python browser/scripts/test-cef-home-pages.py $exe.FullName browser/artifacts/home-evidence.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -m pip install --disable-pip-version-check numpy soundfile
+          python browser/scripts/test-cef-home-speech.py $exe.FullName browser/artifacts/home-speech.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python browser/scripts/test-cef-home-design.py $exe.FullName browser/artifacts/home-design
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           foreach ($suite in @('bookmarks-overview', 'site-reader', 'profile-isolation', 'content-policy', 'navigation', 'link-menu', 'storage')) {
@@ -612,6 +615,9 @@ jobs:
           $env:SOULU_UI_TEST_PORT = '9223'
           python browser/scripts/test-cef-home-pages.py '${{ steps.package.outputs.build_dir }}/Soulu.exe' browser/artifacts/home-evidence.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -m pip install --disable-pip-version-check numpy soundfile
+          python browser/scripts/test-cef-home-speech.py '${{ steps.package.outputs.build_dir }}/Soulu.exe' browser/artifacts/home-speech.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python browser/scripts/test-cef-home-design.py '${{ steps.package.outputs.build_dir }}/Soulu.exe' browser/artifacts/home-design
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
@@ -623,6 +629,7 @@ jobs:
           path: |
             browser/artifacts/home-evidence.json
             browser/artifacts/home-design
+            browser/artifacts/home-speech.json
           if-no-files-found: ignore
 
       - name: Test current-site popover and local Reader Mode in native CEF

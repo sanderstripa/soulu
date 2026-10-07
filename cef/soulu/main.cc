@@ -8,6 +8,7 @@
 
 #include "examples/soulu/app_factory.h"
 #include "examples/soulu/profile_data.h"
+#include "examples/soulu/home_system.h"
 #include "include/cef_command_line.h"
 namespace soulu { int RunDataSecurityTests(const std::filesystem::path&); }
 
@@ -28,6 +29,19 @@ int APIENTRY wWinMain(HINSTANCE instance, HINSTANCE, wchar_t*, int) {
   CefMainArgs main_args(instance);
   auto command_line = CefCommandLine::CreateCommandLine();
   command_line->InitFromString(GetCommandLineW());
+  if(command_line->HasSwitch("home-speech-test-file")){
+    wchar_t enabled[12]={};if(!GetEnvironmentVariableW(L"SOULU_UI_TEST_PORT",enabled,12))return 2;
+    const std::filesystem::path input(command_line->GetSwitchValue("home-speech-test-file").ToWString());
+    std::error_code error;const auto size=std::filesystem::file_size(input,error);
+    if(error||size<16000||size>640000||size%2)return 2;
+    std::ifstream stream(input,std::ios::binary);std::vector<short> pcm(static_cast<size_t>(size/2));
+    stream.read(reinterpret_cast<char*>(pcm.data()),static_cast<std::streamsize>(size));if(!stream)return 2;
+    std::vector<float> audio;audio.reserve(pcm.size());for(auto sample:pcm)audio.push_back(sample/32768.0f);
+    const std::string language=command_line->GetSwitchValue("home-speech-test-language");if(language!="ru"&&language!="en")return 2;
+    const auto text=soulu::HomeTranscribeTest(audio,language);
+    std::ofstream report(std::filesystem::path(command_line->GetSwitchValue("home-speech-test-report").ToWString()),std::ios::binary);report<<text;
+    return report&&!text.empty()?0:2;
+  }
   if(command_line->HasSwitch("data-security-test-report")){
     wchar_t enabled[12]={};
     if(!GetEnvironmentVariableW(L"SOULU_UI_TEST_PORT",enabled,12))return 2;
