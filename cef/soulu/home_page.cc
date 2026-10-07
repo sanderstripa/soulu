@@ -36,6 +36,24 @@ CefRefPtr<CefValue> AsValue(CefRefPtr<CefDictionaryValue> data) {
 }
 }
 
+void BrowserWindow::MigrateHomePreferences(CefRefPtr<CefDictionaryValue> saved){
+  if(saved&&saved->HasKey("homeWeatherCity")&&!saved->HasKey("homeWeatherMode")&&!saved->GetString("homeWeatherCity").empty())
+    settings_->SetString("homeWeatherMode","configured");
+  if(saved&&saved->HasKey("homeFavoriteIds"))return;
+  auto rows=settings_->GetList("homeShortcuts");if(!rows||!rows->GetSize())return;
+  auto marks=bookmarks_->Copy();auto ids=CefListValue::Create();int next=1;
+  for(size_t j=0;j<marks->GetSize();++j){auto mark=marks->GetDictionary(j);if(mark)next=std::max(next,mark->GetInt("id")+1);}
+  for(size_t i=0;i<std::min<size_t>(rows->GetSize(),12);++i){auto row=rows->GetDictionary(i);if(!row)continue;
+    const auto url=WebUrl(row->GetString("url"));if(url.empty())continue;int id=0;
+    for(size_t j=0;j<marks->GetSize();++j){auto mark=marks->GetDictionary(j);if(mark&&mark->GetString("profileId")==active_profile_id_&&mark->GetString("url")==url){id=mark->GetInt("id");break;}}
+    if(!id){id=next++;auto mark=CefDictionaryValue::Create();mark->SetInt("id",id);mark->SetString("type","url");mark->SetString("title",row->GetString("name"));mark->SetString("url",url);mark->SetString("favicon","");mark->SetString("profileId",active_profile_id_);mark->SetInt("parentId",0);mark->SetInt("order",static_cast<int>(marks->GetSize()));marks->SetDictionary(marks->GetSize(),mark);}
+    bool selected=false;for(size_t j=0;j<ids->GetSize();++j)if(ids->GetInt(j)==id){selected=true;break;}
+    if(!selected)ids->SetInt(ids->GetSize(),id);
+  }
+  // A failed writer leaves legacy data untouched; retry reuses existing URLs.
+  if(SaveBookmarks(marks)){bookmarks_=marks;settings_->SetList("homeFavoriteIds",ids);}
+}
+
 std::string BrowserWindow::InternalUrl(const std::string& url) const {
   if(url=="soulu://home"||url=="soulu://home/")return LocalPage("home.html");
   if(url=="soulu://history"||url=="soulu://history/")return LocalPage("history.html");
@@ -148,7 +166,7 @@ void BrowserWindow::HandleHomeBridge(int id,const std::string& request,
       auto* current=self->FindTab(id);
       if(!allowed||!current||!current->browser||current->document_generation!=generation||current->home_voice_generation!=voice){auto d=CefDictionaryValue::Create();d->SetString("status","denied");self->Reply(callback,d);return;}
       HomeRecognize(current->browser->GetIdentifier(),self->PageSettings(*current)->GetString("language"),
-        [self,id,generation,callback](CefRefPtr<CefDictionaryValue> result){auto* t=self->FindTab(id);if(!t||!t->browser||t->document_generation!=generation){callback->Failure(410,"Document closed");return;}self->Reply(callback,result);});
+        [self,id,generation,voice,callback](CefRefPtr<CefDictionaryValue> result){auto* t=self->FindTab(id);if(!t||!t->browser||t->document_generation!=generation||t->home_voice_generation!=voice){callback->Failure(410,"Voice request cancelled");return;}self->Reply(callback,result);});
     });return;
   }
   if(action=="home.weather"){

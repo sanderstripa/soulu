@@ -447,6 +447,8 @@ jobs:
           $env:SOULU_UI_TEST_PORT = '9223'
           python browser/scripts/test-cef-home-pages.py $exe.FullName browser/artifacts/home-evidence.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python browser/scripts/test-cef-home-design.py $exe.FullName browser/artifacts/home-design
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           foreach ($suite in @('bookmarks-overview', 'site-reader', 'profile-isolation', 'content-policy', 'navigation', 'link-menu', 'storage')) {
             $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP "soulu-native-$suite"
               if ($suite -eq 'link-menu') {
@@ -610,13 +612,17 @@ jobs:
           $env:SOULU_UI_TEST_PORT = '9223'
           python browser/scripts/test-cef-home-pages.py '${{ steps.package.outputs.build_dir }}/Soulu.exe' browser/artifacts/home-evidence.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python browser/scripts/test-cef-home-design.py '${{ steps.package.outputs.build_dir }}/Soulu.exe' browser/artifacts/home-design
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Upload Home verification evidence
         if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.55')) && (always()) }}
         uses: actions/upload-artifact@v4
         with:
           name: Soulu-home-evidence-${{ github.run_id }}
-          path: browser/artifacts/home-evidence.json
+          path: |
+            browser/artifacts/home-evidence.json
+            browser/artifacts/home-design
           if-no-files-found: ignore
 
       - name: Test current-site popover and local Reader Mode in native CEF

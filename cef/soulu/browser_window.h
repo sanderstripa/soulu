@@ -42,6 +42,7 @@ class BrowserWindow final : public CefBaseRefCounted {
       CefRefPtr<CefMessageRouterBrowserSide::Callback> callback);
   bool HandlePageShortcut(int id, int key, bool control, bool alt);
   void RefreshHomePages(int id = 0);
+  void MigrateHomePreferences(CefRefPtr<CefDictionaryValue> saved);
   void ContentPageLoaded(int id);
   bool ValidateHomePatch(CefRefPtr<CefDictionaryValue> patch,
       CefRefPtr<CefDictionaryValue> config,std::string& error) const;

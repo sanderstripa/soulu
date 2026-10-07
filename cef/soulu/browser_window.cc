@@ -491,6 +491,7 @@ void BrowserWindow::LoadProfileSettings() {
     CefDictionaryValue::KeyList keys;saved->GetDictionary()->GetKeys(keys);
     for(const auto& key:keys)settings_->SetValue(key,saved->GetDictionary()->GetValue(key)->Copy());
   }
+  MigrateHomePreferences(saved&&saved->GetType()==VTYPE_DICTIONARY?saved->GetDictionary():nullptr);
   SaveSettings();ApplyWindowAppearance();ApplyContentTheme();
 }
 
@@ -622,6 +623,7 @@ void BrowserWindow::CreateProfile(const std::string& name,
   profiles_.push_back(profile);
   auto saved=ReadJson(profile_path/L"soulu-settings.json");
   auto config=saved&&saved->GetType()==VTYPE_DICTIONARY?saved->GetDictionary()->Copy(false):initial_settings_->Copy(false);
+  if(!existing){config->SetString("homeProvider","google");config->SetList("homeFavoriteIds",CefListValue::Create());config->SetList("homeShortcuts",CefListValue::Create());config->SetString("homeWeatherCity","");config->SetString("homeWeatherMode","automatic");}
   if(!config->GetDictionary("onboarding")) {
     auto flow=CefDictionaryValue::Create();flow->SetString("status",existing?"skipped":"not_started");
     flow->SetInt("step",1);config->SetDictionary("onboarding",flow);

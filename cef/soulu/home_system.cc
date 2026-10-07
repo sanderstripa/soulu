@@ -41,7 +41,7 @@ bool VerifiedModel(const std::filesystem::path& path){
  if(BCryptOpenAlgorithmProvider(&algorithm,BCRYPT_SHA256_ALGORITHM,nullptr,0)<0)return false;
  bool ok=BCryptCreateHash(algorithm,&hash,nullptr,0,nullptr,0,0)>=0;std::ifstream stream(path,std::ios::binary);std::array<unsigned char,65536> buffer;
  while(ok&&stream){stream.read(reinterpret_cast<char*>(buffer.data()),buffer.size());if(stream.gcount())ok=BCryptHashData(hash,buffer.data(),static_cast<ULONG>(stream.gcount()),0)>=0;}
- std::array<unsigned char,32> digest{};if(ok)ok=BCryptFinishHash(hash,digest.data(),digest.size(),0)>=0;
+ std::array<unsigned char,32> digest{};if(ok)ok=BCryptFinishHash(hash,digest.data(),static_cast<ULONG>(digest.size()),0)>=0;
  if(hash)BCryptDestroyHash(hash);BCryptCloseAlgorithmProvider(algorithm,0);if(!ok)return false;
  std::string hex;const char* digits="0123456789abcdef";for(auto byte:digest){hex+=digits[byte>>4];hex+=digits[byte&15];}
  return hex=="be07e048e1e599ad46341c8d2a135645097a538221678b7acdd1b1919c6e1b21";
