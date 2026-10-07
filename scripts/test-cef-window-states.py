@@ -38,6 +38,7 @@ u.ShowWindow.argtypes = [W.HWND, C.c_int]
 u.SendMessageW.argtypes = [W.HWND,W.UINT,W.WPARAM,W.LPARAM]
 u.SendMessageW.restype = C.c_ssize_t
 u.ClientToScreen.argtypes = [W.HWND,C.POINTER(W.POINT)]
+u.SetForegroundWindow.argtypes = [W.HWND]
 u.GetWindowThreadProcessId.argtypes = [W.HWND, C.POINTER(W.DWORD)]
 u.GetClassNameW.argtypes = [W.HWND, W.LPWSTR, C.c_int]
 u.IsWindowVisible.argtypes = [W.HWND]
@@ -148,6 +149,22 @@ def available_monitors():
     u.EnumDisplayMonitors(None,None,visit,0)
     return found
 
+def caption_point(shell,hwnd,selector):
+    box=s.evaluate(shell,'(()=>{const r=document.querySelector('+json.dumps(selector)+').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()')
+    point=W.POINT(round(box['x']*u.GetDpiForWindow(hwnd)/96),round(box['y']*u.GetDpiForWindow(hwnd)/96))
+    u.ClientToScreen(hwnd,C.byref(point))
+    return point
+
+def native_caption_click(shell,hwnd,selector,cancel=False):
+    point=caption_point(shell,hwnd,selector)
+    u.SetForegroundWindow(hwnd)
+    assert u.SetCursorPos(point.x,point.y)
+    u.mouse_event(2,0,0,0,0)
+    wait(lambda:s.evaluate(shell,"document.body.dataset.nativeCaptionPressed==='true'"))
+    if cancel:assert u.SetCursorPos(point.x-180,point.y+140)
+    u.mouse_event(4,0,0,0,0)
+    wait(lambda:s.evaluate(shell,"!document.body.dataset.nativeCaptionPressed"))
+
 process = None
 try:
     with tempfile.TemporaryDirectory(prefix='soulu-window-', ignore_cleanup_errors=True) as profile:
@@ -173,6 +190,16 @@ try:
                     point = W.POINT(round(box['x']*u.GetDpiForWindow(hwnd)/96),round(box['y']*u.GetDpiForWindow(hwnd)/96))
                     u.ClientToScreen(hwnd,C.byref(point))
                     wait(lambda:u.SendMessageW(hwnd,0x84,0,((point.y&0xffff)<<16)|(point.x&0xffff))==9)
+
+                    if not matte and theme=='light':
+                        native_caption_click(shell,hwnd,selector,cancel=True)
+                        assert not u.IsZoomed(hwnd) and rect(hwnd)==original
+                        native_caption_click(shell,hwnd,selector)
+                        wait(lambda:u.IsZoomed(hwnd) and s.evaluate(shell,'browserShell.getState().maximized'))
+                        taskbar_excluded(hwnd)
+                        native_caption_click(shell,hwnd,selector)
+                        wait(lambda:not u.IsZoomed(hwnd) and rect(hwnd)==original)
+                        checks.append(dict(layout=layout,native_caption_click=True,pressed_cancel=True))
                     for maximized in [False,True]:
                         if maximized:
                             u.ShowWindow(hwnd,3)
