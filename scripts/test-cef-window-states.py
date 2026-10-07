@@ -39,6 +39,9 @@ u.SendMessageW.argtypes = [W.HWND,W.UINT,W.WPARAM,W.LPARAM]
 u.SendMessageW.restype = C.c_ssize_t
 u.ClientToScreen.argtypes = [W.HWND,C.POINTER(W.POINT)]
 u.SetForegroundWindow.argtypes = [W.HWND]
+u.GetForegroundWindow.restype = W.HWND
+u.BringWindowToTop.argtypes = [W.HWND]
+u.AttachThreadInput.argtypes = [W.DWORD,W.DWORD,W.BOOL]
 u.GetWindowThreadProcessId.argtypes = [W.HWND, C.POINTER(W.DWORD)]
 u.GetClassNameW.argtypes = [W.HWND, W.LPWSTR, C.c_int]
 u.IsWindowVisible.argtypes = [W.HWND]
@@ -51,6 +54,9 @@ class Monitor(C.Structure):
     _fields_ = [('size', W.DWORD), ('monitor', W.RECT), ('work', W.RECT), ('flags', W.DWORD)]
 class Titlebar(C.Structure):
     _fields_ = [('size', W.DWORD), ('bounds', W.RECT), ('states', W.DWORD*6), ('buttons', W.RECT*6)]
+class FocusInfo(C.Structure):
+    _fields_ = [('size',W.DWORD),('flags',W.DWORD),('active',W.HWND),('focus',W.HWND),('capture',W.HWND),('menu',W.HWND),('move',W.HWND),('caret',W.HWND),('caret_rect',W.RECT)]
+u.GetGUIThreadInfo.argtypes=[W.DWORD,C.POINTER(FocusInfo)]
 class Fixture(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         body = b'''<!doctype html><style>html,body{margin:0;background:#46a6cf}video{width:300px}</style>
@@ -159,13 +165,31 @@ def caption_point(shell,hwnd,selector):
 
 def native_caption_click(shell,hwnd,selector,cancel=False):
     point=caption_point(shell,hwnd,selector)
-    u.SetForegroundWindow(hwnd)
+    foreground(hwnd)
     assert u.SetCursorPos(point.x,point.y)
     u.mouse_event(2,0,0,0,0)
     wait(lambda:s.evaluate(shell,"document.body.dataset.nativeCaptionPressed==='true'"))
     if cancel:assert u.SetCursorPos(point.x-180,point.y+140)
     u.mouse_event(4,0,0,0,0)
     wait(lambda:s.evaluate(shell,"!document.body.dataset.nativeCaptionPressed"))
+
+def foreground(hwnd):
+    u.SetForegroundWindow(hwnd)
+    previous=u.GetForegroundWindow()
+    if previous!=hwnd:
+        thread=u.GetWindowThreadProcessId(previous,None)
+        current=C.windll.kernel32.GetCurrentThreadId()
+        u.AttachThreadInput(current,thread,True)
+        try:u.BringWindowToTop(hwnd);u.SetForegroundWindow(hwnd)
+        finally:u.AttachThreadInput(current,thread,False)
+    assert u.GetForegroundWindow()==hwnd,'Only isolated Soulu may receive native test input'
+
+def page_focus_ready(page,hwnd):
+    info=FocusInfo();info.size=C.sizeof(info)
+    assert u.GetGUIThreadInfo(u.GetWindowThreadProcessId(hwnd,None),C.byref(info))
+    assert info.focus!=hwnd and u.GetAncestor(info.focus,2)==hwnd,('CEF native focus not yet restored',info.focus,hwnd)
+    assert s.evaluate(page,'document.hasFocus()'),'CEF renderer focus not yet restored'
+    return True
 
 def ready_caption(shell,hwnd,selector):
     # CEF publishes the new DOM geometry asynchronously after native resize.
@@ -180,6 +204,14 @@ def ready_caption(shell,hwnd,selector):
     assert u.SendMessageW(hwnd,0x84,0,((point.y&0xffff)<<16)|(point.x&0xffff))==9,'Native maximize hit target not yet synchronized'
     return point
 
+def address_ready(shell,hwnd,address):
+    actual=s.evaluate(shell,'document.activeElement?.id')
+    if actual==address:return True
+    info=FocusInfo();info.size=C.sizeof(info)
+    u.GetGUIThreadInfo(u.GetWindowThreadProcessId(hwnd,None),C.byref(info))
+    name=C.create_unicode_buffer(100);u.GetClassNameW(info.focus,name,100)
+    raise AssertionError(('Address did not receive focus',actual,address,'native focus',name.value,'active',info.active))
+
 process = None
 try:
     with tempfile.TemporaryDirectory(prefix='soulu-window-', ignore_cleanup_errors=True) as profile:
@@ -188,6 +220,7 @@ try:
         page = s.page_socket()
         target = next(t for t in s.targets() if '/ui/index.html' in t.get('url',''))
         shell = s.websocket.create_connection(target['webSocketDebuggerUrl'],timeout=30,origin=s.BASE)
+        wait(lambda:s.evaluate(shell,'!!window.browserShell?.setSettings'))
         hwnd = wait(lambda:next(iter(windows(process.pid)),None))
         s.navigate(page, f'http://127.0.0.1:{server.server_port}/')
         for layout in ['compact','classic']:
@@ -219,13 +252,14 @@ try:
                         wait(lambda:not u.IsZoomed(hwnd) and rect(hwnd)==original)
                         # Restoring root focus must route normal browser keys
                         # back to CEF, rather than leaving a keyboard dead end.
-                        u.SetForegroundWindow(hwnd)
+                        foreground(hwnd)
                         u.SendMessageW(hwnd,0x7,0,0)
+                        wait(lambda:page_focus_ready(page,hwnd))
                         u.keybd_event(17,29,0,0);time.sleep(.1)
                         u.keybd_event(76,38,0,0);time.sleep(.1)
                         u.keybd_event(76,38,2,0);u.keybd_event(17,29,2,0)
                         address='classicAddress' if layout=='classic' else 'compactAddress'
-                        wait(lambda:s.evaluate(shell,'document.activeElement?.id')==address)
+                        wait(lambda:address_ready(shell,hwnd,address))
                         # Caption/Snap can focus the root instead of a CEF child.
                         # Exercise its native key route, including held-key repeat.
                         u.SendMessageW(hwnd,0x100,122,1)
