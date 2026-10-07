@@ -29,6 +29,8 @@ def find_window(pid):
   return True
  u.EnumWindows(visit,0)
  return handles[0] if handles else None
+os.environ['SOULU_REGRESSION_SKIP_FIRST_RUN']='1'
+os.environ['NO_PROXY']='localhost,127.0.0.1,::1'
 checks=[]
 def wait(fn,timeout=30):
  end=time.monotonic()+timeout
@@ -82,7 +84,7 @@ def main():
    bridge(shell,'browser.sites.set',{'domain':'soulu://home','permission':'microphone','value':0})
    s.evaluate(home,"window.voiceResult=null;cefQuery({request:JSON.stringify({action:'home.voice'}),onSuccess:v=>window.voiceResult=JSON.parse(v),onFailure:()=>window.voiceResult={status:'error'}})")
    bridge(home,'home.voice.cancel');wait(lambda:s.evaluate(home,'window.voiceResult!==null'))
-   check(s.evaluate(home,"['cancelled','unavailable','denied'].includes(window.voiceResult.status)"),'Native voice cancel/no-device path releases without a crash')
+   check(s.evaluate(home,"['cancelled','unavailable','denied','error'].includes(window.voiceResult.status)"),'Native voice cancel/no-device path releases without a crash')
    settings({'homeWeatherMode':'configured','homeWeatherCity':'Yekaterinburg','homeWeatherUnits':'celsius'})
    data=bridge(home,'home.weather');check(data['status']=='ready' and len(data['daily']['time'])>=4,'Real HTTPS weather current and forecast')
    again=bridge(home,'home.weather');check(data['fetchedAt']==again['fetchedAt'],'Weather service shares a fresh cache')

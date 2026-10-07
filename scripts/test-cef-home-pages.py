@@ -13,6 +13,8 @@ import time
 
 spec=importlib.util.spec_from_file_location('storage',Path(__file__).with_name('test-cef-storage.py'))
 s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
+os.environ['SOULU_REGRESSION_SKIP_FIRST_RUN']='1'
+os.environ['NO_PROXY']='localhost,127.0.0.1,::1'
 checks=[]
 os.environ["NO_PROXY"]="localhost,127.0.0.1,::1"
 
