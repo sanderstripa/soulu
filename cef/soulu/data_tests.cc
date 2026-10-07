@@ -1,5 +1,6 @@
 #include "examples/soulu/profile_data.h"
 #include "examples/soulu/history_store.h"
+#include "examples/soulu/home_weather.h"
 #include <windows.h>
 #include <wincrypt.h>
 #include <bcrypt.h>
@@ -38,6 +39,19 @@ std::string EncryptFixture(const std::string& plain,const std::string& key,const
 int RunDataSecurityTests(const std::filesystem::path& report) {
   try{
     const std::string test="soulu-test-secret-"+RandomId();
+    {
+      const std::string weather=R"({"current":{"temperature_2m":8.5,"weather_code":3},"daily":{"time":["2026-10-07","2026-10-08","2026-10-09","2026-10-10"],"weather_code":[3,0,3,61],"temperature_2m_max":[10,12,9,8],"temperature_2m_min":[3,4,3,1],"precipitation_probability_max":[5,0,10,80]},"fetchedAt":1000.0})";
+      auto value=CefParseJSON(weather,JSON_PARSER_RFC);auto data=value->GetDictionary();
+      Check(ValidHomeWeather(data),"weather-provider-schema");
+      Check(HomeWeatherSnapshot(data,1001)->GetString("status")=="ready","weather-cache-hit");
+      Check(HomeWeatherSnapshot(data,1900)->GetString("status")=="stale","weather-cache-ttl-expiry");
+      Check(HomeWeatherSnapshot(data,1001,true)->GetString("status")=="stale","weather-error-keeps-last-known-data");
+      Check(HomeWeatherSnapshot(data,87400)->GetString("status")=="unavailable","weather-stale-hard-expiry");
+      Check(HomeWeatherSnapshot(data,999)->GetString("status")=="unavailable","weather-rejects-future-cache");
+      data->GetDictionary("daily")->Remove("weather_code");
+      Check(!ValidHomeWeather(data)&&HomeWeatherSnapshot(data,1001)->GetString("status")=="unavailable","weather-rejects-malformed-data");
+    }
+
     Check(ValidProfileId("personal")&&!ValidProfileId("../personal")&&!ValidProfileId("CEF")&&!ValidProfileId("con"+std::string("/")),"profile-id-validation");
     Check(ProfileRoot("personal")==ProfileRoot("personal"),"canonical-profile-root");
     Check(SiteDomain("HTTPS://Example.COM:443/")=="example.com","domain-normalization");

@@ -792,7 +792,7 @@ void BrowserWindow::SyncSitePolicy(int id,const std::string& url) {
 }
 void BrowserWindow::ReleaseIncognito() {
   if(std::any_of(tabs_.begin(),tabs_.end(),[](const Tab& t){return t.incognito;}))return;
-  private_page_settings_=nullptr;ForgetPrivateHomeWeather();
+  private_page_settings_=nullptr;private_home_profile_.clear();ForgetPrivateHomeWeather();
   incognito_context_=nullptr;policies_.erase("__incognito__");reader_preferences_.erase("__incognito__");
   auto retained=CefListValue::Create();
   for(size_t i=0;i<bookmarks_->GetSize();++i){auto row=bookmarks_->GetDictionary(i);
@@ -1110,18 +1110,19 @@ void BrowserWindow::NewTab(const std::string& url, bool incognito,
   const int id = next_tab_id_++;
   Tab tab;
   tab.id = id;
-  if (incognito && !private_page_settings_) private_page_settings_ = settings_->Copy(false);
+  if (incognito && !private_page_settings_) {private_page_settings_ = settings_->Copy(false);private_home_profile_=active_profile_id_;}
   tab.url = url.empty() ? PageUrl("newTab", incognito ? private_page_settings_ : settings_) : url;
   if(!incognito && foreground && (profile_id.empty()||profile_id==active_profile_id_) && NeedsOnboarding() &&
       std::none_of(tabs_.begin(),tabs_.end(),[this](const Tab& t){return !t.incognito&&t.profile_id==active_profile_id_;}))
     tab.url="soulu://onboarding";
   tab.focus_address_on_attach = foreground && tab.url=="about:blank";
+  tab.focus_home_on_load = foreground && tab.url=="soulu://home";
   tab.incognito = incognito;
   tab.profile_id = profile_id.empty() ? (incognito ? "__incognito__" : active_profile_id_) : profile_id;
 
   tabs_.push_back(tab);
   const int previous_active = active_tab_id_;
-  if (foreground) { CaptureThumbnail(); active_tab_id_ = id; if(!incognito)last_normal_active_[tab.profile_id]=id; }
+  if (foreground) { if(auto* previous=FindTab(previous_active);previous&&previous->browser)HomeCancelVoice(previous->browser->GetIdentifier());CaptureThumbnail(); active_tab_id_ = id; if(!incognito)last_normal_active_[tab.profile_id]=id; }
 
   CefWindowInfo info;
   info.SetAsChild(hwnd_, CurrentGeometry().content);
@@ -1222,7 +1223,7 @@ void BrowserWindow::SwitchTab(int id) {
     settings_preview_=nullptr;settings_loaded_=nullptr;settings_staged_=nullptr;
     active_profile_id_=tab->profile_id;LoadProfileSettings();RefreshSettingsProfile();
   }
-  if (active_tab_id_ != id) { CancelSitePermissions(active_tab_id_); CaptureThumbnail(); }
+  if (active_tab_id_ != id) { if(auto* old=ActiveTab();old&&old->browser)HomeCancelVoice(old->browser->GetIdentifier());CancelSitePermissions(active_tab_id_); CaptureThumbnail(); }
   active_tab_id_ = id;
   if(!tab->incognito)last_normal_active_[tab->profile_id]=id;
   Layout();
@@ -1237,6 +1238,7 @@ void BrowserWindow::CloseTab(int id) {
   if (it == tabs_.end()) return;
 
   if (it->browser) {
+    HomeCancelVoice(it->browser->GetIdentifier());
     it->browser->GetHost()->CloseBrowser(true);
     return;
   }
@@ -1278,6 +1280,7 @@ void BrowserWindow::BrowserClosed(CefRefPtr<CefBrowser> browser, int tab_id,
 }
 
 void BrowserWindow::FocusAddress() {
+  if(auto* tab=ActiveTab())tab->focus_home_on_load=false;
   if (settings_overlay_) { FocusSettings(); return; }
   if (!shell_ || !shell_->GetMainFrame()) return;
   if (surface_) surface_->Focus();
@@ -1318,14 +1321,14 @@ void BrowserWindow::Navigate(const std::string& value) {
   if (tab->browser) tab->browser->GetMainFrame()->LoadURL(InternalUrl(url));
 }
 
-std::string BrowserWindow::NormalizeAddress(const std::string& input) const {
+std::string BrowserWindow::NormalizeAddress(const std::string& input,const std::string& engine_override) const {
   std::string value = input;
   value.erase(0, value.find_first_not_of(" \t\r\n"));
   value.erase(value.find_last_not_of(" \t\r\n") + 1);
   if (value.find("://") != std::string::npos || value.rfind("about:", 0) == 0) return value;
   if (value.find(' ') == std::string::npos && value.find('.') != std::string::npos)
     return "https://" + value;
-  const std::string engine = settings_->GetString("searchEngine");
+  const std::string engine = engine_override.empty()?settings_->GetString("searchEngine").ToString():engine_override;
   const std::string base = engine == "yandex" ? "https://yandex.ru/search/?text=" :
       engine == "perplexity" ? "https://www.perplexity.ai/search?s=o&q=" :
       engine == "bing" ? "https://www.bing.com/search?q=" :
@@ -1985,8 +1988,9 @@ void BrowserWindow::HandleBridge(const std::string& request,
   }
   else if (action == "browser.newTab") NewTab("", VisibleProfileId()=="__incognito__");
   else if (action == "browser.home") {
-    if (auto* tab=ActiveTab(); tab && tab->browser)
-      tab->browser->GetMainFrame()->LoadURL(InternalUrl(PageUrl("home", PageSettings(*tab))));
+    if (auto* tab=ActiveTab(); tab && tab->browser){
+      tab->focus_home_on_load=true;tab->browser->GetMainFrame()->LoadURL(InternalUrl(PageUrl("home", PageSettings(*tab))));
+    }
   }
   else if (action == "browser.newIncognito") NewTab("", true);
   else if (action == "browser.profile.create") {

@@ -65,6 +65,24 @@ else()
   SET_EXAMPLE_EXECUTABLE_TARGET_PROPERTIES(${EXAMPLE_TARGET})
 endif()
 
+# Local multilingual speech. Pin source and build CPU-only static libraries.
+include(FetchContent)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+set(WHISPER_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(WHISPER_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(WHISPER_BUILD_SERVER OFF CACHE BOOL "" FORCE)
+set(GGML_NATIVE OFF CACHE BOOL "" FORCE)
+set(GGML_OPENMP OFF CACHE BOOL "" FORCE)
+set(GGML_CUDA OFF CACHE BOOL "" FORCE)
+set(GGML_VULKAN OFF CACHE BOOL "" FORCE)
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+FetchContent_Declare(soulu_whisper
+ GIT_REPOSITORY https://github.com/ggml-org/whisper.cpp.git
+ GIT_TAG 4979e04f5dcaccb36057e059bbaed8a2f5288315
+ GIT_SHALLOW FALSE)
+FetchContent_MakeAvailable(soulu_whisper)
+target_link_libraries(${EXAMPLE_TARGET} whisper winmm)
+
 find_program(CARGO_EXECUTABLE cargo REQUIRED)
 set(ADBLOCK_LIB "${CMAKE_CURRENT_BINARY_DIR}/adblock/release/soulu_adblock.lib")
 file(GLOB_RECURSE ADBLOCK_INPUTS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/adblock/src/*.rs" "${CMAKE_CURRENT_SOURCE_DIR}/adblock/filters/*.txt")

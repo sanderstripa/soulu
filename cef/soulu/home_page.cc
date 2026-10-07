@@ -75,10 +75,12 @@ CefRefPtr<CefDictionaryValue> BrowserWindow::HomeState(const Tab& tab) const {
   if(ids)for(size_t i=0;i<ids->GetSize();++i)for(size_t j=0;j<bookmarks_->GetSize();++j){
     auto row=bookmarks_->GetDictionary(j);
     if(row&&row->GetInt("id")==ids->GetInt(i)&&row->GetString("profileId")==
-       (tab.incognito?active_profile_id_:tab.profile_id)&&!WebUrl(row->GetString("url")).empty())
+       (tab.incognito?private_home_profile_:tab.profile_id)&&!WebUrl(row->GetString("url")).empty())
       favorites->SetDictionary(favorites->GetSize(),row->Copy(false));
   }
   data->SetList("favorites",favorites);
+  const auto policy=policies_.find(tab.incognito?"__incognito__":tab.profile_id);
+  data->SetBool("homeLocationAllowed",policy!=policies_.end()&&policy->second&&policy->second->Rule("soulu://home","geolocation")==0);
   const std::string theme=config->GetString("theme");
   DWORD light=1,size=sizeof(light);
   RegGetValueW(HKEY_CURRENT_USER,L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
@@ -100,7 +102,8 @@ void BrowserWindow::ContentPageLoaded(int id) {
   auto frame=tab->browser->GetMainFrame();if(!frame)return;
   if(IsOnboardingUi(frame->GetURL())){if(id==active_tab_id_)tab->browser->GetHost()->SetFocus(true);return;}
   if(IsHomeUi(frame->GetURL())){RefreshHomePages(id);
-    if(id==active_tab_id_&&!SettingsOverlayActive()){
+    if(tab->focus_home_on_load&&id==active_tab_id_&&!SettingsOverlayActive()){
+      tab->focus_home_on_load=false;
       tab->browser->GetHost()->SetFocus(true);
       frame->ExecuteJavaScript("window.souluHomeFocus&&window.souluHomeFocus()",frame->GetURL(),0);
     }return;}
@@ -124,9 +127,8 @@ void BrowserWindow::HandleHomeBridge(int id,const std::string& request,
   if(action=="home.navigate"){
     if(!payload||payload->GetType()!=VTYPE_STRING){callback->Failure(400,"Text required");return;}
     // Use exactly the omnibox parser, with this document's profile search engine.
-    const auto previous=settings_;settings_=PageSettings(*tab)->Copy(false);
-    settings_->SetString("searchEngine",settings_->GetString("homeProvider")=="perplexity"?"perplexity":"google");
-    const auto url=NormalizeAddress(payload->GetString());settings_=previous;
+    const auto config=PageSettings(*tab);
+    const auto url=NormalizeAddress(payload->GetString(),config->GetString("homeProvider")=="perplexity"?"perplexity":"google");
     if(url!="soulu://home"&&url!="about:blank"&&WebUrl(url).empty()){
       callback->Failure(400,"Only web addresses or search queries are allowed");return;
     }
@@ -139,7 +141,7 @@ void BrowserWindow::HandleHomeBridge(int id,const std::string& request,
       ReplyEmpty(callback);NewTab(row->GetString("url"),tab->incognito,!payload->GetDictionary()->GetBool("background"),tab->browser->GetHost()->GetRequestContext(),tab->profile_id);return;}}
     callback->Failure(404,"Favorite not found");return;
   }
-  if(action=="home.voice.cancel"){++tab->home_voice_generation;HomeCancelVoice(tab->browser->GetIdentifier());ReplyEmpty(callback);return;}
+  if(action=="home.voice.cancel"){++tab->home_voice_generation;CancelSitePermissions(id);HomeCancelVoice(tab->browser->GetIdentifier());ReplyEmpty(callback);return;}
   if(action=="home.voice"){
     const auto generation=tab->document_generation;const int voice=++tab->home_voice_generation;CefRefPtr<BrowserWindow> self=this;
     RequestSitePermissions(id,"soulu://home",{"microphone"},[self,id,generation,voice,callback](bool allowed){
@@ -244,8 +246,9 @@ bool BrowserWindow::HandlePageShortcut(int id,int key,bool control,bool alt) {
   }
   if(control&&key=='L'){FocusAddress();return true;}
   if(alt&&key==VK_HOME){
-    if(auto* tab=ActiveTab();tab&&tab->browser)
-      tab->browser->GetMainFrame()->LoadURL(InternalUrl(PageUrl("home",PageSettings(*tab))));
+    if(auto* tab=ActiveTab();tab&&tab->browser){
+      tab->focus_home_on_load=true;tab->browser->GetMainFrame()->LoadURL(InternalUrl(PageUrl("home",PageSettings(*tab))));
+    }
     return true;
   }
   return false;

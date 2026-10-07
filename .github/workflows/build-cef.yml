@@ -117,6 +117,12 @@ jobs:
           python browser/scripts/build-translation-runtime.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      - name: Prepare integrity-pinned local speech model
+        shell: pwsh
+        run: |
+          python browser/scripts/prepare-home-speech.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Add Soulu target and assets
         shell: pwsh
         run: |

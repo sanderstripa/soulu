@@ -125,6 +125,7 @@ class BrowserWindow final : public CefBaseRefCounted {
     bool incognito = false;
     bool activate_on_attach = false;
     bool focus_address_on_attach = false;
+    bool focus_home_on_load = false;
     bool loading = false;
     bool can_go_back = false;
     bool reader_active = false;
@@ -212,7 +213,7 @@ class BrowserWindow final : public CefBaseRefCounted {
   Tab* ActiveTab();
   Tab* FindTab(int id);
   std::string VisibleProfileId() const;
-  std::string NormalizeAddress(const std::string& value) const;
+  std::string NormalizeAddress(const std::string& value, const std::string& engine_override = "") const;
   CefRefPtr<CefDictionaryValue> State() const;
   CefRefPtr<CefListValue> ProfileBookmarks() const;
   CefRefPtr<CefListValue> ProfileDownloads() const;
@@ -274,6 +275,7 @@ class BrowserWindow final : public CefBaseRefCounted {
   bool settings_close_all_ = false;
   std::string settings_pending_url_;
   CefRefPtr<CefDictionaryValue> private_page_settings_;
+  std::string private_home_profile_;
   std::map<std::string, std::shared_ptr<SitePolicy>> policies_;
   CefRefPtr<CefDictionaryValue> vpn_settings_;
   CefRefPtr<CefListValue> bookmarks_;

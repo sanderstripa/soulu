@@ -8,5 +8,7 @@ namespace soulu {
 void HomeWeather(const std::string& key,const std::filesystem::path& cache_file,
  CefRefPtr<CefRequestContext> context,CefRefPtr<CefDictionaryValue> config,
  CefRefPtr<CefDictionaryValue> location,HomeResult done);
+bool ValidHomeWeather(CefRefPtr<CefDictionaryValue> data);
+CefRefPtr<CefDictionaryValue> HomeWeatherSnapshot(CefRefPtr<CefDictionaryValue> data,double now,bool stale=false);
 void ForgetPrivateHomeWeather();
 }
