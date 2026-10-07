@@ -1150,8 +1150,22 @@ jobs:
             'The owner will complete the remaining physical desktop acceptance checks. Automated Windows/CEF checks remain required; unfinished manual checks are not claimed as passed.' | Add-Content browser/artifacts/release-notes.md -Encoding utf8
           }
           $sites = Get-Content browser/artifacts/sites-evidence.json -Raw | ConvertFrom-Json
-          if (@($sites).Count -ne 7 -or @($sites | Where-Object { !$_.opened }).Count) {
+          $unopened = @($sites | Where-Object { !$_.opened })
+          # The existing native diagnostic separates Ozon's hosted-runner
+          # HTTP rejection from browser/network failure. The owner explicitly
+          # chose to check Ozon personally and permits this release without it.
+          $deferredOzon = $env:DEFER_AUTH_CHECKS -eq 'true' -and $unopened.Count -eq 1 -and
+            $unopened[0].host -eq 'ozon.ru' -and $unopened[0].externalServiceRejection -and
+            @($unopened[0].events | Where-Object {
+              $_.event -eq 'Network.responseReceived' -and $_.response.status -in @(403,429) -and
+              $_.response.url -match '^https://(?:www\.)?ozon\.ru/' -and $_.response.securityState -eq 'secure'
+            }).Count -gt 0 -and
+            @($unopened[0].events | Where-Object { $_.event -eq 'Network.loadingFailed' -and !$_.canceled }).Count -eq 0
+          if (@($sites).Count -ne 7 -or ($unopened.Count -gt 0 -and !$deferredOzon)) {
             throw 'Publication blocked: one or more required sites did not serve usable content'
+          }
+          if ($deferredOzon) {
+            'Anonymous Ozon access from the GitHub Windows runner returned a secure HTTP 403/429 server rejection. Usable Ozon content is not claimed as verified; the owner will check Ozon personally. The other six required sites opened successfully.' | Add-Content browser/artifacts/release-notes.md -Encoding utf8
           }
 
       - name: Publish Soulu release
