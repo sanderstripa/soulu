@@ -41,6 +41,7 @@ class BrowserWindow final : public CefBaseRefCounted {
   void HandleHomeBridge(int id, const std::string& request,
       CefRefPtr<CefMessageRouterBrowserSide::Callback> callback);
   bool HandlePageShortcut(int id, int key, bool control, bool alt);
+  bool BufferHomeInput(const CefKeyEvent& event);
   void RefreshHomePages(int id = 0);
   void MigrateHomePreferences(CefRefPtr<CefDictionaryValue> saved);
   void ContentPageLoaded(int id);
@@ -127,6 +128,8 @@ class BrowserWindow final : public CefBaseRefCounted {
     bool activate_on_attach = false;
     bool focus_address_on_attach = false;
     bool focus_home_on_load = false;
+    std::wstring pending_home_input;
+    bool pending_home_submit = false;
     bool loading = false;
     bool can_go_back = false;
     bool reader_active = false;

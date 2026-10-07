@@ -1230,6 +1230,7 @@ void BrowserWindow::SwitchTab(int id) {
   if (active_tab_id_ != id) { if(auto* old=ActiveTab();old&&old->browser)HomeCancelVoice(old->browser->GetIdentifier());CancelSitePermissions(active_tab_id_); CaptureThumbnail(); }
   active_tab_id_ = id;
   if(!tab->incognito)last_normal_active_[tab->profile_id]=id;
+  if(tab->focus_home_on_load&&tab->browser&&!tab->browser->IsLoading())ContentPageLoaded(id);
   Layout();
   EmitState();
 }
@@ -1284,7 +1285,7 @@ void BrowserWindow::BrowserClosed(CefRefPtr<CefBrowser> browser, int tab_id,
 }
 
 void BrowserWindow::FocusAddress() {
-  if(auto* tab=ActiveTab())tab->focus_home_on_load=false;
+  if(auto* tab=ActiveTab()){tab->focus_home_on_load=false;tab->pending_home_input.clear();tab->pending_home_submit=false;}
   if (settings_overlay_) { FocusSettings(); return; }
   if (!shell_ || !shell_->GetMainFrame()) return;
   if (surface_) surface_->Focus();
@@ -1359,6 +1360,7 @@ void BrowserWindow::UpdateAddress(int id, const std::string& url) {
       ++tab->document_generation;tab->reader_active=false;tab->reader_article=nullptr;
     }
     tab->url = next;
+    if(next!="soulu://home"){tab->focus_home_on_load=false;tab->pending_home_input.clear();tab->pending_home_submit=false;}
   }
   Layout();
   EmitState();

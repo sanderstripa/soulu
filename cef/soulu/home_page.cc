@@ -123,7 +123,9 @@ void BrowserWindow::ContentPageLoaded(int id) {
     if(tab->focus_home_on_load&&id==active_tab_id_&&!SettingsOverlayActive()){
       tab->focus_home_on_load=false;
       tab->browser->GetHost()->SetFocus(true);
-      frame->ExecuteJavaScript("window.souluHomeFocus&&window.souluHomeFocus()",frame->GetURL(),0);
+      auto text=CefValue::Create();text->SetString(CefString(tab->pending_home_input));
+      const auto submit=tab->pending_home_submit;tab->pending_home_input.clear();tab->pending_home_submit=false;
+      frame->ExecuteJavaScript("window.souluHomeFocus&&window.souluHomeFocus("+CefWriteJSON(text,JSON_WRITER_DEFAULT).ToString()+","+(submit?"true":"false")+")",frame->GetURL(),0);
     }return;}
   if(frame->GetURL()!=InternalUrl("about:blank"))return;
   const std::string theme=HomeState(*tab)->GetString("resolvedTheme");
@@ -254,6 +256,23 @@ bool BrowserWindow::ValidatePagePatch(CefRefPtr<CefDictionaryValue> patch) const
       if(!url.empty()&&WebUrl(url).empty())return false;
     }
   }
+  return true;
+}
+
+bool BrowserWindow::BufferHomeInput(const CefKeyEvent& event) {
+  auto* tab=ActiveTab();
+  if(!tab||!tab->focus_home_on_load||tab->url!="soulu://home"||event.type!=KEYEVENT_CHAR||
+     (event.modifiers&(EVENTFLAG_CONTROL_DOWN|EVENTFLAG_ALT_DOWN)))return false;
+  const auto character=static_cast<wchar_t>(event.character);
+  if(character==L'\r'){tab->pending_home_submit=true;return true;}
+  if(character==L'\b'){
+    if(!tab->pending_home_input.empty()){
+      const auto last=tab->pending_home_input.back();tab->pending_home_input.pop_back();
+      if(last>=0xdc00&&last<=0xdfff&&!tab->pending_home_input.empty()&&tab->pending_home_input.back()>=0xd800&&tab->pending_home_input.back()<=0xdbff)tab->pending_home_input.pop_back();
+    }return true;
+  }
+  if(character<32)return false;
+  if(tab->pending_home_input.size()<4096)tab->pending_home_input+=character;
   return true;
 }
 
