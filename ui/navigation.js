@@ -19,7 +19,7 @@
   const children=id=>rows.filter(r=>(r.parentId||0)===id).sort((a,b)=>(a.order||0)-(b.order||0));
   const descendants=id=>{const found=new Set([id]);let changed=true;while(changed){changed=false;for(const r of rows)if(found.has(r.parentId)&&!found.has(r.id)){found.add(r.id);changed=true;}}return found;};
   async function persist(next){if(busy)throw Error('Дождитесь сохранения');busy=true;try{rows=await api.replaceBookmarks(next);render();}finally{busy=false;}}
-  const updatePopover=()=>{const open=Boolean(document.querySelector('.bookmark-context'));shield.hidden=!open;return api.setPopover(open,'bookmarks');};
+  const updatePopover=()=>{const open=Boolean(document.querySelector('.bookmark-context'));shield.hidden=!(open||editor);return api.setPopover(open,'bookmarks');};
   const closeMenu=()=>{pane='list';menu.hidden=true;api.setBookmarksSidebar(false);document.querySelector('.bookmark-context')?.remove();updatePopover();api.setSuggestionsHeight(0);};
   async function openMenu(id=0,editor=false){await api.setOverview(false);rows=await api.getBookmarks();parent=id;manage=editor;pane='list';query='';menuSearch.value='';menu.hidden=false;await api.setBookmarksSidebar(true);await updatePopover();renderMenu();menuSearch.focus();}
   function icon(row){const n=el('span','bookmark-icon',row.type==='folder'?'▱':'◉');if(row.favicon&&row.type!=='folder'){const im=el('img');im.src=row.favicon;im.alt='';im.onerror=()=>im.remove();n.replaceChildren(im);}return n;}
@@ -65,9 +65,60 @@
     if(command>0&&commands[command-1])await commands[command-1]();
   }
 
-  async function edit(row){const title=prompt('Название',row.title||'');if(title===null)return;let url=row.url;if(row.type!=='folder'){url=prompt('URL',url||'');if(url===null)return;if(!/^https?:\/\//i.test(url)){alert('Введите HTTP или HTTPS URL');return;}}await persist(rows.map(r=>r.id===row.id?{...r,title,url,updatedAt:Date.now()}:r));}
-  async function folder(){const title=prompt('Название папки');if(!title?.trim())return;await persist([...rows,{id:nextId(),type:'folder',title:title.trim(),parentId:parent,order:children(parent).length,createdAt:Date.now()}]);}
-  async function add(){const before=new Set(rows.map(r=>r.id));rows=await api.addBookmark();if(parent)await persist(rows.map(r=>before.has(r.id)?r:{...r,parentId:parent,order:children(parent).length}));else render();}
+  let editor=null, editorReturn=null;
+  const profileKey=()=>String(state.activeProfileId)+':'+String(state.incognito);
+  function closeEditor(restore=true){if(!editor)return;editor.remove();editor=null;api.setPopover(false,'bookmark-editor');updatePopover();if(restore&&editorReturn?.isConnected)editorReturn.focus();editorReturn=null;}
+  async function edit(row=null,newFolder=false){
+    closeEditor(false);
+    rows=await api.getBookmarks();
+    const key=profileKey(),page={...state.page};
+    if(!row&&!newFolder){
+      if(!/^https?:\/\//i.test(page.url||'')){await openMenu();return;}
+      row=rows.find(mark=>mark.type!=='folder'&&mark.url===page.url)||null;
+    }
+    const isFolder=newFolder||row?.type==='folder',existing=row;
+    const en=state.settings?.language==='en',t=(ru,english)=>en?english:ru;
+    editorReturn=document.activeElement;
+    const box=el('form','bookmark-editor');editor=box;
+    box.setAttribute('role','dialog');box.setAttribute('aria-label',t(existing?'Изменить закладку':isFolder?'Новая папка':'Сохранить закладку',existing?'Edit bookmark':isFolder?'New folder':'Save bookmark'));
+    const top=el('div','bookmark-editor-head');top.append(el('strong','',box.getAttribute('aria-label')),button('×',()=>closeEditor()));top.lastChild.setAttribute('aria-label',t('Закрыть','Close'));box.append(top);
+    function field(label,id,value){const wrap=el('label','bookmark-editor-field',label),input=el('input');input.id=id;input.value=value||'';input.required=true;wrap.append(input);box.append(wrap);return input;}
+    const title=field(t('Название','Name'),'bookmarkTitle',existing?.title||(isFolder?'':page.title));
+    const url=isFolder?null:field(t('Адрес','Address'),'bookmarkUrl',existing?.url||page.url);
+    const place=el('label','bookmark-editor-field',t('Сохранить в','Save in')),select=el('select');select.id='bookmarkFolder';
+    select.append(new Option(t('Панель закладок','Bookmarks bar'),'0'));
+    const excluded=existing?descendants(existing.id):new Set();
+    const path=mark=>{const names=[mark.title];let id=mark.parentId,depth=0;while(id&&depth++<64){const folder=rows.find(r=>r.id===id);if(!folder)break;names.unshift(folder.title);id=folder.parentId;}return names.join(' / ');};
+    for(const mark of rows.filter(r=>r.type==='folder'&&!excluded.has(r.id)))select.append(new Option(path(mark),String(mark.id)));
+    select.value=String(existing?.parentId||parent||0);if(select.selectedIndex<0)select.value='0';place.append(select);box.append(place);
+    const favorite=el('input');favorite.type='checkbox';favorite.id='bookmarkHomeFavorite';favorite.checked=!!existing&&(state.settings?.homeFavoriteIds||[]).includes(existing.id);
+    if(!isFolder){const label=el('label','bookmark-editor-favorite');label.append(favorite,document.createTextNode(t('Избранное на Home','Home favorites')));box.append(label);}
+    const error=el('p','bookmark-editor-error');error.setAttribute('role','alert');error.hidden=true;box.append(error);
+    const footer=el('div','bookmark-editor-footer'),cancel=button(t('Отмена','Cancel'),()=>closeEditor()),save=button(t('Сохранить','Save'),()=>{});save.type='submit';footer.append(cancel,save);box.append(footer);
+    box.onsubmit=async e=>{e.preventDefault();if(save.disabled)return;error.hidden=true;let address=url?.value.trim();
+      if(url){try{const parsed=new URL(address);if(!['http:','https:'].includes(parsed.protocol)||!parsed.hostname||parsed.username||parsed.password)throw Error();address=parsed.href;}catch{error.textContent=t('Введите адрес HTTP или HTTPS.','Enter an HTTP or HTTPS address.');error.hidden=false;url.focus();return;}}
+      if(!title.value.trim()){title.focus();return;}save.disabled=true;cancel.disabled=true;
+      try{
+        if(profileKey()!==key)throw Error(t('Профиль изменился. Откройте редактор заново.','The profile changed. Open the editor again.'));
+        rows=await api.getBookmarks();
+        if(profileKey()!==key)throw Error(t('Профиль изменился. Откройте редактор заново.','The profile changed. Open the editor again.'));
+        const mark=existing?rows.find(r=>r.id===existing.id):null;
+        if(existing&&!mark)throw Error(t('Закладка уже удалена.','This bookmark was deleted.'));
+        const next=mark?{...mark}:{id:nextId(),type:isFolder?'folder':'url',createdAt:Date.now(),order:rows.length};
+        Object.assign(next,{title:title.value.trim(),parentId:Number(select.value),updatedAt:Date.now()});if(url){next.url=address;if(!mark&&address===page.url)next.favicon=page.favicon;}
+        await persist(mark?rows.map(r=>r.id===mark.id?next:r):[...rows,next]);
+        if(profileKey()!==key)throw Error(t('Профиль изменился.','The profile changed.'));
+        if(!isFolder){const ids=state.settings?.homeFavoriteIds||[],selected=favorite.checked;await api.setSettings({homeFavoriteIds:selected?[...new Set([...ids,next.id])]:ids.filter(id=>id!==next.id)});}
+        closeEditor();
+      }catch(reason){error.textContent=reason.message;error.hidden=false;save.disabled=false;cancel.disabled=false;}
+    };
+    document.body.append(box);await api.setPopover(true,'bookmark-editor');updatePopover();
+    const anchor=document.querySelector(state.settings?.layout==='classic'?'#favoritesButton':'.compact-toolbar [data-favorites]')?.getBoundingClientRect();
+    const width=box.getBoundingClientRect().width;box.style.left=Math.max(12,Math.min(innerWidth-width-12,(anchor?.right||innerWidth)-width))+'px';box.style.top=(anchor?.bottom||document.querySelector('.browser-toolbar:not([hidden])')?.getBoundingClientRect().bottom||58)+10+'px';title.focus();title.select();
+    box.onkeydown=e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();closeEditor();}else if(e.key==='Tab'){const focusable=[...box.querySelectorAll('button,input,select')].filter(n=>!n.disabled);if(e.shiftKey&&document.activeElement===focusable[0]){e.preventDefault();focusable.at(-1).focus();}else if(!e.shiftKey&&document.activeElement===focusable.at(-1)){e.preventDefault();focusable[0].focus();}}};
+  }
+  async function folder(){await edit(null,true);}
+  async function add(){await edit();}
   actions.append(button('Все закладки',()=>{pane='list';parent=0;query='';menuSearch.value='';manage=false;renderMenu();}),button('Управление закладками',()=>{pane='list';manage=true;renderMenu();}),button('Добавить текущую страницу',add),button('Создать папку',folder),button('Импортировать закладки…',importMenu));
   const options=el('div','bookmark-options');
   const settingsAction=button('Настройки закладок',()=>{closeMenu();api.openSettingsWindow();});
@@ -78,13 +129,14 @@
   function render(){renderBar();if(!menu.hidden)renderMenu();overview.hidden=!state.overviewVisible;renderOverview();}
   async function importMenu(){pane='import';contents.replaceChildren(el('p','','Chrome / Edge / Brave / другие Chromium: файл Bookmarks (JSON) или экспорт HTML. Firefox: экспорт закладок HTML. Пароли не импортируются.'));const input=el('input');input.type='file';input.setAttribute('aria-label','Файл закладок Chromium JSON или HTML-экспорт');contents.append(input);input.onchange=async()=>{try{const file=input.files[0];if(!file)return;const profile=String(state.activeProfileId)+':'+String(state.incognito);if(file.size>20*1024*1024)throw Error('Файл превышает 20 МБ');const text=await file.text();if(menu.hidden||pane!=='import')return;if(profile!==String(state.activeProfileId)+':'+String(state.incognito))throw Error('Профиль изменился. Откройте импорт заново.');let nodes=[];if(text.trim().startsWith('{')){const data=JSON.parse(text);if(!data.roots)throw Error('Нужен стандартный Chromium Bookmarks JSON');nodes=Object.values(data.roots);}else{const doc=new DOMParser().parseFromString(text,'text/html');if(!doc.querySelector('dl'))throw Error('Нужен экспорт закладок HTML');const parse=dl=>[...dl.children].filter(n=>n.tagName==='DT').map(dt=>{const a=dt.querySelector(':scope > a'),h=dt.querySelector(':scope > h3');if(a)return {type:'url',name:a.textContent,url:a.getAttribute('href')};const nested=dt.querySelector(':scope > dl');return h?{type:'folder',name:h.textContent,children:nested?parse(nested):[]}:null;}).filter(Boolean);nodes=parse(doc.querySelector('dl'));}const next=rows.map(r=>({...r}));let id=nextId(),added=0;const walk=(ns,p,depth=0)=>{if(depth>64)throw Error('Слишком глубокая вложенность');for(const n of ns){if(next.length>=20000)throw Error('Слишком много закладок');if(n.type==='folder'||n.children){let existing=next.find(r=>r.type==='folder'&&(r.parentId||0)===p&&r.title===(n.name||'Импорт'));if(!existing){existing={id:id++,type:'folder',title:n.name||'Импорт',parentId:p,order:next.length,createdAt:Date.now()};next.push(existing);added++;}walk(n.children||[],existing.id,depth+1);}else if(/^https?:\/\//i.test(n.url||'')&&!next.some(r=>r.url===n.url)){next.push({id:id++,type:'url',title:n.name||n.url,url:n.url,parentId:p,order:next.length,createdAt:Date.now()});added++;}}};walk(nodes,0);if(!added){alert('Новых закладок нет. Дубликаты пропущены.');return;}if(!confirm('Добавить '+added+' элементов из '+file.name+'? Дубликаты URL будут пропущены.'))return;pane='list';await persist(next);alert('Импорт завершён');}catch(error){alert(error.message);}};}
   for(const [selector,before] of [['.window-controls','#windowMinimize'],['.compact-toolbar-surface','#compactWindowMinimize']]){const host=document.querySelector(selector);if(!host)continue;const tabs=button('',async()=>{closeMenu();await api.setOverview(!state.overviewVisible);});tabs.classList.add('navigation-toolbar-button',selector==='.window-controls'?'toolbar-button':'compact-control');tabs.title='Обзор вкладок';tabs.setAttribute('aria-label','Обзор вкладок');tabs.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 7V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h2"/><rect x="7" y="7" width="14" height="14" rx="1.8"/></svg>';host.insertBefore(tabs,host.querySelector(before));}
-  document.addEventListener('click',e=>{if(e.target.closest('#favoritesButton,[data-favorites]')){e.preventDefault();e.stopImmediatePropagation();if(menu.hidden)openMenu();else closeMenu();}},true);
+  document.addEventListener('click',e=>{if(e.target.closest('#favoritesButton,[data-favorites]')){e.preventDefault();e.stopImmediatePropagation();edit();}else if(e.target.closest('#sidebarButton,#compactSidebarButton')){e.preventDefault();e.stopImmediatePropagation();closeEditor(false);if(menu.hidden)openMenu();else closeMenu();}},true);
   document.addEventListener('pointerdown',e=>{if(!e.target.closest('.bookmark-context')){document.querySelector('.bookmark-context')?.remove();updatePopover();}});
-  document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeMenu();api.setOverview(false);}if(e.ctrlKey&&e.shiftKey&&e.key.toLowerCase()==='b'){e.preventDefault();api.setBookmarksAuto(!state.bookmarksBarVisible);}});
+  shield.addEventListener('pointerdown',()=>closeEditor());
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeEditor();closeMenu();api.setOverview(false);}if(e.ctrlKey&&e.shiftKey&&e.key.toLowerCase()==='b'){e.preventDefault();api.setBookmarksAuto(!state.bookmarksBarVisible);}});
   let autoTimer=0;
   for(const header of document.querySelectorAll('.browser-toolbar')){header.addEventListener('pointerenter',()=>{clearTimeout(autoTimer);if(state.settings?.bookmarksBarMode==='auto'&&!state.bookmarksBarVisible)api.setBookmarksAuto(true);});header.addEventListener('pointerleave',()=>{autoTimer=setTimeout(()=>{if(state.settings?.bookmarksBarMode==='auto'&&menu.hidden&&!bar.matches(':hover'))api.setBookmarksAuto(false);},500);});}
   bar.addEventListener('pointerenter',()=>clearTimeout(autoTimer));bar.addEventListener('pointerleave',()=>{if(state.settings?.bookmarksBarMode==='auto'&&menu.hidden)api.setBookmarksAuto(false);});
   window.addEventListener('resize',()=>{renderBar();if(!menu.hidden)renderMenu();});
   window.souluNavigation={openBookmarks:openMenu};
-  const apply=s=>{const entered=s.overviewVisible&&!state.overviewVisible;state=s;rows=s.bookmarks||rows;menu.hidden=!s.bookmarksSidebarVisible;if(entered)closeMenu();render();if(entered){search.value='';renderOverview();search.focus();}};api.onState(apply);api.getState().then(apply);
+  const apply=s=>{const changed=profileKey()!==String(s.activeProfileId)+':'+String(s.incognito),entered=s.overviewVisible&&!state.overviewVisible;state=s;if(changed)closeEditor(false);rows=s.bookmarks||rows;menu.hidden=!s.bookmarksSidebarVisible;if(entered){closeEditor(false);closeMenu();}render();document.querySelectorAll('#sidebarButton,#compactSidebarButton').forEach(n=>{n.title=s.settings?.language==='en'?'Bookmarks':'Закладки';n.setAttribute('aria-label',n.title);n.classList.toggle('active',!!s.bookmarksSidebarVisible);});document.querySelectorAll('#favoritesButton,[data-favorites]').forEach(n=>{n.title=s.settings?.language==='en'?'Save bookmark':'Сохранить закладку';const saved=rows.some(r=>r.url===s.page?.url);n.classList.toggle('bookmark-saved',saved);n.setAttribute('aria-pressed',String(saved));});if(entered){search.value='';renderOverview();search.focus();}};api.onState(apply);api.getState().then(apply);
 })();

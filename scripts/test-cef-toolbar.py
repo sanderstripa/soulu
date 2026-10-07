@@ -37,7 +37,7 @@ def wait(fn,timeout=30):
 def main():
     exe=Path(sys.argv[1]).resolve();out=Path(sys.argv[2]);out.parent.mkdir(parents=True,exist_ok=True)
     visuals=out.parent/'toolbar-visuals';visuals.mkdir(exist_ok=True)
-    report={'passed':False,'checks':[], 'matrix':[], 'limitations':['CDP emulation verifies raster scales, not moving between physical monitors.','Authenticated Google/Ozon and working VPN require the user profile.','Windows 11 Snap Layout flyout is not implemented by the existing OSR caption architecture.']}
+    report={'passed':False,'checks':[], 'matrix':[], 'limitations':['CDP emulation verifies raster scales, not moving between physical monitors.','Authenticated Google/Ozon and working VPN require the user profile.','Physical Snap flyout and snapped fullscreen restore are checked separately from this caption style suite.']}
     def check(ok,label):
         assert ok,label
         report['checks'].append(label);print('PASS:',label,flush=True)
@@ -87,8 +87,8 @@ def main():
                         E('''(async()=>{const p=getComputedStyle(document.querySelector('''+json.dumps(selector)+'''),'::before');const d=p.transitionDuration.split(',')[0].trim();await new Promise(r=>setTimeout(r,parseFloat(d)*(d.endsWith('ms')?1:1000)+34));})()''')
                         data=E('''(()=>{const n=document.querySelector('''+json.dumps(selector)+'''),r=n.getBoundingClientRect(),g=n.querySelector('svg').getBoundingClientRect(),c=getComputedStyle(n),p=getComputedStyle(n,'::before');return {w:r.width,h:r.height,bg:c.backgroundColor,pw:p.width,ph:p.height,radius:p.borderRadius,fill:p.backgroundColor,glyph:{w:g.width,h:g.height,x:g.x-r.x,y:g.y-r.y},transform:getComputedStyle(n.querySelector('svg')).transform}})()''')
                         check(data['w']==42 and data['h']==(48 if layout=='classic' else 58) and data['bg'] in ('rgba(0, 0, 0, 0)','transparent'),f'{layout}/{action}/{pseudo}: full caption target transparent')
-                        check(data['pw']==('30px' if layout=='classic' else '32px') and data['ph']==('30px' if layout=='classic' else '32px') and data['radius']=='50%' and data['transform']=='none',f'{layout}/{action}/{pseudo}: circular 30px feedback')
-                        check(data['glyph']=={'w':16,'h':16,'x':13,'y':16},f'{layout}/{action}/{pseudo}: stable centered glyph')
+                        check(data['pw']==('30px' if layout=='classic' else '32px') and data['ph']==('30px' if layout=='classic' else '32px') and data['radius']=='50%' and data['transform']=='none',f'{layout}/{action}/{pseudo}: canonical circular feedback')
+                        check(data['glyph']=={'w':16,'h':16,'x':13,'y':(data['h']-16)/2},f'{layout}/{action}/{pseudo}: stable centered glyph')
                         colors.append(data['fill'])
                         if pseudo==['hover']:
                             label='Restore' if action=='Maximize' and E('document.querySelector('+json.dumps(selector)+'+" rect").getAttribute("width")==="7"') else action

@@ -71,6 +71,9 @@ def main():
       for width,height in ((1280,800),(640,480),(360,420)):
        s.command(home,'Emulation.setDeviceMetricsOverride',{'width':width,'height':height,'deviceScaleFactor':scale,'mobile':False})
        row=geometry();check(not row['overflow'] and abs(row['search']['x']+row['search']['w']/2-width/2)<2 and row['input']['w']>25 and row['search']['right']<=width, f'Layout {language}/{theme}/{scale}/{width}')
+       if width==1280:
+        check(row['search']['w']==700 and row['search']['h']==58 and row['logo']['w']==112,'Compact Home search and logo geometry')
+        check(abs((row['logo']['y']+row['search']['bottom'])/2-height*.46)<2,'Home group is raised without losing horizontal centering')
       s.command(home,'Emulation.setDeviceMetricsOverride',{'width':1280,'height':800,'deviceScaleFactor':scale,'mobile':False})
       capture(f'home-{language}-{theme}-{scale}')
    s.command(home,'Emulation.clearDeviceMetricsOverride');settings({'language':'ru','theme':'light','layout':'compact'})
@@ -92,6 +95,10 @@ def main():
    check(s.evaluate(home,"['cancelled','unavailable','denied','error'].includes(window.voiceResult.status)"),'Native voice cancel/no-device path releases without a crash')
    settings({'homeWeatherMode':'configured','homeWeatherCity':'Yekaterinburg','homeWeatherUnits':'celsius'})
    data=bridge(home,'home.weather');check(data['status']=='ready' and len(data['daily']['time'])>=4,'Real HTTPS weather current and forecast')
+   s.evaluate(home,"document.querySelector('#weatherToggle').click()")
+   wait(lambda:s.evaluate(home,"!!document.querySelector('#weatherDetail svg[data-condition]')"))
+   check(s.evaluate(home,"!document.querySelector('#weatherDetail a')"),'Forecast card has no provider footer')
+   check(s.evaluate(home,"!!document.querySelector('#weatherIcon svg[data-condition]')"),'Weather summary and forecast use condition accents')
    again=bridge(home,'home.weather');check(data['fetchedAt']==again['fetchedAt'],'Weather service shares a fresh cache')
    s.evaluate(home,"document.querySelector('#weatherToggle').click()")
    wait(lambda:s.evaluate(home,"document.querySelectorAll('.forecast-day').length>=3"))
