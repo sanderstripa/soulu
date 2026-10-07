@@ -118,6 +118,10 @@ def main():
             s.evaluate(h,"document.querySelector('#favoritesToggle').click();document.querySelector('.favorite').click()")
             wait(lambda:current_url()==origin+'/two');check(len(state()['tabs'])==1,'Favorite opens inside current Soulu tab')
             call('home');h=page()
+            s.evaluate(h,"document.querySelector('#favoritesToggle').click()")
+            s.command(h,'Input.dispatchKeyEvent',{'type':'keyDown','key':' ','code':'Space','windowsVirtualKeyCode':32})
+            wait(lambda:current_url()==origin+'/two');check(len(state()['tabs'])==1,'Space activates the focused real favorite inside Soulu')
+            call('home');h=page()
             for theme in ('light','dark','system'):
                 call('setSettings',{'theme':theme});wait(lambda:home(h,'home.get')['theme']==theme)
                 check(s.evaluate(h,"['light','dark'].includes(document.body.dataset.theme)"),'Resolved '+theme+' theme')

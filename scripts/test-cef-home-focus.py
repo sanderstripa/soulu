@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import shutil
 import sys
 import tempfile
 import time
@@ -22,6 +23,7 @@ u.ClientToScreen.argtypes=[W.HWND,C.POINTER(W.POINT)]
 u.GetClassNameW.argtypes=[W.HWND,W.LPWSTR,C.c_int]
 u.IsWindowVisible.argtypes=[W.HWND]
 u.BringWindowToTop.argtypes=[W.HWND]
+u.GetDpiForWindow.argtypes=[W.HWND]
 class Keyboard(C.Structure):
  _fields_=[('vk',W.WORD),('scan',W.WORD),('flags',W.DWORD),('time',W.DWORD),('extra',C.c_size_t)]
 class Mouse(C.Structure):
@@ -58,8 +60,10 @@ def foreground(hwnd):
   u.AttachThreadInput(current,thread,True);u.BringWindowToTop(hwnd);u.SetForegroundWindow(hwnd);u.AttachThreadInput(current,thread,False)
  assert u.GetForegroundWindow()==hwnd,'Only the isolated Soulu window may receive native test input'
 
-def text(value):
+def text(value,prefix=()):
  events=[]
+ for vk,flags in prefix:
+  event=Input();event.kind=1;event.payload.keyboard=Keyboard(vk,0,flags,0,0);events.append(event)
  raw=value.encode('utf-16-le')
  for i in range(0,len(raw),2):
   code=int.from_bytes(raw[i:i+2],'little')
@@ -102,10 +106,10 @@ def main():
     before=len(s.evaluate(shell,'browserShell.getState()')['tabs']);foreground(hwnd)
     if action=='plus':
      point=s.evaluate(shell,"(()=>{const r=document.querySelector('#compactNewTabButton').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()")
-     screen=W.POINT(round(point['x']),round(point['y']));u.ClientToScreen(hwnd,C.byref(screen));u.SetCursorPos(screen.x,screen.y);time.sleep(.15);u.mouse_event(2,0,0,0,0);time.sleep(.05);u.mouse_event(4,0,0,0,0)
-    else:shortcut('T')
+     scale=s.evaluate(shell,'devicePixelRatio')
+     screen=W.POINT(round(point['x']*scale),round(point['y']*scale));u.ClientToScreen(hwnd,C.byref(screen));u.SetCursorPos(screen.x,screen.y);time.sleep(.15);u.mouse_event(2,0,0,0,0);time.sleep(.05);u.mouse_event(4,0,0,0,0)
     # No DOM wait, click, focus call or navigation bridge between creation and input.
-    print('INPUT',action,'tabs before',before,'window',hwnd,'point',point if action=='plus' else None,flush=True);text('openai.com')
+    print('INPUT',action,'tabs before',before,'DPI',u.GetDpiForWindow(hwnd),'scale',scale if action=='plus' else None,flush=True);text('openai.com',((17,0),(ord('T'),0),(ord('T'),2),(17,2)) if action=='Ctrl+T' else ())
     wait(lambda:len(s.evaluate(shell,'browserShell.getState()')['tabs'])==before+1);page=wait(home)
     wait(lambda:s.evaluate(page,"document.querySelector('#query').value==='openai.com'"))
     check(s.evaluate(page,"document.activeElement.id==='query'&&document.hasFocus()"),action+' immediately retains all native typed characters in Home')
@@ -117,6 +121,9 @@ def main():
    report.parent.mkdir(parents=True,exist_ok=True);report.write_text(json.dumps({'passed':True,'checks':checks,'input':'Real Windows pointer and Unicode keyboard input; no programmatic Home focus.'},ensure_ascii=False,indent=2),encoding='utf-8')
   except Exception:
    print('PROCESS EXIT',process.poll(),flush=True)
+   report.parent.mkdir(parents=True,exist_ok=True)
+   log=Path(root)/'Soulu/User Data/Profiles/chrome_debug.log'
+   if log.is_file():shutil.copyfile(log,report.with_suffix('.debug.log'))
    raise
   finally:
    for ws in sockets:

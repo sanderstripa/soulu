@@ -51,7 +51,9 @@ def main():
    target=wait(lambda:next((x for x in s.targets() if fragment in x.get('url','')),None))
    ws=s.websocket.create_connection(target['webSocketDebuggerUrl'],timeout=40,origin=s.BASE);sockets.append(ws);return ws
   try:
-   shell=connect('/ui/index.html');home=connect('/ui/home.html');wait(lambda:s.evaluate(home,"typeof window.souluHomeApply==='function' && document.fonts.check('400 14px Onest')"))
+   shell=connect('/ui/index.html')
+   wait(lambda:s.evaluate(shell,"typeof window.browserShell?.setSettings==='function'"))
+   home=connect('/ui/home.html');wait(lambda:s.evaluate(home,"typeof window.souluHomeApply==='function' && document.fonts.check('400 14px Onest')"))
    def bridge(ws,action,payload=None):return s.evaluate(ws,"new Promise((resolve,reject)=>cefQuery({request:"+json.dumps(json.dumps({'action':action,'payload':payload}))+",onSuccess:v=>resolve(v?JSON.parse(v):null),onFailure:(_,m)=>reject(Error(m))}))")
    def settings(patch):return s.evaluate(shell,'browserShell.setSettings('+json.dumps(patch)+')')
    def capture(name,native=False):
@@ -92,7 +94,9 @@ def main():
    data=bridge(home,'home.weather');check(data['status']=='ready' and len(data['daily']['time'])>=4,'Real HTTPS weather current and forecast')
    again=bridge(home,'home.weather');check(data['fetchedAt']==again['fetchedAt'],'Weather service shares a fresh cache')
    s.evaluate(home,"document.querySelector('#weatherToggle').click()")
-   wait(lambda:s.evaluate(home,"document.querySelectorAll('.forecast-day').length>=3"));capture('weather-real-forecast',True)
+   wait(lambda:s.evaluate(home,"document.querySelectorAll('.forecast-day').length>=3"))
+   check(s.evaluate(home,"document.querySelector('.weather-temperature').textContent.endsWith(String.fromCharCode(176)) && !document.querySelector('#weatherDetail').textContent.includes(String.fromCharCode(194))"),'Weather renders degree units without broken Unicode text')
+   capture('weather-real-forecast',True)
    check((Path(root)/'Soulu/User Data/Profiles/personal/soulu-weather.json').is_file(),'Normal profile weather cache persists')
    s.command(home,'Network.enable');s.command(home,'Network.emulateNetworkConditions',{'offline':True,'latency':0,'downloadThroughput':0,'uploadThroughput':0});s.command(home,'Page.reload')
    wait(lambda:s.evaluate(home,"typeof window.souluHomeApply==='function' && document.documentElement.classList.contains('typography-ready')"))

@@ -1,4 +1,18 @@
-# Soulu Beta 1.0.55 — native menus and local page translation
+# Soulu Beta 1.0.56 — Soulu Home
+
+- Minimal local Home follows the approved layout, with the canonical logo, search capsule and separate weather/favorites popovers.
+- Home offers Google and Perplexity independently from the omnibox provider, with direct address navigation and native foreground input focus.
+- Immediate typing is retained while Home loads; Ctrl+L keeps control of the omnibox.
+- Favorites use real ordered profile bookmark IDs and are managed through ordinary Settings. Legacy shortcuts migrate without deleting their source data.
+- Weather uses Open-Meteo through the originating browser network context, with configured city or explicitly permitted Windows location, current conditions, five following days, bounded cache and calm offline behavior.
+- Microphone capture and RU/EN recognition run locally with an integrity-pinned multilingual Whisper model. The interface distinguishes preparation, listening and recognition; cancellation releases the microphone and invalidates results.
+- Existing page intents, profiles, private state and session behavior remain independent. New profiles receive Soulu Home and Google defaults.
+- Bundled Onest, light/dark/system themes and responsive layouts are retained. No dashboard, feed, widgets, background editor or inline Home settings are added.
+- CEF 154.0.33+ga03e714 / Chromium 154.0.8037.94 remain unchanged.
+
+Voice recognition requires an available microphone and permission. Weather requires network access and a saved city or permitted Windows location. Public speech fixtures do not substitute for live microphone verification.
+
+## Beta 1.0.55 — native menus and local page translation
 
 - A shared native Soulu Menu System replaces browser-owned default context menus, using Onest, browser themes, keyboard navigation, nested menus and Windows accessibility.
 - Expanded page, link, image and media menus connect to real browser commands, with foreground/background tabs, separate normal/private windows, clipboard actions, downloads, Reader, local QR codes and translation.
