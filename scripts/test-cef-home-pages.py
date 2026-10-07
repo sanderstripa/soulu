@@ -60,16 +60,27 @@ def main():
         def state():return s.evaluate(shell,'browserShell.getState()')
         def call(method,payload=None):return s.evaluate(shell,'browserShell.'+method+'('+('' if payload is None else json.dumps(payload))+')')
         def page(fragment='/ui/home.html'):
+            diagnostics=[]
             def find():
                 for target in s.targets():
                     if fragment not in target.get('url',''):continue
-                    ws=socket(target);connections.append(ws)
+                    ws=socket(target)
                     try:
-                        if fragment=='/ui/home.html' and home(ws,'home.get')['tabId']!=state()['activeTabId']:continue
-                        if s.evaluate(ws,"document.readyState==='complete'"):return ws
-                    except Exception:continue
+                        # The target URL changes before the new document/context is ready.
+                        # Do not await a bridge promise from the departing context:
+                        # navigation cancels that query without settling its JS promise.
+                        if not s.evaluate(ws,"document.readyState==='complete'"+ (" && typeof window.souluHomeApply==='function'" if fragment=='/ui/home.html' else '')):
+                            ws.close();continue
+                        if fragment=='/ui/home.html' and home(ws,'home.get')['tabId']!=state()['activeTabId']:
+                            ws.close();continue
+                        connections.append(ws);return ws
+                    except Exception as error:
+                        diagnostics.append(str(error)[:500]);ws.close();continue
                 return None
-            return wait(find)
+            try:return wait(find)
+            except AssertionError:
+                print('PAGE TIMEOUT DIAGNOSTICS:',json.dumps({'state':state(),'targets':[{'url':t.get('url'),'type':t.get('type')} for t in s.targets()],'errors':diagnostics[-5:]},ensure_ascii=False),flush=True)
+                raise
         def home(ws,action,payload=None):
             if action=='home.navigate':
                 s.command(ws,'Runtime.evaluate',{'expression':"cefQuery({request:"+json.dumps(json.dumps({'action':action,'payload':payload}))+",onSuccess:()=>{},onFailure:()=>{}})",'awaitPromise':False})
