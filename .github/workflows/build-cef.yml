@@ -312,22 +312,6 @@ jobs:
           python browser/scripts/test-cef-adblock-lifetime.py "$env:build_dir/Soulu.exe" browser/artifacts/adblock-lifetime.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: Compare real public websites with AdBlock OFF and ON
-        shell: pwsh
-        run: |
-          python browser/scripts/test-cef-adblock-public.py "$env:build_dir/Soulu.exe" browser/artifacts/adblock-public
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-      - name: Upload AdBlock evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: Soulu-adblock-${{ github.sha }}
-          path: |
-            browser/artifacts/adblock*.json
-            browser/artifacts/adblock-public/
-          if-no-files-found: ignore
-
       - name: Test Soulu site permissions and reading palette
         shell: pwsh
         run: |
@@ -1116,6 +1100,22 @@ jobs:
         with:
           name: Soulu-native-menu-typography-${{ github.sha }}
           path: browser/artifacts/native-menu-visuals/
+          if-no-files-found: ignore
+
+      - name: Compare real public websites with AdBlock OFF and ON
+        shell: pwsh
+        run: |
+          python browser/scripts/test-cef-adblock-public.py "$env:build_dir/Soulu.exe" browser/artifacts/adblock-public
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Upload AdBlock evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Soulu-adblock-${{ github.sha }}
+          path: |
+            browser/artifacts/adblock*.json
+            browser/artifacts/adblock-public/
           if-no-files-found: ignore
 
       - name: Verify release source is the current main commit
