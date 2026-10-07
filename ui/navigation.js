@@ -65,13 +65,15 @@
     if(command>0&&commands[command-1])await commands[command-1]();
   }
 
-  let editor=null, editorReturn=null;
+  let editor=null, editorReturn=null, editorGeneration=0;
   const profileKey=()=>String(state.activeProfileId)+':'+String(state.incognito);
-  function closeEditor(restore=true){if(!editor)return;editor.remove();editor=null;api.setPopover(false,'bookmark-editor');updatePopover();if(restore&&editorReturn?.isConnected)editorReturn.focus();editorReturn=null;}
+  function closeEditor(restore=true){++editorGeneration;if(!editor)return;editor.remove();editor=null;api.setPopover(false,'bookmark-editor');updatePopover();if(restore&&editorReturn?.isConnected)editorReturn.focus();editorReturn=null;}
   async function edit(row=null,newFolder=false){
     closeEditor(false);
+    const key=profileKey(),generation=editorGeneration;
     rows=await api.getBookmarks();
-    const key=profileKey(),page={...state.page};
+    if(profileKey()!==key||generation!==editorGeneration)return;
+    const page={...state.page};
     if(!row&&!newFolder){
       if(!/^https?:\/\//i.test(page.url||'')){await openMenu();return;}
       row=rows.find(mark=>mark.type!=='folder'&&mark.url===page.url)||null;
@@ -90,7 +92,7 @@
     const excluded=existing?descendants(existing.id):new Set();
     const path=mark=>{const names=[mark.title];let id=mark.parentId,depth=0;while(id&&depth++<64){const folder=rows.find(r=>r.id===id);if(!folder)break;names.unshift(folder.title);id=folder.parentId;}return names.join(' / ');};
     for(const mark of rows.filter(r=>r.type==='folder'&&!excluded.has(r.id)))select.append(new Option(path(mark),String(mark.id)));
-    select.value=String(existing?.parentId||parent||0);if(select.selectedIndex<0)select.value='0';place.append(select);box.append(place);
+    select.value=String(existing?.parentId??parent??0);if(select.selectedIndex<0)select.value='0';place.append(select);box.append(place);
     const favorite=el('input');favorite.type='checkbox';favorite.id='bookmarkHomeFavorite';favorite.checked=!!existing&&(state.settings?.homeFavoriteIds||[]).includes(existing.id);
     if(!isFolder){const label=el('label','bookmark-editor-favorite');label.append(favorite,document.createTextNode(t('Избранное на Home','Home favorites')));box.append(label);}
     const error=el('p','bookmark-editor-error');error.setAttribute('role','alert');error.hidden=true;box.append(error);
@@ -109,10 +111,11 @@
         await persist(mark?rows.map(r=>r.id===mark.id?next:r):[...rows,next]);
         if(profileKey()!==key)throw Error(t('Профиль изменился.','The profile changed.'));
         if(!isFolder){const ids=state.settings?.homeFavoriteIds||[],selected=favorite.checked;await api.setSettings({homeFavoriteIds:selected?[...new Set([...ids,next.id])]:ids.filter(id=>id!==next.id)});}
-        closeEditor();
+        if(editor===box)closeEditor();
       }catch(reason){error.textContent=reason.message;error.hidden=false;save.disabled=false;cancel.disabled=false;}
     };
     document.body.append(box);await api.setPopover(true,'bookmark-editor');updatePopover();
+    if(editor!==box)return;
     const anchor=document.querySelector(state.settings?.layout==='classic'?'#favoritesButton':'.compact-toolbar [data-favorites]')?.getBoundingClientRect();
     const width=box.getBoundingClientRect().width;box.style.left=Math.max(12,Math.min(innerWidth-width-12,(anchor?.right||innerWidth)-width))+'px';box.style.top=(anchor?.bottom||document.querySelector('.browser-toolbar:not([hidden])')?.getBoundingClientRect().bottom||58)+10+'px';title.focus();title.select();
     box.onkeydown=e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();closeEditor();}else if(e.key==='Tab'){const focusable=[...box.querySelectorAll('button,input,select')].filter(n=>!n.disabled);if(e.shiftKey&&document.activeElement===focusable[0]){e.preventDefault();focusable.at(-1).focus();}else if(!e.shiftKey&&document.activeElement===focusable.at(-1)){e.preventDefault();focusable[0].focus();}}};

@@ -220,7 +220,12 @@ try:
         page = s.page_socket()
         target = next(t for t in s.targets() if '/ui/index.html' in t.get('url',''))
         shell = s.websocket.create_connection(target['webSocketDebuggerUrl'],timeout=30,origin=s.BASE)
-        wait(lambda:s.evaluate(shell,'!!window.browserShell?.setSettings'))
+        try:
+            wait(lambda:s.evaluate(shell,"document.readyState==='complete' && !!window.browserShell?.setSettings"),timeout=45)
+        except AssertionError:
+            print('Shell startup diagnostics:',json.dumps(s.evaluate(shell,"({url:location.href,ready:document.readyState,title:document.title,cefQuery:typeof window.cefQuery,browserShell:typeof window.browserShell,scripts:[...document.scripts].map(n=>n.src),body:document.body?.innerText.slice(0,600)})")),flush=True)
+            print('CEF targets:',json.dumps([{k:t.get(k) for k in ('url','title','type')} for t in s.targets()]),flush=True)
+            raise
         hwnd = wait(lambda:next(iter(windows(process.pid)),None))
         s.navigate(page, f'http://127.0.0.1:{server.server_port}/')
         for layout in ['compact','classic']:

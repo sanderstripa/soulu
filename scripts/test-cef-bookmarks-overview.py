@@ -105,7 +105,7 @@ with tempfile.TemporaryDirectory(prefix='soulu-navigation-', ignore_cleanup_erro
         s.navigate(content,home_url+'/saved')
         wait(lambda:s.evaluate(shell,'window.browserShell.getState()')['page']['url']==home_url+'/saved')
         star="document.querySelector('.compact-toolbar [data-favorites]')"
-        s.evaluate(shell,star+'.click()')
+        s.evaluate(shell,star+'.click();'+star+'.click()')
         wait(lambda:s.evaluate(shell,"!!document.querySelector('.bookmark-editor')"))
         assert s.evaluate(shell,"document.querySelectorAll('.bookmark-editor').length===1 && !!document.querySelector('#bookmarkTitle') && !!document.querySelector('#bookmarkUrl') && !!document.querySelector('#bookmarkFolder')")
         assert s.evaluate(shell,"!document.querySelector('.bookmark-editor').textContent.includes('AppData')")
@@ -127,11 +127,18 @@ with tempfile.TemporaryDirectory(prefix='soulu-navigation-', ignore_cleanup_erro
         assert s.evaluate(shell,"document.querySelector('.compact-toolbar [data-favorites]').getAttribute('aria-pressed')")== 'true'
         s.evaluate(shell,star+'.click()')
         wait(lambda:s.evaluate(shell,"document.querySelector('#bookmarkTitle')?.value==='Saved from star'"))
-        s.evaluate(shell,"document.querySelector('#bookmarkTitle').value='Renamed in one editor';document.querySelector('#bookmarkUrl').value="+json.dumps(home_url+'/edited')+";document.querySelector('#bookmarkHomeFavorite').checked=false;document.querySelector('.bookmark-editor').requestSubmit()")
+        s.evaluate(shell,"document.querySelector('#bookmarkTitle').value='Renamed in one editor';document.querySelector('#bookmarkUrl').value="+json.dumps(home_url+'/edited')+";document.querySelector('#bookmarkFolder').value='0';document.querySelector('#bookmarkHomeFavorite').checked=false;document.querySelector('.bookmark-editor').requestSubmit()")
         wait(lambda:s.evaluate(shell,"!document.querySelector('.bookmark-editor')"))
         changed=next(r for r in s.evaluate(shell,'window.browserShell.getBookmarks()') if r['id']==mark['id'])
-        assert changed['title']=='Renamed in one editor' and changed['url']==home_url+'/edited'
+        assert changed['title']=='Renamed in one editor' and changed['url']==home_url+'/edited' and changed['parentId']==0
         assert mark['id'] not in s.evaluate(shell,'window.browserShell.getSettings()')['homeFavoriteIds']
+        s.navigate(content,home_url+'/edited')
+        wait(lambda:s.evaluate(shell,'window.browserShell.getState()')['page']['url']==home_url+'/edited')
+        s.evaluate(shell,'window.souluNavigation.openBookmarks(1)')
+        s.evaluate(shell,star+'.click()')
+        wait(lambda:s.evaluate(shell,"!!document.querySelector('#bookmarkFolder')"))
+        assert s.evaluate(shell,"document.querySelector('#bookmarkFolder').value")=='0', 'Editing a root bookmark must not move it into the browsed folder'
+        s.evaluate(shell,"document.querySelector('.bookmark-editor .bookmark-editor-head button').click();document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))")
         s.navigate(content,'about:blank');content.close()
         wait(lambda:s.evaluate(shell,'window.browserShell.getState()')['page']['url']=='about:blank')
         s.evaluate(shell,'window.browserShell.newTab()')
