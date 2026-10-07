@@ -47,7 +47,7 @@ bool VerifiedModel(const std::filesystem::path& path){
  return hex=="be07e048e1e599ad46341c8d2a135645097a538221678b7acdd1b1919c6e1b21";
 }
 void QuietLog(enum ggml_log_level,const char*,void*){}
-std::string Transcribe(const std::vector<float>& audio,const std::string& language,std::atomic_bool& cancelled){
+std::string Transcribe(const std::vector<float>& audio,const std::string& language,std::atomic_bool& cancelled,bool* timed_out=nullptr){
  // One inference at a time; cancelled jobs never queue additional model loads.
  std::unique_lock lock(recognition_mutex);if(cancelled||audio.size()<8000||audio.size()>320000)return "";
  const auto path=ModelPath();if(!VerifiedModel(path)||cancelled)return "";
@@ -58,8 +58,12 @@ std::string Transcribe(const std::vector<float>& audio,const std::string& langua
  auto params=whisper_full_default_params(WHISPER_SAMPLING_GREEDY);params.n_threads=std::clamp(static_cast<int>(std::thread::hardware_concurrency()),1,4);
  params.language=language=="en"?"en":"ru";params.translate=false;params.no_context=true;params.no_timestamps=true;params.single_segment=true;
  params.print_realtime=false;params.print_progress=false;params.print_timestamps=false;params.max_tokens=128;
- params.abort_callback=[](void* data){return static_cast<std::atomic_bool*>(data)->load();};params.abort_callback_user_data=&cancelled;
- if(whisper_full(context.get(),params,audio.data(),static_cast<int>(audio.size()))!=0||cancelled)return "";
+ struct AbortState{std::atomic_bool& cancelled;std::chrono::steady_clock::time_point deadline;bool timed_out=false;};
+ AbortState abort{cancelled,std::chrono::steady_clock::now()+std::chrono::seconds(60)};
+ params.abort_callback=[](void* data){auto& state=*static_cast<AbortState*>(data);state.timed_out=std::chrono::steady_clock::now()>=state.deadline;return state.cancelled.load()||state.timed_out;};params.abort_callback_user_data=&abort;
+ const int inference=whisper_full(context.get(),params,audio.data(),static_cast<int>(audio.size()));
+ if(timed_out)*timed_out=abort.timed_out;
+ if(inference!=0||cancelled||abort.timed_out)return "";
  std::string text;for(int i=0;i<whisper_full_n_segments(context.get());++i)text+=whisper_full_get_segment_text(context.get(),i);
  const auto begin=text.find_first_not_of(" \t\r\n");return begin==std::string::npos?"":text.substr(begin,text.find_last_not_of(" \t\r\n")-begin+1);
 }
@@ -104,7 +108,7 @@ void HomeRecognize(int id,const std::string& language,HomeResult done,std::funct
       if((voiced&&silent>=15)||(!voiced&&silent>=60))break;
      }
     }} // Release the microphone before inference. Audio never touches disk.
-    if(voiced&&!job->cancelled){phase("processing");const auto text=Transcribe(audio,language,job->cancelled);if(!text.empty()){result->SetString("status","recognized");result->SetString("text",text);}else result->SetString("status","unrecognized");}
+    if(voiced&&!job->cancelled){phase("processing");bool timed_out=false;const auto text=Transcribe(audio,language,job->cancelled,&timed_out);if(!text.empty()){result->SetString("status","recognized");result->SetString("text",text);}else result->SetString("status",timed_out?"unavailable":"unrecognized");}
     else if(!job->cancelled&&audio.size()>=8000)result->SetString("status","no_speech");
    }
   }catch(...){}
