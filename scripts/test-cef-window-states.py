@@ -167,6 +167,12 @@ def native_caption_click(shell,hwnd,selector,cancel=False):
     u.mouse_event(4,0,0,0,0)
     wait(lambda:s.evaluate(shell,"!document.body.dataset.nativeCaptionPressed"))
 
+def ready_caption(shell,hwnd,selector):
+    # CEF publishes the new DOM geometry asynchronously after native resize.
+    # Re-read the point while waiting; a point from the previous size is stale.
+    point=caption_point(shell,hwnd,selector)
+    return point if u.SendMessageW(hwnd,0x84,0,((point.y&0xffff)<<16)|(point.x&0xffff))==9 else None
+
 process = None
 try:
     with tempfile.TemporaryDirectory(prefix='soulu-window-', ignore_cleanup_errors=True) as profile:
@@ -188,10 +194,7 @@ try:
                     inset = round((58 if layout=='compact' else 82)*u.GetDpiForWindow(hwnd)/96)
                     viewport(page,hwnd,inset)
                     selector = '#windowMaximize' if layout=='classic' else '#compactWindowMaximize'
-                    box = s.evaluate(shell, '(()=>{const r=document.querySelector('+json.dumps(selector)+').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()')
-                    point = W.POINT(round(box['x']*u.GetDpiForWindow(hwnd)/96),round(box['y']*u.GetDpiForWindow(hwnd)/96))
-                    u.ClientToScreen(hwnd,C.byref(point))
-                    wait(lambda:u.SendMessageW(hwnd,0x84,0,((point.y&0xffff)<<16)|(point.x&0xffff))==9)
+                    point=wait(lambda:ready_caption(shell,hwnd,selector))
                     titlebar=Titlebar();titlebar.size=C.sizeof(titlebar)
                     u.SendMessageW(hwnd,0x33f,0,C.addressof(titlebar))
                     caption=titlebar.buttons[3]
