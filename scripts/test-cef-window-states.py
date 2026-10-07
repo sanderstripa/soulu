@@ -203,7 +203,7 @@ try:
                         native_caption_click(shell,hwnd,selector,cancel=True)
                         assert not u.IsZoomed(hwnd) and rect(hwnd)==original
                         native_caption_click(shell,hwnd,selector)
-                        wait(lambda:u.IsZoomed(hwnd) and s.evaluate(shell,'browserShell.getState().maximized'))
+                        wait(lambda:u.IsZoomed(hwnd) and s.evaluate(shell,'(async()=> (await browserShell.getState()).maximized)()'))
                         taskbar_excluded(hwnd)
                         native_caption_click(shell,hwnd,selector)
                         wait(lambda:not u.IsZoomed(hwnd) and rect(hwnd)==original)
