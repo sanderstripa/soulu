@@ -220,7 +220,7 @@ jobs:
           if-no-files-found: error
 
       - name: Verify Home before broader development regressions
-        if: github.ref == 'refs/heads/codex/home-final'
+        if: github.ref == 'refs/heads/codex/home-final' || (github.ref == 'refs/heads/main' && !inputs.native_only)
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client pillow numpy soundfile
@@ -232,7 +232,7 @@ jobs:
           }
 
       - name: Upload early Home evidence
-        if: github.ref == 'refs/heads/codex/home-final' && always()
+        if: (github.ref == 'refs/heads/codex/home-final' || (github.ref == 'refs/heads/main' && !inputs.native_only)) && always()
         uses: actions/upload-artifact@v4
         with:
           name: Soulu-home-early-${{ github.sha }}
@@ -970,7 +970,7 @@ jobs:
           $shellGraphics.Dispose();$shellBitmap.Dispose()
           Get-Process Soulu -ErrorAction SilentlyContinue | Stop-Process -Force
           "Physical mouse-click, extraction drag and persistent finish checks passed."
-          # Replace the test installation with the actual published Beta 1.0.54
+          # Replace the test installation with the actual published Beta 1.0.55
           # runtime, then upgrade it with this final-main installer.
           $previousZip = Join-Path $env:RUNNER_TEMP 'soulu-beta-1.0.55.zip'
           Invoke-WebRequest 'https://github.com/sanderstripa/soulu/releases/download/beta-1.0.55/Soulu-Beta-1.0.55-x64.zip' -OutFile $previousZip
@@ -980,7 +980,7 @@ jobs:
           $previousProbe = Start-Process $installedExe -ArgumentList @("--engine-version-file=`"$previousReport`"") -WorkingDirectory $installedDirectory -WindowStyle Hidden -PassThru -Wait
           if ($previousProbe.ExitCode -ne 0) { throw 'Previous Beta engine probe failed' }
           $previousEngine = Get-Content -LiteralPath $previousReport -Raw | ConvertFrom-Json
-          if ($previousEngine.cef -cne '154.0.33' -or $previousEngine.chromium -cne '154.0.8037.94') { throw 'Upgrade baseline is not the published Beta 1.0.54 runtime' }
+          if ($previousEngine.cef -cne '154.0.33' -or $previousEngine.chromium -cne '154.0.8037.94') { throw 'Upgrade baseline is not the published Beta 1.0.55 runtime' }
           # Repeat with launch unchecked: Done must close without starting Soulu.
           $noLaunch = Start-Process $installer -PassThru
           Start-Sleep -Seconds 2

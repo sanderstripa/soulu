@@ -280,6 +280,8 @@ bool BrowserWindow::BufferHomeInput(const CefKeyEvent& event) {
 void BrowserWindow::NavigateHome(Tab& tab) {
   CEF_REQUIRE_UI_THREAD();
   if(!tab.browser)return;
+  // Cancel the departing page's pending load before issuing the Home intent.
+  tab.browser->StopLoad();
   tab.focus_home_on_load=true;
   // Target the browser host while an in-flight navigation replaces its frame.
   auto request=CefDictionaryValue::Create();
