@@ -1,7 +1,7 @@
 /* One geometry policy for both layouts, including dynamically created actions. */
 body[data-layout=compact] { --toolbar-target:var(--geometry-main-target); --caption-height:var(--geometry-main-toolbar); }
 :root {
-  --toolbar-target: 30px;
+  --toolbar-target: var(--geometry-classic-target);
   --toolbar-glyph: var(--geometry-glyph);
   --toolbar-radius: 50%;
   --toolbar-stroke: 1;

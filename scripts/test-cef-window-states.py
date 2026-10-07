@@ -136,6 +136,18 @@ def exit_video(page):
     s.evaluate(page, 'document.exitFullscreen()')
     wait(lambda:s.evaluate(page, '!document.fullscreenElement'))
 
+def available_monitors():
+    found = []
+    callback_type = C.WINFUNCTYPE(W.BOOL,W.HANDLE,W.HDC,C.POINTER(W.RECT),W.LPARAM)
+    @callback_type
+    def visit(handle,dc,r,param):
+        m=Monitor();m.size=C.sizeof(m)
+        assert u.GetMonitorInfoW(handle,C.byref(m))
+        found.append(m)
+        return True
+    u.EnumDisplayMonitors(None,None,visit,0)
+    return found
+
 process = None
 try:
     with tempfile.TemporaryDirectory(prefix='soulu-window-', ignore_cleanup_errors=True) as profile:
@@ -192,6 +204,28 @@ try:
                         checks.append(evidence)
                     u.ShowWindow(hwnd,9)
                     wait(lambda:rect(hwnd)==original)
+        # Move a restored window to every actual monitor, then verify native
+        # maximize/F11/current-monitor selection and exact restore at its DPI.
+        displays = available_monitors()
+        for display in displays:
+            u.ShowWindow(hwnd,9)
+            width=min(900,display.work.right-display.work.left-40)
+            height=min(640,display.work.bottom-display.work.top-40)
+            u.SetWindowPos(hwnd,None,display.work.left+20,display.work.top+20,width,height,0x14)
+            wait(lambda:coords(monitor(hwnd).monitor)==coords(display.monitor))
+            original=rect(hwnd)
+            for maximized in [False,True]:
+                if maximized:
+                    u.ShowWindow(hwnd,3);wait(lambda:u.IsZoomed(hwnd))
+                    taskbar_excluded(hwnd)
+                previous=rect(hwnd)
+                key(page,122)
+                wait(lambda:rect(hwnd)==coords(display.monitor))
+                viewport(page,hwnd,0)
+                key(page,122)
+                wait(lambda:rect(hwnd)==previous and bool(u.IsZoomed(hwnd))==maximized)
+            u.ShowWindow(hwnd,9);wait(lambda:rect(hwnd)==original)
+            checks.append(dict(monitor=coords(display.monitor),work=coords(display.work),primary=bool(display.flags&1),dpi=u.GetDpiForWindow(hwnd),monitor_transfer=True))
         shell.close();page.close();s.close_normally(process);process=None
     (out/'window-states.json').write_text(json.dumps(dict(passed=True,checks=checks,limits='Actual available monitor/DPI/taskbar configuration only; hit testing is not a manual Start/tray click check.'),indent=2),encoding='utf-8')
     print(f'PASS: {len(checks)} native states; F11, nested HTML5 video, exact restore, work-area/input exclusion and CEF viewport')

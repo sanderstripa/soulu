@@ -215,6 +215,7 @@ class BrowserWindow final : public CefBaseRefCounted {
   int content_fullscreen_id_ = 0;
   bool fullscreen_applied_ = false;
   WINDOWPLACEMENT fullscreen_placement_ = {sizeof(WINDOWPLACEMENT)};
+  RECT fullscreen_bounds_ = {};
   LONG_PTR fullscreen_style_ = 0;
   struct Geometry {
     int width, height, toolbar, shell_height, sidebar, panel;

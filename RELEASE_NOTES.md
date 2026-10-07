@@ -1,4 +1,13 @@
-# Soulu Beta 1.0.56 — Soulu Home
+# Soulu Beta 1.0.57 — window geometry and surface polish
+
+- Normal maximize constrains the root HWND and its input area to the current monitor work area, retaining auto-hide taskbar activation edges.
+- F11 uses the current monitor's full bounds and restores the previous normal/maximized state. HTML5/video fullscreen is tracked separately, including inside F11.
+- Main uses 58 DIP toolbar / 38 DIP container / 32 DIP active capsule and action targets, with 16 DIP glyphs and unchanged 42 DIP caption width.
+- CSS and native content insets share generated DIP geometry; bookmarks, Reader, overview and popup fallbacks follow it. Classic retains its existing size.
+- Browser-owned native menus retain Onest, command routing and opaque white light surfaces, with 12 DIP text and 30 DIP rows.
+- CEF 154.0.33+ga03e714 / Chromium 154.0.8037.94 remain unchanged.
+
+## Beta 1.0.56 — Soulu Home
 
 - Minimal local Home follows the approved layout, with the canonical logo, search capsule and separate weather/favorites popovers.
 - Home offers Google and Perplexity independently from the omnibox provider, with direct address navigation and native foreground input focus.

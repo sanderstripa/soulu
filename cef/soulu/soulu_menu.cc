@@ -209,7 +209,7 @@ int ShowSouluMenu(HWND owner,POINT anchor,MenuModel model,MenuAppearance appeara
   if(!s.dpi)s.dpi=96;
   wchar_t testing[12]={},testDpi[12]={};
   if(GetEnvironmentVariableW(L"SOULU_UI_TEST_PORT",testing,12)&&GetEnvironmentVariableW(L"SOULU_MENU_TEST_DPI",testDpi,12)){
-    const int value=_wtoi(testDpi);if(value==96||value==120||value==144||value==192)s.dpi=static_cast<UINT>(value);
+    const int value=_wtoi(testDpi);if(value==96||value==120||value==144||value==168||value==192)s.dpi=static_cast<UINT>(value);
   }
   active=&s;if(!Open(s,s.model,anchor,nullptr)){active=nullptr;return 0;}
   CefScopedSetNestableTasksAllowed allow_tasks;

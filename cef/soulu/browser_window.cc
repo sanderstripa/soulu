@@ -1563,6 +1563,7 @@ void BrowserWindow::UpdateFullscreen() {
     if (fullscreen) {
       fullscreen_placement_.length = sizeof(WINDOWPLACEMENT);
       if (!GetWindowPlacement(hwnd_, &fullscreen_placement_)) return;
+      GetWindowRect(hwnd_, &fullscreen_bounds_);
       fullscreen_style_ = GetWindowLongPtrW(hwnd_, GWL_STYLE);
       fullscreen_applied_ = true;
       // Preserve the original placement once across nested HTML5/F11 changes.
@@ -1579,6 +1580,14 @@ void BrowserWindow::UpdateFullscreen() {
       fullscreen_applied_ = false;
       SetWindowLongPtrW(hwnd_, GWL_STYLE, fullscreen_style_ & ~WS_MAXIMIZE);
       SetWindowPlacement(hwnd_, &fullscreen_placement_);
+      if (fullscreen_placement_.showCmd != SW_SHOWMAXIMIZED &&
+          MonitorFromRect(&fullscreen_bounds_, MONITOR_DEFAULTTONULL)) {
+        // Snapped restored windows can retain a different rcNormalPosition.
+        // Restore their actual rectangle without replacing saved normal bounds.
+        const auto& r = fullscreen_bounds_;
+        SetWindowPos(hwnd_, nullptr, r.left, r.top, r.right-r.left, r.bottom-r.top,
+            SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOCOPYBITS);
+      }
       SetWindowPos(hwnd_, nullptr, 0, 0, 0, 0,
           SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
     }
