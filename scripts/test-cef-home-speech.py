@@ -21,7 +21,8 @@ def main():
   folder=Path(root)
   for language,url,digest,expected in FIXTURES:
    req=urllib.request.Request(url,headers={'User-Agent':'SouluRegression/1.0'})
-   raw=urllib.request.urlopen(req,timeout=30).read(2000000)
+   local=os.environ.get('SOULU_SPEECH_FIXTURE_DIR')
+   raw=(Path(local)/('ru-weather.ogg' if language=='ru' else 'jfk.wav')).read_bytes() if local else urllib.request.urlopen(req,timeout=30).read(2000000)
    assert hashlib.sha256(raw).hexdigest()==digest,'Public speech fixture integrity'
    source=folder/('source-'+language);source.write_bytes(raw)
    audio,rate=sf.read(source,dtype='float32',always_2d=True);audio=audio.mean(axis=1)
