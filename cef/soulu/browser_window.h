@@ -196,6 +196,7 @@ class BrowserWindow final : public CefBaseRefCounted {
   std::string PageUrl(const std::string& kind, CefRefPtr<CefDictionaryValue> settings) const;
   std::string InternalUrl(const std::string& url) const;
   CefRefPtr<CefDictionaryValue> PageSettings(const Tab& tab) const;
+  void NavigateHome(Tab& tab);
   CefRefPtr<CefDictionaryValue> HomeState(const Tab& tab) const;
   void SaveSession();
   bool RestoreSession();

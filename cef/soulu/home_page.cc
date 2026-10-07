@@ -277,6 +277,16 @@ bool BrowserWindow::BufferHomeInput(const CefKeyEvent& event) {
   return true;
 }
 
+void BrowserWindow::NavigateHome(Tab& tab) {
+  CEF_REQUIRE_UI_THREAD();
+  if(!tab.browser)return;
+  tab.focus_home_on_load=true;
+  // Target the browser host while an in-flight navigation replaces its frame.
+  auto request=CefDictionaryValue::Create();
+  request->SetString("url",InternalUrl(PageUrl("home",PageSettings(tab))));
+  tab.browser->GetHost()->ExecuteDevToolsMethod(0,"Page.navigate",request);
+}
+
 bool BrowserWindow::HandlePageShortcut(int id,int key,bool control,bool alt) {
   if(control&&key=='T'){
     auto* tab=FindTab(id);
@@ -285,7 +295,7 @@ bool BrowserWindow::HandlePageShortcut(int id,int key,bool control,bool alt) {
   if(control&&key=='L'){FocusAddress();return true;}
   if(alt&&key==VK_HOME){
     if(auto* tab=ActiveTab();tab&&tab->browser){
-      tab->focus_home_on_load=true;tab->browser->GetMainFrame()->LoadURL(InternalUrl(PageUrl("home",PageSettings(*tab))));
+      NavigateHome(*tab);
     }
     return true;
   }

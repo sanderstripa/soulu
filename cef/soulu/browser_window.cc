@@ -2001,7 +2001,7 @@ void BrowserWindow::HandleBridge(const std::string& request,
   else if (action == "browser.newTab") NewTab("", VisibleProfileId()=="__incognito__");
   else if (action == "browser.home") {
     if (auto* tab=ActiveTab(); tab && tab->browser){
-      tab->focus_home_on_load=true;tab->browser->GetMainFrame()->LoadURL(InternalUrl(PageUrl("home", PageSettings(*tab))));
+      NavigateHome(*tab);
     }
   }
   else if (action == "browser.newIncognito") NewTab("", true);

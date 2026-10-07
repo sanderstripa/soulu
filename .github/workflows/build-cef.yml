@@ -972,9 +972,9 @@ jobs:
           "Physical mouse-click, extraction drag and persistent finish checks passed."
           # Replace the test installation with the actual published Beta 1.0.54
           # runtime, then upgrade it with this final-main installer.
-          $previousZip = Join-Path $env:RUNNER_TEMP 'soulu-beta-1.0.54.zip'
-          Invoke-WebRequest 'https://github.com/sanderstripa/soulu/releases/download/beta-1.0.54/Soulu-Beta-1.0.54-x64.zip' -OutFile $previousZip
-          if ((Get-FileHash -LiteralPath $previousZip -Algorithm SHA256).Hash.ToLowerInvariant() -cne '7b0417cbadcedd10d9c9549f09a7005e12233b959032ed2e88238e6bf7c50f1f') { throw 'Previous Beta archive checksum mismatch' }
+          $previousZip = Join-Path $env:RUNNER_TEMP 'soulu-beta-1.0.55.zip'
+          Invoke-WebRequest 'https://github.com/sanderstripa/soulu/releases/download/beta-1.0.55/Soulu-Beta-1.0.55-x64.zip' -OutFile $previousZip
+          if ((Get-FileHash -LiteralPath $previousZip -Algorithm SHA256).Hash.ToLowerInvariant() -cne '09924cc34fae974866a64f6c64ad5bf24c757c18edb0d0a6e724c9e49ce3a814') { throw 'Previous Beta archive checksum mismatch' }
           Expand-Archive -LiteralPath $previousZip -DestinationPath $installedDirectory -Force
           $previousReport = Join-Path $env:RUNNER_TEMP 'soulu-previous-engine.json'
           $previousProbe = Start-Process $installedExe -ArgumentList @("--engine-version-file=`"$previousReport`"") -WorkingDirectory $installedDirectory -WindowStyle Hidden -PassThru -Wait

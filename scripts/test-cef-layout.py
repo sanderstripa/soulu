@@ -88,6 +88,17 @@ def own_window():
     u.EnumWindows(visit, 0)
     return result[0] if result else None
 
+def command(ws, method, params):
+    global seq
+    seq += 1
+    ident = seq
+    ws.send(json.dumps({'id': ident, 'method': method, 'params': params}))
+    while True:
+        reply = json.loads(ws.recv())
+        if reply.get('id') == ident:
+            assert 'error' not in reply, reply
+            return reply.get('result')
+
 def evaluate(ws, expression):
     global seq
     seq += 1
@@ -337,6 +348,9 @@ with tempfile.TemporaryDirectory(prefix='soulu-layout-', ignore_cleanup_errors=T
             page.close()
             page = connect(url.split('/')[2])
             wait(lambda: evaluate(page, 'document.readyState === "complete"'), timeout=40)
+            # The bridge navigation does not dismiss the editing omnibox itself.
+            for key_type in ('keyDown', 'keyUp'):
+                command(shell, 'Input.dispatchKeyEvent', {'type': key_type, 'key': 'Escape', 'code': 'Escape', 'windowsVirtualKeyCode': 27})
             resize(850, 580)
             check(name, screenshot=True)
             resize(1040, 700)
