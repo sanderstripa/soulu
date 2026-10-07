@@ -114,6 +114,11 @@ BrowserClient::BrowserClient(CefRefPtr<BrowserWindow> owner, BrowserRole role, i
       policy_(role!=BrowserRole::kShell?owner->PolicyForTab(tab_id):nullptr) {}
 
 bool BrowserClient::OnPreKeyEvent(CefRefPtr<CefBrowser> browser,const CefKeyEvent& event,CefEventHandle,bool*) {
+  if (event.type == KEYEVENT_RAWKEYDOWN && event.windows_key_code == VK_F11 &&
+      (event.native_key_code & (1 << 30))) return true;
+  if (event.type == KEYEVENT_RAWKEYDOWN &&
+      !(event.modifiers & (EVENTFLAG_CONTROL_DOWN | EVENTFLAG_ALT_DOWN | EVENTFLAG_SHIFT_DOWN)) &&
+      owner_->HandleFullscreenKey(event.windows_key_code)) return true;
   if (role_ == BrowserRole::kSettings) return false;
   if(role_==BrowserRole::kContent&&event.type==KEYEVENT_RAWKEYDOWN){
     if((event.modifiers&EVENTFLAG_CONTROL_DOWN)&&!(event.modifiers&EVENTFLAG_ALT_DOWN)){
@@ -133,6 +138,10 @@ bool BrowserClient::OnPreKeyEvent(CefRefPtr<CefBrowser> browser,const CefKeyEven
     owner_->RequestFind();return true;
   }
   return false;
+}
+
+void BrowserClient::OnFullscreenModeChange(CefRefPtr<CefBrowser>, bool fullscreen) {
+  if (role_ == BrowserRole::kContent) owner_->ContentFullscreen(tab_id_, fullscreen);
 }
 
 CefRefPtr<CefDictionaryValue> BrowserClient::AdBlockSnapshot() {

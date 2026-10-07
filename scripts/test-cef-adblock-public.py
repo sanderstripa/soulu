@@ -53,13 +53,18 @@ with tempfile.TemporaryDirectory(prefix='soulu-public-adblock-',ignore_cleanup_e
         target=wait(lambda:next((t for t in s.targets() if '/ui/index.html' in t.get('url','')),None))
         shell=s.websocket.create_connection(target['webSocketDebuggerUrl'],timeout=45,origin=s.BASE)
         wait(lambda:s.evaluate(shell,"typeof window.browserShell==='object'"));page=s.page_socket()
+        s.evaluate(shell,"window.browserShell.setSettings({addressOpenMode:'current'})")
         s.command(page,'Network.enable');s.command(page,'Network.setCacheDisabled',{'cacheDisabled':True})
         for url in urls:
             entry={'url':url,'runs':{}}
             for enabled in (False,True):
                 label='on' if enabled else 'off';events.clear()
                 s.evaluate(shell,'window.browserShell.setContentBlocking('+json.dumps({'domain':'','value':int(enabled)})+')')
-                start=time.monotonic();s.command(page,'Page.navigate',{'url':url})
+                previous=s.evaluate(shell,'window.browserShell.getState()')['page']['generation']
+                # Navigate through the real omnibox route. A public renderer may
+                # be replaced while CDP Page.navigate is awaiting its response;
+                # the stable shell bridge does not depend on that target's life.
+                start=time.monotonic();s.evaluate(shell,'window.browserShell.navigate('+json.dumps(url)+')')
                 # Let asynchronous auctions and lazy initial containers settle.
                 deadline=time.monotonic()+18
                 while time.monotonic()<deadline:
@@ -74,6 +79,8 @@ with tempfile.TemporaryDirectory(prefix='soulu-public-adblock-',ignore_cleanup_e
                         s.command(page,'Network.setCacheDisabled',{'cacheDisabled':True})
                         s.evaluate(page,'document.readyState')
                     time.sleep(.5)
+                actual=s.evaluate(shell,'window.browserShell.getState()')['page']
+                assert actual['generation']>previous, ('Public navigation did not start a new document',url,label,actual)
                 snapshot=s.evaluate(shell,'window.browserShell.getCurrentSite()')
                 dom=s.evaluate(page,"""(()=>{const s=window.__souluCosmetic;return {
                     title:document.title,url:location.href,textLength:document.body?.innerText.length||0,

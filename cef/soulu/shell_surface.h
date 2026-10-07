@@ -17,6 +17,9 @@ class ShellSurface final : public CefRenderHandler {
   static constexpr UINT kFirstFrame = WM_APP + 73;
   void Focus();
   void Cursor(HCURSOR cursor);
+  void SetMaximizeRect(CefRect rect) { maximize_rect_ = rect; }
+  bool MaximizeHit(POINT client) const;
+  RECT MaximizeBounds() const;
   HWND hwnd() const { return hwnd_; }
   int paint_error() const { return paint_error_; }
   int paint_count() const { return paint_count_; }
@@ -49,7 +52,7 @@ class ShellSurface final : public CefRenderHandler {
   HGDIOBJ original_ = nullptr;
   void* pixels_ = nullptr;
   int bitmap_width_ = 0, bitmap_height_ = 0;
-  int width_ = 1, height_ = 48;
+  int width_ = 1, height_ = 1;
   float scale_ = 1;
   bool tracking_ = false;
   bool resize_pending_ = false, screen_pending_ = false;
@@ -59,6 +62,7 @@ class ShellSurface final : public CefRenderHandler {
   bool popup_visible_ = false;
   int popup_width_ = 0, popup_height_ = 0, popup_paint_count_ = 0;
   CefRect popup_rect_;
+  CefRect maximize_rect_;
   std::vector<unsigned char> popup_pixels_, popup_background_;
   IMPLEMENT_REFCOUNTING(ShellSurface);
 };

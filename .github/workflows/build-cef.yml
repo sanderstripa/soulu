@@ -14,18 +14,30 @@ on:
         default: false
         type: boolean
       manual_checks_sha:
-        description: SHA verified for real Google auth after restart, YouTube playback and Home speech, Ozon, VPN and remaining manual regression checks
+        description: Final SHA covered by manual acceptance or explicit owner deferrals
         required: false
         default: ""
         type: string
+      defer_auth_checks:
+        description: Owner explicitly permits this release without real Google/Ozon session checks
+        required: false
+        default: false
+        type: boolean
+      defer_desktop_checks:
+        description: Owner will complete remaining physical desktop acceptance checks
+        required: false
+        default: false
+        type: boolean
   push:
-    branches: [main, codex/settings-overlay, codex/cef-stable-update, codex/beta-motion, codex/beta-typography, codex/beta-toolbar, codex/beta-adblock, codex/beta-site-reader, codex/menu-translate, codex/home-final]
-    tags: [beta-1.0.56]
+    branches: [main, codex/settings-overlay, codex/cef-stable-update, codex/beta-motion, codex/beta-typography, codex/beta-toolbar, codex/beta-adblock, codex/beta-site-reader, codex/menu-translate, codex/home-final, codex/window-polish]
+    tags: [beta-1.0.57]
     paths:
       - "cef/**"
       - "installer/**"
       - "scripts/**"
       - "ui/**"
+      - "geometry.json"
+      - "typography.json"
       - "vpn/**"
       - ".github/workflows/build-cef.yml"
 
@@ -43,8 +55,8 @@ jobs:
     runs-on: windows-2025
     timeout-minutes: 90
     env:
-      BETA_VERSION: 1.0.56-beta
-      BETA_NUMBER: 56
+      BETA_VERSION: 1.0.57-beta
+      BETA_NUMBER: 57
       SOULU_REGRESSION_SKIP_FIRST_RUN: 1
       SOULU_TEST_DEFAULT_APPS: 1
       PYTHONUTF8: 1
@@ -54,6 +66,14 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: browser
+
+      - name: Verify canonical generated geometry and typography
+        shell: pwsh
+        run: |
+          python browser/scripts/generate-geometry.py --check
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python browser/scripts/generate-typography.py --check
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Checkout official CEF project
         uses: actions/checkout@v4
@@ -239,6 +259,14 @@ jobs:
           path: browser/artifacts/home-early/
           if-no-files-found: ignore
 
+      - name: Test work-area input bounds and fullscreen restore in real Win32 CEF
+        shell: pwsh
+        run: |
+          python -m pip install --disable-pip-version-check websocket-client pillow
+          $env:SOULU_UI_TEST_PORT = '9223'
+          python browser/scripts/test-cef-window-states.py "$env:build_dir/Soulu.exe" browser/artifacts/window-states
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Test local full-page translation in native CEF
         shell: pwsh
         run: |
@@ -283,22 +311,6 @@ jobs:
           python -m pip install --disable-pip-version-check psutil
           python browser/scripts/test-cef-adblock-lifetime.py "$env:build_dir/Soulu.exe" browser/artifacts/adblock-lifetime.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-      - name: Compare real public websites with AdBlock OFF and ON
-        shell: pwsh
-        run: |
-          python browser/scripts/test-cef-adblock-public.py "$env:build_dir/Soulu.exe" browser/artifacts/adblock-public
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-      - name: Upload AdBlock evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: Soulu-adblock-${{ github.sha }}
-          path: |
-            browser/artifacts/adblock*.json
-            browser/artifacts/adblock-public/
-          if-no-files-found: ignore
 
       - name: Test Soulu site permissions and reading palette
         shell: pwsh
@@ -457,7 +469,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Validate native runtime before main packaging
-        if: (inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.56'))
+        if: (inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.57'))
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client pillow dxcam comtypes
@@ -494,7 +506,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Upload validation executable and evidence
-        if: (inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.56')) && always()
+        if: (inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.57')) && always()
         uses: actions/upload-artifact@v4
         with:
           name: Soulu-native-validation-${{ github.sha }}
@@ -506,7 +518,7 @@ jobs:
           if-no-files-found: error
 
       - name: Verify installer source is current main before packaging
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.56')) }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.57')) }}
         shell: pwsh
         working-directory: browser
         run: |
@@ -517,7 +529,7 @@ jobs:
           }
 
       - name: Locate output and package ZIP
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.56')) }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.57')) }}
         id: package
         shell: pwsh
         run: |
@@ -539,7 +551,7 @@ jobs:
           "build_dir=$buildDir" >> $env:GITHUB_OUTPUT
 
       - name: Upload native executable for local runtime verification
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.56')) }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.57')) }}
         uses: actions/upload-artifact@v4
         with:
           name: Soulu-native-${{ github.sha }}
@@ -549,7 +561,7 @@ jobs:
           if-no-files-found: error
 
       - name: Build installer
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.56')) }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.57')) }}
         shell: pwsh
         run: |
           choco install nsis -y --no-progress
@@ -565,7 +577,7 @@ jobs:
           "SOULU_SCREENSHOT:installer-exe-icon="+[Convert]::ToBase64String([IO.File]::ReadAllBytes((Join-Path $PWD "browser/artifacts/installer-exe-icon.png")))
 
       - name: Render installer typography at four native DPI scales
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.56')) }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.57')) }}
         shell: pwsh
         run: |
           $installer = Join-Path $PWD "browser/artifacts/Soulu-Beta-1.0.$env:BETA_NUMBER-x64.exe"
@@ -576,7 +588,7 @@ jobs:
           if (!$report.passed -or $report.privateFaces -ne 3 -or $report.syntheticBold) { throw 'Installer faces were not verified' }
 
       - name: Verify ZIP and installer payload before upload or release
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.56')) }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.57')) }}
         id: verified
         shell: pwsh
         run: |
@@ -595,7 +607,7 @@ jobs:
           "passed=true" >> $env:GITHUB_OUTPUT
 
       - name: Upload verified engine evidence
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.56')) && (success() && steps.verified.outputs.passed == 'true') }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.57')) && (success() && steps.verified.outputs.passed == 'true') }}
         uses: actions/upload-artifact@v4
         with:
           name: Soulu-engine-verification-${{ github.run_id }}
@@ -603,7 +615,7 @@ jobs:
           if-no-files-found: error
 
       - name: Test live CEF settings and toolbar on Windows
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.56')) }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.57')) }}
         # Cloud visual probes are diagnostic and must not block packaging.
         continue-on-error: true
         shell: pwsh
@@ -624,7 +636,7 @@ jobs:
           }
 
       - name: Test bookmarks persistence and native tab overview
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.56')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.57')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client
@@ -633,7 +645,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test Startup New Tab Home in native CEF
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.56')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.57')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
         shell: pwsh
         run: |
           $env:SOULU_UI_TEST_PORT = '9223'
@@ -651,7 +663,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Upload Home verification evidence
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.56')) && (always()) }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.57')) && (always()) }}
         uses: actions/upload-artifact@v4
         with:
           name: Soulu-home-evidence-${{ github.run_id }}
@@ -664,7 +676,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Test current-site popover and local Reader Mode in native CEF
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.56')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.57')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
         shell: pwsh
         run: |
           $env:SOULU_UI_TEST_PORT = '9223'
@@ -672,7 +684,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test persistent CEF cookies and site storage
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.56')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.57')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
         shell: pwsh
         run: |
           $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP 'soulu-preview36-storage'
@@ -682,7 +694,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test real public articles and reported-site navigation
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.56')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.57')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
         shell: pwsh
         run: |
           $env:SOULU_UI_TEST_PORT = '9223'
@@ -690,7 +702,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Upload Reader Mode evidence
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.56')) && (always()) }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.57')) && (always()) }}
         uses: actions/upload-artifact@v4
         with:
           name: Soulu-reader-evidence-${{ github.run_id }}
@@ -698,7 +710,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Verify all reported public sites with native CEF
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.56')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.57')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
         shell: pwsh
         run: |
           $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP 'soulu-cef-upgrade-sites'
@@ -717,7 +729,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Test two profiles, incognito disposal and password restart
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.56')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.57')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
         shell: pwsh
         run: |
           $env:SOULU_UI_TEST_PORT = '9223'
@@ -725,7 +737,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test native permission overrides and actual content filtering
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.56')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.57')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
         shell: pwsh
         run: |
           $env:SOULU_UI_TEST_PORT = '9223'
@@ -733,7 +745,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Verify internal tabs and native link context menu
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.56')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.57')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
         shell: pwsh
         run: |
           $env:SOULU_UI_TEST_PORT = '9223'
@@ -746,7 +758,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Verify retained layout and native resize
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.56')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.57')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
         shell: pwsh
         run: |
           $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP 'soulu-preview36-layout'
@@ -754,7 +766,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Smoke-test visible installer controls with mouse on Windows
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.56')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.57')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
         shell: pwsh
         run: |
           Add-Type @'
@@ -970,17 +982,17 @@ jobs:
           $shellGraphics.Dispose();$shellBitmap.Dispose()
           Get-Process Soulu -ErrorAction SilentlyContinue | Stop-Process -Force
           "Physical mouse-click, extraction drag and persistent finish checks passed."
-          # Replace the test installation with the actual published Beta 1.0.55
+          # Replace the test installation with the actual published Beta 1.0.56
           # runtime, then upgrade it with this final-main installer.
           $previousZip = Join-Path $env:RUNNER_TEMP 'soulu-beta-1.0.55.zip'
-          Invoke-WebRequest 'https://github.com/sanderstripa/soulu/releases/download/beta-1.0.55/Soulu-Beta-1.0.55-x64.zip' -OutFile $previousZip
-          if ((Get-FileHash -LiteralPath $previousZip -Algorithm SHA256).Hash.ToLowerInvariant() -cne '09924cc34fae974866a64f6c64ad5bf24c757c18edb0d0a6e724c9e49ce3a814') { throw 'Previous Beta archive checksum mismatch' }
+          Invoke-WebRequest 'https://github.com/sanderstripa/soulu/releases/download/beta-1.0.55/Soulu-Beta-1.0.56-x64.zip' -OutFile $previousZip
+          if ((Get-FileHash -LiteralPath $previousZip -Algorithm SHA256).Hash.ToLowerInvariant() -cne '0e132747b26bc74ed1ecfb62adac8a29902c96481fa2b72378eb3aea76563b5e') { throw 'Previous Beta archive checksum mismatch' }
           Expand-Archive -LiteralPath $previousZip -DestinationPath $installedDirectory -Force
           $previousReport = Join-Path $env:RUNNER_TEMP 'soulu-previous-engine.json'
           $previousProbe = Start-Process $installedExe -ArgumentList @("--engine-version-file=`"$previousReport`"") -WorkingDirectory $installedDirectory -WindowStyle Hidden -PassThru -Wait
           if ($previousProbe.ExitCode -ne 0) { throw 'Previous Beta engine probe failed' }
           $previousEngine = Get-Content -LiteralPath $previousReport -Raw | ConvertFrom-Json
-          if ($previousEngine.cef -cne '154.0.33' -or $previousEngine.chromium -cne '154.0.8037.94') { throw 'Upgrade baseline is not the published Beta 1.0.55 runtime' }
+          if ($previousEngine.cef -cne '154.0.33' -or $previousEngine.chromium -cne '154.0.8037.94') { throw 'Upgrade baseline is not the published Beta 1.0.56 runtime' }
           # Repeat with launch unchecked: Done must close without starting Soulu.
           $noLaunch = Start-Process $installer -PassThru
           Start-Sleep -Seconds 2
@@ -1046,7 +1058,7 @@ jobs:
 
       - name: Upload visual checks
         continue-on-error: true
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.56')) && (always()) }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.57')) && (always()) }}
         uses: actions/upload-artifact@v4
         with:
           name: Soulu-visual-checks
@@ -1056,7 +1068,7 @@ jobs:
       - name: Upload preview artifacts
         # Preserve the verified binary for diagnosing failed runtime tests.
         # Release publication below still requires every mandatory check.
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.56')) && (always() && steps.verified.outputs.passed == 'true') }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.57')) && (always() && steps.verified.outputs.passed == 'true') }}
         uses: actions/upload-artifact@v4
         with:
           name: Soulu-Beta-1.0.${{ env.BETA_NUMBER }}-x64
@@ -1067,7 +1079,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload native data-security evidence
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.56')) && (always()) }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.57')) && (always()) }}
         uses: actions/upload-artifact@v4
         with:
           name: Soulu-data-security-${{ github.run_id }}
@@ -1090,8 +1102,24 @@ jobs:
           path: browser/artifacts/native-menu-visuals/
           if-no-files-found: ignore
 
+      - name: Compare real public websites with AdBlock OFF and ON
+        shell: pwsh
+        run: |
+          python browser/scripts/test-cef-adblock-public.py "$env:build_dir/Soulu.exe" browser/artifacts/adblock-public
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Upload AdBlock evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Soulu-adblock-${{ github.sha }}
+          path: |
+            browser/artifacts/adblock*.json
+            browser/artifacts/adblock-public/
+          if-no-files-found: ignore
+
       - name: Verify release source is the current main commit
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.56')) && (success() && (github.ref == 'refs/tags/beta-1.0.56' || (github.ref == 'refs/heads/main' && inputs.publish))) }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.57')) && (success() && (github.ref == 'refs/tags/beta-1.0.57' || (github.ref == 'refs/heads/main' && inputs.publish))) }}
         shell: pwsh
         working-directory: browser
         run: |
@@ -1105,13 +1133,21 @@ jobs:
           Write-Host "Release source verified: HEAD == origin/main == $headSha"
 
       - name: Verify mandatory manual regression evidence belongs to this SHA
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.56')) && (success() && (github.ref == 'refs/tags/beta-1.0.56' || (github.ref == 'refs/heads/main' && inputs.publish))) }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.57')) && (success() && (github.ref == 'refs/tags/beta-1.0.57' || (github.ref == 'refs/heads/main' && inputs.publish))) }}
         shell: pwsh
         env:
           MANUAL_CHECKS_SHA: ${{ inputs.manual_checks_sha }}
+          DEFER_AUTH_CHECKS: ${{ inputs.defer_auth_checks }}
+          DEFER_DESKTOP_CHECKS: ${{ inputs.defer_desktop_checks }}
         run: |
           if ($env:MANUAL_CHECKS_SHA -cne $env:GITHUB_SHA) {
-            throw 'Publication blocked: real authenticated sessions, YouTube playback and Home speech, Ozon, VPN and remaining manual checks must be verified for this exact SHA'
+            throw 'Publication blocked: manual acceptance or explicit owner deferrals must cover this exact SHA'
+          }
+          if ($env:DEFER_AUTH_CHECKS -eq 'true') {
+            'Google/Ozon authenticated-session restart checks were explicitly deferred to the owner; they were not performed for this release.' | Add-Content browser/artifacts/release-notes.md -Encoding utf8
+          }
+          if ($env:DEFER_DESKTOP_CHECKS -eq 'true') {
+            'The owner will complete the remaining physical desktop acceptance checks. Automated Windows/CEF checks remain required; unfinished manual checks are not claimed as passed.' | Add-Content browser/artifacts/release-notes.md -Encoding utf8
           }
           $sites = Get-Content browser/artifacts/sites-evidence.json -Raw | ConvertFrom-Json
           if (@($sites).Count -ne 7 -or @($sites | Where-Object { !$_.opened }).Count) {
@@ -1119,7 +1155,7 @@ jobs:
           }
 
       - name: Publish Soulu release
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.56')) && (success() && (github.ref == 'refs/tags/beta-1.0.56' || (github.ref == 'refs/heads/main' && inputs.publish)) && steps.verified.outputs.passed == 'true') }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.57')) && (success() && (github.ref == 'refs/tags/beta-1.0.57' || (github.ref == 'refs/heads/main' && inputs.publish)) && steps.verified.outputs.passed == 'true') }}
         uses: softprops/action-gh-release@v2
         with:
           tag_name: beta-1.0.${{ env.BETA_NUMBER }}

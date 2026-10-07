@@ -133,6 +133,7 @@ LRESULT CALLBACK Procedure(HWND window,UINT message,WPARAM w,LPARAM l){
   if(message==WM_NCCREATE){p=reinterpret_cast<Panel*>(reinterpret_cast<CREATESTRUCTW*>(l)->lpCreateParams);p->window=window;SetWindowLongPtrW(window,GWLP_USERDATA,reinterpret_cast<LONG_PTR>(p));}
   if(!p)return DefWindowProcW(window,message,w,l);
   auto& s=*p->session;
+  if(message==WM_GETFONT)return reinterpret_cast<LRESULT>(TypographyFont(typography::menu,s.dpi));
   if(message==WM_GETOBJECT&&static_cast<LONG>(l)==OBJID_CLIENT){auto* accessible=new AccessibleMenu(window);auto result=LresultFromObject(IID_IAccessible,w,accessible);accessible->Release();return result;}
   if(message==WM_NCDESTROY){SetWindowLongPtrW(window,GWLP_USERDATA,0);return DefWindowProcW(window,message,w,l);}
   if(message==WM_ERASEBKGND)return 1;
@@ -140,7 +141,7 @@ LRESULT CALLBACK Procedure(HWND window,UINT message,WPARAM w,LPARAM l){
     PAINTSTRUCT paint={};auto target=BeginPaint(window,&paint);
     auto dc=CreateCompatibleDC(target);auto bitmap=CreateCompatibleBitmap(target,p->width,p->height);auto oldBitmap=SelectObject(dc,bitmap);
     RECT all={0,0,p->width,p->height};Rounded(dc,all,s.Surface(),s.Px(14));
-    SetBkMode(dc,TRANSPARENT);auto oldFont=SelectObject(dc,TypographyFont(typography::compactControl,s.dpi));
+    SetBkMode(dc,TRANSPARENT);auto oldFont=SelectObject(dc,TypographyFont(typography::menu,s.dpi));
     int saved=SaveDC(dc);IntersectClipRect(dc,s.Px(6),s.Px(6),p->width-s.Px(6),p->height-s.Px(6));
     for(size_t i=0;i<p->model->size();++i){
       auto& item=(*p->model)[i];RECT row=p->rows[i];OffsetRect(&row,0,-p->offset);
@@ -182,10 +183,10 @@ LRESULT CALLBACK Procedure(HWND window,UINT message,WPARAM w,LPARAM l){
 }
 Panel* Open(Session& s,MenuModel& model,POINT at,Panel* parent){
   auto panel=std::make_unique<Panel>();panel->session=&s;panel->model=&model;panel->parent=parent;
-  int width=s.Px(240),y=s.Px(6);auto dc=GetDC(s.owner);auto font=SelectObject(dc,TypographyFont(typography::compactControl,s.dpi));
+  int width=s.Px(240),y=s.Px(6);auto dc=GetDC(s.owner);auto font=SelectObject(dc,TypographyFont(typography::menu,s.dpi));
   for(auto& item:model){SIZE size={};GetTextExtentPoint32W(dc,item.label.c_str(),static_cast<int>(item.label.size()),&size);width=std::max(width,static_cast<int>(size.cx)+s.Px(item.accelerator.empty()?58:194));}
   SelectObject(dc,font);ReleaseDC(s.owner,dc);panel->width=std::min(width,s.Px(560));
-  for(auto& item:model){int height=s.Px(item.type==MenuItemType::Separator?9:32);panel->rows.push_back({s.Px(6),y,panel->width-s.Px(6),y+height});y+=height;}
+  for(auto& item:model){int height=s.Px(item.type==MenuItemType::Separator?8:30);panel->rows.push_back({s.Px(6),y,panel->width-s.Px(6),y+height});y+=height;}
   MONITORINFO monitor={sizeof(monitor)};GetMonitorInfoW(MonitorFromPoint(at,MONITOR_DEFAULTTONEAREST),&monitor);auto work=monitor.rcWork;
   panel->width=std::min(panel->width,static_cast<int>(work.right-work.left));panel->height=std::min(y+s.Px(6),static_cast<int>(work.bottom-work.top)-s.Px(8));
   if(parent&&at.x+panel->width>work.right){RECT rect={};GetWindowRect(parent->window,&rect);at.x=rect.left-panel->width+s.Px(3);}
@@ -208,7 +209,7 @@ int ShowSouluMenu(HWND owner,POINT anchor,MenuModel model,MenuAppearance appeara
   if(!s.dpi)s.dpi=96;
   wchar_t testing[12]={},testDpi[12]={};
   if(GetEnvironmentVariableW(L"SOULU_UI_TEST_PORT",testing,12)&&GetEnvironmentVariableW(L"SOULU_MENU_TEST_DPI",testDpi,12)){
-    const int value=_wtoi(testDpi);if(value==96||value==120||value==144||value==192)s.dpi=static_cast<UINT>(value);
+    const int value=_wtoi(testDpi);if(value==96||value==120||value==144||value==168||value==192)s.dpi=static_cast<UINT>(value);
   }
   active=&s;if(!Open(s,s.model,anchor,nullptr)){active=nullptr;return 0;}
   CefScopedSetNestableTasksAllowed allow_tasks;

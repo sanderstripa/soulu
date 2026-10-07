@@ -9,7 +9,7 @@
   const key=s=>`${s.tabId}:${s.generation}:${s.url}`;
   const status=element('p');status.setAttribute('role','status');
   const languages={en:{ru:'Английский',en:'English'},ru:{ru:'Русский',en:'Russian'},de:{ru:'Немецкий',en:'German'}};
-  function position(){const icon=document.querySelector('.soulu-translate-button');const rect=icon?.getBoundingClientRect();const top=Math.max(8,Math.min((rect?.bottom||48)+8,innerHeight-120));panel.style.top=top+'px';panel.style.maxHeight=Math.max(100,innerHeight-top-12)+'px';}
+  function position(){const icon=document.querySelector('.soulu-translate-button');const rect=icon?.getBoundingClientRect();const css=getComputedStyle(document.documentElement);const chrome=state.fullscreen?0:parseFloat(css.getPropertyValue(state.settings?.layout==='classic'?'--geometry-classic-toolbar':'--geometry-main-toolbar'));const top=Math.max(8,Math.min((rect?.bottom||chrome)+8,innerHeight-120));panel.style.top=top+'px';panel.style.maxHeight=Math.max(100,innerHeight-top-12)+'px';}
   window.addEventListener('resize',position);
   function close(){panel.hidden=true;api.setPopover(false,'translation');api.setSuggestionsHeight(0);document.querySelector('.soulu-translate-button')?.focus();}
   function button(text,action){const b=element('button',text);b.type='button';b.onclick=()=>Promise.resolve().then(action).catch(error=>status.textContent=tr(error.message==='unsupported'?'unsupported':'error'));return b;}

@@ -14,6 +14,7 @@
   --type-compact:400 13px/18px var(--font-ui);
   --type-compactControl:500 13px/18px var(--font-ui);
   --type-caption:400 12px/16px var(--font-ui);
+  --type-menu:500 12px/16px var(--font-ui);
   --glyph-tiny:8px;--glyph-medium:20px;--glyph-large:32px;
 }
 html,body{font:var(--type-body);letter-spacing:normal;font-synthesis:none}

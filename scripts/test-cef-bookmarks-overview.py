@@ -75,7 +75,7 @@ with tempfile.TemporaryDirectory(prefix='soulu-navigation-', ignore_cleanup_erro
                 wait(lambda:s.evaluate(shell,"document.body.dataset.bookmarksBar === 'true'"))
                 assert s.evaluate(shell,"document.querySelector('.bookmarks-bar').getBoundingClientRect().height")==28
         s.evaluate(shell,"window.browserShell.setSettings({bookmarksBarPosition:'above'})")
-        s.evaluate(shell,"document.querySelector('.compact-toolbar [data-favorites]').click()")
+        s.evaluate(shell,"document.querySelector('#compactSidebarButton').click()")
         wait(lambda:s.evaluate(shell,"!document.querySelector('.bookmarks-menu').hidden && document.querySelector('.bookmarks-menu').getBoundingClientRect().height > 300"))
         assert s.evaluate(shell,'window.browserShell.getState()')['sidebarVisible']
         assert s.evaluate(shell,"document.querySelector('.bookmarks-menu').getBoundingClientRect().left")==0
@@ -99,6 +99,78 @@ with tempfile.TemporaryDirectory(prefix='soulu-navigation-', ignore_cleanup_erro
             s.command(shell,'Input.dispatchMouseEvent',{'type':'mouseMoved','buttons':1,**point})
         s.command(shell,'Input.dispatchMouseEvent',{'type':'mouseReleased','button':'left','clickCount':1,**positions['to']})
         wait(lambda:any(r['id']==3 and r.get('parentId')==1 for r in s.evaluate(shell,'window.browserShell.getBookmarks()')))
+        # The address star saves a page through one compact editor; cancellation
+        # never creates a bookmark. Home favorites use the same persistent ID.
+        content=s.page_socket()
+        s.navigate(content,home_url+'/saved')
+        wait(lambda:s.evaluate(shell,'window.browserShell.getState()')['page']['url']==home_url+'/saved')
+        star="document.querySelector('.compact-toolbar [data-favorites]')"
+        s.evaluate(shell,star+'.click();'+star+'.click()')
+        wait(lambda:s.evaluate(shell,"!!document.querySelector('.bookmark-editor')"))
+        wait(lambda:s.evaluate(shell,"(()=>{const n=document.querySelector('.bookmark-editor'),r=n.getBoundingClientRect();return r.height>200&&r.left>=0&&r.right<=innerWidth&&r.bottom<=innerHeight})()"))
+        assert s.evaluate(shell,"(()=>{const n=document.querySelector('.bookmark-editor');return n.scrollTop===0&&n.querySelector('.bookmark-editor-head').getBoundingClientRect().top>=n.getBoundingClientRect().top})()"), 'Editor heading must remain visible after the native shell expands'
+        assert s.evaluate(shell,"document.querySelectorAll('.bookmark-editor').length===1 && !!document.querySelector('#bookmarkTitle') && !!document.querySelector('#bookmarkUrl') && !!document.querySelector('#bookmarkFolder')")
+        assert s.evaluate(shell,"!document.querySelector('.bookmark-editor').textContent.includes('AppData')")
+        before_cancel=s.evaluate(shell,'window.browserShell.getBookmarks()')
+        s.evaluate(shell,"document.querySelector('.bookmark-editor .bookmark-editor-head button').click()")
+        wait(lambda:s.evaluate(shell,"!document.querySelector('.bookmark-editor')"))
+        assert s.evaluate(shell,'window.browserShell.getBookmarks()')==before_cancel
+        s.evaluate(shell,star+'.click()')
+        wait(lambda:s.evaluate(shell,"!!document.querySelector('#bookmarkUrl')"))
+        s.evaluate(shell,"document.querySelector('#bookmarkUrl').value='javascript:alert(1)';document.querySelector('.bookmark-editor').requestSubmit()")
+        wait(lambda:s.evaluate(shell,"!document.querySelector('.bookmark-editor-error').hidden"))
+        assert s.evaluate(shell,'window.browserShell.getBookmarks()')==before_cancel
+        s.evaluate(shell,"document.querySelector('#bookmarkTitle').value='Saved from star';document.querySelector('#bookmarkUrl').value="+json.dumps(home_url+'/saved')+";document.querySelector('#bookmarkFolder').value='1';document.querySelector('#bookmarkHomeFavorite').checked=true;document.querySelector('.bookmark-editor').requestSubmit()")
+        wait(lambda:s.evaluate(shell,"!document.querySelector('.bookmark-editor')"))
+        mark=next(r for r in s.evaluate(shell,'window.browserShell.getBookmarks()') if r.get('url')==home_url+'/saved')
+        assert mark['title']=='Saved from star' and mark['parentId']==1
+        wait(lambda:mark['id'] in s.evaluate(shell,'window.browserShell.getSettings()')['homeFavoriteIds'])
+        assert mark['id'] in json.loads(settings_file.read_text(encoding='utf-8'))['homeFavoriteIds']
+        assert s.evaluate(shell,"document.querySelector('.compact-toolbar [data-favorites]').getAttribute('aria-pressed')")== 'true'
+        s.evaluate(shell,star+'.click()')
+        wait(lambda:s.evaluate(shell,"document.querySelector('#bookmarkTitle')?.value==='Saved from star'"))
+        s.evaluate(shell,"document.querySelector('#bookmarkTitle').value='Renamed in one editor';document.querySelector('#bookmarkUrl').value="+json.dumps(home_url+'/edited')+";document.querySelector('#bookmarkFolder').value='0';document.querySelector('#bookmarkHomeFavorite').checked=false;document.querySelector('.bookmark-editor').requestSubmit()")
+        wait(lambda:s.evaluate(shell,"!document.querySelector('.bookmark-editor')"))
+        changed=next(r for r in s.evaluate(shell,'window.browserShell.getBookmarks()') if r['id']==mark['id'])
+        assert changed['title']=='Renamed in one editor' and changed['url']==home_url+'/edited' and changed['parentId']==0
+        assert mark['id'] not in s.evaluate(shell,'window.browserShell.getSettings()')['homeFavoriteIds']
+        s.navigate(content,home_url+'/edited')
+        wait(lambda:s.evaluate(shell,'window.browserShell.getState()')['page']['url']==home_url+'/edited')
+        s.evaluate(shell,'window.souluNavigation.openBookmarks(1)')
+        s.evaluate(shell,star+'.click()')
+        wait(lambda:s.evaluate(shell,"!!document.querySelector('#bookmarkFolder')"))
+        assert s.evaluate(shell,"document.querySelector('#bookmarkFolder').value")=='0', 'Editing a root bookmark must not move it into the browsed folder'
+        s.evaluate(shell,"document.querySelector('.bookmark-editor .bookmark-editor-head button').click();document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))")
+        s.navigate(content,'about:blank');content.close()
+        wait(lambda:s.evaluate(shell,'window.browserShell.getState()')['page']['url']=='')
+        normal_preferences=settings_file.read_bytes()
+        before_scope_guard=s.evaluate(shell,'window.browserShell.getBookmarks()')
+        assert s.evaluate(shell,'window.browserShell.replaceBookmarks([],"wrong-profile").then(()=>false,()=>true)') is True
+        assert s.evaluate(shell,'window.browserShell.getBookmarks()')==before_scope_guard
+        assert s.evaluate(shell,'window.browserShell.setHomeFavorite('+str(mark['id'])+',true,"wrong-profile").then(()=>false,()=>true)') is True
+        assert settings_file.read_bytes()==normal_preferences
+        s.evaluate(shell,'window.browserShell.newIncognito()')
+        wait(lambda:s.evaluate(shell,'window.browserShell.getState()')['incognito'])
+        private_id=s.evaluate(shell,'window.browserShell.getState()')['activeTabId']
+        s.evaluate(shell,'window.browserShell.navigate('+json.dumps(home_url+'/private-bookmark')+')')
+        wait(lambda:s.evaluate(shell,'window.browserShell.getState()')['page']['url']==home_url+'/private-bookmark')
+        s.evaluate(shell,star+'.click()')
+        wait(lambda:s.evaluate(shell,"!!document.querySelector('#bookmarkTitle')"))
+        s.evaluate(shell,"document.querySelector('#bookmarkTitle').value='Private favorite';document.querySelector('#bookmarkHomeFavorite').checked=true;document.querySelector('.bookmark-editor').requestSubmit()")
+        wait(lambda:s.evaluate(shell,"!document.querySelector('.bookmark-editor')"))
+        private_mark=next(r for r in s.evaluate(shell,'window.browserShell.getBookmarks()') if r.get('url')==home_url+'/private-bookmark')
+        assert private_mark['id'] in s.evaluate(shell,'window.browserShell.getState()')['homeFavoriteIds']
+        assert s.evaluate(shell,'window.browserShell.getSettings()')['homeFavoriteIds']==[]
+        assert settings_file.read_bytes()==normal_preferences, 'Private favorite changed the normal profile preferences'
+        s.evaluate(shell,'window.browserShell.closeTab('+str(private_id)+')')
+        wait(lambda:not s.evaluate(shell,'window.browserShell.getState()')['incognito'])
+        assert not any(r.get('url')==home_url+'/private-bookmark' for r in s.evaluate(shell,'window.browserShell.getBookmarks()'))
+        s.evaluate(shell,'window.browserShell.newIncognito()')
+        wait(lambda:s.evaluate(shell,'window.browserShell.getState()')['incognito'])
+        fresh_private=s.evaluate(shell,'window.browserShell.getState()')
+        assert fresh_private['homeFavoriteIds']==[], 'A new private session retained the previous private Home favorite'
+        s.evaluate(shell,'window.browserShell.closeTab('+str(fresh_private['activeTabId'])+')')
+        wait(lambda:not s.evaluate(shell,'window.browserShell.getState()')['incognito'])
         s.evaluate(shell,'window.browserShell.newTab()')
         wait(lambda:len(s.evaluate(shell,'window.browserShell.getState()')['tabs'])==2)
         s.evaluate(shell,"window.browserShell.setSettings({bookmarksBarMode:'newTab'})")

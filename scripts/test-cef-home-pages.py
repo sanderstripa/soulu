@@ -102,6 +102,17 @@ def main():
         try:
             start();h=page()
             check(current_url()=='soulu://home' and len(state()['tabs'])==1,'Fresh startup is one offline local Soulu page')
+            for layout in ('compact','classic'):
+                call('setSettings',{'layout':layout})
+                selector='#compactAddress' if layout=='compact' else '#classicAddress'
+                wait(lambda:s.evaluate(shell,'document.body.dataset.layout')==layout)
+                check(s.evaluate(shell,'document.querySelector('+json.dumps(selector)+').value')=='','Home omnibox is empty: '+layout)
+                check(s.evaluate(shell,'document.querySelector('+json.dumps(selector)+').placeholder')=='','Home omnibox has no hint: '+layout)
+                s.evaluate(shell,'document.querySelector('+json.dumps(selector)+').focus();document.querySelector('+json.dumps(selector)+').blur()')
+                time.sleep(.2)
+                check(s.evaluate(shell,'document.querySelector('+json.dumps(selector)+').value')=='','Home blur keeps the address empty: '+layout)
+            call('setSettings',{'layout':'compact'})
+            s.evaluate(h,"document.querySelector('#query').focus()")
             check(s.evaluate(h,"document.querySelector('#logo').getAttribute('src')==='browser-icon.png' && typeof window.souluHomeApply==='function'"),'Bundled logo and internal shell rendered')
             wait(lambda:s.evaluate(h,"document.activeElement?.id==='query'"))
             check(home(h,'home.get')['homeProvider']=='google','Fresh Home provider is Google')
