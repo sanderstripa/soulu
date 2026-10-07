@@ -107,6 +107,8 @@ with tempfile.TemporaryDirectory(prefix='soulu-navigation-', ignore_cleanup_erro
         star="document.querySelector('.compact-toolbar [data-favorites]')"
         s.evaluate(shell,star+'.click();'+star+'.click()')
         wait(lambda:s.evaluate(shell,"!!document.querySelector('.bookmark-editor')"))
+        wait(lambda:s.evaluate(shell,"(()=>{const n=document.querySelector('.bookmark-editor'),r=n.getBoundingClientRect();return r.height>200&&r.left>=0&&r.right<=innerWidth&&r.bottom<=innerHeight})()"))
+        assert s.evaluate(shell,"(()=>{const n=document.querySelector('.bookmark-editor');return n.scrollTop===0&&n.querySelector('.bookmark-editor-head').getBoundingClientRect().top>=n.getBoundingClientRect().top})()"), 'Editor heading must remain visible after the native shell expands'
         assert s.evaluate(shell,"document.querySelectorAll('.bookmark-editor').length===1 && !!document.querySelector('#bookmarkTitle') && !!document.querySelector('#bookmarkUrl') && !!document.querySelector('#bookmarkFolder')")
         assert s.evaluate(shell,"!document.querySelector('.bookmark-editor').textContent.includes('AppData')")
         before_cancel=s.evaluate(shell,'window.browserShell.getBookmarks()')
@@ -141,6 +143,31 @@ with tempfile.TemporaryDirectory(prefix='soulu-navigation-', ignore_cleanup_erro
         s.evaluate(shell,"document.querySelector('.bookmark-editor .bookmark-editor-head button').click();document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))")
         s.navigate(content,'about:blank');content.close()
         wait(lambda:s.evaluate(shell,'window.browserShell.getState()')['page']['url']=='')
+        normal_preferences=settings_file.read_bytes()
+        assert s.evaluate(shell,'window.browserShell.setHomeFavorite('+str(mark['id'])+',true,"wrong-profile").then(()=>false,()=>true)') is True
+        assert settings_file.read_bytes()==normal_preferences
+        s.evaluate(shell,'window.browserShell.newIncognito()')
+        wait(lambda:s.evaluate(shell,'window.browserShell.getState()')['incognito'])
+        private_id=s.evaluate(shell,'window.browserShell.getState()')['activeTabId']
+        s.evaluate(shell,'window.browserShell.navigate('+json.dumps(home_url+'/private-bookmark')+')')
+        wait(lambda:s.evaluate(shell,'window.browserShell.getState()')['page']['url']==home_url+'/private-bookmark')
+        s.evaluate(shell,star+'.click()')
+        wait(lambda:s.evaluate(shell,"!!document.querySelector('#bookmarkTitle')"))
+        s.evaluate(shell,"document.querySelector('#bookmarkTitle').value='Private favorite';document.querySelector('#bookmarkHomeFavorite').checked=true;document.querySelector('.bookmark-editor').requestSubmit()")
+        wait(lambda:s.evaluate(shell,"!document.querySelector('.bookmark-editor')"))
+        private_mark=next(r for r in s.evaluate(shell,'window.browserShell.getBookmarks()') if r.get('url')==home_url+'/private-bookmark')
+        assert private_mark['id'] in s.evaluate(shell,'window.browserShell.getState()')['homeFavoriteIds']
+        assert s.evaluate(shell,'window.browserShell.getSettings()')['homeFavoriteIds']==[]
+        assert settings_file.read_bytes()==normal_preferences, 'Private favorite changed the normal profile preferences'
+        s.evaluate(shell,'window.browserShell.closeTab('+str(private_id)+')')
+        wait(lambda:not s.evaluate(shell,'window.browserShell.getState()')['incognito'])
+        assert not any(r.get('url')==home_url+'/private-bookmark' for r in s.evaluate(shell,'window.browserShell.getBookmarks()'))
+        s.evaluate(shell,'window.browserShell.newIncognito()')
+        wait(lambda:s.evaluate(shell,'window.browserShell.getState()')['incognito'])
+        fresh_private=s.evaluate(shell,'window.browserShell.getState()')
+        assert fresh_private['homeFavoriteIds']==[], 'A new private session retained the previous private Home favorite'
+        s.evaluate(shell,'window.browserShell.closeTab('+str(fresh_private['activeTabId'])+')')
+        wait(lambda:not s.evaluate(shell,'window.browserShell.getState()')['incognito'])
         s.evaluate(shell,'window.browserShell.newTab()')
         wait(lambda:len(s.evaluate(shell,'window.browserShell.getState()')['tabs'])==2)
         s.evaluate(shell,"window.browserShell.setSettings({bookmarksBarMode:'newTab'})")

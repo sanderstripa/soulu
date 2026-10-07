@@ -80,6 +80,7 @@
     replaceBookmarks: rows => invoke("browser.bookmarks.replace", rows),
     getBookmarks: () => invoke("browser.bookmarks.get"),
     addBookmark: () => invoke("browser.bookmarks.add"),
+    setHomeFavorite: (id, selected, profile) => invoke("browser.bookmarks.homeFavorite", {id, selected, profile}),
     removeBookmark: id => invoke("browser.bookmarks.remove", id),
     openBookmark: url => invoke("browser.bookmarks.open", url),
     getSettingsSite: tabId => invoke("browser.settings.siteSnapshot", {tabId}),

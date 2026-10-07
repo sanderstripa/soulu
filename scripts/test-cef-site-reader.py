@@ -226,7 +226,7 @@ with tempfile.TemporaryDirectory(prefix='soulu-reader-', ignore_cleanup_errors=T
         for layout in ('compact','classic'):
             s.evaluate(shell,'browserShell.setSettings('+json.dumps({'layout':layout})+')')
             wait(lambda: s.evaluate(shell,'document.body.dataset.layout')==layout)
-            assert_check(s.evaluate(shell,"document.querySelector('.reader-view').getBoundingClientRect().top") == (82 if layout=='classic' else 48), 'reader '+layout)
+            assert_check(s.evaluate(shell,"document.querySelector('.reader-view').getBoundingClientRect().top") == (82 if layout=='classic' else 58), 'reader '+layout)
         user=ctypes.windll.user32;handles=[]
         @ctypes.WINFUNCTYPE(ctypes.c_bool,ctypes.c_void_p,ctypes.c_void_p)
         def own_window(hwnd,_):

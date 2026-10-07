@@ -1758,6 +1758,8 @@ CefRefPtr<CefDictionaryValue> BrowserWindow::State() const {
   state->SetBool("readerActive",active&&active->reader_active);
   state->SetBool("bookmarksBarVisible", BookmarksBarVisible());
   state->SetList("bookmarks", ProfileBookmarks());
+  auto favorite_ids=active?PageSettings(*active)->GetList("homeFavoriteIds"):nullptr;
+  state->SetList("homeFavoriteIds",favorite_ids?favorite_ids->Copy():CefListValue::Create());
   state->SetBool("maximized", IsZoomed(hwnd_) != FALSE);
   state->SetBool("fullscreen", Fullscreen());
   state->SetString("activeProfileId", active_profile_id_);
@@ -2273,6 +2275,27 @@ void BrowserWindow::HandleBridge(const std::string& request,
   else if (action == "browser.openTab") {
     auto args = payload->GetDictionary();
     if (auto* tab = ActiveTab()) OpenTabFrom(tab->id, tab->browser, args->GetString("url"), args->GetBool("background"));
+  }
+  else if (action == "browser.bookmarks.homeFavorite") {
+    if(settings_source||!payload||payload->GetType()!=VTYPE_DICTIONARY){callback->Failure(400,"Bookmark favorite required");return;}
+    auto data=payload->GetDictionary();auto* tab=ActiveTab();const auto profile=VisibleProfileId();
+    if(data->GetType("id")!=VTYPE_INT||data->GetType("selected")!=VTYPE_BOOL||data->GetType("profile")!=VTYPE_STRING){callback->Failure(400,"Invalid bookmark favorite");return;}
+    if(!tab||data->GetString("profile")!=profile||(!tab->incognito&&tab->profile_id!=profile)){callback->Failure(409,"Bookmark profile changed");return;}
+    auto marks=ProfileBookmarks();std::unordered_map<int,bool> valid;
+    for(size_t i=0;i<marks->GetSize();++i){auto mark=marks->GetDictionary(i);if(mark&&mark->GetString("type")!="folder"&&!WebOrigin(mark->GetString("url")).empty())valid.emplace(mark->GetInt("id"),true);}
+    const int id=data->GetInt("id");if(valid.find(id)==valid.end()){callback->Failure(404,"Bookmark not found");return;}
+    auto config=PageSettings(*tab)->Copy(false),patch=CefDictionaryValue::Create();
+    auto ids=CefListValue::Create(),previous=config->GetList("homeFavoriteIds");std::vector<int> chosen;
+    if(previous)for(size_t i=0;i<previous->GetSize();++i){const int value=previous->GetInt(i);if(valid.find(value)!=valid.end()&&(value!=id||data->GetBool("selected"))&&std::find(chosen.begin(),chosen.end(),value)==chosen.end())chosen.push_back(value);}
+    if(data->GetBool("selected")&&std::find(chosen.begin(),chosen.end(),id)==chosen.end())chosen.push_back(id);
+    for(const int value:chosen)ids->SetInt(ids->GetSize(),value);patch->SetList("homeFavoriteIds",ids);
+    std::string error;if(!ValidateHomePatch(patch,config,error)){callback->Failure(400,error);return;}
+    if(tab->incognito)private_page_settings_=config;
+    else{
+      if(!WriteJson(ProfileRoot(tab->profile_id)/L"soulu-settings.json",Wrap(config))){callback->Failure(500,"Could not save Home favorite");return;}
+      if(tab->profile_id==active_profile_id_)settings_=config;
+    }
+    RefreshHomePages();EmitState();return Reply(callback,Wrap(ids));
   }
   else if (action == "browser.bookmarks.replace") {
     if (!payload || payload->GetType() != VTYPE_LIST || payload->GetList()->GetSize() > 20000) {

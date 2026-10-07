@@ -83,7 +83,7 @@ def main():
             trigger("window.notificationResult=null;Notification.requestPermission().then(v=>window.notificationResult=v)")
             item=wait(prompt);check(item['origin']==origin and item['permissions']==['notifications'],'real notification callback names exact origin')
             wait(lambda:not bounds('.soulu-permission-prompt')['hidden'])
-            r=bounds('.soulu-permission-prompt');check(r['x']==12 and r['y']>=48 and r['y']<150 and r['h']<280 and 'Onest' in r['font'],'compact upper left Onest prompt')
+            r=bounds('.soulu-permission-prompt');check(r['x']==12 and r['y']>=58 and r['y']<150 and r['h']<280 and 'Onest' in r['font'],'compact upper left Onest prompt')
             capture('notification-prompt');reply('block')
             wait(lambda:s.evaluate(page,'window.notificationResult')=='denied')
             check(current()['rules']['sites']['127.0.0.1']['notifications']==2,'prompt Block persists canonical override')
