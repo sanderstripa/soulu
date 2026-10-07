@@ -64,7 +64,7 @@ std::string Transcribe(const std::vector<float>& audio,const std::string& langua
  const auto begin=text.find_first_not_of(" \t\r\n");return begin==std::string::npos?"":text.substr(begin,text.find_last_not_of(" \t\r\n")-begin+1);
 }
 class Capture {
- public:~Capture(){if(input){waveInReset(input);for(auto& header:headers)if(header.dwFlags&WHDR_PREPARED)waveInUnprepareHeader(input,&header,sizeof(header));waveInClose(input);}if(event)CloseHandle(event);}
+ public:~Capture(){if(input){waveInReset(input);for(auto& header:headers)if(header.dwFlags&WHDR_PREPARED)waveInUnprepareHeader(input,&header,sizeof(header));waveInClose(input);}if(event)CloseHandle(event);SecureZeroMemory(samples.data(),sizeof(samples));}
  HWAVEIN input=nullptr;HANDLE event=nullptr;std::array<std::array<short,1600>,2> samples{};std::array<WAVEHDR,2> headers{};
  bool Start(){event=CreateEventW(nullptr,FALSE,FALSE,nullptr);if(!event)return false;WAVEFORMATEX format{};format.wFormatTag=WAVE_FORMAT_PCM;format.nChannels=1;format.nSamplesPerSec=16000;format.wBitsPerSample=16;format.nBlockAlign=2;format.nAvgBytesPerSec=32000;
  if(waveInOpen(&input,WAVE_MAPPER,&format,reinterpret_cast<DWORD_PTR>(event),0,CALLBACK_EVENT)!=MMSYSERR_NOERROR)return false;
@@ -73,14 +73,16 @@ class Capture {
 };
 }
 void HomeCancelVoice(int id){std::lock_guard lock(jobs_mutex);auto it=jobs.find(id);if(it!=jobs.end()){it->second->cancelled=true;jobs.erase(it);}}
-void HomeRecognize(int id,const std::string& language,HomeResult done){
+void HomeRecognize(int id,const std::string& language,HomeResult done,std::function<void(const std::string&)> progress){
  HomeCancelVoice(id);auto job=std::make_shared<VoiceJob>();{std::lock_guard lock(jobs_mutex);jobs[id]=job;}
- std::thread([id,job,language,done=std::move(done)]() mutable {
+ std::thread([id,job,language,done=std::move(done),progress=std::move(progress)]() mutable {
+  const auto phase=[&](const std::string& value){CefPostTask(TID_UI,new Completion([job,progress,value]{if(!job->cancelled)progress(value);}));};
   auto result=CefDictionaryValue::Create();result->SetString("status","unavailable");
   try{
    if(MicrophoneDenied())result->SetString("status","denied");
    else {std::vector<float> audio;bool voiced=false;int silent=0;
     {Capture capture;if(capture.Start()){
+     phase("listening");
      const auto start=std::chrono::steady_clock::now();
      while(!job->cancelled&&std::chrono::steady_clock::now()-start<std::chrono::seconds(15)){
       WaitForSingleObject(capture.event,100);
@@ -93,8 +95,9 @@ void HomeRecognize(int id,const std::string& language,HomeResult done){
       if((voiced&&silent>=15)||(!voiced&&silent>=60))break;
      }
     }} // Release the microphone before inference. Audio never touches disk.
-    if(voiced&&!job->cancelled){const auto text=Transcribe(audio,language,job->cancelled);if(!text.empty()){result->SetString("status","recognized");result->SetString("text",text);}}
-    std::fill(audio.begin(),audio.end(),0);
+    if(voiced&&!job->cancelled){phase("processing");const auto text=Transcribe(audio,language,job->cancelled);if(!text.empty()){result->SetString("status","recognized");result->SetString("text",text);}else result->SetString("status","unrecognized");}
+    else if(!job->cancelled&&audio.size()>=8000)result->SetString("status","no_speech");
+    if(!audio.empty())SecureZeroMemory(audio.data(),audio.size()*sizeof(float));
    }
   }catch(...){}
   if(job->cancelled)result->SetString("status","cancelled");{std::lock_guard lock(jobs_mutex);auto it=jobs.find(id);if(it!=jobs.end()&&it->second==job)jobs.erase(it);}

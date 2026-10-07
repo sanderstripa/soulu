@@ -168,7 +168,8 @@ void BrowserWindow::HandleHomeBridge(int id,const std::string& request,
       auto* current=self->FindTab(id);
       if(!allowed||!current||!current->browser||self->active_tab_id_!=id||!self->IsHomeUi(current->browser->GetMainFrame()->GetURL())||current->document_generation!=generation||current->home_voice_generation!=voice){auto d=CefDictionaryValue::Create();d->SetString("status","denied");self->Reply(callback,d);return;}
       HomeRecognize(current->browser->GetIdentifier(),self->PageSettings(*current)->GetString("language"),
-        [self,id,generation,voice,callback](CefRefPtr<CefDictionaryValue> result){auto* t=self->FindTab(id);if(!t||!t->browser||t->document_generation!=generation||t->home_voice_generation!=voice){callback->Failure(410,"Voice request cancelled");return;}self->Reply(callback,result);});
+        [self,id,generation,voice,callback](CefRefPtr<CefDictionaryValue> result){auto* t=self->FindTab(id);if(!t||!t->browser||t->document_generation!=generation||t->home_voice_generation!=voice){callback->Failure(410,"Voice request cancelled");return;}self->Reply(callback,result);},
+        [self,id,generation,voice](const std::string& phase){auto* t=self->FindTab(id);if(!t||!t->browser||self->active_tab_id_!=id||t->document_generation!=generation||t->home_voice_generation!=voice)return;auto frame=t->browser->GetMainFrame();if(!frame||!self->IsHomeUi(frame->GetURL()))return;frame->ExecuteJavaScript("window.souluHomeVoicePhase&&window.souluHomeVoicePhase('"+phase+"')",frame->GetURL(),0);});
     });return;
   }
   if(action=="home.weather"){
