@@ -144,6 +144,9 @@ with tempfile.TemporaryDirectory(prefix='soulu-navigation-', ignore_cleanup_erro
         s.navigate(content,'about:blank');content.close()
         wait(lambda:s.evaluate(shell,'window.browserShell.getState()')['page']['url']=='')
         normal_preferences=settings_file.read_bytes()
+        before_scope_guard=s.evaluate(shell,'window.browserShell.getBookmarks()')
+        assert s.evaluate(shell,'window.browserShell.replaceBookmarks([],"wrong-profile").then(()=>false,()=>true)') is True
+        assert s.evaluate(shell,'window.browserShell.getBookmarks()')==before_scope_guard
         assert s.evaluate(shell,'window.browserShell.setHomeFavorite('+str(mark['id'])+',true,"wrong-profile").then(()=>false,()=>true)') is True
         assert settings_file.read_bytes()==normal_preferences
         s.evaluate(shell,'window.browserShell.newIncognito()')

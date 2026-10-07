@@ -77,7 +77,7 @@
     },
     setBookmarksAuto: value => invoke("browser.bookmarks.auto", value),
     openTab: (url, background = false) => invoke("browser.openTab", {url, background}),
-    replaceBookmarks: rows => invoke("browser.bookmarks.replace", rows),
+    replaceBookmarks: (rows, profile) => invoke("browser.bookmarks.replace", profile===undefined?rows:{rows,profile}),
     getBookmarks: () => invoke("browser.bookmarks.get"),
     addBookmark: () => invoke("browser.bookmarks.add"),
     setHomeFavorite: (id, selected, profile) => invoke("browser.bookmarks.homeFavorite", {id, selected, profile}),

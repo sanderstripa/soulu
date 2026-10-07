@@ -2298,10 +2298,15 @@ void BrowserWindow::HandleBridge(const std::string& request,
     RefreshHomePages();EmitState();return Reply(callback,Wrap(ids));
   }
   else if (action == "browser.bookmarks.replace") {
-    if (!payload || payload->GetType() != VTYPE_LIST || payload->GetList()->GetSize() > 20000) {
+    CefRefPtr<CefListValue> incoming;
+    if(payload&&payload->GetType()==VTYPE_DICTIONARY){
+      auto data=payload->GetDictionary();
+      if(data->GetType("profile")!=VTYPE_STRING||data->GetString("profile")!=VisibleProfileId()){callback->Failure(409,"Bookmark profile changed");return;}
+      if(data->GetType("rows")==VTYPE_LIST)incoming=data->GetList("rows");
+    }else if(payload&&payload->GetType()==VTYPE_LIST)incoming=payload->GetList();
+    if (!incoming || incoming->GetSize() > 20000) {
       callback->Failure(400, "Invalid bookmarks"); return;
     }
-    auto incoming = payload->GetList();
     auto merged = CefListValue::Create();
     const auto profile = VisibleProfileId();
     for (size_t i=0; i<bookmarks_->GetSize(); ++i) {

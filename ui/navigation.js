@@ -18,7 +18,8 @@
   const nextId=()=>rows.reduce((n,r)=>Math.max(n,Number(r.id)||0),0)+1;
   const children=id=>rows.filter(r=>(r.parentId||0)===id).sort((a,b)=>(a.order||0)-(b.order||0));
   const descendants=id=>{const found=new Set([id]);let changed=true;while(changed){changed=false;for(const r of rows)if(found.has(r.parentId)&&!found.has(r.id)){found.add(r.id);changed=true;}}return found;};
-  async function persist(next){if(busy)throw Error('Дождитесь сохранения');busy=true;try{rows=await api.replaceBookmarks(next);render();}finally{busy=false;}}
+  const bookmarkProfile=()=>state.incognito?'__incognito__':state.activeProfileId;
+  async function persist(next,profile=bookmarkProfile()){if(busy)throw Error('Дождитесь сохранения');busy=true;try{const saved=await api.replaceBookmarks(next,profile);if(bookmarkProfile()===profile){rows=saved;render();}return saved;}finally{busy=false;}}
   const updatePopover=()=>{const open=Boolean(document.querySelector('.bookmark-context'));shield.hidden=!(open||editor);return api.setPopover(open,'bookmarks');};
   const closeMenu=()=>{pane='list';menu.hidden=true;api.setBookmarksSidebar(false);document.querySelector('.bookmark-context')?.remove();updatePopover();api.setSuggestionsHeight(0);};
   async function openMenu(id=0,editor=false){await api.setOverview(false);rows=await api.getBookmarks();parent=id;manage=editor;pane='list';query='';menuSearch.value='';menu.hidden=false;await api.setBookmarksSidebar(true);await updatePopover();renderMenu();menuSearch.focus();}
@@ -108,7 +109,7 @@
         if(existing&&!mark)throw Error(t('Закладка уже удалена.','This bookmark was deleted.'));
         const next=mark?{...mark}:{id:nextId(),type:isFolder?'folder':'url',createdAt:Date.now(),order:rows.length};
         Object.assign(next,{title:title.value.trim(),parentId:Number(select.value),updatedAt:Date.now()});if(url){next.url=address;if(!mark&&address===page.url)next.favicon=page.favicon;}
-        await persist(mark?rows.map(r=>r.id===mark.id?next:r):[...rows,next]);
+        await persist(mark?rows.map(r=>r.id===mark.id?next:r):[...rows,next],profile);
         existing=next;
         if(profileKey()!==key)throw Error(t('Профиль изменился.','The profile changed.'));
         if(!isFolder)await api.setHomeFavorite(next.id,favorite.checked,profile);
