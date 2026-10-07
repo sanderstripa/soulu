@@ -1,6 +1,7 @@
 #pragma once
 #include "include/cef_values.h"
 #include <functional>
+#include <array>
 #include <string>
 #include <vector>
 namespace soulu {
@@ -9,6 +10,7 @@ void HomeRecognize(int browser_id,const std::string& language,HomeResult done,
                    std::function<void(const std::string&)> progress);
 void HomeCancelVoice(int browser_id);
 void HomeLocate(HomeResult done);
+double HomeSpeechThreshold(std::array<double,5> noise);
 // Native fixture entry point; never exposed to web pages or the Home bridge.
 std::string HomeTranscribeTest(const std::vector<float>& audio,const std::string& language);
 }

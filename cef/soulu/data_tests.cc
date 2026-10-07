@@ -1,6 +1,7 @@
 #include "examples/soulu/profile_data.h"
 #include "examples/soulu/history_store.h"
 #include "examples/soulu/home_weather.h"
+#include "examples/soulu/home_system.h"
 #include <windows.h>
 #include <wincrypt.h>
 #include <bcrypt.h>
@@ -39,6 +40,13 @@ std::string EncryptFixture(const std::string& plain,const std::string& key,const
 int RunDataSecurityTests(const std::filesystem::path& report) {
   try{
     const std::string test="soulu-test-secret-"+RandomId();
+    {
+      const double quiet=HomeSpeechThreshold({.001,.0011,.0012,.0013,.05});
+      Check(.005>quiet&&.001<quiet,"speech-quiet-query-survives-calibration-click");
+      const double noisy=HomeSpeechThreshold({.008,.007,.009,.008,.008});
+      Check(.01<noisy&&.06>noisy,"speech-rejects-steady-noise-with-audible-query");
+      Check(HomeSpeechThreshold({0,0,0,0,0})>0,"speech-rejects-digital-silence");
+    }
     {
       const std::string weather=R"({"current":{"temperature_2m":8.5,"weather_code":3},"daily":{"time":["2026-10-07","2026-10-08","2026-10-09","2026-10-10"],"weather_code":[3,0,3,61],"temperature_2m_max":[10,12,9,8],"temperature_2m_min":[3,4,3,1],"precipitation_probability_max":[5,0,10,80]},"fetchedAt":1000.0})";
       auto value=CefParseJSON(weather,JSON_PARSER_RFC);auto data=value->GetDictionary();

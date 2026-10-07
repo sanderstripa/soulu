@@ -63,6 +63,10 @@ std::string Transcribe(const std::vector<float>& audio,const std::string& langua
  std::string text;for(int i=0;i<whisper_full_n_segments(context.get());++i)text+=whisper_full_get_segment_text(context.get(),i);
  const auto begin=text.find_first_not_of(" \t\r\n");return begin==std::string::npos?"":text.substr(begin,text.find_last_not_of(" \t\r\n")-begin+1);
 }
+struct SecureAudio {
+ std::vector<float> samples;
+ ~SecureAudio(){if(!samples.empty())SecureZeroMemory(samples.data(),samples.size()*sizeof(float));}
+};
 class Capture {
  public:~Capture(){if(input){waveInReset(input);for(auto& header:headers)if(header.dwFlags&WHDR_PREPARED)waveInUnprepareHeader(input,&header,sizeof(header));waveInClose(input);}if(event)CloseHandle(event);SecureZeroMemory(samples.data(),sizeof(samples));}
  HWAVEIN input=nullptr;HANDLE event=nullptr;std::array<std::array<short,1600>,2> samples{};std::array<WAVEHDR,2> headers{};
@@ -73,6 +77,7 @@ class Capture {
 };
 }
 void HomeCancelVoice(int id){std::lock_guard lock(jobs_mutex);auto it=jobs.find(id);if(it!=jobs.end()){it->second->cancelled=true;jobs.erase(it);}}
+double HomeSpeechThreshold(std::array<double,5> noise){std::sort(noise.begin(),noise.end());return std::max(.003,noise[2]*2.5);}
 void HomeRecognize(int id,const std::string& language,HomeResult done,std::function<void(const std::string&)> progress){
  HomeCancelVoice(id);auto job=std::make_shared<VoiceJob>();{std::lock_guard lock(jobs_mutex);jobs[id]=job;}
  std::thread([id,job,language,done=std::move(done),progress=std::move(progress)]() mutable {
@@ -80,16 +85,20 @@ void HomeRecognize(int id,const std::string& language,HomeResult done,std::funct
   auto result=CefDictionaryValue::Create();result->SetString("status","unavailable");
   try{
    if(MicrophoneDenied())result->SetString("status","denied");
-   else {std::vector<float> audio;bool voiced=false;int silent=0;
+   else {SecureAudio storage;auto& audio=storage.samples;bool voiced=false;int silent=0;size_t calibration=0;std::array<double,5> noise{};double threshold=.003;
     {Capture capture;if(capture.Start()){
-     phase("listening");
      const auto start=std::chrono::steady_clock::now();
      while(!job->cancelled&&std::chrono::steady_clock::now()-start<std::chrono::seconds(15)){
       WaitForSingleObject(capture.event,100);
       for(size_t i=0;i<capture.headers.size();++i){auto& header=capture.headers[i];if(!(header.dwFlags&WHDR_DONE))continue;
        double energy=0;const size_t count=header.dwBytesRecorded/2;
        for(size_t j=0;j<count;++j){const float value=capture.samples[i][j]/32768.0f;audio.push_back(value);energy+=value*value;}
-       if(count&&std::sqrt(energy/count)>.012){voiced=true;silent=0;}else ++silent;
+       const double rms=count?std::sqrt(energy/count):0;
+       // Calibrate before announcing readiness; a single click must not set the noise floor.
+       if(count&&calibration<noise.size()){
+        noise[calibration++]=rms;
+        if(calibration==noise.size()){threshold=HomeSpeechThreshold(noise);phase("listening");}
+       }else if(count&&rms>threshold){voiced=true;silent=0;}else ++silent;
        header.dwBytesRecorded=0;if(!job->cancelled)waveInAddBuffer(capture.input,&header,sizeof(header));
       }
       if((voiced&&silent>=15)||(!voiced&&silent>=60))break;
@@ -97,13 +106,12 @@ void HomeRecognize(int id,const std::string& language,HomeResult done,std::funct
     }} // Release the microphone before inference. Audio never touches disk.
     if(voiced&&!job->cancelled){phase("processing");const auto text=Transcribe(audio,language,job->cancelled);if(!text.empty()){result->SetString("status","recognized");result->SetString("text",text);}else result->SetString("status","unrecognized");}
     else if(!job->cancelled&&audio.size()>=8000)result->SetString("status","no_speech");
-    if(!audio.empty())SecureZeroMemory(audio.data(),audio.size()*sizeof(float));
    }
   }catch(...){}
   if(job->cancelled)result->SetString("status","cancelled");{std::lock_guard lock(jobs_mutex);auto it=jobs.find(id);if(it!=jobs.end()&&it->second==job)jobs.erase(it);}
   Deliver(std::move(done),result);
  }).detach();
 }
-std::string HomeTranscribeTest(const std::vector<float>& audio,const std::string& language){std::atomic_bool cancelled=false;return Transcribe(audio,language,cancelled);}
+std::string HomeTranscribeTest(const std::vector<float>& audio,const std::string& language){std::atomic_bool cancelled=false;std::string text;std::thread worker([&]{try{text=Transcribe(audio,language,cancelled);}catch(...){}});worker.join();return text;}
 void HomeLocate(HomeResult done){std::thread([done=std::move(done)]() mutable {auto result=CefDictionaryValue::Create();result->SetString("status","unavailable");try{winrt::init_apartment(winrt::apartment_type::multi_threaded);using namespace winrt::Windows::Devices::Geolocation;Geolocator locator;locator.DesiredAccuracy(PositionAccuracy::Default);auto position=locator.GetGeopositionAsync(std::chrono::minutes(15),std::chrono::seconds(10)).get();auto point=position.Coordinate().Point().Position();result->SetString("status","ready");result->SetDouble("latitude",std::round(point.Latitude*100)/100);result->SetDouble("longitude",std::round(point.Longitude*100)/100);}catch(...){}Deliver(std::move(done),result);}).detach();}
 }
