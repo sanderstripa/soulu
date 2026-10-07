@@ -184,6 +184,7 @@ void BrowserWindow::HandleOnboardingBridge(int id,const std::string& request,
     if(!save())return;
     const auto destination=pending_external_url_.empty()?PageUrl("startup",settings_):pending_external_url_;
     pending_external_url_.clear();
+    tab->focus_home_on_load=id==active_tab_id_&&destination=="soulu://home";
     tab->browser->GetMainFrame()->LoadURL(InternalUrl(destination));EmitState();ReplyEmpty(callback);return;
   }
   callback->Failure(400,"Unknown onboarding action");

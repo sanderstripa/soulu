@@ -2,5 +2,7 @@
 
 @media(max-height:460px){.provider-panel{top:auto;bottom:calc(100% + 8px);max-height:180px}}
 /* The official Perplexity favicon is a white transparent glyph. */
-body:not([data-theme=dark]) img[src$="perplexity.ico"]{filter:brightness(0)}
-@media(prefers-color-scheme:dark){body:not([data-theme=light]) img[src$="perplexity.ico"]{filter:none}}
+body:not([data-theme=dark]) img[src$="perplexity.ico"]{filter:invert(1);mix-blend-mode:multiply}
+@media(prefers-color-scheme:dark){body:not([data-theme=light]) img[src$="perplexity.ico"]{filter:none;mix-blend-mode:screen}}
+
+body[data-theme=dark] img[src$="perplexity.ico"]{filter:none;mix-blend-mode:screen}

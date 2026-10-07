@@ -46,7 +46,7 @@ def main():
  exe=Path(sys.argv[1]).resolve();out=Path(sys.argv[2]).resolve();out.mkdir(parents=True,exist_ok=True)
  with tempfile.TemporaryDirectory(prefix='soulu-home-design-',ignore_cleanup_errors=True) as root:
   env=dict(os.environ,LOCALAPPDATA=root,SOULU_UI_TEST_PORT=str(s.DEBUG_PORT),SOULU_REGRESSION_SKIP_FIRST_RUN='1')
-  process=subprocess.Popen([str(exe),'--no-proxy-server'],env=env);sockets=[]
+  process=subprocess.Popen([str(exe)],env=env);sockets=[]
   def connect(fragment):
    target=wait(lambda:next((x for x in s.targets() if fragment in x.get('url','')),None))
    ws=s.websocket.create_connection(target['webSocketDebuggerUrl'],timeout=40,origin=s.BASE);sockets.append(ws);return ws
@@ -55,7 +55,7 @@ def main():
    def bridge(ws,action,payload=None):return s.evaluate(ws,"new Promise((resolve,reject)=>cefQuery({request:"+json.dumps(json.dumps({'action':action,'payload':payload}))+",onSuccess:v=>resolve(v?JSON.parse(v):null),onFailure:(_,m)=>reject(Error(m))}))")
    def settings(patch):return s.evaluate(shell,'browserShell.setSettings('+json.dumps(patch)+')')
    def capture(name,native=False):
-    s.evaluate(home,'new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))')
+    s.evaluate(home,'Promise.all(document.getAnimations().map(animation=>animation.finished.catch(()=>{}))).then(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))))')
     if native:
      hwnd=wait(lambda:find_window(process.pid));u.SetForegroundWindow(hwnd);ctypes.windll.dwmapi.DwmFlush();r=W.RECT();u.GetWindowRect(hwnd,ctypes.byref(r));ImageGrab.grab(bbox=(r.left,r.top,r.right,r.bottom),include_layered_windows=True,all_screens=True).save(out/(name+'.png'))
     else:(out/(name+'.png')).write_bytes(base64.b64decode(s.command(home,'Page.captureScreenshot',{'format':'png','captureBeyondViewport':False})['data']))
