@@ -56,7 +56,7 @@ def main():
         try:
             shell=connect('/ui/index.html');home=connect('/ui/home.html')
             wait(lambda:s.evaluate(shell,'typeof browserShell?.getState==="function"'))
-            audit(shell,'browser chrome');audit(home,'Home');actual_face(home,'#logo','Home wordmark');capture(home,'home')
+            audit(shell,'browser chrome');audit(home,'Home');actual_face(home,'#providerName','Home provider label');capture(home,'home')
             s.evaluate(shell,'document.querySelector("#compactVpnButton").dispatchEvent(new PointerEvent("pointerover",{bubbles:true}))')
             wait(lambda:s.evaluate(shell,'!document.querySelector(".soulu-type-tooltip").hidden'))
             actual_face(shell,'.soulu-type-tooltip','Toolbar title tooltip');capture(shell,'toolbar-tooltip')
