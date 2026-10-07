@@ -2668,7 +2668,33 @@ LRESULT CALLBACK BrowserWindow::WindowProc(HWND hwnd, UINT message, WPARAM wpara
       if (top) return HTTOP; if (bottom) return HTBOTTOM;
       return HTCLIENT;
     }
-    case WM_NCLBUTTONDOWN:
+    case WM_GETTITLEBARINFOEX: {
+      auto* info = reinterpret_cast<TITLEBARINFOEX*>(lparam);
+      if (!info || info->cbSize != sizeof(TITLEBARINFOEX)) return 0;
+      *info = {sizeof(TITLEBARINFOEX)};
+      info->rgstate[1] = info->rgstate[4] = STATE_SYSTEM_INVISIBLE;
+      if (self->Fullscreen() || !self->surface_ || self->settings_overlay_) {
+        for (auto& state : info->rgstate) state = STATE_SYSTEM_INVISIBLE;
+        return 0;
+      }
+      // Expose the same physical caption rectangle used by hit testing. The
+      // default popup-frame metrics describe a shorter, system-drawn caption.
+      RECT maximize = self->surface_->MaximizeBounds();
+      POINT origin = {}; ClientToScreen(hwnd, &origin);
+      OffsetRect(&maximize, origin.x, origin.y);
+      RECT client = {}; GetClientRect(hwnd, &client);
+      info->rcTitleBar = {origin.x, origin.y, origin.x + client.right, maximize.bottom};
+      info->rgrect[0] = info->rcTitleBar;
+      info->rgrect[3] = maximize;
+      info->rgrect[2] = maximize;
+      info->rgrect[5] = maximize;
+      const LONG width = maximize.right - maximize.left;
+      OffsetRect(&info->rgrect[2], -width, 0);
+      OffsetRect(&info->rgrect[5], width, 0);
+      if (self->caption_pressed_) info->rgstate[3] = STATE_SYSTEM_PRESSED;
+      return 0;
+    }
+    case WM_NCLBUTTONDOWN: case WM_NCLBUTTONDBLCLK:
       if (wparam == HTMAXBUTTON && !self->Fullscreen()) {
         // The custom popup frame exposes a real Snap hit target, but does not
         // have a system-painted caption button for DefWindowProc to track.

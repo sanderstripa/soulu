@@ -44,12 +44,15 @@ void ShellSurface::CommitResize() {
 }
 void ShellSurface::Focus() { SetFocus(hwnd_); if (browser_) browser_->GetHost()->SetFocus(true); }
 void ShellSurface::Cursor(HCURSOR cursor) { cursor_ = cursor; SetCursor(cursor ? cursor : LoadCursor(nullptr, IDC_ARROW)); }
+RECT ShellSurface::MaximizeBounds() const {
+  return {static_cast<LONG>(std::round(maximize_rect_.x * scale_)),
+      static_cast<LONG>(std::round(maximize_rect_.y * scale_)),
+      static_cast<LONG>(std::round((maximize_rect_.x + maximize_rect_.width) * scale_)),
+      static_cast<LONG>(std::round((maximize_rect_.y + maximize_rect_.height) * scale_))};
+}
 bool ShellSurface::MaximizeHit(POINT client) const {
-  return maximize_rect_.width > 0 && maximize_rect_.height > 0 &&
-      client.x >= std::round(maximize_rect_.x * scale_) &&
-      client.y >= std::round(maximize_rect_.y * scale_) &&
-      client.x < std::round((maximize_rect_.x + maximize_rect_.width) * scale_) &&
-      client.y < std::round((maximize_rect_.y + maximize_rect_.height) * scale_);
+  const RECT bounds = MaximizeBounds();
+  return PtInRect(&bounds, client) != FALSE;
 }
 void ShellSurface::GetViewRect(CefRefPtr<CefBrowser>, CefRect& rect) {
   rect = CefRect(0, 0, std::max(1, static_cast<int>(std::ceil(width_ / scale_))),

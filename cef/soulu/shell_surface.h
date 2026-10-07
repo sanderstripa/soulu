@@ -19,6 +19,7 @@ class ShellSurface final : public CefRenderHandler {
   void Cursor(HCURSOR cursor);
   void SetMaximizeRect(CefRect rect) { maximize_rect_ = rect; }
   bool MaximizeHit(POINT client) const;
+  RECT MaximizeBounds() const;
   HWND hwnd() const { return hwnd_; }
   int paint_error() const { return paint_error_; }
   int paint_count() const { return paint_count_; }

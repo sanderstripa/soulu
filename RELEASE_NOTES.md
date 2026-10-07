@@ -6,6 +6,7 @@
 - CSS and native content insets share generated DIP geometry; bookmarks, Reader, overview and popup fallbacks follow it. Classic retains its existing size.
 - Browser-owned native menus retain Onest, command routing and opaque white light surfaces, with 12 DIP text and 30 DIP rows.
 - CEF 154.0.33+ga03e714 / Chromium 154.0.8037.94 remain unchanged.
+- Google/Ozon authenticated-session restart checks are deferred to the owner by explicit instruction; they are not claimed as passed for this release.
 
 ## Beta 1.0.56 — Soulu Home
 
