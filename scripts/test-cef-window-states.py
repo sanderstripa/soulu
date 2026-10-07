@@ -171,7 +171,14 @@ def ready_caption(shell,hwnd,selector):
     # CEF publishes the new DOM geometry asynchronously after native resize.
     # Re-read the point while waiting; a point from the previous size is stale.
     point=caption_point(shell,hwnd,selector)
-    return point if u.SendMessageW(hwnd,0x84,0,((point.y&0xffff)<<16)|(point.x&0xffff))==9 else None
+    titlebar=Titlebar();titlebar.size=C.sizeof(titlebar)
+    u.SendMessageW(hwnd,0x33f,0,C.addressof(titlebar))
+    caption=titlebar.buttons[3]
+    expected=round((48 if selector=='#windowMaximize' else 58)*u.GetDpiForWindow(hwnd)/96)
+    assert abs(caption.bottom-caption.top-expected)<=1,('Caption layout not yet synchronized',caption.bottom-caption.top,expected)
+    assert caption.left<=point.x<caption.right and caption.top<=point.y<caption.bottom,('Caption DOM/native bounds not yet synchronized',point.x,point.y)
+    assert u.SendMessageW(hwnd,0x84,0,((point.y&0xffff)<<16)|(point.x&0xffff))==9,'Native maximize hit target not yet synchronized'
+    return point
 
 process = None
 try:
@@ -210,6 +217,15 @@ try:
                         taskbar_excluded(hwnd)
                         native_caption_click(shell,hwnd,selector)
                         wait(lambda:not u.IsZoomed(hwnd) and rect(hwnd)==original)
+                        # Restoring root focus must route normal browser keys
+                        # back to CEF, rather than leaving a keyboard dead end.
+                        u.SetForegroundWindow(hwnd)
+                        u.SendMessageW(hwnd,0x7,0,0)
+                        u.keybd_event(17,29,0,0);time.sleep(.1)
+                        u.keybd_event(76,38,0,0);time.sleep(.1)
+                        u.keybd_event(76,38,2,0);u.keybd_event(17,29,2,0)
+                        address='classicAddress' if layout=='classic' else 'compactAddress'
+                        wait(lambda:s.evaluate(shell,'document.activeElement?.id')==address)
                         # Caption/Snap can focus the root instead of a CEF child.
                         # Exercise its native key route, including held-key repeat.
                         u.SendMessageW(hwnd,0x100,122,1)
@@ -218,7 +234,7 @@ try:
                         assert rect(hwnd)==coords(monitor(hwnd).monitor)
                         u.SendMessageW(hwnd,0x100,27,1)
                         wait(lambda:rect(hwnd)==original)
-                        checks.append(dict(layout=layout,native_caption_click=True,pressed_cancel=True,root_fullscreen_keys=True))
+                        checks.append(dict(layout=layout,native_caption_click=True,pressed_cancel=True,root_fullscreen_keys=True,root_focus_ctrl_l=True))
                     for maximized in [False,True]:
                         if maximized:
                             u.ShowWindow(hwnd,3)

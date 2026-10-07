@@ -2798,7 +2798,11 @@ LRESULT CALLBACK BrowserWindow::WindowProc(HWND hwnd, UINT message, WPARAM wpara
       if (wparam == VK_F11 && (lparam & (1LL << 30))) return 0;
       if (self->HandleFullscreenKey(static_cast<int>(wparam))) return 0;
       break;
-    case WM_SETFOCUS: if (self->settings_overlay_) { self->FocusSettings(); return 0; } break;
+    case WM_SETFOCUS:
+      if (self->settings_overlay_) self->FocusSettings();
+      else if (auto* tab = self->ActiveTab(); tab && tab->browser)
+        tab->browser->GetHost()->SetFocus(true);
+      return 0;
     case WM_DWMCOMPOSITIONCHANGED: self->ApplyWindowAppearance(); return 0;
     case WM_SETTINGCHANGE: self->ApplyWindowAppearance(); self->ApplyContentTheme(); break;
     case WM_CLOSE: TypographyCancelOwnedDialogs(hwnd);self->CloseAll();return 0;
