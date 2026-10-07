@@ -47,6 +47,10 @@ bool VerifiedModel(const std::filesystem::path& path){
  return hex=="be07e048e1e599ad46341c8d2a135645097a538221678b7acdd1b1919c6e1b21";
 }
 void QuietLog(enum ggml_log_level,const char*,void*){}
+struct SecureAudio {
+ std::vector<float> samples;
+ ~SecureAudio(){if(!samples.empty())SecureZeroMemory(samples.data(),samples.size()*sizeof(float));}
+};
 std::string Transcribe(const std::vector<float>& audio,const std::string& language,std::atomic_bool& cancelled,bool* timed_out=nullptr){
  // One inference at a time; cancelled jobs never queue additional model loads.
  std::unique_lock lock(recognition_mutex);if(cancelled||audio.size()<8000||audio.size()>320000)return "";
@@ -55,22 +59,24 @@ std::string Transcribe(const std::vector<float>& audio,const std::string& langua
  const auto filename=CefString(path.wstring()).ToString();
  std::unique_ptr<whisper_context,decltype(&whisper_free)> context(whisper_init_from_file_with_params(filename.c_str(),options),whisper_free);
  if(!context||cancelled)return "";
+ // Camera microphones can deliver speech far below the model's normal PCM
+ // level. Gain only quiet, already voice-qualified input, with a bounded gain.
+ // Both this working copy and the original capture are securely cleared.
+ SecureAudio prepared;prepared.samples=audio;float peak=0;
+ for(float sample:prepared.samples)peak=std::max(peak,std::abs(sample));
+ if(peak>0&&peak<.5f){const float gain=std::min(32.f,.5f/peak);for(auto& sample:prepared.samples)sample*=gain;}
  auto params=whisper_full_default_params(WHISPER_SAMPLING_GREEDY);params.n_threads=std::clamp(static_cast<int>(std::thread::hardware_concurrency()),1,4);
  params.language=language=="en"?"en":"ru";params.translate=false;params.no_context=true;params.no_timestamps=true;params.single_segment=true;
  params.print_realtime=false;params.print_progress=false;params.print_timestamps=false;params.max_tokens=128;
  struct AbortState{std::atomic_bool& cancelled;std::chrono::steady_clock::time_point deadline;bool timed_out=false;};
  AbortState abort{cancelled,std::chrono::steady_clock::now()+std::chrono::seconds(60)};
  params.abort_callback=[](void* data){auto& state=*static_cast<AbortState*>(data);state.timed_out=std::chrono::steady_clock::now()>=state.deadline;return state.cancelled.load()||state.timed_out;};params.abort_callback_user_data=&abort;
- const int inference=whisper_full(context.get(),params,audio.data(),static_cast<int>(audio.size()));
+ const int inference=whisper_full(context.get(),params,prepared.samples.data(),static_cast<int>(prepared.samples.size()));
  if(timed_out)*timed_out=abort.timed_out;
  if(inference!=0||cancelled||abort.timed_out)return "";
  std::string text;for(int i=0;i<whisper_full_n_segments(context.get());++i)text+=whisper_full_get_segment_text(context.get(),i);
  const auto begin=text.find_first_not_of(" \t\r\n");return begin==std::string::npos?"":text.substr(begin,text.find_last_not_of(" \t\r\n")-begin+1);
 }
-struct SecureAudio {
- std::vector<float> samples;
- ~SecureAudio(){if(!samples.empty())SecureZeroMemory(samples.data(),samples.size()*sizeof(float));}
-};
 class Capture {
  public:~Capture(){if(input){waveInReset(input);for(auto& header:headers)if(header.dwFlags&WHDR_PREPARED)waveInUnprepareHeader(input,&header,sizeof(header));waveInClose(input);}if(event)CloseHandle(event);SecureZeroMemory(samples.data(),sizeof(samples));}
  HWAVEIN input=nullptr;HANDLE event=nullptr;std::array<std::array<short,1600>,2> samples{};std::array<WAVEHDR,2> headers{};
