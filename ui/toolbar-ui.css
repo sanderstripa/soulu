@@ -49,6 +49,7 @@ body[data-layout=compact] { --toolbar-target:var(--geometry-main-target); --capt
 }
 .browser-toolbar :is(.compact-window-button,.window-controls button):not(.navigation-toolbar-button):hover::before {background:var(--caption-hover)}
 .browser-toolbar :is(.compact-window-button,.window-controls button):not(.navigation-toolbar-button):active::before {background:var(--caption-pressed)}
+body[data-native-caption-pressed=true] .browser-toolbar :is(#compactWindowMaximize,#windowMaximize)::before {background:var(--caption-pressed)}
 .browser-toolbar :is(.compact-window-button,.window-controls button).window-close:hover::before {background:var(--caption-danger)}
 .browser-toolbar :is(.compact-window-button,.window-controls button).window-close:active::before {background:var(--caption-danger-pressed)}
 .browser-toolbar :is(.compact-window-button,.window-controls button):not(.navigation-toolbar-button) svg {position:relative;width:var(--toolbar-glyph);height:var(--toolbar-glyph);stroke-width:1;transform:none}

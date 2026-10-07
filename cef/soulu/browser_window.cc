@@ -1555,6 +1555,15 @@ void BrowserWindow::FitFullscreenMonitor() {
       SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED | SWP_NOCOPYBITS);
 }
 
+void BrowserWindow::SetCaptionPressed(bool pressed) {
+  if (caption_pressed_ == pressed) return;
+  caption_pressed_ = pressed;
+  if (shell_) shell_->GetMainFrame()->ExecuteJavaScript(
+      pressed ? "document.body.dataset.nativeCaptionPressed='true'"
+              : "delete document.body.dataset.nativeCaptionPressed",
+      shell_->GetMainFrame()->GetURL(), 0);
+}
+
 void BrowserWindow::UpdateFullscreen() {
   CEF_REQUIRE_UI_THREAD();
   const bool fullscreen = Fullscreen();
@@ -1583,7 +1592,7 @@ void BrowserWindow::UpdateFullscreen() {
       if (fullscreen_placement_.showCmd != SW_SHOWMAXIMIZED &&
           MonitorFromRect(&fullscreen_bounds_, MONITOR_DEFAULTTONULL)) {
         // Snapped restored windows can retain a different rcNormalPosition.
-        // Restore their actual rectangle without replacing saved normal bounds.
+        // Restore their actual rectangle rather than the unsnapped placement.
         const auto& r = fullscreen_bounds_;
         SetWindowPos(hwnd_, nullptr, r.left, r.top, r.right-r.left, r.bottom-r.top,
             SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOCOPYBITS);
@@ -2659,6 +2668,30 @@ LRESULT CALLBACK BrowserWindow::WindowProc(HWND hwnd, UINT message, WPARAM wpara
       if (top) return HTTOP; if (bottom) return HTBOTTOM;
       return HTCLIENT;
     }
+    case WM_NCLBUTTONDOWN:
+      if (wparam == HTMAXBUTTON && !self->Fullscreen()) {
+        // The custom popup frame exposes a real Snap hit target, but does not
+        // have a system-painted caption button for DefWindowProc to track.
+        self->SetCaptionPressed(true);
+        SetCapture(hwnd);
+        return 0;
+      }
+      break;
+    case WM_LBUTTONUP: case WM_NCLBUTTONUP:
+      if (self->caption_pressed_) {
+        POINT point = {}; GetCursorPos(&point); ScreenToClient(hwnd, &point);
+        const bool activate = !self->Fullscreen() && self->surface_ &&
+            self->surface_->MaximizeHit(point);
+        self->SetCaptionPressed(false);
+        ReleaseCapture();
+        if (activate) SendMessageW(hwnd, WM_SYSCOMMAND,
+            IsZoomed(hwnd) ? SC_RESTORE : SC_MAXIMIZE, 0);
+        return 0;
+      }
+      break;
+    case WM_CAPTURECHANGED:
+      self->SetCaptionPressed(false);
+      break;
     case WM_NCMOUSEMOVE:
       if (wparam == HTMAXBUTTON && self->surface_) {
         POINT point = {GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam)};

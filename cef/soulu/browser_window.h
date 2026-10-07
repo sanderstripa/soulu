@@ -209,11 +209,13 @@ class BrowserWindow final : public CefBaseRefCounted {
   void FocusAddress();
   void Layout();
   void UpdateFullscreen();
+  void SetCaptionPressed(bool pressed);
   void FitFullscreenMonitor();
   bool Fullscreen() const { return browser_fullscreen_ || content_fullscreen_id_ != 0; }
   bool browser_fullscreen_ = false;
   int content_fullscreen_id_ = 0;
   bool fullscreen_applied_ = false;
+  bool caption_pressed_ = false;
   WINDOWPLACEMENT fullscreen_placement_ = {sizeof(WINDOWPLACEMENT)};
   RECT fullscreen_bounds_ = {};
   LONG_PTR fullscreen_style_ = 0;

@@ -26,7 +26,7 @@ body[data-theme=dark]{color-scheme:dark;--surface:#202124f5;--solid:#26272a;--pa
 .compact-drag-space{flex:1 1 18px;min-width:8px;height:100%;-webkit-app-region:drag}
 .compact-window-button{display:grid;place-items:center;background:transparent;-webkit-app-region:no-drag}.compact-window-button svg{fill:none;stroke:currentColor}
 body[data-layout=compact] .classic-toolbar{display:none}
-body[data-layout=compact] .sidebar,body[data-layout=compact] .side-panel,body[data-layout=compact] .vpn-panel,body[data-layout=compact] .settings-panel{top:52px}
+body[data-layout=compact] .sidebar,body[data-layout=compact] .side-panel,body[data-layout=compact] .vpn-panel,body[data-layout=compact] .settings-panel{top:var(--geometry-main-toolbar)}
 
 
 body[data-layout=classic] .compact-toolbar{display:none}
