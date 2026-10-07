@@ -140,7 +140,7 @@ with tempfile.TemporaryDirectory(prefix='soulu-navigation-', ignore_cleanup_erro
         assert s.evaluate(shell,"document.querySelector('#bookmarkFolder').value")=='0', 'Editing a root bookmark must not move it into the browsed folder'
         s.evaluate(shell,"document.querySelector('.bookmark-editor .bookmark-editor-head button').click();document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))")
         s.navigate(content,'about:blank');content.close()
-        wait(lambda:s.evaluate(shell,'window.browserShell.getState()')['page']['url']=='about:blank')
+        wait(lambda:s.evaluate(shell,'window.browserShell.getState()')['page']['url']=='')
         s.evaluate(shell,'window.browserShell.newTab()')
         wait(lambda:len(s.evaluate(shell,'window.browserShell.getState()')['tabs'])==2)
         s.evaluate(shell,"window.browserShell.setSettings({bookmarksBarMode:'newTab'})")

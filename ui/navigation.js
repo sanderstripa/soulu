@@ -78,7 +78,7 @@
       if(!/^https?:\/\//i.test(page.url||'')){await openMenu();return;}
       row=rows.find(mark=>mark.type!=='folder'&&mark.url===page.url)||null;
     }
-    const isFolder=newFolder||row?.type==='folder',existing=row;
+    const isFolder=newFolder||row?.type==='folder';let existing=row;
     const en=state.settings?.language==='en',t=(ru,english)=>en?english:ru;
     editorReturn=document.activeElement;
     const box=el('form','bookmark-editor');editor=box;
@@ -109,6 +109,7 @@
         const next=mark?{...mark}:{id:nextId(),type:isFolder?'folder':'url',createdAt:Date.now(),order:rows.length};
         Object.assign(next,{title:title.value.trim(),parentId:Number(select.value),updatedAt:Date.now()});if(url){next.url=address;if(!mark&&address===page.url)next.favicon=page.favicon;}
         await persist(mark?rows.map(r=>r.id===mark.id?next:r):[...rows,next]);
+        existing=next;
         if(profileKey()!==key)throw Error(t('Профиль изменился.','The profile changed.'));
         if(!isFolder){const ids=state.settings?.homeFavoriteIds||[],selected=favorite.checked;await api.setSettings({homeFavoriteIds:selected?[...new Set([...ids,next.id])]:ids.filter(id=>id!==next.id)});}
         if(editor===box)closeEditor();
@@ -117,7 +118,8 @@
     document.body.append(box);await api.setPopover(true,'bookmark-editor');updatePopover();
     if(editor!==box)return;
     const anchor=document.querySelector(state.settings?.layout==='classic'?'#favoritesButton':'.compact-toolbar [data-favorites]')?.getBoundingClientRect();
-    const width=box.getBoundingClientRect().width;box.style.left=Math.max(12,Math.min(innerWidth-width-12,(anchor?.right||innerWidth)-width))+'px';box.style.top=(anchor?.bottom||document.querySelector('.browser-toolbar:not([hidden])')?.getBoundingClientRect().bottom||58)+10+'px';title.focus();title.select();
+    const toolbar=document.querySelector(state.settings?.layout==='classic'?'.classic-toolbar':'.compact-toolbar');
+    const width=box.getBoundingClientRect().width;box.style.left=Math.max(12,Math.min(innerWidth-width-12,(anchor?.right||innerWidth)-width))+'px';box.style.top=(anchor?.bottom||toolbar?.getBoundingClientRect().bottom||0)+10+'px';title.focus();title.select();
     box.onkeydown=e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();closeEditor();}else if(e.key==='Tab'){const focusable=[...box.querySelectorAll('button,input,select')].filter(n=>!n.disabled);if(e.shiftKey&&document.activeElement===focusable[0]){e.preventDefault();focusable.at(-1).focus();}else if(!e.shiftKey&&document.activeElement===focusable.at(-1)){e.preventDefault();focusable[0].focus();}}};
   }
   async function folder(){await edit(null,true);}
