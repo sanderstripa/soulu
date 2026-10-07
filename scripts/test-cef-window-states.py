@@ -207,7 +207,15 @@ try:
                         taskbar_excluded(hwnd)
                         native_caption_click(shell,hwnd,selector)
                         wait(lambda:not u.IsZoomed(hwnd) and rect(hwnd)==original)
-                        checks.append(dict(layout=layout,native_caption_click=True,pressed_cancel=True))
+                        # Caption/Snap can focus the root instead of a CEF child.
+                        # Exercise its native key route, including held-key repeat.
+                        u.SendMessageW(hwnd,0x100,122,1)
+                        wait(lambda:rect(hwnd)==coords(monitor(hwnd).monitor))
+                        u.SendMessageW(hwnd,0x100,122,(1<<30)|1)
+                        assert rect(hwnd)==coords(monitor(hwnd).monitor)
+                        u.SendMessageW(hwnd,0x100,27,1)
+                        wait(lambda:rect(hwnd)==original)
+                        checks.append(dict(layout=layout,native_caption_click=True,pressed_cancel=True,root_fullscreen_keys=True))
                     for maximized in [False,True]:
                         if maximized:
                             u.ShowWindow(hwnd,3)

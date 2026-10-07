@@ -2792,6 +2792,12 @@ LRESULT CALLBACK BrowserWindow::WindowProc(HWND hwnd, UINT message, WPARAM wpara
       return 0;
     case WM_MOVE: if (self->shell_) self->shell_->GetHost()->NotifyMoveOrResizeStarted();
       if (self->settings_overlay_) self->settings_overlay_->Layout(); break;
+    case WM_KEYDOWN:
+      // Windows caption/Snap interactions can leave keyboard focus on the root
+      // HWND rather than a CEF child. Keep fullscreen keys available there too.
+      if (wparam == VK_F11 && (lparam & (1LL << 30))) return 0;
+      if (self->HandleFullscreenKey(static_cast<int>(wparam))) return 0;
+      break;
     case WM_SETFOCUS: if (self->settings_overlay_) { self->FocusSettings(); return 0; } break;
     case WM_DWMCOMPOSITIONCHANGED: self->ApplyWindowAppearance(); return 0;
     case WM_SETTINGCHANGE: self->ApplyWindowAppearance(); self->ApplyContentTheme(); break;
