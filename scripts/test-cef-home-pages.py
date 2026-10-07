@@ -141,6 +141,11 @@ def main():
             check(s.evaluate(h,"document.activeElement.id==='voice'"),'Tab reaches microphone')
             s.command(h,'Input.dispatchKeyEvent',{'type':'keyDown','key':'Tab','code':'Tab','windowsVirtualKeyCode':9,'modifiers':8})
             check(s.evaluate(h,"document.activeElement.id==='query'"),'Shift+Tab returns to input')
+            # Routing assertions inspect native URL encoding, not live search content.
+            # A provider redirect can otherwise overtake the immediate Home command.
+            # Real result pages are verified separately with the normal system route.
+            s.command(h,'Network.enable')
+            s.command(h,'Network.setBlockedURLs',{'urls':['*://www.google.com/*','*://www.perplexity.ai/*']})
             for provider in ('google','perplexity'):
                 home(h,'home.set',{'homeProvider':provider});call('setSettings',{'searchEngine':'bing'})
                 query='погода екатеринбург';home(h,'home.navigate',query)
