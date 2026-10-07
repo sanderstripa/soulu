@@ -49,6 +49,8 @@ u.EnumWindows.argtypes = [CALLBACK, W.LPARAM]
 u.EnumChildWindows.argtypes = [W.HWND, CALLBACK, W.LPARAM]
 class Monitor(C.Structure):
     _fields_ = [('size', W.DWORD), ('monitor', W.RECT), ('work', W.RECT), ('flags', W.DWORD)]
+class Titlebar(C.Structure):
+    _fields_ = [('size', W.DWORD), ('bounds', W.RECT), ('states', W.DWORD*6), ('buttons', W.RECT*6)]
 class Fixture(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         body = b'''<!doctype html><style>html,body{margin:0;background:#46a6cf}video{width:300px}</style>
@@ -190,6 +192,12 @@ try:
                     point = W.POINT(round(box['x']*u.GetDpiForWindow(hwnd)/96),round(box['y']*u.GetDpiForWindow(hwnd)/96))
                     u.ClientToScreen(hwnd,C.byref(point))
                     wait(lambda:u.SendMessageW(hwnd,0x84,0,((point.y&0xffff)<<16)|(point.x&0xffff))==9)
+                    titlebar=Titlebar();titlebar.size=C.sizeof(titlebar)
+                    u.SendMessageW(hwnd,0x33f,0,C.addressof(titlebar))
+                    caption=titlebar.buttons[3]
+                    assert caption.left<=point.x<caption.right and caption.top<=point.y<caption.bottom
+                    assert abs((caption.right-caption.left)-round(42*u.GetDpiForWindow(hwnd)/96))<=1
+                    assert abs((caption.bottom-caption.top)-round((58 if layout=='compact' else 48)*u.GetDpiForWindow(hwnd)/96))<=1
 
                     if not matte and theme=='light':
                         native_caption_click(shell,hwnd,selector,cancel=True)
