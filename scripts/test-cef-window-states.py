@@ -35,6 +35,9 @@ u.IsZoomed.argtypes = [W.HWND]
 u.GetDpiForWindow.argtypes = [W.HWND]
 u.SetWindowPos.argtypes = [W.HWND, W.HWND, C.c_int, C.c_int, C.c_int, C.c_int, W.UINT]
 u.ShowWindow.argtypes = [W.HWND, C.c_int]
+u.SendMessageW.argtypes = [W.HWND,W.UINT,W.WPARAM,W.LPARAM]
+u.SendMessageW.restype = C.c_ssize_t
+u.ClientToScreen.argtypes = [W.HWND,C.POINTER(W.POINT)]
 u.GetWindowThreadProcessId.argtypes = [W.HWND, C.POINTER(W.DWORD)]
 u.GetClassNameW.argtypes = [W.HWND, W.LPWSTR, C.c_int]
 u.IsWindowVisible.argtypes = [W.HWND]
@@ -153,6 +156,11 @@ try:
                     original = rect(hwnd)
                     inset = round((58 if layout=='compact' else 82)*u.GetDpiForWindow(hwnd)/96)
                     viewport(page,hwnd,inset)
+                    selector = '#windowMaximize' if layout=='classic' else '#compactWindowMaximize'
+                    box = s.evaluate(shell, '(()=>{const r=document.querySelector('+json.dumps(selector)+').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()')
+                    point = W.POINT(round(box['x']*u.GetDpiForWindow(hwnd)/96),round(box['y']*u.GetDpiForWindow(hwnd)/96))
+                    u.ClientToScreen(hwnd,C.byref(point))
+                    wait(lambda:u.SendMessageW(hwnd,0x84,0,((point.y&0xffff)<<16)|(point.x&0xffff))==9)
                     for maximized in [False,True]:
                         if maximized:
                             u.ShowWindow(hwnd,3)
