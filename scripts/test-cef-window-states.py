@@ -164,7 +164,9 @@ def caption_point(shell,hwnd,selector):
     return point
 
 def native_caption_click(shell,hwnd,selector,cancel=False):
-    point=caption_point(shell,hwnd,selector)
+    # Native IsZoomed changes before CEF has published its resized caption.
+    # Every click, including Restore, must use matching DOM/native hit bounds.
+    point=wait(lambda:ready_caption(shell,hwnd,selector))
     foreground(hwnd)
     assert u.SetCursorPos(point.x,point.y)
     u.mouse_event(2,0,0,0,0)
