@@ -1,15 +1,12 @@
-# Settings 2.0 — awaiting user review
+# Settings 2.0 — approved; final regression pending
 
-Baseline: clean clone of GitHub main, fetched and pulled before editing:
-`49b90f22bbb94d17d9428309b4dfcd4a96b129fd`.
-Latest published release at the start: `beta-1.0.57`.
-Pinned CEF: `154.0.33+ga03e714`; Chromium: `154.0.8037.94`.
-No engine or product version bump is part of this review.
+The owner approved the interactive preview on 2026-10-08 and authorized final checks, main integration and release preparation.
+Baseline main: `49b90f22bbb94d17d9428309b4dfcd4a96b129fd`; baseline release: `beta-1.0.57`.
+Release target: Beta 1.0.58. CEF `154.0.33+ga03e714` and Chromium `154.0.8037.94` remain unchanged.
 
-The user requires an interactive review before tests, release builds, commits,
-pushes and publication. Continue only after “Хорошо. Продолжай”.
-No test result or native build success is claimed at this stage.
+All five targeted suites passed against the real newly compiled native runtime: settings/persistence, native overlay/lifecycle, motion/keyboard, toolbar/window controls, and typography. Evidence is stored in the operator workspace `work/native-local`. Source syntax and generated geometry/typography checks passed. The final main workflow will compile and run the complete existing regression and installer verification against its exact source SHA.
 
+The sections below document implementation and earlier review history; earlier pending-review statements do not override the approval above. Physical multi-monitor DPI, authenticated external accounts and working VPN connections are not claimed as automated checks.
 ## Information architecture and bindings
 
 | Previous location | New location | Binding / scope |

@@ -127,6 +127,20 @@ def main():
             check(json.loads(rulesFile.read_text())['defaults']['microphone']==2,'Recovery permits subsequent immediate save')
             section('vpn');beforeVpn=json.loads((data/'settings.json').read_text())['vpn'];change('#vpn-link','unsupported://invalid');evaluate('souluSettings.flush()')
             check(json.loads((data/'settings.json').read_text())['vpn']==beforeVpn,'Invalid VPN key does not overwrite global configuration')
+            if os.environ.get('GITHUB_ACTIONS')=='true':
+                def proxy_snapshot():
+                    result={}
+                    with winreg.OpenKey(winreg.HKEY_CURRENT_USER,r'Software\Microsoft\Windows\CurrentVersion\Internet Settings') as key:
+                        for name in ['ProxyEnable','ProxyServer','AutoConfigURL']:
+                            try:result[name]=winreg.QueryValueEx(key,name)[0]
+                            except FileNotFoundError:result[name]=None
+                    return result
+                proxy_before=proxy_snapshot()
+                valid='vless://11111111-1111-4111-8111-111111111111@vpn-fixture.invalid:443?encryption=none&security=tls&type=xhttp&path=%2Ffixture&host=vpn-fixture.invalid&sni=vpn-fixture.invalid#Settings%20fixture'
+                change('#vpn-link',valid);evaluate('souluSettings.flush()')
+                vpn_saved=json.loads((data/'settings.json').read_text())['vpn']
+                check(vpn_saved['link']==valid and vpn_saved['lastProfileId'],'Valid VPN key saves immediately through the canonical helper')
+                check(proxy_snapshot()==proxy_before and not evaluate("window.vpn.send('status')").get('connected',False),'Saving VPN does not connect or alter Windows proxy')
             active=shellcall('getState')['activeTabId'];evaluate('souluSettingsRequestClose()');wait(lambda:not shellcall('getState')['settingsOverlayOpen'])
             check(shellcall('getState')['activeTabId']==active,'Close requires no dirty dialog and preserves active tab')
             stop();start()
@@ -139,6 +153,7 @@ def main():
                 section('privacy');capture('privacy-dpi-'+str(scale));check(evaluate('document.documentElement.scrollWidth<=innerWidth'),'Section has no horizontal overflow at DPI '+str(scale))
             s.command(settings,'Emulation.clearDeviceMetricsOverride',{})
             a=saved();shellcall('createProfile','Settings B');bId=shellcall('getState')['activeProfileId']
+            wait(lambda:not any('/ui/onboarding.html' in t.get('url','') for t in s.targets()))
             wait(lambda:evaluate("document.body.classList.contains('ready') && souluSettings.persisted?.profile==="+json.dumps(bId)))
             check(evaluate('souluSettings.current.settings.searchEngine')==legacy['searchEngine'],'Profile B uses its independent legacy template')
             section('search');change('#searchEngine','duckduckgo');evaluate('souluSettings.flush()')

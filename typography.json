@@ -54,72 +54,72 @@
     16,
     500
   ],
-  "settings1": [
+  "settingsBody": [
     13.0,
     19.5,
     400
   ],
-  "settings2": [
+  "settingsInput": [
     13.0,
     18.2,
     400
   ],
-  "settings3": [
+  "settingsTitle": [
     21.0,
     27.3,
     600
   ],
-  "settings4": [
+  "settingsButton": [
     13.0,
     18.2,
     500
   ],
-  "settings5": [
+  "settingsCaption": [
     11.5,
     17.25,
     400
   ],
-  "settings6": [
+  "settingsSectionTitle": [
     19.0,
-    25.650000000000002,
+    25.65,
     600
   ],
-  "settings7": [
+  "settingsNav": [
     12.0,
     18.0,
     400
   ],
-  "settings8": [
+  "settingsNavActive": [
     12.0,
     18.0,
     500
   ],
-  "settings9": [
+  "settingsRow": [
     13.0,
-    18.849999999999998,
+    18.85,
     400
   ],
-  "settings10": [
+  "settingsNote": [
     12.0,
     18.6,
     400
   ],
-  "settings11": [
+  "settingsDialogTitle": [
     18.0,
     25.2,
     600
   ],
-  "settings12": [
+  "settingsValue": [
     13.0,
     19.5,
     500
   ],
-  "settings13": [
+  "settingsSmall": [
     11.0,
     16.5,
     400
   ],
-  "settings14": [
+  "settingsNarrowTitle": [
     18.0,
     27.0,
     400
