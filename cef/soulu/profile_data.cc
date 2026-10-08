@@ -112,6 +112,31 @@ bool WriteJson(const std::filesystem::path& path,CefRefPtr<CefValue> value) {
     f<<CefWriteJSON(value,JSON_WRITER_PRETTY_PRINT);f.flush();if(!f)return false;}
   return MoveFileExW(tmp.c_str(),path.c_str(),MOVEFILE_REPLACE_EXISTING|MOVEFILE_WRITE_THROUGH)!=0;
 }
+bool ValidAutofillField(const std::string& field) {
+  if(field.empty()||field.size()>256)return false;
+  std::string lower=field;std::transform(lower.begin(),lower.end(),lower.begin(),::tolower);
+  if(lower=="pan"||lower.find("routing")!=std::string::npos)return false;
+  for(auto key:{"password","passwd","pwd","token","secret","credit","card","cc-","cvc","cvv","otp","one-time","iban"})
+    if(lower.find(key)!=std::string::npos)return false;
+  return true;
+}
+CefRefPtr<CefListValue> ReadAutofill(const std::string& profile) {
+  auto path=ProfileRoot(profile)/L"soulu-autofill.json";
+  if(!std::filesystem::exists(path))return CefListValue::Create();
+  auto file=ReadJson(path);auto object=file&&file->GetType()==VTYPE_DICTIONARY?file->GetDictionary():nullptr;
+  auto blob=object?CefBase64Decode(object->GetString("encrypted")):nullptr;
+  if(!blob)throw std::runtime_error("Autofill storage unreadable; existing data preserved");
+  std::string sealed(blob->GetSize(),'\0'),plain;blob->GetData(sealed.data(),sealed.size(),0);
+  if(!Secret(sealed,"Soulu/autofill/v1/"+profile,false,plain))throw std::runtime_error("Autofill storage cannot be decrypted");
+  auto value=CefParseJSON(plain,JSON_PARSER_RFC);SecureZeroMemory(plain.data(),plain.size());
+  if(!value||value->GetType()!=VTYPE_LIST)throw std::runtime_error("Autofill storage corrupt");return value->GetList();
+}
+bool SaveAutofill(const std::string& profile,CefRefPtr<CefListValue> rows) {
+  std::string plain=CefWriteJSON(Value(rows),JSON_WRITER_DEFAULT),sealed;
+  bool ok=Secret(plain,"Soulu/autofill/v1/"+profile,true,sealed);SecureZeroMemory(plain.data(),plain.size());if(!ok)return false;
+  auto file=CefDictionaryValue::Create();file->SetInt("version",1);file->SetString("encrypted",CefBase64Encode(sealed.data(),sealed.size()));
+  return WriteJson(ProfileRoot(profile)/L"soulu-autofill.json",Value(file));
+}
 PasswordVault::PasswordVault(const std::string& profile):profile_(profile),
   path_(ProfileRoot(profile)/L"soulu-passwords.json"),rows_(CefListValue::Create()) {
   if(!std::filesystem::exists(path_))return;

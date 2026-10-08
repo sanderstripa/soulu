@@ -16,6 +16,8 @@ class HistoryStore {
                               double end, int offset, int limit);
   bool Remove(const std::string& id);
   bool Clear(double begin, double end);
+  // 1 inserted, 0 identical visit already present, -1 storage error.
+  int ImportVisit(const std::string& url, const std::string& title, double time);
  private:
   sqlite3* db_ = nullptr;
 };

@@ -14,12 +14,15 @@
 
 #include <windowsx.h>
 #include <shellapi.h>
+#include <shobjidl.h>
 #include <ws2tcpip.h>
 
 #include <algorithm>
 #include <cstdint>
 #include <chrono>
 #include <cmath>
+#include <cwctype>
+#include <stdexcept>
 #include "include/cef_urlrequest.h"
 #include "include/cef_task.h"
 #include <dwmapi.h>
@@ -39,6 +42,7 @@
 #include "include/cef_ssl_info.h"
 #include "include/wrapper/cef_helpers.h"
 #include <functional>
+#include <set>
 
 namespace soulu {
 namespace {
@@ -611,7 +615,7 @@ void BrowserWindow::InitializeProfiles() {
 }
 
 void BrowserWindow::CreateProfile(const std::string& name,
-                                  const std::string& requested_id, bool existing) {
+                                  const std::string& requested_id, bool existing, bool save_catalog) {
   std::string id = requested_id.empty()
       ? (profiles_.empty() ? "personal" : "profile-" + RandomId())
       : requested_id;
@@ -655,7 +659,7 @@ void BrowserWindow::CreateProfile(const std::string& name,
     flow->SetInt("step",1);config->SetDictionary("onboarding",flow);
     WriteJson(profile_path/L"soulu-settings.json",Wrap(config));
   }
-  SaveProfiles();
+  if(save_catalog)SaveProfiles();
 }
 
 void BrowserWindow::SaveProfiles() const {
@@ -831,6 +835,38 @@ void BrowserWindow::ReleaseIncognito() {
     if(row&&row->GetString("profileId")!="__incognito__")history->SetDictionary(history->GetSize(),row->Copy(false));}
   downloads_=history;
 }
+void BrowserWindow::FillSavedForm(int id,int x,int y) {
+  auto* tab=FindTab(id);if(!tab||tab->incognito||!tab->browser||tab!=ActiveTab()||importing_)return;
+  auto browser=tab->browser;const std::string profile=tab->profile_id,url=browser->GetMainFrame()->GetURL();
+  if(WebOrigin(url).empty())return;
+  const std::string locate="document.elementFromPoint("+std::to_string(x)+","+std::to_string(y)+")";
+  const std::string query="(()=>{const e="+locate+R"JS(;if(!(e instanceof HTMLInputElement)||e.disabled||e.readOnly||!['text','email','tel','search','url','password'].includes(e.type)||e.autocomplete==='off'||e.autocomplete==='new-password'||e.autocomplete==='one-time-code'||e.autocomplete.includes('cc-'))return {};
+    if(e.form&&new URL(e.form.action||location.href,location.href).origin!==location.origin)return {};
+    return {name:e.name||e.id,type:e.type,id:e.id,autocomplete:e.autocomplete.split(/\s+/).at(-1),valid:true}})())JS";
+  CefRefPtr<BrowserWindow> self=this;
+  EvaluateTranslationPage(browser,url,query,[self,browser,id,profile,url,locate](CefRefPtr<CefDictionaryValue> field){
+    auto* current=self->FindTab(id);if(!field||!field->GetBool("valid")||!current||current!=self->ActiveTab()||current->incognito||current->profile_id!=profile||browser->GetMainFrame()->GetURL()!=url)return;
+    const bool password=field->GetString("type")=="password";auto choices=CefListValue::Create();
+    try{if(password){PasswordVault vault(profile);auto list=vault.List();for(size_t i=0;i<list->GetSize()&&choices->GetSize()<30;++i){auto r=list->GetDictionary(i);if(r&&r->GetString("origin")==WebOrigin(url))choices->SetDictionary(choices->GetSize(),r->Copy(false));}}
+      else if(ValidAutofillField(field->GetString("name"))){auto list=ReadAutofill(profile);for(size_t i=0;i<list->GetSize()&&choices->GetSize()<30;++i){auto r=list->GetDictionary(i);if(r&&(r->GetString("name")==field->GetString("name")||r->GetString("name")=="autocomplete:"+field->GetString("autocomplete").ToString()))choices->SetDictionary(choices->GetSize(),r->Copy(false));}}
+    }catch(...){return;}
+    MenuModel menu;for(size_t i=0;i<choices->GetSize();++i){auto r=choices->GetDictionary(i);std::string label=password?r->GetString("username").ToString():r->GetString("value").ToString();if(label.empty())label=self->MenuEnglish()?"Saved login":"Сохранённый вход";
+      std::replace(label.begin(),label.end(),'\n',' ');std::replace(label.begin(),label.end(),'\r',' ');if(label.size()>120)label=label.substr(0,120);menu.push_back(MenuItem{static_cast<int>(i)+1,CefString(label).ToWString()});}
+    if(menu.empty())return;POINT point{};GetCursorPos(&point);const int selected=ShowSouluMenu(self->hwnd(),point,std::move(menu),{self->MenuDark()});
+    current=self->FindTab(id);if(selected<1||static_cast<size_t>(selected)>choices->GetSize()||!current||current!=self->ActiveTab()||current->incognito||current->profile_id!=profile||browser->GetMainFrame()->GetURL()!=url)return;
+    auto choice=choices->GetDictionary(selected-1);std::string value;
+    if(password){PasswordVault vault(profile);if(!vault.Reveal(choice->GetString("id"),value))return;}else value=choice->GetString("value");
+    auto data=field->Copy(false);data->SetString("value",value);data->SetString("username",password?choice->GetString("username"):CefString());
+    const auto json=CefWriteJSON(Wrap(data),JSON_WRITER_DEFAULT);
+    std::string script="(()=>{const d="+json+",e="+locate+R"JS(;if(!(e instanceof HTMLInputElement)||e.disabled||e.readOnly||e.type!==d.type||(e.name||e.id)!==d.name||e.id!==d.id||e.autocomplete==='off'||e.autocomplete==='new-password'||e.autocomplete==='one-time-code'||e.autocomplete.includes('cc-')||e.autocomplete.split(/\s+/).at(-1)!==d.autocomplete)return {};
+      if(e.form&&new URL(e.form.action||location.href,location.href).origin!==location.origin)return {};
+      const put=(field,value)=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(field,value);field.dispatchEvent(new Event('input',{bubbles:true}));field.dispatchEvent(new Event('change',{bubbles:true}));};
+      if(d.type==='password'&&e.form){const users=[...e.form.elements].filter(f=>f instanceof HTMLInputElement&&!f.disabled&&!f.readOnly&&f.autocomplete==='username');if(users.length===1&&!users[0].value)put(users[0],d.username);}
+      put(e,d.value);return {filled:true}})())JS";
+    EvaluateTranslationPage(browser,url,script,[](auto){});if(!value.empty())SecureZeroMemory(value.data(),value.size());
+  });
+}
+
 void BrowserWindow::OfferCredential(int id,CefRefPtr<CefFrame> frame,
                                    const std::string& username,std::string password,
                                    const std::string& submitted_url) {
@@ -2010,6 +2046,12 @@ void BrowserWindow::HandleBridge(const std::string& request,
   auto root = parsed->GetDictionary();
   const std::string action = root->GetString("action");
   auto payload = root->GetValue("payload");
+  const bool any_import=std::any_of(windows_.begin(),windows_.end(),[](BrowserWindow* w){return w->importing_;});
+  const bool bookmark_write=action=="browser.bookmarks.replace"||action=="browser.bookmarks.add"||action=="browser.bookmarks.remove"||action=="browser.bookmarks.homeFavorite";
+  const bool password_write=action.rfind("browser.passwords.",0)==0&&action!="browser.passwords.get"&&action!="browser.passwords.reveal"&&action!="browser.passwords.copy";
+  if(any_import&&(bookmark_write||password_write||action=="browser.profile.delete"||action=="browser.profile.switch"||action=="browser.profile.create"||action=="browser.import.createProfile"||action=="browser.import.run"||action=="browser.import.passwords")){
+    callback->Failure(409,"Wait for the current import to finish");return;
+  }
   if(action=="browser.menu.show"){
     if(settings_source||!payload||payload->GetType()!=VTYPE_DICTIONARY){callback->Failure(403,"Menu host unavailable");return;}
     auto data=payload->GetDictionary();auto items=data->GetList("items");
@@ -2181,6 +2223,143 @@ void BrowserWindow::HandleBridge(const std::string& request,
     auto marks=CefListValue::Create();for(size_t i=0;i<bookmarks_->GetSize();++i){auto row=bookmarks_->GetDictionary(i);
       if(row&&row->GetString("profileId")!=id)marks->SetDictionary(marks->GetSize(),row->Copy(false));}
     bookmarks_=marks;SaveBookmarks(marks);return Reply(callback,State());
+  }
+  else if(action=="browser.import.createProfile"){
+    auto data=payload&&payload->GetType()==VTYPE_DICTIONARY?payload->GetDictionary():nullptr;
+    if(!settings_source||!data||data->GetType("name")!=VTYPE_STRING){callback->Failure(400,"Profile name required");return;}
+    const std::string name=data->GetString("name");
+    if(name.empty()||name.size()>240||std::all_of(name.begin(),name.end(),[](unsigned char c){return c<=32;})||
+       std::any_of(name.begin(),name.end(),[](unsigned char c){return c<32;})){callback->Failure(400,"Invalid profile name");return;}
+    const auto previous_size=profiles_.size();const std::string id="profile-"+RandomId();
+    try{
+      if(!LocalImportPath(UserDataDirectory()))throw std::runtime_error("Profile requires local storage");
+      auto persisted=ReadJson(UserDataDirectory()/L"profiles.json");
+      if(!persisted||persisted->GetType()!=VTYPE_LIST||persisted->GetList()->GetSize()!=previous_size)throw std::runtime_error("Profile catalog changed or is unavailable");
+      for(size_t i=0;i<previous_size;++i){auto row=persisted->GetList()->GetDictionary(i);
+        if(!row||row->GetString("id")!=profiles_[i].id||row->GetString("name")!=profiles_[i].name)throw std::runtime_error("Profile catalog changed");}
+      // Keep the current browsing/settings context. Persist the new catalog
+      // atomically before reporting the new target to the import form.
+      CreateProfile(name,id,false,false);
+      if(profiles_.size()!=previous_size+1||profiles_.back().id!=id)throw std::runtime_error("Could not create profile");
+      auto config=ReadJson(ProfileRoot(id)/L"soulu-settings.json");
+      if(!config||config->GetType()!=VTYPE_DICTIONARY||!profiles_.back().context)throw std::runtime_error("Could not initialize profile storage");
+      auto rows=CefListValue::Create();for(const auto& profile:profiles_){auto row=CefDictionaryValue::Create();row->SetString("id",profile.id);row->SetString("name",profile.name);rows->SetDictionary(rows->GetSize(),row);}
+      if(!WriteJson(UserDataDirectory()/L"profiles.json",Wrap(rows)))throw std::runtime_error("Could not save profile catalog");
+      const auto profile=profiles_.back();
+      for(auto* window:windows_){if(window!=this){window->profiles_.push_back(profile);window->policies_[id]=policies_[id];}window->EmitState();}
+      auto result=CefDictionaryValue::Create();result->SetString("id",profile.id);result->SetString("name",profile.name);return Reply(callback,result);
+    }catch(const std::exception&){if(profiles_.size()>previous_size)profiles_.resize(previous_size);policies_.erase(id);callback->Failure(500,"Could not create the import target; existing profiles were preserved");return;}
+  }
+  else if(action=="browser.import.catalog"){
+    CefPostTask(TID_FILE_BACKGROUND,new FunctionTask([self=CefRefPtr<BrowserWindow>(this),callback](){
+      try{auto rows=BrowserImportCatalog();CefPostTask(TID_UI,new FunctionTask([self,callback,rows](){self->Reply(callback,Wrap(rows));}));}
+      catch(...){CefPostTask(TID_UI,new FunctionTask([callback](){callback->Failure(500,"Browser discovery failed; retry or choose a profile folder");}));}
+    }));return;
+  }
+  else if(action=="browser.import.cancel"||action=="browser.import.progress"){
+    if(!settings_source){callback->Failure(403,"Import requires settings");return;}
+    if(action=="browser.import.cancel"&&import_control_)import_control_->cancelled=true;
+    auto report=CefDictionaryValue::Create();report->SetBool("running",importing_);report->SetInt("processed",import_control_?import_control_->processed.load():0);
+    return Reply(callback,report);
+  }
+  else if(action=="browser.import.file"||action=="browser.import.portable"){
+    if(!settings_source||importing_){callback->Failure(409,"Import is unavailable");return;}
+    struct PickerApartment { HRESULT result=CoInitializeEx(nullptr,COINIT_APARTMENTTHREADED);~PickerApartment(){if(SUCCEEDED(result))CoUninitialize();} } apartment;
+    IFileOpenDialog* picker=nullptr;
+    if(FAILED(CoCreateInstance(CLSID_FileOpenDialog,nullptr,CLSCTX_INPROC_SERVER,IID_PPV_ARGS(&picker)))){callback->Failure(500,"File picker unavailable");return;}
+    const bool folder=action=="browser.import.portable";
+    auto selection=payload&&payload->GetType()==VTYPE_DICTIONARY?payload->GetDictionary():nullptr;
+    const std::string requested_kind=selection?selection->GetString("kind").ToString():"";
+    if(!folder&&!requested_kind.empty()&&requested_kind!="bookmarks"&&requested_kind!="passwords"&&requested_kind!="tabs"){picker->Release();callback->Failure(400,"Unsupported import file category");return;}
+    DWORD options=0;picker->GetOptions(&options);picker->SetOptions(options|FOS_FORCEFILESYSTEM|FOS_PATHMUSTEXIST|(folder?FOS_PICKFOLDERS:FOS_FILEMUSTEXIST));
+    const COMDLG_FILTERSPEC filters[]={{(requested_kind=="bookmarks"||requested_kind=="tabs")?L"Bookmarks HTML":requested_kind=="passwords"?L"Password CSV":L"Bookmarks HTML / password CSV",(requested_kind=="bookmarks"||requested_kind=="tabs")?L"*.html;*.htm":requested_kind=="passwords"?L"*.csv":L"*.html;*.htm;*.csv"}};
+    if(!folder)picker->SetFileTypes(1,filters);
+    if(FAILED(picker->Show(settings_overlay_?settings_overlay_->hwnd():hwnd_))){picker->Release();return Reply(callback,CefDictionaryValue::Create());}
+    IShellItem* item=nullptr;PWSTR selected=nullptr;std::filesystem::path path;
+    if(SUCCEEDED(picker->GetResult(&item))){if(SUCCEEDED(item->GetDisplayName(SIGDN_FILESYSPATH,&selected))){path=selected;CoTaskMemFree(selected);}item->Release();}picker->Release();
+    if(!LocalImportPath(path)){callback->Failure(400,"Choose a local file or profile without symbolic links");return;}
+    CefRefPtr<BrowserWindow> self=this;
+    CefPostTask(TID_FILE_BACKGROUND,new FunctionTask([self,callback,path,folder,requested_kind](){
+      try{auto result=CefDictionaryValue::Create();std::string id="file:"+RandomId();ImportSource portable;
+        if(folder){portable=PortableImportSource(path);id=portable.id;result->SetString("name",portable.name);result->SetString("family",portable.family);}
+        else{auto ext=path.extension().wstring();std::transform(ext.begin(),ext.end(),ext.begin(),[](wchar_t c){return std::towlower(c);});
+          if(ext!=L".csv"&&ext!=L".html"&&ext!=L".htm")throw std::runtime_error("Choose an HTML bookmarks export or UTF-8 password CSV");
+          if(((requested_kind=="bookmarks"||requested_kind=="tabs")&&ext==L".csv")||(requested_kind=="passwords"&&ext!=L".csv"))throw std::runtime_error("File does not match the selected import category");
+          result->SetString("kind",ext==L".csv"?"passwords":requested_kind=="tabs"?"tabs":"bookmarks");result->SetString("name",CefString(path.filename().wstring()).ToString());
+          // CSV plaintext never crosses the renderer bridge or becomes a preview.
+          if(ext!=L".csv")result->SetString("text",ReadImportFile(path));
+        }result->SetString("id",id);
+        CefPostTask(TID_UI,new FunctionTask([self,callback,path,folder,portable,id,result](){if(folder)self->import_portable_[id]=portable;else self->import_files_[id]=path;self->Reply(callback,result);}));
+      }catch(const std::exception& e){std::string message=e.what();CefPostTask(TID_UI,new FunctionTask([callback,message](){callback->Failure(400,message);}));}
+    }));return;
+  }
+  else if(action=="browser.import.capabilities"||action=="browser.import.run"){
+    auto data=payload&&payload->GetType()==VTYPE_DICTIONARY?payload->GetDictionary():nullptr;
+    if(!settings_source||!data||importing_){callback->Failure(409,"Import is unavailable");return;}
+    std::string source_id=data->GetString("source"),target=data->GetString("target");
+    bool run=action=="browser.import.run",from_file=import_files_.count(source_id)>0;
+    ImportSource source;if(import_portable_.count(source_id))source=import_portable_[source_id];
+    // Resolve catalog IDs in the worker, never accept arbitrary renderer paths.
+    if(run&&std::none_of(profiles_.begin(),profiles_.end(),[&](const Profile& p){return p.id==target;})){callback->Failure(400,"Unknown target profile");return;}
+    bool bookmarks=run&&data->GetBool("bookmarks"),history=run&&data->GetBool("history"),passwords=run&&data->GetBool("passwords"),autofill=run&&data->GetBool("autofill"),tabs=run&&data->GetBool("tabs");
+    auto nodes=data->GetList("nodes");
+    if(run&&(!bookmarks&&!history&&!passwords&&!autofill&&!tabs)){callback->Failure(400,"Choose supported data");return;}
+    auto file=from_file?import_files_[source_id]:std::filesystem::path();
+    auto extension=file.extension().wstring();std::transform(extension.begin(),extension.end(),extension.begin(),[](wchar_t c){return std::towlower(c);});
+    if(passwords&&(!data->GetBool("consent")||(from_file&&extension!=L".csv"))){callback->Failure(400,"Explicit password import consent required");return;}
+    if(from_file&&((history||autofill)||(passwords&&(bookmarks||tabs))||((bookmarks||tabs)&&!nodes))){callback->Failure(400,"Invalid file import selection");return;}
+    if(from_file&&(((bookmarks||tabs)&&extension==L".csv")||(passwords&&extension!=L".csv"))){callback->Failure(400,"File category does not match the selected export");return;}
+    if(run){importing_=true;import_control_=std::make_shared<ImportControl>();}
+    auto control=run?import_control_:std::make_shared<ImportControl>();CefRefPtr<BrowserWindow> self=this;
+    auto existing_bookmarks=bookmarks_->Copy();auto bookmark_path=UserDataDirectory()/L"bookmarks.json";
+    CefPostTask(TID_FILE_BACKGROUND,new FunctionTask([self,callback,source,source_id,target,run,from_file,file,nodes,bookmarks,history,passwords,autofill,tabs,control,existing_bookmarks,bookmark_path]()mutable{
+      auto result=CefDictionaryValue::Create();result->SetString("status","ok");auto reports=CefDictionaryValue::Create();result->SetDictionary("categories",reports);
+      CefRefPtr<CefListValue> imported_nodes=nodes;
+      CefRefPtr<CefListValue> merged_bookmarks,imported_tabs;
+      try{
+        if(!from_file&&source.id.empty()){auto sources=BrowserImportSources();auto found=std::find_if(sources.begin(),sources.end(),[&](const ImportSource& s){return s.id==source_id;});if(found==sources.end())throw std::runtime_error("Source profile is no longer available");source=*found;}
+        if(!run){result=BrowserImportCapabilities(source);}
+        else{
+          if(bookmarks&&!from_file){try{imported_nodes=ReadImportBookmarks(source,control);}catch(const std::exception& e){auto r=CefDictionaryValue::Create();r->SetString("status","error");r->SetString("message",e.what());reports->SetDictionary("bookmarks",r);}}
+          if(bookmarks&&imported_nodes&&!control->cancelled){auto r=CefDictionaryValue::Create();r->SetString("status","ok");
+            try{std::error_code error;bool exists=std::filesystem::exists(bookmark_path,error);if(error)throw std::runtime_error("Target bookmarks unavailable");
+              auto saved=exists?ReadJson(bookmark_path):nullptr;
+              if(exists&&(!saved||saved->GetType()!=VTYPE_LIST))throw std::runtime_error("Target bookmarks file is unreadable; existing data preserved");
+              auto merged=MergeImportBookmarks(saved?saved->GetList():existing_bookmarks,imported_nodes,target,r,control);
+              if(control->cancelled){r->SetInt("imported",0);r->SetString("status","cancelled");}
+              else{if(!self->SaveBookmarks(merged))throw std::runtime_error("Bookmark write failed; existing bookmarks preserved");merged_bookmarks=merged;}
+            }catch(const std::exception& e){r->SetInt("imported",0);r->SetString("status","error");r->SetString("message",e.what());}reports->SetDictionary("bookmarks",r);
+          }
+          if(history&&!control->cancelled)reports->SetDictionary("history",ImportBrowserHistory(source,target,control));
+          if(passwords&&!control->cancelled)reports->SetDictionary("passwords",from_file?ImportPasswordCsv(file,target,control):ImportBrowserPasswords(source,target,control));
+          if(autofill&&!control->cancelled)reports->SetDictionary("autofill",ImportBrowserAutofill(source,target,control));
+          if(tabs&&!control->cancelled){auto r=CefDictionaryValue::Create();r->SetInt("imported",0);r->SetInt("skipped",0);r->SetInt("failed",0);r->SetString("status","ok");
+            try{if(!from_file)imported_tabs=ReadImportTabs(source,control,r);
+              else{imported_tabs=CefListValue::Create();size_t scanned=0;std::set<std::string> seen;
+                std::function<void(CefRefPtr<CefListValue>,int)> walk=[&](CefRefPtr<CefListValue> list,int depth){if(!list||depth>64)throw std::runtime_error("Invalid HTML tab tree");
+                  for(size_t i=0;i<list->GetSize();++i){if(control->cancelled)return;if(++scanned>20000)throw std::runtime_error("HTML tab list too large");auto node=list->GetDictionary(i);if(!node)throw std::runtime_error("Invalid HTML tab");
+                    if(node->GetString("type")=="folder")walk(node->GetList("children"),depth+1);else{std::string url=node->GetString("url");if(!WebOrigin(url).empty()&&url.size()<=65536&&seen.insert(url).second){if(imported_tabs->GetSize()>=500)throw std::runtime_error("Import exceeds 500 tabs");imported_tabs->SetString(imported_tabs->GetSize(),url);}}}};walk(nodes,0);}
+            }catch(const std::exception& e){imported_tabs=nullptr;r->SetInt("failed",1);r->SetString("status","error");r->SetString("message",e.what());}reports->SetDictionary("tabs",r);}
+
+        }
+      }catch(const std::exception& e){result->SetString("status","error");result->SetString("message",e.what());}
+      CefPostTask(TID_UI,new FunctionTask([self,callback,result,reports,run,bookmarks,merged_bookmarks,imported_tabs,target,control](){
+        if(run){
+          if(imported_tabs&&!control->cancelled){auto r=reports->GetDictionary("tabs");auto profile=std::find_if(self->profiles_.begin(),self->profiles_.end(),[&](const Profile& p){return p.id==target;});
+            if(profile==self->profiles_.end()){r->SetInt("failed",1);r->SetString("status","error");}
+            else for(size_t i=0;i<imported_tabs->GetSize();++i){std::string url=imported_tabs->GetString(i);bool duplicate=false;
+              for(auto* window:windows_)for(const auto& tab:window->tabs_)if(!tab.incognito&&tab.profile_id==target&&tab.url==url)duplicate=true;
+              if(duplicate)r->SetInt("skipped",r->GetInt("skipped")+1);
+              else{self->NewTab(url,false,false,profile->context,target);r->SetInt("imported",r->GetInt("imported")+1);}}
+          }
+          if(merged_bookmarks)for(auto* window:windows_){window->bookmarks_=merged_bookmarks->Copy();window->EmitState();}
+          if(control->cancelled&&bookmarks&&!reports->HasKey("bookmarks")){auto r=CefDictionaryValue::Create();r->SetInt("imported",0);r->SetString("status","cancelled");reports->SetDictionary("bookmarks",r);}
+          if(control->cancelled)result->SetString("status","cancelled");
+          else{CefDictionaryValue::KeyList keys;reports->GetKeys(keys);for(const auto& key:keys)if(reports->GetDictionary(key)->GetString("status")!="ok")result->SetString("status","partial");}
+          self->importing_=false;
+        }self->Reply(callback,result);if(run&&self->close_after_import_)self->CloseAll();
+      }));
+    }));return;
   }
   else if(action=="browser.import.sources")return Reply(callback,Wrap(DiscoverPasswordSources()));
   else if(action=="browser.import.browsers")return Reply(callback,Wrap(DiscoverImportBrowsers()));

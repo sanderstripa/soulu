@@ -1,4 +1,4 @@
-#include "examples/soulu/profile_data.h"
+#include "examples/soulu/browser_import.h"
 #include <windows.h>
 #include <wincrypt.h>
 #include <bcrypt.h>
@@ -250,17 +250,19 @@ CefRefPtr<CefListValue> DiscoverImportBrowsers() {
     rows->SetDictionary(rows->GetSize(),row);
   }return rows;
 }
-CefRefPtr<CefDictionaryValue> ImportPasswords(const std::string& source_id,const std::string& target) {
+CefRefPtr<CefDictionaryValue> ImportBrowserPasswords(const ImportSource& input,const std::string& target,const std::shared_ptr<ImportControl>& control) {
   auto report=CefDictionaryValue::Create();int imported=0,skipped=0,failed=0,protected_count=0;
   report->SetString("status","error");
   auto finish=[&](){report->SetInt("imported",imported);report->SetInt("skipped",skipped);
-    report->SetInt("failed",failed);report->SetInt("protected",protected_count);return report;};
+    report->SetInt("failed",failed);report->SetInt("protected",protected_count);report->SetInt("skipped",skipped+protected_count);return report;};
   try {
     if(!ValidProfileId(target)){report->SetString("message","Invalid target profile");return finish();}
     if(!LocalImportPath(DataRoot())||!LocalImportPath(Environment(L"TEMP"))){
       report->SetString("message","Import requires local user-data and temporary storage; network and reparse paths are unsupported");return finish();}
-    auto sources=Sources();auto source=std::find_if(sources.begin(),sources.end(),[&](const Source& s){return s.id==source_id;});
-    if(source==sources.end()){report->SetString("message","Source profile is no longer available");return finish();}
+    if(!LocalImportPath(input.root))throw std::runtime_error("Invalid source");
+    Source selected{input.id,input.family=="firefox"?"Firefox":input.browser,input.name,input.root,{}};
+    selected.state=std::filesystem::exists(input.root/L"Local State")?input.root/L"Local State":input.root.parent_path()/L"Local State";
+    const auto* source=&selected;
     Snapshot snapshot;PasswordVault vault(target);
     auto store=[&](const std::string& origin,const std::string& user,std::string& secret){
       auto site=WebOrigin(origin);
@@ -278,7 +280,7 @@ CefRefPtr<CefDictionaryValue> ImportPasswords(const std::string& source_id,const
       // Do not load source pkcs11.txt: it can register arbitrary external modules.
       std::error_code error;std::filesystem::remove(snapshot.root()/L"pkcs11.txt",error);
       Nss nss;bool ready=nss.Open(snapshot.root());
-      for(size_t i=0;i<logs->GetSize();++i){auto row=logs->GetDictionary(i);if(!row){++failed;continue;}
+      for(size_t i=0;i<logs->GetSize();++i){if(control->cancelled)break;if(i>=20000)throw std::runtime_error("Too many logins");++control->processed;auto row=logs->GetDictionary(i);if(!row){++failed;continue;}
         std::string user,secret;
         if(ready&&nss.Read(row->GetString("encryptedUsername"),user)&&nss.Read(row->GetString("encryptedPassword"),secret))
           store(row->GetString("hostname"),user,secret);
@@ -303,8 +305,9 @@ CefRefPtr<CefDictionaryValue> ImportPasswords(const std::string& source_id,const
       int prepared=sqlite3_prepare_v2(database,"SELECT origin_url,username_value,password_value,blacklisted_by_user FROM logins",-1,&query,nullptr);
       if(prepared!=SQLITE_OK){sqlite3_close(database);Wipe(key);report->SetString("message","Unsupported password store schema");return finish();}
       auto text=[&](int col){auto p=sqlite3_column_text(query,col);return p?std::string(reinterpret_cast<const char*>(p)):std::string();};
-      int status;
+      int status;size_t scanned=0;
       while((status=sqlite3_step(query))==SQLITE_ROW){
+        if(control->cancelled)break;if(++scanned>20000){++failed;break;}++control->processed;
         if(sqlite3_column_int(query,3)){++skipped;continue;}
         auto data=sqlite3_column_blob(query,2);int size=sqlite3_column_bytes(query,2);
         if(!data||size<=0){++skipped;continue;}
@@ -312,12 +315,21 @@ CefRefPtr<CefDictionaryValue> ImportPasswords(const std::string& source_id,const
         if(ChromiumSecret(blob,key,secret,protected_record))store(text(0),text(1),secret);
         else if(protected_record)++protected_count;else ++failed;
       }
-      if(status!=SQLITE_DONE)++failed;
+      if(status!=SQLITE_DONE&&!control->cancelled)++failed;
       sqlite3_finalize(query);sqlite3_close(database);Wipe(key);
     }
-    report->SetString("status",protected_count||failed?"partial":"ok");
+    report->SetString("status",control->cancelled?"cancelled":protected_count||failed?"partial":"ok");
     report->SetString("message",protected_count?"Protected or unsupported records were skipped; no protection bypass was attempted":"Local import complete");
   } catch(const std::exception&) {report->SetString("message","Import failed; source data was not modified");}
   return finish();
+}
+CefRefPtr<CefDictionaryValue> ImportPasswords(const std::string& id,const std::string& target) {
+  for(const auto& source:Sources())if(source.id==id){
+    ImportSource input{source.id,source.browser,source.name,source.browser=="Firefox"?"firefox":"chromium",source.root};
+    auto report=ImportBrowserPasswords(input,target,std::make_shared<ImportControl>());
+    // Preserve legacy onboarding's separate protected-record counter.
+    report->SetInt("skipped",report->GetInt("skipped")-report->GetInt("protected"));return report;
+  }
+  auto r=CefDictionaryValue::Create();r->SetString("status","error");r->SetString("message","Source profile unavailable");return r;
 }
 }

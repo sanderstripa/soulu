@@ -36,6 +36,9 @@ set(SOULU_SRCS
   adblock_bridge.h
   adblock_bridge.cc
   password_import.cc
+  browser_import.h
+  browser_import.cc
+  browser_import_tests.cc
   data_tests.cc
   frosted_backdrop.h
   frosted_backdrop.cc

@@ -10,6 +10,7 @@
 #include <functional>
 #include "examples/soulu/profile_data.h"
 #include "examples/soulu/history_store.h"
+#include "examples/soulu/browser_import.h"
 
 #include "include/cef_browser.h"
 #include "examples/soulu/shell_surface.h"
@@ -111,6 +112,7 @@ class BrowserWindow final : public CefBaseRefCounted {
       CefRefPtr<CefDictionaryValue> article,
       CefRefPtr<CefMessageRouterBrowserSide::Callback> callback);
   void SyncSitePolicy(int id, const std::string& url);
+  void FillSavedForm(int id,int x,int y);
   void OfferCredential(int id, CefRefPtr<CefFrame> frame,
                        const std::string& username, std::string password,
                        const std::string& submitted_url);
@@ -168,7 +170,7 @@ class BrowserWindow final : public CefBaseRefCounted {
   void BlockSettingsBackground(bool block);
   void RefreshSettingsProfile();
   void InitializeProfiles();
-  void CreateProfile(const std::string& name, const std::string& requested_id = "", bool existing = false);
+  void CreateProfile(const std::string& name, const std::string& requested_id = "", bool existing = false, bool save_catalog = true);
   bool NeedsOnboarding() const;
   CefRefPtr<CefDictionaryValue> OnboardingState() const;
   bool SaveOnboarding(CefRefPtr<CefDictionaryValue> state);
@@ -314,6 +316,9 @@ class BrowserWindow final : public CefBaseRefCounted {
   bool vpn_enabled_ = false;
   bool closing_ = false;
   bool importing_ = false;
+  std::shared_ptr<ImportControl> import_control_;
+  std::map<std::string, ImportSource> import_portable_;
+  std::map<std::string, std::filesystem::path> import_files_;
   bool close_after_import_ = false;
   bool flushing_cookies_ = false;
   int pending_cookie_flushes_ = 0;

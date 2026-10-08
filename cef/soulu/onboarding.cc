@@ -117,7 +117,7 @@ void BrowserWindow::HandleOnboardingBridge(int id,const std::string& request,
     if(save())Reply(callback,flow);return;
   }
   if(action=="onboarding.import") {
-    if(importing_){callback->Failure(409,"Import in progress");return;}
+    if(std::any_of(windows_.begin(),windows_.end(),[](BrowserWindow* window){return window->importing_;})){callback->Failure(409,"Import in progress");return;}
     if(flow->GetDictionary("importReport")){Reply(callback,flow);return;}
     // Revalidate detected ∩ supported at the time of the operation.
     const std::string source=flow->GetString("source");bool eligible=false;

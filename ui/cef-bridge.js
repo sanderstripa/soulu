@@ -50,6 +50,7 @@
     passwordSources: () => invoke("browser.import.sources"),
     passwordBrowsers: () => invoke("browser.import.browsers"),
     importPasswords: value => invoke("browser.import.passwords", value),
+    browserImport: (action, value) => invoke("browser.import." + action, value),
     getSiteRules: () => invoke("browser.sites.get"),
     setSiteRule: value => invoke("browser.sites.set", value),
     setContentBlocking: value => invoke("browser.sites.blocking", value),

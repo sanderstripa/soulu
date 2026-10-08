@@ -33,6 +33,16 @@ HistoryStore::HistoryStore(const std::string& profile) {
   if(sqlite3_exec(db_,"PRAGMA secure_delete=ON; CREATE TABLE IF NOT EXISTS visits(id TEXT PRIMARY KEY,url TEXT NOT NULL,title TEXT NOT NULL,favicon TEXT NOT NULL,visited REAL NOT NULL,search TEXT NOT NULL); CREATE INDEX IF NOT EXISTS visits_time ON visits(visited DESC,id DESC);",nullptr,nullptr,nullptr)!=SQLITE_OK){sqlite3_close(db_);db_=nullptr;}
 }
 HistoryStore::~HistoryStore(){sqlite3_close(db_);}
+int HistoryStore::ImportVisit(const std::string& url,const std::string& title,double time){
+  if(!db_||WebOrigin(url).empty())return -1;
+  if(sqlite3_exec(db_,"BEGIN IMMEDIATE",nullptr,nullptr,nullptr)!=SQLITE_OK)return -1;
+  Statement find(db_,"SELECT 1 FROM visits WHERE url=? AND visited=? LIMIT 1");
+  if(!find.value){sqlite3_exec(db_,"ROLLBACK",nullptr,nullptr,nullptr);return -1;}
+  find.Text(1,url);sqlite3_bind_double(find.value,2,time);int code=sqlite3_step(find.value);
+  if(code==SQLITE_ROW){sqlite3_reset(find.value);sqlite3_exec(db_,"ROLLBACK",nullptr,nullptr,nullptr);return 0;}
+  if(code!=SQLITE_DONE||Add(url,title,"",time).empty()||sqlite3_exec(db_,"COMMIT",nullptr,nullptr,nullptr)!=SQLITE_OK){sqlite3_exec(db_,"ROLLBACK",nullptr,nullptr,nullptr);return -1;}
+  return 1;
+}
 std::string HistoryStore::Add(const std::string& url,const std::string& title,const std::string& favicon,double time){
   if(WebOrigin(url).empty())return "";
   Statement s(db_,"INSERT INTO visits VALUES(?,?,?,?,?,?)");if(!s.value)return "";

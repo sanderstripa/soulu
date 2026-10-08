@@ -33,6 +33,9 @@ class PasswordVault {
   bool healthy_ = true;
 };
 
+bool ValidAutofillField(const std::string& field);
+CefRefPtr<CefListValue> ReadAutofill(const std::string& profile);
+bool SaveAutofill(const std::string& profile,CefRefPtr<CefListValue> rows);
 // Separate persistent models for permissions and content-blocker exceptions.
 // IO-thread filters read immutable snapshots under this lock, never tab state.
 class SitePolicy {

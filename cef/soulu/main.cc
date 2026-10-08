@@ -10,7 +10,7 @@
 #include "examples/soulu/profile_data.h"
 #include "examples/soulu/home_system.h"
 #include "include/cef_command_line.h"
-namespace soulu { int RunDataSecurityTests(const std::filesystem::path&); }
+namespace soulu { int RunDataSecurityTests(const std::filesystem::path&); int RunBrowserImportTests(const std::filesystem::path&); }
 
 namespace {
 std::filesystem::path SouluDataRoot() {
@@ -41,6 +41,15 @@ int APIENTRY wWinMain(HINSTANCE instance, HINSTANCE, wchar_t*, int) {
     const auto text=soulu::HomeTranscribeTest(audio,language);
     std::ofstream report(std::filesystem::path(command_line->GetSwitchValue("home-speech-test-report").ToWString()),std::ios::binary);report<<text;
     return report&&!text.empty()?0:2;
+  }
+  if(command_line->HasSwitch("browser-import-test-report")){
+    wchar_t enabled[12]={},test_root[32768]={},local[32768]={},roaming[32768]={};
+    if(!GetEnvironmentVariableW(L"SOULU_UI_TEST_PORT",enabled,12)||
+       !GetEnvironmentVariableW(L"SOULU_DATA_SECURITY_TEST_ROOT",test_root,32768)||
+       !GetEnvironmentVariableW(L"LOCALAPPDATA",local,32768)||
+       !GetEnvironmentVariableW(L"APPDATA",roaming,32768)||
+       std::wstring(test_root)!=local||std::wstring(test_root)!=roaming)return 2;
+    return soulu::RunBrowserImportTests(std::filesystem::path(command_line->GetSwitchValue("browser-import-test-report").ToWString()));
   }
   if(command_line->HasSwitch("data-security-test-report")){
     wchar_t enabled[12]={};

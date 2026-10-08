@@ -278,6 +278,9 @@ void BrowserClient::OnBeforeContextMenu(CefRefPtr<CefBrowser> browser,CefRefPtr<
       {MENU_ID_NO_SPELLING_SUGGESTIONS,"Нет вариантов исправления","No spelling suggestions"},
       {MENU_ID_ADD_TO_DICTIONARY,"Добавить в словарь","Add to dictionary"}};
     for(const auto& [id,ru,english]:labels)if(model->GetIndexOf(id)>=0)model->SetLabel(id,label(ru,english));
+    if(role_==BrowserRole::kContent&&frame&&frame->IsMain()&&!WebOrigin(frame->GetURL()).empty()){
+      model->AddSeparator();model->AddItem(kFillSavedForm,label("Заполнить из Soulu…","Fill from Soulu…"));
+    }
     return;
   }
   const bool internal=owner_->IsTrustedUi(frame->GetURL())||owner_->IsHomeUi(frame->GetURL())||owner_->IsHistoryUi(frame->GetURL())||owner_->IsOnboardingUi(frame->GetURL());
@@ -376,6 +379,7 @@ bool BrowserClient::OnContextMenuCommand(CefRefPtr<CefBrowser> browser,
     int command, EventFlags) {
   CEF_REQUIRE_UI_THREAD();
   if(role_!=BrowserRole::kContent)return false;
+  if(command==kFillSavedForm){owner_->FillSavedForm(tab_id_,params->GetXCoord(),params->GetYCoord());return true;}
   if(command==kPageTranslate){owner_->MenuTranslate(tab_id_);return true;}
   if(command==kPageQR){owner_->MenuQR(tab_id_);return true;}
   if(command==kPageReader){owner_->MenuReader(tab_id_);return true;}
