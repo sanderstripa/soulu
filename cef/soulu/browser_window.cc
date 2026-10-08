@@ -857,7 +857,7 @@ void BrowserWindow::FillSavedForm(int id,int x,int y) {
     auto choice=choices->GetDictionary(selected-1);std::string value;
     if(password){PasswordVault vault(profile);if(!vault.Reveal(choice->GetString("id"),value))return;}else value=choice->GetString("value");
     auto data=field->Copy(false);data->SetString("value",value);data->SetString("username",password?choice->GetString("username"):CefString());
-    const auto json=CefWriteJSON(Wrap(data),JSON_WRITER_DEFAULT);
+    const std::string json=CefWriteJSON(Wrap(data),JSON_WRITER_DEFAULT).ToString();
     std::string script="(()=>{const d="+json+",e="+locate+R"JS(;if(!(e instanceof HTMLInputElement)||e.disabled||e.readOnly||e.type!==d.type||(e.name||e.id)!==d.name||e.id!==d.id||e.autocomplete==='off'||e.autocomplete==='new-password'||e.autocomplete==='one-time-code'||e.autocomplete.includes('cc-')||e.autocomplete.split(/\s+/).at(-1)!==d.autocomplete)return {};
       if(e.form&&new URL(e.form.action||location.href,location.href).origin!==location.origin)return {};
       const put=(field,value)=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(field,value);field.dispatchEvent(new Event('input',{bubbles:true}));field.dispatchEvent(new Event('change',{bubbles:true}));};

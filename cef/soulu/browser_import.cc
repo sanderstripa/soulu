@@ -250,8 +250,8 @@ CefRefPtr<CefListValue> AutofillSource(const ImportSource& source,const std::sha
     if(HasTable(db.db(),table)){Query q(db.db(),source.family=="firefox"?"SELECT fieldname,value FROM moz_formhistory":"SELECT name,value FROM autofill");while(q.Next()){if(control->cancelled)return rows;++control->processed;append(q.Text(0),q.Text(1));}}
     if(source.family=="chromium"){
       const std::map<int,std::string> types={{3,"given-name"},{4,"additional-name"},{5,"family-name"},{7,"name"},{9,"email"},{14,"tel"},{30,"address-line1"},{31,"address-line2"},{33,"address-level2"},{34,"address-level1"},{35,"postal-code"},{36,"country"},{60,"organization"},{77,"street-address"}};
-      for(auto table:{"address_type_tokens","local_addresses_type_tokens","contact_info_type_tokens"})if(HasTable(db.db(),table)){
-        std::string sql="SELECT type,value FROM "+std::string(table);Query q(db.db(),sql.c_str());while(q.Next()){if(control->cancelled)return rows;++control->processed;auto found=types.find(q.Int(0));if(found!=types.end())append("autocomplete:"+found->second,q.Text(1));}}
+      for(auto token_table:{"address_type_tokens","local_addresses_type_tokens","contact_info_type_tokens"})if(HasTable(db.db(),token_table)){
+        std::string sql="SELECT type,value FROM "+std::string(token_table);Query q(db.db(),sql.c_str());while(q.Next()){if(control->cancelled)return rows;++control->processed;auto found=types.find(q.Int(0));if(found!=types.end())append("autocomplete:"+found->second,q.Text(1));}}
       const std::vector<std::tuple<const char*,const char*,const char*>> legacy={
         {"autofill_profile_names","first_name","given-name"},{"autofill_profile_names","middle_name","additional-name"},{"autofill_profile_names","last_name","family-name"},{"autofill_profile_names","full_name","name"},
         {"autofill_profile_emails","email","email"},{"autofill_profile_phones","number","tel"},
@@ -286,8 +286,8 @@ std::string ImportHeader(const std::filesystem::path& path,size_t count){
   if(h==INVALID_HANDLE_VALUE)throw std::runtime_error("Close the source browser and retry: source file is locked or inaccessible");
   struct Close{HANDLE h;~Close(){CloseHandle(h);}} close{h};
   wchar_t final[32768]={};auto n=GetFinalPathNameByHandleW(h,final,32768,FILE_NAME_NORMALIZED|VOLUME_NAME_DOS);std::wstring resolved(final);
-  if(!n||n>=32768||resolved.rfind(L"\\?\UNC\",0)==0)throw std::runtime_error("Unsupported source path");
-  if(resolved.rfind(L"\\?\",0)==0)resolved.erase(0,4);if(!LocalImportPath(resolved))throw std::runtime_error("Unsupported source path");
+  if(!n||n>=32768||resolved.rfind(L"\\\\?\\UNC\\",0)==0)throw std::runtime_error("Unsupported source path");
+  if(resolved.rfind(L"\\\\?\\",0)==0)resolved.erase(0,4);if(!LocalImportPath(resolved))throw std::runtime_error("Unsupported source path");
   std::string bytes(count,'\0');DWORD read=0;if(!ReadFile(h,bytes.data(),static_cast<DWORD>(count),&read,nullptr))throw std::runtime_error("Source header read failed");bytes.resize(read);return bytes;
 }
 }
