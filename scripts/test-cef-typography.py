@@ -71,7 +71,7 @@ def main():
                     for scale in (1,1.25,1.5,2):
                         s.command(settings,'Emulation.setDeviceMetricsOverride',{'width':1000,'height':760,'deviceScaleFactor':scale,'mobile':False})
                         s.evaluate(settings,"souluSettings.openSection('')")
-                        wait(lambda:s.evaluate(settings,'!window.souluMotion?.activeCount'))
+                        wait(lambda:s.evaluate(settings,'!document.getAnimations().some(a=>a.playState==="running")'))
                         audit(settings,f'Settings {lang}/{theme}/{scale}')
                         check(s.evaluate(settings,'document.documentElement.scrollWidth<=innerWidth'),f'No horizontal page overflow {lang}/{theme}/{scale}')
                         name=f'settings-{lang}-{theme}-{scale}';capture(settings,name)
@@ -79,7 +79,7 @@ def main():
                 sections=s.evaluate(settings,'[...document.querySelectorAll("#homeCards [data-section]")].map(n=>n.dataset.section)')
                 for section in sections:
                     s.evaluate(settings,'souluSettings.openSection('+json.dumps(section)+')')
-                    wait(lambda:s.evaluate(settings,'!window.souluMotion?.activeCount'))
+                    wait(lambda:s.evaluate(settings,'!document.getAnimations().some(a=>a.playState==="running")'))
                     audit(settings,'Settings '+lang+'/'+section);capture(settings,'section-'+lang+'-'+section)
             s.evaluate(settings,'souluSettings.flush()')
             s.evaluate(shell,"browserShell.openHistory()")

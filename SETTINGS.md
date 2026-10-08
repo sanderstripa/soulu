@@ -1,130 +1,33 @@
-# Settings architecture
+# Settings 2.0
 
-History controls are in **Profiles and data**: recording, day grouping, default
-filter, History and Clear browsing data. They use the same staged profile settings
-model. See [HISTORY.md](HISTORY.md) for storage, shortcuts and clearing limitations.
+Settings is a native overlay, separate from tabs. Compact Home expands when entering a section and returns to intrinsic height on Home. The fixed nine sections are General, Interface, Startup and home, Search, Privacy and security, VPN, Reading and translation, Profiles and import, and About Soulu.
 
-Baseline: main `1d1ac757276477ddf95918bdefa1c1ecea805e53`, Preview 45.
-CEF 154.0.32 / Chromium 154.0.8037.58 are pinned and remain unchanged.
+General owns language, default browser and downloads. Interface owns theme, matte, toolbar and bookmarks-bar controls. Startup and home owns independent startup/new-tab/home modes and URLs, last-tab behavior, Home widgets, favorites and weather. Privacy owns permissions, ad blocking/exceptions, history/clearing, passwords and site data. Existing VPN, Reader, translation, profile and import actions retain their working backends.
 
-Current hosting: Settings uses the native top-anchored overlay described in [SETTINGS_OVERLAY.md](SETTINGS_OVERLAY.md); the storage and editing model below is retained.
+## Immediate persistence
 
-## Canonical storage audit (before implementation)
+Ordinary controls commit through `settings.save`: toggles/selects/segments on change; text on change/blur; Enter blurs text. Custom page mode and URL commit together. There is no global Apply/Cancel, staged preview dictionary, dirty footer or close confirmation. Close blurs the field and flushes pending saves; profile actions also flush before switching.
 
-| User settings / actions | Existing model | Scope | Destination |
-|---|---|---|---|
-| Language | `language` | Profile | General |
-| Theme, matte, panel mode | `theme`, `mattePanel`, `layout` | Profile | Interface |
-| Toolbar visibility | `showSidebar`, `showBack`, `showFavorites`, `showNewTab`, `showDownloads`, `vpnToolbarVisible` | Profile | Interface |
-| Address, extensions, downloads button | `addressPosition`, `extensionsPosition`, `downloadsMode` | Profile | Interface |
-| Startup / new tab / home | independent `startup*`, `newTab*`, `home*` | Profile | Tabs and pages |
-| Last tab | `openStartPageAfterLastTab` | Profile | Tabs and pages |
-| Home widgets | `homeShowLogo`, `homeShowSearch`, `homeShowShortcuts`, `homeShowBackground`, `homeShortcuts` | Profile | Tabs and pages |
-| Weather | `homeShowWeather`, `homeWeatherCity` | Profile | Omitted: provider is explicitly unconfigured |
-| Search | `searchEngine`, `addressOpenMode` | Profile | Search |
-| Bookmarks bar | `bookmarksBarMode`, `bookmarksBarPosition`, `bookmarksIconsOnly` | Profile | Bookmarks |
-| Permissions, exceptions, ad blocking | `SitePolicy`, `soulu-site-rules.json` | Profile; ephemeral in incognito | Websites |
-| Reader | `ReaderPreferences`, `soulu-reader.json` | Profile; ephemeral in incognito | Websites |
-| Profiles | `profiles.json`, existing create/switch/delete | App registry; profile data isolated | Profiles and data |
-| Passwords | `PasswordVault`, `soulu-passwords.json`, DPAPI | Profile | Existing manager in a dialog |
-| Import | `DiscoverPasswordSources`, `ImportPasswords` | Explicit source/target profiles | Existing importer in a dialog |
-| Downloads | `downloadPath`, `askDownloadLocation` | Profile | Downloads |
-| VPN | `vpn` in legacy `settings.json`, native helper profiles | Global | VPN |
-| Versions | Runtime `EngineVersion`, current product version in native state | App | Updates |
-| Automatic updates | stored `automaticUpdates` has no real updater | Profile legacy value retained | Omitted |
-| Windows default browser | Existing registration and Windows Default Apps action | OS user | General |
+`settings.begin` returns a canonical snapshot. `settings.save` returns `{ok,error,persisted}`, including actual groups committed before a later writer failure. The UI restores persisted values and shows errors. Native validation retains existing URL, directory, Reader, Home and VPN constraints. Profile identity is checked, edited keys rebase on live settings, and conflicting concurrent changes are rejected.
 
-The profile settings dictionary is `Profiles/<id>/soulu-settings.json`. The
-legacy app `settings.json` remains the migration template and global VPN owner.
-All existing scopes are preserved, including profile-scoped theme and language.
-UI reorganization does not rename or delete storage keys. Existing legacy
-Startup and bookmarks migrations remain canonical. Passwords, imports,
-permissions, adblock, Reader, Home, onboarding and VPN engines are reused.
+## Existing stores and scopes
 
-## Product structure
+- Profile browser settings: `Profiles/<id>/soulu-settings.json`.
+- Permission/ad-block policy: profile `soulu-site-rules.json`.
+- Reader preferences: profile `soulu-reader.json`.
+- VPN retains the existing global settings and helper profile stores.
+- Password vault, bookmarks, history, imports, translation rules, cookies and cache retain existing backends/scopes.
 
-General, Interface, Tabs and pages, Search, Bookmarks, Websites, Profiles and
-data, Downloads, VPN, Updates. Normal opening starts at the card grid without
-a sidebar. Sections show a 60px icon rail with All settings at its top.
-Content scrolls independently of the header, rail and Apply/Cancel footer.
+Legacy migration and templates are preserved. Incognito Settings edits the ordinary active profile, as before; private browsing data retains its existing scope. Saving VPN does not connect or alter Windows system proxy settings.
 
-The old Appearance, Toolbar, Startup and Passwords top-level views are replaced;
-their controls have the canonical destinations in the table above.
+## Visual system
 
-## Editing session and persistence
+`ui/settings-icons.js` owns the new monochrome 24×24 vectors with 1.5px stroke, rounded caps/joins and neutral active states. Settings uses bundled Onest 400/500/600 and canonical typography tokens; there are no colored category backplates. Search is a pill aligned with the right Home column. Close has a 42px target and a circular 32px red hover surface. The header divider is removed. Content scrolls independently; narrow layouts collapse the rail and grid. Light, Dark and System remain supported.
 
-`settings_session.cc` implements a trusted Settings-document bridge. `begin`
-loads the existing profile dictionary, SitePolicy snapshot, Reader preferences
-and global VPN configuration. The UI keeps loaded, persisted and staged values.
-Only the staged dictionary changes while editing. Ordinary controls never write
-on input. Explicit profile/password/import/site-data/Windows actions use their
-existing backends and confirmations; they are not undone by Cancel.
-
-Theme, layout, matte, language and supported toolbar controls use a native
-presentation overlay, not a file write. Cancel clears that overlay and reloads
-the actual persisted state. Apply validates values, rebases only changed keys
-on the live model and refuses concurrent changes to the same key. Home shortcut
-validation is shared with the Home backend. Existing atomic writers commit each
-canonical store separately: profile settings, SitePolicy, Reader, then VPN.
-There is no cross-file all-or-nothing transaction. VPN helper storage and the
-Soulu global JSON are separate existing stores; if helper save succeeds but
-the JSON write fails, the error explicitly reports this partial save. If a later group fails, the
-reply includes the actual persisted snapshot; already committed groups are
-reported honestly and the remaining draft remains editable for retry.
-
-Dirty Apply is enabled only after a real difference. Apply is disabled during
-save. Overlay close, Escape and whole-window close use a
-Save / Discard / Keep editing dialog. Failed Save leaves the dialog and draft
-open. Profile switching/creation require Apply or Cancel first. Background
-Settings documents receive profile-change notifications, clear stale drafts
-and close sensitive manager dialogs. Incognito opens ordinary profile Settings;
-its ephemeral permission/storage context is not persisted as profile settings.
-
-Matte capability is derived from the existing DWM/Windows advanced-effects and
-high-contrast checks. Unavailable effects are explained without overwriting
-the saved value. An already enabled value can still be turned off.
-
-No exposed preference needs a browser restart. Startup preferences naturally
-change the next browser startup; page defaults affect future page openings.
-Existing pages are not navigated as an editing side effect.
-
-## Search and presentation
-
-A shared section schema owns cards, rail icons, groups and control metadata.
-Search indexes RU/EN titles, hints, group/section paths, option labels and
-synonyms. Results point to the canonical section/control, scroll it into view,
-focus and briefly highlight its row. Locale changes rebuild labels and index
-without losing bilingual aliases. The home has no sidebar; section navigation
-includes an All settings action, titles/tooltips, selected and keyboard-focus
-states. Radio segments, labelled inputs, live status and reduced-motion CSS use
-native accessible semantics. Small windows stack cards and rows; only content
-scrolls while the footer remains reachable.
-
-## Migration and cleanup
-
-No storage schema is replaced. Legacy `startPage*` to `startup*` and legacy
-bookmarks modes retain the existing migration code. `bookmarksBarPosition` and
-`bookmarksBarMode` are edited through one combined control, including hidden
-mode; their stored keys remain unchanged. Unsupported weather, extension
-placement and automatic-update values are preserved without fake controls.
-New profiles use the existing legacy template, not another profile's edited
-settings. Global VPN remains global.
-
-The old embedded `settingsPanel`, renderer views and save handlers were removed.
-Bookmarks management retains CRUD/import/drag-and-drop and now links to the
-canonical Settings editor instead of owning duplicate preference controls.
-Passwords and import remain dialogs over the existing native engines. Site-data
-UI lists currently open web origins and invokes the existing origin action;
-it does not claim an inventory or complete cache/cookie cleanup.
+Search indexes bilingual labels, descriptions, group names and synonyms. Results open the canonical section and highlight its control. Ctrl+F focuses search; Escape/Ctrl+W closes; Alt+Left returns Home; keyboard focus stays inside the active surface/dialog.
 
 ## Verification
 
-`test-cef-settings.py` launches real Soulu with isolated app-data folders and a
-legacy fixture. It covers all ten sections, control search, preview with no
-writes, rollback, invalid URLs/VPN keys, multi-store Apply, injected write
-failure/retry, native dirty-close actions, restart, profile A/B isolation and
-incognito opening. CDP viewport/device-scale probes cover 100%, 125%, 150% and
-200% layout conditions and save screenshots; these are not physical OS DPI
-switches. The build workflow requires this test before packaging/release and
-retains the project's native browser, security, onboarding and integration
-checks. Release source must exactly equal current origin/main.
+Settings acceptance covers real CEF controls, disk writes, invalid input, writer recovery, restart/migration, languages/DPI, profiles and incognito. Native overlay acceptance covers ownership/focus, backdrop blocking, live background page/media, subviews, resize and close/reopen. Motion, typography, storage, Home, toolbar and broader browser suites remain in Windows CI. Preview helpers live outside the repository and are never shipped.
+
+CEF 154.0.33 / Chromium 154.0.8037.94 remain pinned.

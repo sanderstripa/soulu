@@ -88,10 +88,11 @@ def main():
                         data=E('''(()=>{const n=document.querySelector('''+json.dumps(selector)+'''),r=n.getBoundingClientRect(),g=n.querySelector('svg').getBoundingClientRect(),c=getComputedStyle(n),p=getComputedStyle(n,'::before');return {w:r.width,h:r.height,bg:c.backgroundColor,pw:p.width,ph:p.height,radius:p.borderRadius,fill:p.backgroundColor,glyph:{w:g.width,h:g.height,x:g.x-r.x,y:g.y-r.y},transform:getComputedStyle(n.querySelector('svg')).transform}})()''')
                         check(data['w']==42 and data['h']==(48 if layout=='classic' else 58) and data['bg'] in ('rgba(0, 0, 0, 0)','transparent'),f'{layout}/{action}/{pseudo}: full caption target transparent')
                         check(data['pw']==('30px' if layout=='classic' else '32px') and data['ph']==('30px' if layout=='classic' else '32px') and data['radius']=='50%' and data['transform']=='none',f'{layout}/{action}/{pseudo}: canonical circular feedback')
-                        check(data['glyph']=={'w':16,'h':16,'x':13,'y':(data['h']-16)/2},f'{layout}/{action}/{pseudo}: stable centered glyph')
+                        glyph=20 if action=='Close' else 18
+                        check(data['glyph']=={'w':glyph,'h':glyph,'x':(42-glyph)/2,'y':(data['h']-glyph)/2},f'{layout}/{action}/{pseudo}: stable centered glyph')
                         colors.append(data['fill'])
                         if pseudo==['hover']:
-                            label='Restore' if action=='Maximize' and E('document.querySelector('+json.dumps(selector)+'+" rect").getAttribute("width")==="7"') else action
+                            label='Restore' if action=='Maximize' and E('document.querySelector('+json.dumps(selector)+'+" rect").getAttribute("width")==="10.5"') else action
                             capture(layout+'-'+label+'-hover')
                     s.command(ws,'CSS.forcePseudoState',{'nodeId':node,'forcedPseudoClasses':[]})
                     check(colors[0]!=colors[1] and colors[1]!=colors[2],f'{layout}/{action}: hover and pressed fills '+json.dumps(colors))
@@ -101,7 +102,7 @@ def main():
                 captions(layout)
                 max_selector='#windowMaximize' if layout=='classic' else '#compactWindowMaximize'
                 click_target(max_selector)
-                wait(lambda:u.IsZoomed(hwnd) and E('document.querySelector('+json.dumps(max_selector)+'+" rect").getAttribute("width")==="7"'))
+                wait(lambda:u.IsZoomed(hwnd) and E('document.querySelector('+json.dumps(max_selector)+'+" rect").getAttribute("width")==="10.5"'))
                 check(True,layout+': maximize updates Restore glyph immediately')
                 captions(layout)
                 click_target(max_selector);wait(lambda:not u.IsZoomed(hwnd))
@@ -111,7 +112,7 @@ def main():
                 for theme in ('light','dark','system'):
                     for matte in (False,True):
                         E('browserShell.setSettings('+json.dumps({'theme':theme,'mattePanel':matte})+')')
-                        errors=E('''(()=>{const host=document.querySelector('body[data-layout=classic] .classic-toolbar')||document.querySelector('.compact-toolbar');return [...host.querySelectorAll('.toolbar-button,.compact-control,.tab-action,.address-menu-button,.navigation-toolbar-button')].filter(n=>n.getClientRects().length).flatMap(n=>{const r=n.getBoundingClientRect(),g=n.querySelector('svg'),a=g?.getBoundingClientRect();return r.width!==(document.body.dataset.layout==="classic"?30:32)||r.height!==(document.body.dataset.layout==="classic"?30:32)||(a&&(a.width!==16||a.height!==16||Math.abs(a.x+a.width/2-r.x-r.width/2)>.1||Math.abs(a.y+a.height/2-r.y-r.height/2)>.1))?[{id:n.id||n.className,r:{w:r.width,h:r.height},glyph:a?{w:a.width,h:a.height}:null}]:[]})})()''')
+                        errors=E('''(()=>{const host=document.querySelector('body[data-layout=classic] .classic-toolbar')||document.querySelector('.compact-toolbar');return [...host.querySelectorAll('.toolbar-button,.compact-control,.tab-action,.address-menu-button,.navigation-toolbar-button')].filter(n=>n.getClientRects().length).flatMap(n=>{const r=n.getBoundingClientRect(),g=n.querySelector('svg'),a=g?.getBoundingClientRect(),address=!!n.closest('.compact-active-tab,.classic-address-pill'),size=address?(n.matches('[data-close-active],.classic-close-tab')?14:n.matches('[data-reload],.address-menu-button,.page-action')?16:18):18;return r.width!==(document.body.dataset.layout==="classic"?30:32)||r.height!==(document.body.dataset.layout==="classic"?30:32)||(a&&(a.width!==size||a.height!==size||Math.abs(a.x+a.width/2-r.x-r.width/2)>.1||Math.abs(a.y+a.height/2-r.y-r.height/2)>.1))?[{id:n.id||n.className,r:{w:r.width,h:r.height},glyph:a?{w:a.width,h:a.height}:null}]:[]})})()''')
                         check(not errors,f'{layout}/{theme}/{matte}: canonical controls '+json.dumps(errors))
                         check(E("getComputedStyle(document.querySelector(document.body.dataset.layout==='classic'?'.classic-toolbar':'.compact-toolbar')).borderBottomWidth==='0px'"),f'{layout}/{theme}/{matte}: lower divider removed')
                 E('browserShell.pageMenu()');wait(lambda:inside('.site-popover'))

@@ -49,7 +49,10 @@ struct Metrics { float size, lineHeight; int weight; };
     header += f'inline constexpr float onestAscent={font_metrics["ascent"] / font_metrics["unitsPerEm"]}f;\n'
     header += f'inline constexpr float onestDescent={font_metrics["descent"] / font_metrics["unitsPerEm"]}f;\n'
     for name,(size,line,weight) in tokens.items():
-        header += f'inline constexpr Metrics {name}{{{size}.0f,{line}.0f,{weight}}};\n'
+        def literal(value):
+            text = format(float(value), '.6f').rstrip('0').rstrip('.')
+            return (text if '.' in text else text + '.0') + 'f'
+        header += f'inline constexpr Metrics {name}{{{literal(size)},{literal(line)},{weight}}};\n'
     header += '}\n'
     return {'ui/typography.css':css, 'installer/typography_metrics.h':header,
             'cef/soulu/typography_metrics.h':header}

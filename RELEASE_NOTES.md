@@ -1,4 +1,15 @@
-# Soulu Beta 1.0.57 — window geometry and surface polish
+# Soulu Beta 1.0.58 — Settings 2.0
+
+- Settings Home and all nine sections use the compact monochrome design reviewed with the owner, bundled Onest typography and a new Settings icon family.
+- Ordinary settings save immediately through existing canonical stores. Global Apply/Cancel, staged preview and dirty-close confirmation are removed. Invalid values and write errors report the actual persisted state.
+- Home opens at intrinsic height; sections expand smoothly. Search aligns with the right Home column. Native panel sizing precedes its first visible frame, and shadow follows the visible panel.
+- Browser toolbar refinements retain the final reviewed sizes: regular glyph18, window Close20; address star18, Reload16, Close14. Reload/Stop are mutually exclusive and centered. Maximize retains native Snap behavior with explicit hover feedback; tooltips appear below buttons. Light Home is white.
+- Startup/new-tab/home remain independent. VPN, Reader, profile, permissions, history, imports, storage and browser engines retain existing backend mechanisms.
+- CEF 154.0.33+ga03e714 / Chromium 154.0.8037.94 are unchanged.
+
+Validation and remaining manual limitations are recorded in the final verification report; no unperformed authenticated-session checks are claimed.
+
+## Soulu Beta 1.0.57 — window geometry and surface polish
 
 - Normal maximize constrains the root HWND and its input area to the current monitor work area, retaining auto-hide taskbar activation edges.
 - F11 uses the current monitor's full bounds and restores the previous normal/maximized state. HTML5/video fullscreen is tracked separately, including inside F11.

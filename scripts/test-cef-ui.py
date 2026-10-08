@@ -74,8 +74,8 @@ try:
     assert wait_for(lambda: evaluate(settings, "Boolean(document.body?.classList.contains('ready'))"), "settings ready")
     # This visual fixture explicitly selects Blank rather than assuming the
     # product's Soulu Home default is an old blank New Tab page.
-    evaluate(settings,"souluSettings.openSection('tabs');const n=document.querySelector('#newTabMode');n.value='blank';n.dispatchEvent(new Event('change',{bubbles:true}))")
-    assert evaluate(settings,'souluSettings.apply()'), 'Blank visual fixture Apply failed'
+    evaluate(settings,"souluSettings.openSection('startup');const n=document.querySelector('#newTabMode');n.value='blank';n.dispatchEvent(new Event('change',{bubbles:true}))")
+    evaluate(settings,'souluSettings.flush()')
     evaluate(settings, "window.souluSettings.openSection('interface')")
     # These are real change/click handlers from the settings page, not a
     # direct write to settings.json or a synthetic state injected into shell.
@@ -142,7 +142,7 @@ try:
       return true;
     })()""")
     wait_for(lambda: evaluate(shell, "document.body.dataset.theme === 'dark'"), "dark restored")
-    assert evaluate(settings, "window.souluSettings.apply()"), "Apply failed"
+    evaluate(settings, "window.souluSettings.flush()")
     persisted = evaluate(shell, """(async () => await window.browserShell.getSettings())()""")
     assert persisted["theme"] == "dark" and persisted["mattePanel"] is True
     assert persisted["vpnToolbarVisible"] is True
@@ -333,4 +333,3 @@ try:
 finally:
     if settings: settings.close()
     shell.close()
-

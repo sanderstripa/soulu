@@ -49,13 +49,13 @@ def main():
             report['systemReducedAtLaunch']=evaluate('souluMotion.reduced')
             s.command(settings,'Emulation.setEmulatedMedia',{'features':[{'name':'prefers-reduced-motion','value':'no-preference'}]})
             keys=evaluate('[...document.querySelectorAll("#homeCards [data-section]")].map(n=>n.dataset.section)')
-            check(len(keys)==10,'Ten Settings categories preserved')
+            check(len(keys)==9,'Nine Settings categories preserved')
             for key in keys:
                 evaluate('document.querySelector('+json.dumps(card(key))+').scrollIntoView({block:"center"})')
                 # Observe the ephemeral layer in the same renderer turn as activation.
                 # CI transport latency can exceed the entire 260 ms transition.
                 shared=evaluate('(async()=>{document.querySelector('+json.dumps(card(key))+').click();await Promise.resolve();const layer=document.querySelector(".motion-shared");return !!layer&&layer.inert&&layer.getAttribute("aria-hidden")==="true"})()')
-                check(shared,key+': shared container is visual only')
+                check(not shared,key+': section fade does not clone controls')
                 if key=='interface':
                     capture('interface-transition')
                     if o.u.GetForegroundWindow()==host:
@@ -176,4 +176,3 @@ def main():
             output.write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
 
 if __name__=='__main__':main()
-
