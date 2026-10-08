@@ -401,6 +401,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python browser/scripts/test-cef-browser-import.py $exe.FullName browser/artifacts/browser-import-integration.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python browser/scripts/test-cef-browser-import-files.py $exe.FullName browser/artifacts/browser-import-files.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test immediate settings saves, migration and native profile isolation
         shell: pwsh
@@ -1193,6 +1195,7 @@ jobs:
             browser/artifacts/data-security.json
             browser/artifacts/browser-import-native.json
             browser/artifacts/browser-import-integration.json
+            browser/artifacts/browser-import-files.json
             browser/artifacts/onboarding-evidence.json
             browser/artifacts/default-links-evidence.json
             browser/artifacts/settings-evidence.json

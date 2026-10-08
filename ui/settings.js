@@ -169,11 +169,12 @@
       const height=section&&!searching?800:Math.min(800,Math.max(160,Math.ceil(
         document.querySelector('.settings-header').getBoundingClientRect().height+
         entries.getBoundingClientRect().height+parseFloat(style.paddingTop)+parseFloat(style.paddingBottom)+2)));
-      return height;
+      const action=$('actionDialog');
+      return action.open&&action.classList.contains('browser-import-dialog')?Math.max(height,640,Math.min(800,action.scrollHeight+40)):height;
   }
   function resizePanel(){cancelAnimationFrame(resizeFrame);resizeFrame=requestAnimationFrame(()=>{if(!current)return;const height=measurePanelHeight();if(height===lastPanelHeight)return;lastPanelHeight=height;invoke('resize',{height}).catch(report);});}
   const contentSize=new ResizeObserver(resizePanel);
-  for(const node of [$('homeCards'),$('searchResults'),document.querySelector('.settings-header')])contentSize.observe(node);
+  for(const node of [$('homeCards'),$('searchResults'),document.querySelector('.settings-header'),$('actionDialog')])contentSize.observe(node);
   window.addEventListener('resize',resizePanel);
   window.souluSettingsProfileChanged=async()=>{window.souluMotion.cancel();
     if($('actionDialog').open)$('actionDialog').close();

@@ -235,9 +235,16 @@ def main():
                       'Settings controls and Close fit at device scale '+str(scale))
             s.command(settings,'Emulation.clearDeviceMetricsOverride')
             edit('souluSettings.flush()')
-            edit('souluSettingsRequestClose()')
-            time.sleep(duration / 1000 * .15)
-            transition=state()
+            # Do not await the close request across the short native animation.
+            # Sample immediately instead of adding transport delay plus a fixed sleep.
+            edit('souluSettingsRequestClose();true')
+            transition=None;sample_deadline=time.monotonic()+duration/1000+.25
+            while time.monotonic()<sample_deadline:
+                sample=state()
+                if sample['settingsOverlayOpen'] and 0<sample['settingsOverlayProgress']<1:
+                    transition=sample;break
+                time.sleep(.005)
+            check(transition is not None,'A native close animation frame is observable')
             check(transition['settingsOverlayOpen'] and 0<transition['settingsOverlayProgress']<1,'Close transition retains the overlay and blocker while blur fades')
             wait(lambda:not state()['settingsOverlayOpen']);settings.close()
             check(focus(main_window)==previous_focus or bool(u.IsChild(main_window,focus(main_window))),'Closing restores a valid previous browser focus target')
