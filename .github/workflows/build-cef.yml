@@ -777,6 +777,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Smoke-test visible installer controls with mouse on Windows
+        env:
+          GH_TOKEN: ${{ github.token }}
         if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.59')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
         shell: pwsh
         run: |
@@ -993,17 +995,18 @@ jobs:
           $shellGraphics.Dispose();$shellBitmap.Dispose()
           Get-Process Soulu -ErrorAction SilentlyContinue | Stop-Process -Force
           "Physical mouse-click, extraction drag and persistent finish checks passed."
-          # Replace the test installation with the actual published Beta 1.0.57
+          # Replace the test installation with the actual published Beta 1.0.58
           # runtime, then upgrade it with this final-main installer.
-          $previousZip = Join-Path $env:RUNNER_TEMP 'soulu-beta-1.0.57.zip'
-          Invoke-WebRequest 'https://github.com/sanderstripa/soulu/releases/download/beta-1.0.57/Soulu-Beta-1.0.57-x64.zip' -OutFile $previousZip
-          if ((Get-FileHash -LiteralPath $previousZip -Algorithm SHA256).Hash.ToLowerInvariant() -cne '071f0706362f2e5601b84e596655a12d492ca99ec7e957f0cbc5ce8c67625704') { throw 'Previous Beta archive checksum mismatch' }
+          $previousZip = Join-Path $env:RUNNER_TEMP 'Soulu-Beta-1.0.58-x64.zip'
+          gh release download beta-1.0.58 --repo $env:GITHUB_REPOSITORY --pattern 'Soulu-Beta-1.0.58-x64.zip' --dir $env:RUNNER_TEMP --clobber
+          if ($LASTEXITCODE -ne 0) { throw 'Authenticated previous Beta download failed' }
+          if ((Get-FileHash -LiteralPath $previousZip -Algorithm SHA256).Hash.ToLowerInvariant() -cne '8828932dab0460d2bd178956d69090288c18ed160c492f2483e563dc805329b9') { throw 'Previous Beta archive checksum mismatch' }
           Expand-Archive -LiteralPath $previousZip -DestinationPath $installedDirectory -Force
           $previousReport = Join-Path $env:RUNNER_TEMP 'soulu-previous-engine.json'
           $previousProbe = Start-Process $installedExe -ArgumentList @("--engine-version-file=`"$previousReport`"") -WorkingDirectory $installedDirectory -WindowStyle Hidden -PassThru -Wait
           if ($previousProbe.ExitCode -ne 0) { throw 'Previous Beta engine probe failed' }
           $previousEngine = Get-Content -LiteralPath $previousReport -Raw | ConvertFrom-Json
-          if ($previousEngine.cef -cne '154.0.33' -or $previousEngine.chromium -cne '154.0.8037.94') { throw 'Upgrade baseline is not the published Beta 1.0.57 runtime' }
+          if ($previousEngine.cef -cne '154.0.33' -or $previousEngine.chromium -cne '154.0.8037.94') { throw 'Upgrade baseline is not the published Beta 1.0.58 runtime' }
           # Repeat with launch unchecked: Done must close without starting Soulu.
           $noLaunch = Start-Process $installer -PassThru
           Start-Sleep -Seconds 2
