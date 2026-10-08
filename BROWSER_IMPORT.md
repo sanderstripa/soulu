@@ -1,7 +1,7 @@
 # Browser Import 2.0
 
-The compact interface preview was approved by the owner. Native validation and
-release verification are in progress; successful checks are recorded separately.
+The compact interface preview was approved by the owner. Native validation and the general regression suite passed. Final main packaging
+and publication remain subject to the acceptance gates described below.
 Baseline: `d290070a2f5a0e4954b9d031a9898ac0f4d926ca`, published release
 `beta-1.0.58`. CEF 154.0.33 / Chromium 154.0.8037.94 are unchanged.
 
@@ -49,21 +49,21 @@ Opera root profiles and Default profiles have distinct catalog IDs.
 
 | Source | Profile detection | Bookmarks reader | History reader | Passwords |
 | --- | --- | --- | --- | --- |
-| Chrome | LocalAppData, Local State, Default/Profile N | Chromium JSON tree | History visits + urls | Supported DPAPI/AES or NSS + CSV fallback |
-| Edge | LocalAppData, Local State, Default/Profile N | Chromium JSON tree | History visits + urls | Supported DPAPI/AES or NSS + CSV fallback |
-| Brave | LocalAppData, Local State, Default/Profile N | Chromium JSON tree | History visits + urls | Supported DPAPI/AES or NSS + CSV fallback |
-| Opera | AppData, root or Default/Profile N | Chromium JSON tree | History visits + urls | Supported DPAPI/AES or NSS + CSV fallback |
-| Opera GX | AppData, root or Default/Profile N | Chromium JSON tree | History visits + urls | Supported DPAPI/AES or NSS + CSV fallback |
-| Vivaldi | LocalAppData, Local State, Default/Profile N | Chromium JSON tree | History visits + urls | Supported DPAPI/AES or NSS + CSV fallback |
-| Yandex | LocalAppData, Local State, Default/Profile N | Chromium JSON tree | History visits + urls | Supported DPAPI/AES or NSS + CSV fallback |
-| Chromium | LocalAppData, Default/Profile N | Chromium JSON tree | History visits + urls | Supported DPAPI/AES or NSS + CSV fallback |
-| Firefox | AppData, profiles.ini relative/absolute paths | Places tree, positions, roots | Places individual visits | Supported DPAPI/AES or NSS + CSV fallback |
-| Custom/portable | Explicit local profile-folder picker | Recognized Chromium/Places format | Recognized History/Places format | Supported DPAPI/AES or NSS + CSV fallback |
+| Chrome | LocalAppData, Local State, Default/Profile N | Chromium JSON tree | History visits + urls | Windows DPAPI / v10-v11 AES; CSV fallback |
+| Edge | LocalAppData, Local State, Default/Profile N | Chromium JSON tree | History visits + urls | Windows DPAPI / v10-v11 AES; CSV fallback |
+| Brave | LocalAppData, Local State, Default/Profile N | Chromium JSON tree | History visits + urls | Windows DPAPI / v10-v11 AES; CSV fallback |
+| Opera | AppData, root or Default/Profile N | Chromium JSON tree | History visits + urls | Windows DPAPI / v10-v11 AES; CSV fallback |
+| Opera GX | AppData, root or Default/Profile N | Chromium JSON tree | History visits + urls | Windows DPAPI / v10-v11 AES; CSV fallback |
+| Vivaldi | LocalAppData, Local State, Default/Profile N | Chromium JSON tree | History visits + urls | Windows DPAPI / v10-v11 AES; CSV fallback |
+| Yandex | LocalAppData, Local State, Default/Profile N | Chromium JSON tree | History visits + urls | Windows DPAPI / v10-v11 AES; CSV fallback |
+| Chromium | LocalAppData, Default/Profile N | Chromium JSON tree | History visits + urls | Windows DPAPI / v10-v11 AES; CSV fallback |
+| Firefox | AppData, profiles.ini relative/absolute paths | Places tree, positions, roots | Places individual visits | Installed Firefox NSS; CSV for protected records |
+| Custom/portable | Explicit local profile-folder picker | Recognized Chromium/Places format | Recognized History/Places format | Windows DPAPI / v10-v11 AES; CSV fallback |
 
 These are implemented adapter paths, **not verified compatibility claims for every
 current browser version**. Capabilities are probed for the selected source, with
-available/not found/action required/unsupported/blocked states and counts where
-supported. A locked database is reported as unavailable, with a retry instruction.
+available/not found/action required/unsupported/blocked states. Counts are
+reported after reading the selected data; capability probes read only headers. A locked database is reported as unavailable, with a retry instruction.
 The custom picker selects a single profile directory, not an entire User Data tree.
 
 Autofill and open-tab URLs have native readers described below. Separate favicon
@@ -139,38 +139,47 @@ credential or profile mutations are guarded across the current browser windows.
 
 ## Verification status
 
-Passed: JavaScript syntax checks, patch whitespace checks, 45 browser-driven UI and
-HTML parsing checks against an explicitly labeled synthetic adapter. The revised
-preview made no network requests. Eleven additional checks exercise the actual
-field-query/fill expressions on a synthetic page, including sensitive fields,
-cross-origin forms and changed field purpose; they do not execute the C++ bridge,
-DPAPI, native menu or isolated-world integration. Seventeen screenshots show the combined form,
-both dropdowns, inline profile creation, progress, success, partial failure, empty
-discovery, HTML file, CSV consent, cancellation and dark/narrow layouts. These
-results do not execute the new C++ backend.
+Completed local checks on the newly compiled Windows runtime:
 
-Prepared but **not run**: isolated native adapter checks in browser_import_tests.cc,
-including all nine discovery layouts, multiple profiles without Login Data, display
-names, hierarchy, bookmark/history/credential repetition, target isolation, both
-history epochs, Firefox's separate reader, CSV validation before writes, source sidecar preservation, direct DPAPI import,
-autofill encryption/deduplication/isolation/payment exclusion, SNSS and JSONLZ4
-current-tab parsing, closed/private tab exclusion and encrypted/truncated sessions. The harness requires a fresh empty AppData fixture root and
-never uses real personal profiles.
+- 48 native adapter checks: nine discovery layouts, profile names, hierarchy,
+  duplicate prevention, isolation, both history epochs, CSV validation, direct
+  DPAPI credentials, encrypted autofill, payment exclusion, SNSS/JSONLZ4 parsing,
+  private/closed tab exclusion, cancellation and unchanged source files.
+- 23 real CEF integration checks: all five categories, inline profile creation,
+  source locks, duplicate prevention, encrypted destination storage, refusal of
+  failed writes, actual native-menu form/password filling, compact dialog without
+  scrolling, restart persistence, cancellation and incognito rejection.
+- 10 native file-path checks: Windows HTML/CSV/folder pickers and cancellation,
+  actual HTML bookmarks and tab URLs, CSV consent/password transfer, repeat
+  deduplication and portable-profile import. CSV secrets never cross the renderer.
+- An isolated profile created by installed Chrome 154.0.8037.98 imported actual
+  History/Web Data/SNSS files successfully; repeated imports added nothing and
+  the original fixture was unchanged. All records were synthetic.
+- Native Settings overlay lifecycle checks, including animation, preserved live
+  page state, focus restoration, repeated open/close cycles and Reader state.
+- 45 labeled synthetic UI/parser checks, 11 isolated field-expression checks,
+  and canonical typography/font checks. UI previews are not native import proof.
 
-After building the modified sources with the pinned Windows CEF toolchain:
+The complete validation run [37761240394](https://github.com/sanderstripa/soulu/actions/runs/37761240394)
+passed on validation commit `946f6bf292289f8e75bf446e9183612007e1cda7`.
+The CI workflow repeats adapter, CEF and file-path checks before the broader
+regression suite. Final main packaging and publication remain conditional on
+successful required checks and the repository's acceptance gates.
+
+Compatibility with every current version of Edge, Brave, Opera, Opera GX, Vivaldi,
+Yandex, Chromium and Firefox has not been independently exercised using each
+vendor's running browser. Discovery and format adapters have synthetic coverage;
+unsupported/protected stores require a supported export. Real authenticated
+Google/Ozon sessions, configured VPN connectivity and remaining physical desktop
+acceptance must not be inferred from synthetic fixtures.
+
+Run native checks with a newly built Soulu executable:
 
 ```text
 python scripts/test-browser-import-native.py PATH_TO_NEW_SOULU_EXE REPORT_JSON
+python scripts/test-cef-browser-import.py PATH_TO_NEW_SOULU_EXE REPORT_JSON
+python scripts/test-cef-browser-import-files.py PATH_TO_NEW_SOULU_EXE REPORT_JSON
 ```
-
-Still required: actual native compilation; adapter checks on synthetic profiles
-created by each current source browser; live/closed source locking and WAL cases;
-access denial, corrupt/oversized inputs and disk-write failures; Windows file and
-folder pickers; renderer/native cancellation timing; normal browsing during import;
-restart persistence and UI visibility; independent profiles and multiple windows.
-The UI demonstration cannot validate DPAPI, SQLite Windows sharing modes or native
-bridge compilation. Preview approval has been received. Publication still requires successful native
-checks and the existing release acceptance gates for the final main SHA.
 
 Schema references: [Mozilla Places](https://firefox-source-docs.mozilla.org/browser/places/index.html),
 [Firefox history](https://firefox-source-docs.mozilla.org/browser/places/History.html),

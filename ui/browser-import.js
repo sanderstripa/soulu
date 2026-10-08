@@ -164,7 +164,7 @@
     function finish(result) {
       phase='result';box.dataset.importState=phase;cancelRequested=false;lock();
       form.querySelector('.import-categories-section').hidden=true;consentBox.hidden=true;createField.hidden=true;execution.hidden=true;
-      const title=result.status==='ok'?label('Импорт завершён','Import complete'):result.status==='cancelled'?label('Импорт отменён','Import cancelled'):label('Импорт завершён с ошибками','Import completed with errors');
+      const title=result.status==='ok'?label('Импорт завершён','Import complete'):result.status==='cancelled'?label('Импорт отменён','Import cancelled'):result.status==='partial'?label('Импорт завершён частично','Import partially completed'):label('Импорт завершён с ошибками','Import completed with errors');
       summary.replaceChildren(el('p',title,'import-result-title'));summary.hidden=false;
       const totals={imported:0,skipped:0,failed:0},reports=Object.entries(result.categories||{});
       for(const [,r] of reports){totals.imported+=r.imported||0;totals.skipped+=r.skipped||0;totals.failed+=r.failed||0;if(r.status==='error'&&!r.failed)++totals.failed;}

@@ -140,7 +140,8 @@ def main():
             s.evaluate(settings,"document.getElementById('actionDialog').close()");stop();start()
             check(len(s.evaluate(settings,'browserShell.getBookmarks()'))==3,'imported-bookmarks-persist-after-browser-restart')
             check(call('run',payload)['categories']['passwords']['imported']==0,'imported-passwords-persist-after-restart')
-            with closing(sqlite3.connect(source/'History',isolation_level=None)) as c:c.executemany('INSERT INTO visits VALUES(1,?)',[(13344473600123000+i*1000,) for i in range(1,6001)])
+            with closing(sqlite3.connect(source/'History')) as c:
+                with c:c.executemany('INSERT INTO visits VALUES(1,?)',[(13344473600123000+i*1000,) for i in range(1,6001)])
             cancellation=dict(payload,bookmarks=False,passwords=False,autofill=False,tabs=False)
             s.evaluate(settings,'window.__importResult=null;browserShell.browserImport("run",'+json.dumps(cancellation)+').then(r=>window.__importResult=r);true')
             call('cancel');cancelled=wait(lambda:s.evaluate(settings,'window.__importResult'));check(cancelled['status']=='cancelled','native-worker-cancellation-through-same-settings-window')
