@@ -220,7 +220,7 @@ CefRefPtr<CefListValue> ReadImportTabs(const ImportSource& source,const std::sha
       if(bytes.size()-at<3)throw std::runtime_error("Truncated session command");size_t count=static_cast<unsigned char>(bytes[at])|(static_cast<unsigned char>(bytes[at+1])<<8);at+=2;
       if(!count||count>bytes.size()-at)throw std::runtime_error("Invalid session command length");unsigned id=static_cast<unsigned char>(bytes[at]);std::string p=bytes.substr(at+1,count-1);at+=count;
       if(id==255){marker=true;continue;}if(tabs.size()>10000)throw std::runtime_error("Oversized session");
-      if(id==0||id==2||id==7||id==9){int key=static_cast<int>(U32(p,0)),value=static_cast<int>(U32(p,4));if(id==0)tabs[key].window=value;else if(id==2)tabs[key].index=value;else if(id==7)tabs[key].selected=value;else windows[key]=value;}
+      if(id==0||id==2||id==7||id==9){int key=static_cast<int>(U32(p,0)),value=static_cast<int>(U32(p,4));if(id==0)tabs[value].window=key;else if(id==2)tabs[key].index=value;else if(id==7)tabs[key].selected=value;else windows[key]=value;}
       else if(id==16)tabs.erase(static_cast<int>(U32(p,0)));else if(id==17)closed.insert(static_cast<int>(U32(p,0)));
       else if(id==6){if(p.size()<16||U32(p,0)!=p.size()-4)throw std::runtime_error("Invalid navigation pickle");int key=static_cast<int>(U32(p,4)),index=static_cast<int>(U32(p,8));size_t length=U32(p,12);
         if(length>p.size()-16||length>65536)throw std::runtime_error("Invalid navigation URL");tabs[key].urls[index]=p.substr(16,length);}

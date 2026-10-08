@@ -43,7 +43,7 @@ def main():
         ctypes.windll.kernel32.LocalFree(sealed.data)
         nav=struct.pack('<iii',10,0,len(url))+url.encode();nav+=b'\0'*(-len(nav)%4);nav+=struct.pack('<iii',0,0,0)
         command=lambda id,p:struct.pack('<HB',len(p)+1,id)+p
-        session=b'SNSS'+struct.pack('<i',3)+command(0,struct.pack('<ii',10,1))+command(9,struct.pack('<ii',1,0))+command(6,struct.pack('<i',len(nav))+nav)+command(7,struct.pack('<ii',10,0))+command(255,b'')
+        session=b'SNSS'+struct.pack('<i',3)+command(0,struct.pack('<ii',1,10))+command(9,struct.pack('<ii',1,0))+command(6,struct.pack('<i',len(nav))+nav)+command(7,struct.pack('<ii',10,0))+command(255,b'')
         (source/'Sessions').mkdir();(source/'Sessions/Session_1').write_bytes(session);before=digest(source)
         env=dict(os.environ,LOCALAPPDATA=str(local),APPDATA=str(roaming),SOULU_UI_TEST_PORT=str(s.DEBUG_PORT),SOULU_REGRESSION_SKIP_FIRST_RUN='1')
         connections=[];process=None;shell=None;settings=None
@@ -56,7 +56,7 @@ def main():
         def start():
             nonlocal process,shell,settings
             process=subprocess.Popen([str(exe),'--no-proxy-server'],env=env);shell=socket('/ui/index.html');wait(lambda:s.evaluate(shell,"typeof window.browserShell?.browserImport==='function'"))
-            s.evaluate(shell,'browserShell.openSettingsWindow()');settings=socket('/ui/settings.html');wait(lambda:s.evaluate(settings,"document.body.classList.contains('ready')"))
+            s.evaluate(shell,'browserShell.openSettingsWindow()');settings=socket('/ui/settings.html');wait(lambda:s.evaluate(settings,"document.body?.classList.contains('ready')"))
         def stop():
             nonlocal process
             for ws in connections:
@@ -81,12 +81,21 @@ def main():
             finally:kernel.CloseHandle(locked)
             profile=call('createProfile',{'name':'Import target fixture'});other=profile['id'];check(s.evaluate(shell,'browserShell.getState()')['activeProfileId']=='personal','inline-profile-creation-does-not-switch-profile')
             result=call('run',payload);check(result['status']=='ok' and all(result['categories'][k]['imported']>0 for k in ('bookmarks','history','passwords','autofill','tabs')),'all-five-categories-import-through-native-settings-bridge')
-            again=call('run',payload);check(all(r['imported']==0 for r in again['categories'].values()),'repeat-import-deduplicates-all-categories')
+            again=call('run',payload);print('Repeat synthetic import:',again,flush=True);check(all(r.get('imported',0)==0 for r in again['categories'].values()),'repeat-import-deduplicates-all-categories')
             data=local/'Soulu/User Data';personal=data/'Profiles/personal';destination=data/'Profiles'/other
             check(not (destination/'soulu-autofill.json').exists() and not (destination/'soulu-passwords.json').exists(),'existing-target-profile-isolation')
             check(b'fixture@example.test' not in (personal/'soulu-autofill.json').read_bytes() and b'synthetic-import-only' not in (personal/'soulu-passwords.json').read_bytes(),'native-target-stores-encrypted')
             marks=s.evaluate(settings,'browserShell.getBookmarks()');check(any(r.get('parentId',0)>0 for r in marks) and len(marks)==3,'nested-bookmarks-visible-in-existing-bookmark-backend')
             check(digest(source)==before,'native-import-does-not-change-source-or-create-sidecars')
+            original_web=(source/'Web Data').read_bytes();form_file=personal/'soulu-autofill.json';form_backup=form_file.with_suffix('.backup');encrypted_before=form_file.read_bytes()
+            with closing(sqlite3.connect(source/'Web Data',isolation_level=None)) as c:c.execute("INSERT INTO autofill VALUES('email','second@example.test')")
+            form_file.rename(form_backup);form_file.mkdir()
+            try:
+                failure=call('run',dict(payload,bookmarks=False,history=False,passwords=False,tabs=False))
+                check(failure['categories']['autofill']['status']=='error' and failure['categories']['autofill']['imported']==0,'target-write-failure-is-reported-without-success-count')
+                check(form_backup.read_bytes()==encrypted_before,'target-write-failure-preserves-existing-autofill')
+            finally:
+                form_file.rmdir();form_backup.rename(form_file);(source/'Web Data').write_bytes(original_web)
             # Drive the renderer's context menu and the real native saved-value menu.
             menu_spec=importlib.util.spec_from_file_location('access',Path(__file__).with_name('native-menu-accessibility.py'))
             access=importlib.util.module_from_spec(menu_spec);menu_spec.loader.exec_module(access)
@@ -112,7 +121,12 @@ def main():
                 # Host coordinates are screen-relative in accessibility, use keyboard
                 # End because the Fill from Soulu command is the final editable row.
                 user.PostMessageW(hwnd,0x100,0x23,0);user.PostMessageW(hwnd,0x100,0x0D,0)
-                wait(lambda:(h:=menu_window()) and any(r['label']==(label or expected) for r in access.rows(h)))
+                def choices_ready():
+                    hwnd=menu_window()
+                    if not hwnd:return False
+                    try:return any(r['label']==(label or expected) for r in access.rows(hwnd))
+                    except AssertionError:return False # Menu replacement can invalidate MSAA briefly.
+                wait(choices_ready)
                 hwnd=menu_window();user.PostMessageW(hwnd,0x100,0x24,0);user.PostMessageW(hwnd,0x100,0x0D,0)
                 wait(lambda:s.evaluate(content,'document.querySelector('+json.dumps(selector)+').value')==expected)
             fill('input[name=email]','fixture@example.test');check(True,'native-imported-autofill-fills-page-field')

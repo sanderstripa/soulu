@@ -2321,7 +2321,7 @@ void BrowserWindow::HandleBridge(const std::string& request,
         if(!run){result=BrowserImportCapabilities(source);}
         else{
           if(bookmarks&&!from_file){try{imported_nodes=ReadImportBookmarks(source,control);}catch(const std::exception& e){auto r=CefDictionaryValue::Create();r->SetString("status","error");r->SetString("message",e.what());reports->SetDictionary("bookmarks",r);}}
-          if(bookmarks&&imported_nodes&&!control->cancelled){auto r=CefDictionaryValue::Create();r->SetString("status","ok");
+          if(bookmarks&&imported_nodes&&!control->cancelled){auto r=CefDictionaryValue::Create();r->SetInt("imported",0);r->SetInt("skipped",0);r->SetInt("failed",0);r->SetString("status","ok");
             try{std::error_code error;bool exists=std::filesystem::exists(bookmark_path,error);if(error)throw std::runtime_error("Target bookmarks unavailable");
               auto saved=exists?ReadJson(bookmark_path):nullptr;
               if(exists&&(!saved||saved->GetType()!=VTYPE_LIST))throw std::runtime_error("Target bookmarks file is unreadable; existing data preserved");

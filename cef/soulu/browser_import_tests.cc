@@ -32,6 +32,7 @@ int RunBrowserImportTests(const std::filesystem::path& output){
     auto repeated=CefDictionaryValue::Create();check(MergeImportBookmarks(merged,nodes,"import-one",repeated,control)->GetSize()==4&&repeated->GetInt("skipped")==4,"bookmark-repeat-deduplication");
     auto isolated=CefDictionaryValue::Create();check(MergeImportBookmarks(merged,nodes,"import-two",isolated,control)->GetSize()==8,"bookmark-profile-isolation");
     auto cancelled=std::make_shared<ImportControl>();cancelled->cancelled=true;auto cancelReport=CefDictionaryValue::Create();check(MergeImportBookmarks(merged,nodes,"import-one",cancelReport,cancelled)->GetSize()==4,"bookmark-cancellation");
+    std::filesystem::create_directories(DataRoot());
     database(chrome/L"History","CREATE TABLE urls(id INTEGER,url TEXT,title TEXT); CREATE TABLE visits(url INTEGER,visit_time INTEGER); INSERT INTO urls VALUES(1,'https://example.test/','Fixture'); INSERT INTO visits VALUES(1,13344473600123000);");
     auto history=ImportBrowserHistory(source,"import-one",control);check(history->GetString("status")=="ok"&&history->GetInt("imported")==1,"chromium-history-reader");
     auto visits=HistoryStore("import-one").Query("",0,HistoryNow(),0,10);check(visits&&visits->GetSize()==1&&visits->GetDictionary(0)->GetDouble("visited")==1700000000123.0,"chromium-timestamp-conversion");
@@ -61,7 +62,7 @@ int RunBrowserImportTests(const std::filesystem::path& output){
     auto command=[](unsigned char id,const std::string& payload){size_t n=payload.size()+1;std::string b;b.push_back(static_cast<char>(n&255));b.push_back(static_cast<char>(n>>8));b.push_back(static_cast<char>(id));return b+payload;};
     const std::string tabUrl="https://example.test/tab";std::string nav=u32(10)+u32(0)+u32(static_cast<uint32_t>(tabUrl.size()))+tabUrl;while(nav.size()%4)nav.push_back(0);
     nav+=u32(0)+u32(0)+u32(0); // Empty title and page state; transition LINK.
-    std::string snss="SNSS"+u32(3)+command(0,u32(10)+u32(1))+command(9,u32(1)+u32(0))+command(6,u32(static_cast<uint32_t>(nav.size()))+nav)+command(7,u32(10)+u32(0))+command(255,"");
+    std::string snss="SNSS"+u32(3)+command(0,u32(1)+u32(10))+command(9,u32(1)+u32(0))+command(6,u32(static_cast<uint32_t>(nav.size()))+nav)+command(7,u32(10)+u32(0))+command(255,"");
     write(chrome/L"Sessions/Session_1",snss);check(ReadImportTabs(source,control)->GetSize()==1&&ReadImportTabs(source,control)->GetString(0)==tabUrl,"chromium-current-navigation-session-reader");
     write(chrome/L"Sessions/Session_1",snss+command(16,u32(10)+u32(0)+u32(0)+u32(0)));check(ReadImportTabs(source,control)->GetSize()==0,"chromium-closed-tab-exclusion");
     write(chrome/L"Sessions/Session_1","SNSS"+u32(5));bool protectedSession=false;try{ReadImportTabs(source,control);}catch(...){protectedSession=true;}check(protectedSession,"encrypted-chromium-session-rejected-without-bypass");
