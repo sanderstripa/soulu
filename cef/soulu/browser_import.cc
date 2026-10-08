@@ -139,7 +139,7 @@ std::vector<ImportSource> BrowserImportSources(){
     // Local State profile names are discovery metadata, not imported data.
     CefRefPtr<CefDictionaryValue> cache;
     if(File(root/L"Local State")){try{auto state=CefParseJSON(ReadText(root/L"Local State",8*1024*1024),JSON_PARSER_RFC);
-      if(state&&state->GetType()==VTYPE_DICTIONARY){auto p=state->GetDictionary()->GetDictionary("profile");if(p)cache=p->GetDictionary("info_cache");}}catch(...) {}}
+      if(state&&state->GetType()==VTYPE_DICTIONARY){auto p=state->GetDictionary()->GetDictionary("profile");if(p){auto names=p->GetDictionary("info_cache");if(names)cache=names->Copy(false);}}}catch(...) {}}
     std::error_code e;size_t count=0;
     for(std::filesystem::directory_iterator it(root,e),end;!e&&it!=end&&count++<512;it.increment(e)){
       auto filename=CefString(it->path().filename().wstring()).ToString();
@@ -343,7 +343,7 @@ CefRefPtr<CefListValue> ReadImportBookmarks(const ImportSource& source,const std
     std::function<void(int,CefRefPtr<CefListValue>,int)> walk=[&](int parent,CefRefPtr<CefListValue> dest,int depth){
       if(depth>64||!ancestors.insert(parent).second)throw std::runtime_error("Invalid Firefox bookmark hierarchy");
       for(auto index:children[parent]){if(control->cancelled)break;const auto& e=entries[index];if(e.guid=="tags________")continue;
-        if(e.type==2){auto n=Node("folder",e.title.empty()?(e.guid=="toolbar_____"?"Bookmarks toolbar":e.guid=="menu________"?"Bookmarks menu":"Other bookmarks"):e.title);dest->SetDictionary(dest->GetSize(),n);walk(e.id,n->GetList("children"),depth+1);}
+        if(e.type==2){auto n=Node("folder",e.title.empty()?(e.guid=="toolbar_____"?"Bookmarks toolbar":e.guid=="menu________"?"Bookmarks menu":"Other bookmarks"):e.title);walk(e.id,n->GetList("children"),depth+1);dest->SetDictionary(dest->GetSize(),n);}
         else if(e.type==1&&!WebOrigin(e.url).empty())dest->SetDictionary(dest->GetSize(),Node("url",e.title,e.url));
       }ancestors.erase(parent);
     };walk(root,nodes,0);
@@ -369,7 +369,7 @@ CefRefPtr<CefListValue> MergeImportBookmarks(CefRefPtr<CefListValue> existing,Ce
         if(++target_count>20000||id>=2147483647)throw std::runtime_error("Target bookmark capacity reached");
         match=CefDictionaryValue::Create();match->SetInt("id",id++);match->SetString("type",type);match->SetString("title",title);match->SetString("url",url);match->SetInt("parentId",parent);match->SetInt("order",order);match->SetString("profileId",target);match->SetDouble("createdAt",HistoryNow());
         std::string icon=n->GetString("favicon");if(icon.size()<=65536&&(icon.rfind("data:image/png;base64,",0)==0||icon.rfind("data:image/x-icon;base64,",0)==0))match->SetString("favicon",icon);
-        merged->SetDictionary(merged->GetSize(),match);index[key]=match;orders[parent]=order+1;Increment(report,"imported");
+        merged->SetDictionary(merged->GetSize(),match->Copy(false));index[key]=match;orders[parent]=order+1;Increment(report,"imported");
       }if(type=="folder")walk(n->GetList("children"),match->GetInt("id"),depth+1);
     }
   };walk(nodes,0,0);return merged;

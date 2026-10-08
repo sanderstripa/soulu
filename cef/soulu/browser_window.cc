@@ -2302,7 +2302,7 @@ void BrowserWindow::HandleBridge(const std::string& request,
     // Resolve catalog IDs in the worker, never accept arbitrary renderer paths.
     if(run&&std::none_of(profiles_.begin(),profiles_.end(),[&](const Profile& p){return p.id==target;})){callback->Failure(400,"Unknown target profile");return;}
     bool bookmarks=run&&data->GetBool("bookmarks"),history=run&&data->GetBool("history"),passwords=run&&data->GetBool("passwords"),autofill=run&&data->GetBool("autofill"),tabs=run&&data->GetBool("tabs");
-    auto nodes=data->GetList("nodes");
+    auto nodes=data->GetList("nodes");if(nodes)nodes=nodes->Copy();
     if(run&&(!bookmarks&&!history&&!passwords&&!autofill&&!tabs)){callback->Failure(400,"Choose supported data");return;}
     auto file=from_file?import_files_[source_id]:std::filesystem::path();
     auto extension=file.extension().wstring();std::transform(extension.begin(),extension.end(),extension.begin(),[](wchar_t c){return std::towlower(c);});
@@ -2313,7 +2313,7 @@ void BrowserWindow::HandleBridge(const std::string& request,
     auto control=run?import_control_:std::make_shared<ImportControl>();CefRefPtr<BrowserWindow> self=this;
     auto existing_bookmarks=bookmarks_->Copy();auto bookmark_path=UserDataDirectory()/L"bookmarks.json";
     CefPostTask(TID_FILE_BACKGROUND,new FunctionTask([self,callback,source,source_id,target,run,from_file,file,nodes,bookmarks,history,passwords,autofill,tabs,control,existing_bookmarks,bookmark_path]()mutable{
-      auto result=CefDictionaryValue::Create();result->SetString("status","ok");auto reports=CefDictionaryValue::Create();result->SetDictionary("categories",reports);
+      auto result=CefDictionaryValue::Create();result->SetString("status","ok");auto reports=CefDictionaryValue::Create();result->SetDictionary("categories",reports);reports=result->GetDictionary("categories");
       CefRefPtr<CefListValue> imported_nodes=nodes;
       CefRefPtr<CefListValue> merged_bookmarks,imported_tabs;
       try{

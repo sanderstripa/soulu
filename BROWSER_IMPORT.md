@@ -1,6 +1,7 @@
-# Browser Import 2.0 — preliminary implementation
+# Browser Import 2.0
 
-This is the mandatory review stage, not a release or a claim of native readiness.
+The compact interface preview was approved by the owner. Native validation and
+release verification are in progress; successful checks are recorded separately.
 Baseline: `d290070a2f5a0e4954b9d031a9898ac0f4d926ca`, published release
 `beta-1.0.58`. CEF 154.0.33 / Chromium 154.0.8037.94 are unchanged.
 
@@ -20,7 +21,7 @@ field; clicking Import creates it through the existing CreateProfile mechanism
 without changing the active profile or opening tabs. The import-specific handler
 defers catalog persistence until it can write atomically with WriteJson and rejects
 a stale/unreadable catalog. A creation failure prevents the import from starting.
-The corresponding C++ additions are pending native compilation/verification.
+Native profile creation is covered by the isolated CEF integration check.
 
 Available categories use 16px square checkboxes. Browser sources show bookmarks,
 history, passwords, autofill and tabs, with concise reasons for unavailable items.
@@ -65,11 +66,10 @@ available/not found/action required/unsupported/blocked states and counts where
 supported. A locked database is reported as unavailable, with a retry instruction.
 The custom picker selects a single profile directory, not an entire User Data tree.
 
-Autofill, session tabs, separate favicon databases, foreign preferences, downloads
-and extensions are unsupported in this preview. Soulu has no verified address/form
-autofill storage binding; no verified session parser or preference mapping was
-found. Cookies, authentication tokens, payment data and extension executables are
-excluded. Safe PNG/ICO data-URL icons in HTML exports can accompany bookmarks.
+Autofill and open-tab URLs have native readers described below. Separate favicon
+databases, foreign preferences, downloads and extensions are unsupported. Cookies,
+authentication tokens, payment data and extension executables are excluded. Safe
+PNG/ICO data-URL icons in HTML exports can accompany bookmarks.
 
 ## Storage and privacy
 
@@ -169,8 +169,8 @@ access denial, corrupt/oversized inputs and disk-write failures; Windows file an
 folder pickers; renderer/native cancellation timing; normal browsing during import;
 restart persistence and UI visibility; independent profiles and multiple windows.
 The UI demonstration cannot validate DPAPI, SQLite Windows sharing modes or native
-bridge compilation. Full regression, commit, normal push to main and release are
-deferred until explicit preview approval.
+bridge compilation. Preview approval has been received. Publication still requires successful native
+checks and the existing release acceptance gates for the final main SHA.
 
 Schema references: [Mozilla Places](https://firefox-source-docs.mozilla.org/browser/places/index.html),
 [Firefox history](https://firefox-source-docs.mozilla.org/browser/places/History.html),

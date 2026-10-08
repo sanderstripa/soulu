@@ -129,7 +129,7 @@ CefRefPtr<CefListValue> ReadAutofill(const std::string& profile) {
   std::string sealed(blob->GetSize(),'\0'),plain;blob->GetData(sealed.data(),sealed.size(),0);
   if(!Secret(sealed,"Soulu/autofill/v1/"+profile,false,plain))throw std::runtime_error("Autofill storage cannot be decrypted");
   auto value=CefParseJSON(plain,JSON_PARSER_RFC);SecureZeroMemory(plain.data(),plain.size());
-  if(!value||value->GetType()!=VTYPE_LIST)throw std::runtime_error("Autofill storage corrupt");return value->GetList();
+  if(!value||value->GetType()!=VTYPE_LIST)throw std::runtime_error("Autofill storage corrupt");return value->GetList()->Copy();
 }
 bool SaveAutofill(const std::string& profile,CefRefPtr<CefListValue> rows) {
   std::string plain=CefWriteJSON(Value(rows),JSON_WRITER_DEFAULT),sealed;
