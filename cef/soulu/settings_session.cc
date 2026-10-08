@@ -15,12 +15,6 @@ CefRefPtr<CefValue> Value(CefRefPtr<CefDictionaryValue> d) {
 bool Same(CefRefPtr<CefDictionaryValue> a,CefRefPtr<CefDictionaryValue> b) {
   return a&&b&&a->IsEqual(b);
 }
-bool PreviewKey(const std::string& key) {
-  return key=="theme"||key=="mattePanel"||key=="layout"||key=="language"||
-    key=="addressPosition"||key=="downloadsMode"||key=="extensionsPosition"||
-    key=="vpnToolbarVisible"||key=="showSidebar"||key=="showBack"||
-    key=="showFavorites"||key=="showNewTab"||key=="showDownloads";
-}
 bool ValidReader(CefRefPtr<CefDictionaryValue> d) {
   if(!d)return false;
   const std::string theme=d->GetString("theme"),font=d->GetString("font");
@@ -33,10 +27,7 @@ bool ValidReader(CefRefPtr<CefDictionaryValue> d) {
 }
 
 CefRefPtr<CefDictionaryValue> BrowserWindow::EffectiveSettings() const {
-  if(!settings_preview_||settings_profile_!=active_profile_id_)return settings_;
-  auto next=settings_->Copy(false);CefDictionaryValue::KeyList keys;settings_preview_->GetKeys(keys);
-  for(const auto& key:keys)next->SetValue(key,settings_preview_->GetValue(key)->Copy());
-  return next;
+  return settings_;
 }
 CefRefPtr<CefDictionaryValue> BrowserWindow::SettingsSnapshot() {
   auto data=CefDictionaryValue::Create();
@@ -51,17 +42,16 @@ CefRefPtr<CefDictionaryValue> BrowserWindow::SettingsSnapshot() {
   data->SetDictionary("vpn",vpn_settings_->Copy(false));
   return data;
 }
-void BrowserWindow::ResetSettingsPreview() {
-  settings_preview_=nullptr;ApplyWindowAppearance();ApplyContentTheme();Layout();EmitState();
+void BrowserWindow::RefreshSettingsAppearance() {
+  ApplyWindowAppearance();ApplyContentTheme();Layout();EmitState();
 }
 bool BrowserWindow::GuardSettingsClose(int id,bool all) {
   if (!settings_overlay_ || (!all && id != kSettingsSession)) return false;
   if (all) settings_close_all_ = true;
-  if (settings_dirty_ && settings_browser_) {
+  if (settings_browser_) {
     settings_browser_->GetMainFrame()->ExecuteJavaScript(
       "window.souluSettingsRequestClose&&window.souluSettingsRequestClose()",
       settings_browser_->GetMainFrame()->GetURL(), 0);
-    FocusSettings();
   } else CloseSettingsOverlay();
   return true;
 }
@@ -76,15 +66,15 @@ bool BrowserWindow::GuardSettingsNavigation(int id,const std::string& url) {
 
 // Each canonical store commits atomically through its existing writer. If a
 // later group fails, the reply includes the actual persisted snapshot; the UI
-// keeps the remaining draft instead of claiming success or losing edits.
-bool BrowserWindow::ApplySettingsSession(std::string& error) {
-  if(!settings_loaded_||!settings_staged_||settings_profile_!=active_profile_id_) {
+// reflects the actual store values and reports a failed save.
+bool BrowserWindow::SaveSettingsSnapshot(CefRefPtr<CefDictionaryValue> requested, std::string& error) {
+  if(!settings_loaded_||!requested||settings_profile_!=active_profile_id_) {
     error="Профиль изменился. Откройте настройки заново.";return false;
   }
-  auto config=settings_staged_->GetDictionary("settings");
-  auto reader=settings_staged_->GetDictionary("reader");
-  auto rules=settings_staged_->GetDictionary("rules");
-  auto vpn=settings_staged_->GetDictionary("vpn");
+  auto config=requested->GetDictionary("settings");
+  auto reader=requested->GetDictionary("reader");
+  auto rules=requested->GetDictionary("rules");
+  auto vpn=requested->GetDictionary("vpn");
   if(!config||!rules||!vpn||!ValidReader(reader)) {
     error="Проверьте адреса страниц и настройки чтения.";return false;
   }
@@ -161,8 +151,9 @@ bool BrowserWindow::ApplySettingsSession(std::string& error) {
     if(!Same(vpn_settings_,settings_loaded_->GetDictionary("vpn"))&&!Same(vpn_settings_,vpn)){
       error="VPN: конфигурация изменена в другом окне.";return false;}
     const std::string protocol=vpn->GetString("protocol"),link=vpn->GetString("link");
-    if((protocol!="vless"&&protocol!="sudoku")||link.rfind(protocol+"://",0)!=0){
+    if((protocol!="vless"&&protocol!="sudoku")||(!link.empty()&&link.rfind(protocol+"://",0)!=0)){
       error="VPN: проверьте ключ подключения.";return false;}
+    if(link.empty()){auto old=vpn_settings_;vpn_settings_=vpn->Copy(false);if(!SaveSettings()){vpn_settings_=old;error="VPN: конфигурация не сохранена.";return false;}return true;}
     auto command=CefDictionaryValue::Create();command->SetString("action","save_profile");
     command->SetString("id",vpn_settings_->GetString("lastProfileId"));
     command->SetString("name",vpn->GetString("region").empty()?"Soulu VPN":vpn->GetString("region"));
@@ -172,7 +163,7 @@ bool BrowserWindow::ApplySettingsSession(std::string& error) {
     auto old=vpn_settings_;vpn_settings_=vpn->Copy(false);
     std::string id=saved->GetString("id");if(id.empty())id=saved->GetString("profileId");
     if(!id.empty())vpn_settings_->SetString("lastProfileId",id);
-    if(!SaveSettings()){vpn_settings_=old;error="VPN-helper сохранил профиль, но конфигурация Soulu не записана. Повторите Apply.";return false;}
+    if(!SaveSettings()){vpn_settings_=old;error="VPN-helper сохранил профиль, но конфигурация Soulu не записана. Повторите сохранение.";return false;}
   }
   return true;
 }
@@ -188,7 +179,7 @@ bool BrowserWindow::HandleSettingsBridge(int id,const std::string& request,
       !IsSettingsUrl(settings_browser_->GetMainFrame()->GetURL())){
     callback->Failure(403,"Настройки доступны только в слое Soulu.");return true;
   }
-  if (settings_overlay_->closing() && action != "settings.abortClose") {
+  if (settings_overlay_->closing()) {
     callback->Failure(409,"Настройки закрываются.");return true;
   }
   if(action=="settings.capabilities"){
@@ -204,12 +195,11 @@ bool BrowserWindow::HandleSettingsBridge(int id,const std::string& request,
     result->SetBool("defaultBrowser",is_default);Reply(callback,result);return true;
   }
   if(action=="settings.begin"){
-    if(settings_session_id_&&settings_session_id_!=id&&settings_dirty_){callback->Failure(409,"Закройте другое окно настроек.");return true;}
     if (settings_loaded_ && settings_profile_ == active_profile_id_ && settings_session_id_ == id) {
       Reply(callback,settings_loaded_->Copy(false));return true;
     }
-    ResetSettingsPreview();settings_session_id_=id;settings_profile_=active_profile_id_;
-    settings_dirty_=false;settings_loaded_=SettingsSnapshot();settings_staged_=settings_loaded_->Copy(false);
+    RefreshSettingsAppearance();settings_session_id_=id;settings_profile_=active_profile_id_;
+    settings_loaded_=SettingsSnapshot();
     Reply(callback,settings_loaded_->Copy(false));return true;
   }
   if(action=="settings.defaultBrowser"){
@@ -234,38 +224,30 @@ bool BrowserWindow::HandleSettingsBridge(int id,const std::string& request,
   }
   if(id!=settings_session_id_||settings_profile_!=active_profile_id_||!settings_loaded_){
     callback->Failure(409,"Откройте настройки заново.");return true;}
-  if(action=="settings.stage"){
-    if(!payload||payload->GetString("profile")!=settings_profile_||!payload->GetDictionary("settings")||!payload->GetDictionary("rules")||
+  if(action=="settings.save"){
+    if(!payload||payload->GetString("profile")!=settings_profile_||
+        !payload->GetDictionary("settings")||!payload->GetDictionary("rules")||
         !payload->GetDictionary("reader")||!payload->GetDictionary("vpn")){
-      callback->Failure(400,"Некорректные настройки.");return true;}
-    settings_staged_=payload->Copy(false);settings_dirty_=!Same(settings_staged_,settings_loaded_);
-    settings_preview_=CefDictionaryValue::Create();auto config=payload->GetDictionary("settings");
-    CefDictionaryValue::KeyList keys;config->GetKeys(keys);
-    for(const auto& key:keys)if(PreviewKey(key))settings_preview_->SetValue(key,config->GetValue(key)->Copy());
-    ApplyWindowAppearance();ApplyContentTheme();Layout();EmitState();ReplyEmpty(callback);return true;
-  }
-  if(action=="settings.apply"){
-    std::string error;const bool ok=ApplySettingsSession(error);
+      callback->Failure(400,"Некорректные настройки.");return true;
+    }
+    std::string error;const bool ok=SaveSettingsSnapshot(payload,error);
     settings_loaded_=SettingsSnapshot();
-    if(ok){settings_staged_=settings_loaded_->Copy(false);settings_dirty_=false;ResetSettingsPreview();RefreshHomePages();}
-    else settings_dirty_=!Same(settings_staged_,settings_loaded_);
+    RefreshSettingsAppearance();RefreshHomePages();
     auto result=CefDictionaryValue::Create();result->SetBool("ok",ok);result->SetString("error",error);
     result->SetDictionary("persisted",settings_loaded_->Copy(false));Reply(callback,result);return true;
   }
-  if(action=="settings.cancel"){
-    settings_loaded_=SettingsSnapshot();settings_staged_=settings_loaded_->Copy(false);settings_dirty_=false;
-    ResetSettingsPreview();Reply(callback,settings_loaded_->Copy(false));return true;
+  if(action=="settings.resize"){
+    if(!payload||payload->GetType("height")!=VTYPE_INT){callback->Failure(400,"Некорректная высота настроек.");return true;}
+    settings_overlay_->SetPanelHeight(payload->GetInt("height"));ReplyEmpty(callback);return true;
   }
   if(action=="settings.ready"){
+    if(payload && payload->GetType("height")==VTYPE_INT)settings_overlay_->SetPanelHeight(payload->GetInt("height"));
     settings_overlay_->Open(); FocusSettings(); ReplyEmpty(callback); return true;
   }
   if(action=="settings.close"){
-    if(settings_dirty_){GuardSettingsClose(id);ReplyEmpty(callback);return true;}
-    ResetSettingsPreview();ReplyEmpty(callback);CloseSettingsOverlay();return true;
+    RefreshSettingsAppearance();ReplyEmpty(callback);CloseSettingsOverlay();return true;
   }
-  if(action=="settings.abortClose"){
-    settings_pending_url_.clear();settings_close_all_=false;ReplyEmpty(callback);return true;
-  }
+
   callback->Failure(400,"Неизвестное действие настроек.");return true;
 }
 }

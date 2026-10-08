@@ -7,6 +7,7 @@
 #include <DispatcherQueue.h>
 #include <dwmapi.h>
 #include <map>
+#include <algorithm>
 namespace soulu {
 namespace {
 using namespace winrt;
@@ -16,6 +17,8 @@ struct Backdrop {
   Compositor compositor{nullptr};
   Desktop::DesktopWindowTarget target{nullptr};
   SpriteVisual visual{nullptr};
+  ContainerVisual settings_root{nullptr};
+  SpriteVisual settings_shadow{nullptr};
 };
 std::map<HWND,Backdrop> backdrops;
 }
@@ -61,6 +64,30 @@ void ResizeFrostedBackdrop(HWND window,int width,int height){
 void SetFrostedBackdropOpacity(HWND window,float opacity){
   const auto found=backdrops.find(window);
   if(found!=backdrops.end()&&found->second.visual)found->second.visual.Opacity(opacity);
+  if(found!=backdrops.end()&&found->second.settings_shadow)found->second.settings_shadow.Opacity(opacity);
+}
+void SetSettingsBackdropPanel(HWND window,float x,float y,float width,float height,float scale){
+  const auto found=backdrops.find(window);if(found==backdrops.end())return;
+  try{
+    auto& state=found->second;
+    if(!state.settings_root){
+      state.settings_root=state.compositor.CreateContainerVisual();
+      state.target.Root(nullptr);
+      state.settings_root.Children().InsertAtBottom(state.visual);
+      state.settings_shadow=state.compositor.CreateSpriteVisual();
+      state.settings_shadow.Opacity(state.visual.Opacity());
+      state.settings_shadow.Brush(state.compositor.CreateColorBrush(Windows::UI::Color{255,32,33,36}));
+      const auto shadow=state.compositor.CreateDropShadow();
+      shadow.Color(Windows::UI::Color{255,0,0,0});shadow.Opacity(.34f);
+      shadow.BlurRadius(20*scale);shadow.Offset({0,8*scale,0});
+      state.settings_shadow.Shadow(shadow);
+      state.settings_root.Children().InsertAtTop(state.settings_shadow);
+      state.target.Root(state.settings_root);
+    }
+    state.settings_shadow.Opacity(y+height>0 ? state.visual.Opacity() : 0);
+    state.settings_shadow.Offset({x+2*scale,y,0});
+    state.settings_shadow.Size({std::max(1.f,width-4*scale),std::max(1.f,height-3*scale)});
+  }catch(const hresult_error&){/* The Settings edge remains visible without shadows. */}
 }
 void ReleaseFrostedBackdrop(HWND window){backdrops.erase(window);}
 }

@@ -6,7 +6,9 @@
   "classicToolbar": 82,
   "classicTarget": 30,
   "classicCaption": 48,
-  "glyph": 16,
+  "glyph": 18,
   "captionWidth": 42,
-  "bookmarks": 28
+  "bookmarks": 28,
+  "addressGlyph": 16,
+  "pageRightInset": 20
 }

@@ -8,7 +8,9 @@ inline constexpr int mainTarget = 32;
 inline constexpr int classicToolbar = 82;
 inline constexpr int classicTarget = 30;
 inline constexpr int classicCaption = 48;
-inline constexpr int glyph = 16;
+inline constexpr int glyph = 18;
 inline constexpr int captionWidth = 42;
 inline constexpr int bookmarks = 28;
+inline constexpr int addressGlyph = 16;
+inline constexpr int pageRightInset = 20;
 }

@@ -81,7 +81,7 @@ def main():
                     s.evaluate(settings,'souluSettings.openSection('+json.dumps(section)+')')
                     wait(lambda:s.evaluate(settings,'!window.souluMotion?.activeCount'))
                     audit(settings,'Settings '+lang+'/'+section);capture(settings,'section-'+lang+'-'+section)
-            s.evaluate(settings,'souluSettings.cancel()')
+            s.evaluate(settings,'souluSettings.flush()')
             s.evaluate(shell,"browserShell.openHistory()")
             history=connect('/ui/history.html');audit(history,'History');actual_face(history,'h1','History title');capture(history,'history')
             # File-origin iframes are isolated by CEF; inspect their own execution

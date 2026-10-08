@@ -7,7 +7,9 @@
   --geometry-classic-toolbar: 82px;
   --geometry-classic-target: 30px;
   --geometry-classic-caption: 48px;
-  --geometry-glyph: 16px;
+  --geometry-glyph: 18px;
   --geometry-caption-width: 42px;
   --geometry-bookmarks: 28px;
+  --geometry-address-glyph: 16px;
+  --geometry-page-right-inset: 20px;
 }

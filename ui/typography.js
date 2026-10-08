@@ -19,9 +19,10 @@ window.souluTypographyReady = Promise.all([400,500,600].map(weight =>
   const tip=document.createElement('div');tip.className='soulu-type-tooltip';
   tip.id='soulu-type-tooltip';tip.setAttribute('role','tooltip');tip.hidden=true;
   document.body.append(tip);
-  let owner=null,timer=0,previousDescription=null;
+  let owner=null,timer=0,previousDescription=null,expanded=false;
   const hide=()=>{
     clearTimeout(timer);tip.hidden=true;
+    if(expanded){expanded=false;if(!document.querySelector('.suggestions.visible'))window.browserShell?.setSuggestionsHeight(0);}
     if(owner){if(previousDescription===null)owner.removeAttribute('aria-describedby');else owner.setAttribute('aria-describedby',previousDescription);}
     owner=null;
   };
@@ -34,7 +35,9 @@ window.souluTypographyReady = Promise.all([400,500,600].map(weight =>
       const r=node.getBoundingClientRect(),size=tip.getBoundingClientRect();
       tip.style.left=Math.max(8,Math.min(r.left,innerWidth-size.width-8))+'px';
       const below=r.bottom+8;
-      tip.style.top=Math.max(8,Math.min(below,innerHeight-size.height-8))+'px';
+      const toolbar=!!node.closest('.browser-toolbar');
+      tip.style.top=(toolbar?below:(below+size.height+8<=innerHeight?below:Math.max(8,r.top-size.height-8)))+'px';
+      if(toolbar){expanded=true;window.browserShell?.setSuggestionsHeight(Math.ceil(below+size.height+8));}
       node.setAttribute('aria-describedby',[previousDescription,tip.id].filter(Boolean).join(' '));
     },420);
   };
@@ -45,6 +48,6 @@ window.souluTypographyReady = Promise.all([400,500,600].map(weight =>
   document.addEventListener('pointerdown',hide);
   document.addEventListener('keydown',hide);
   document.addEventListener('scroll',hide,true);
-  window.addEventListener('resize',hide);
+  window.addEventListener('resize',()=>{if(!expanded)hide();});
   window.addEventListener('blur',hide);
 })();

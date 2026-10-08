@@ -175,12 +175,12 @@ def main():
             check(wait(lambda: bool(u.IsChild(overlay,focus(main_window)))), 'Real Windows keyboard focus is inside Settings')
             animations = w.BOOL()
             assert u.SystemParametersInfoW(0x1042, 0, c.byref(animations), 0)
-            duration = 260 if animations.value else 90
+            duration = 380 if animations.value else 90
             check(state()['settingsOverlayDuration']==duration, 'Transition duration respects Windows animation preference')
-            initial = edit('JSON.stringify(souluSettings.staged)')
+            initial = edit('JSON.stringify(souluSettings.current)')
             call('openSettingsWindow')
-            check(len(windows(process.pid,'SouluSettingsOverlay'))==1 and edit('JSON.stringify(souluSettings.staged)')==initial,
-                  'Repeated opening focuses one existing overlay without resetting staged state')
+            check(len(windows(process.pid,'SouluSettingsOverlay'))==1 and edit('JSON.stringify(souluSettings.current)')==initial,
+                  'Repeated opening focuses one existing overlay without resetting saved state')
             time.sleep(.35)
             blurred=composed_capture(); blurred.save(visuals/'settings-composed-blur.png')
             # The native Settings panel is capped at 1020 DIP. Inspect the live
@@ -204,13 +204,13 @@ def main():
             count=len(state()['tabs']); s.evaluate(shell,"cefQuery({request:JSON.stringify({action:'browser.test.pageShortcut',payload:84}),onSuccess:()=>{}})")
             time.sleep(.2);check(len(state()['tabs'])==count,'Background Ctrl+T cannot change tabs while Settings is open')
             # Existing managers must stay inside the editor and preserve both
-            # browser state and the currently staged settings transaction.
-            before_subviews=state(); draft=edit('JSON.stringify(souluSettings.staged)')
-            for section,action in [('profiles','passwords'),('profiles','import'),('sites','siteData'),('sites','exceptions'),('sites','adblockExceptions')]:
+            # browser state and the currently saved settings transaction.
+            before_subviews=state(); draft=edit('JSON.stringify(souluSettings.current)')
+            for section,action in [('privacy','passwords'),('profiles','import'),('privacy','siteData'),('privacy','exceptions'),('privacy','adblockExceptions')]:
                 edit('souluSettings.openSection('+json.dumps(section)+');document.querySelector('+json.dumps('#control-settings-'+action+' button')+').click()')
                 wait(lambda:edit("document.querySelector('#actionDialog').open"))
                 check(state()['tabs']==before_subviews['tabs'] and state()['activeTabId']==before_subviews['activeTabId'],action+' subview stays inside Settings without changing browser tabs')
-                check(edit('JSON.stringify(souluSettings.staged)')==draft,action+' subview preserves staged settings')
+                check(edit('JSON.stringify(souluSettings.current)')==draft,action+' subview preserves saved settings')
                 if action=='siteData':
                     snapshot=edit('browserShell.getSettingsSite('+str(before_subviews['activeTabId'])+')')
                     check(snapshot['url']==page_before['url'],'Settings site-data backend addresses the original webpage directly')
@@ -231,10 +231,10 @@ def main():
                 check(rect(overlay)==client_rect(main_window),'Resize preserves backdrop bounds '+str((width,height)))
             for scale in [1,1.25,1.5,1.75,2]:
                 s.command(settings,'Emulation.setDeviceMetricsOverride',{'width':760,'height':560,'deviceScaleFactor':scale,'mobile':False})
-                check(edit("document.documentElement.scrollWidth<=innerWidth && document.querySelector('.settings-footer').getBoundingClientRect().bottom<=innerHeight+1"),
-                      'Settings controls and footer fit at device scale '+str(scale))
+                check(edit("document.documentElement.scrollWidth<=innerWidth && document.querySelector('#closeSettings').getBoundingClientRect().bottom<=innerHeight+1"),
+                      'Settings controls and Close fit at device scale '+str(scale))
             s.command(settings,'Emulation.clearDeviceMetricsOverride')
-            edit('souluSettings.cancel()')
+            edit('souluSettings.flush()')
             edit('souluSettingsRequestClose()')
             time.sleep(duration / 1000 * .15)
             transition=state()

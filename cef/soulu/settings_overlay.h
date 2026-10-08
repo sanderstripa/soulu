@@ -18,6 +18,7 @@ class SettingsOverlay final {
   void Open();
   void Close();
   void Layout();
+  void SetPanelHeight(int height);
   void Focus();
   HWND hwnd() const { return hwnd_; }
   bool closing() const { return state_ == State::Closing || state_ == State::Closed; }
@@ -30,6 +31,8 @@ class SettingsOverlay final {
   static LRESULT CALLBACK Proc(HWND, UINT, WPARAM, LPARAM);
   void Tick();
   void PlacePanel();
+  void ResizeTick();
+  void ClipPanel();
   HWND owner_ = nullptr, hwnd_ = nullptr, browser_ = nullptr;
   std::function<void()> closed_, request_close_;
   State state_ = State::Loading;
@@ -38,5 +41,8 @@ class SettingsOverlay final {
   int width_ = 1, height_ = 1, panel_width_ = 1, panel_height_ = 1;
   int duration_ = 260, ticks_ = 0;
   bool reduced_ = false;
+  int requested_height_ = 800;
+  float display_height_ = 800, resize_from_ = 800;
+  ULONGLONG resize_start_ = 0;
 };
 }

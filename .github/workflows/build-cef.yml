@@ -393,7 +393,7 @@ jobs:
           python browser/scripts/test-cef-data-security.py $exe.FullName browser/artifacts/data-security.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: Test staged settings, migration and native profile isolation
+      - name: Test immediate settings saves, migration and native profile isolation
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client

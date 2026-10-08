@@ -67,3 +67,31 @@ body[data-fullscreen=true]{--chrome-height:0px;--content-top:0px}
 body[data-fullscreen=true] :is(.browser-toolbar,.bookmarks-bar){display:none!important}
 .bookmarks-bar{top:var(--chrome-height)}
 body :is(.sidebar,.side-panel,.vpn-panel,.settings-panel,.bookmarks-menu,.tab-overview,.navigation-shield,.reader-view){top:var(--content-top)}
+
+/* Toolbar action glyphs grow together; the address capsule keeps its density. */
+.browser-toolbar :is(.compact-active-tab,.classic-address-pill){--toolbar-glyph:var(--geometry-address-glyph)}
+/* Close is centered over Home's 44px favorites target, inset 20px. */
+.compact-toolbar-surface{padding-right:calc(var(--geometry-page-right-inset) + (44px - var(--caption-target)) / 2)}
+.classic-navigation-right{padding-right:calc(var(--geometry-page-right-inset) + (44px - var(--caption-target)) / 2)}
+
+/* All address actions share a viewport, footprint, center and stroke. */
+.browser-toolbar .window-close svg{width:20px!important;height:20px!important}
+.browser-toolbar :is(.compact-active-tab,.classic-address-pill) :is([data-close-active],.classic-close-tab,[data-reload],.address-favorite) svg{width:18px;height:18px;stroke-width:1.25;fill:none;stroke:currentColor}
+.browser-toolbar :is(.toolbar-button,.compact-control,.tab-action,.address-menu-button,.navigation-toolbar-button,.compact-window-button,.window-controls button):not(.window-close) svg :is(path,rect,circle,line,polyline){vector-effect:non-scaling-stroke;stroke-width:1.25;stroke-linecap:round;stroke-linejoin:round}
+.browser-toolbar button svg{align-self:center;justify-self:center}
+.compact-toolbar-surface{position:relative;align-items:center}
+.compact-center-cluster{top:50%;transform:translate(-50%,-50%);align-items:center}
+.compact-toolbar-surface>.compact-control{align-self:center}
+.browser-toolbar :is(.compact-active-tab,.classic-address-pill) .tab-action{align-self:center;justify-items:center;align-items:center}
+body[data-native-caption-hover=true] .browser-toolbar :is(#compactWindowMaximize,#windowMaximize)::before{background:var(--caption-hover)}
+
+/* Reload and Stop occupy the same cell and are mutually exclusive. */
+.browser-toolbar [data-reload]{grid-template-columns:1fr;grid-template-rows:1fr}
+.browser-toolbar [data-reload] svg{grid-area:1 / 1}
+.browser-toolbar [data-reload]:not(.loading) .reload-svg{display:block}
+.browser-toolbar [data-reload]:not(.loading) .stop-svg{display:none}
+.browser-toolbar [data-reload].loading .reload-svg{display:none}
+.browser-toolbar [data-reload].loading .stop-svg{display:block}
+/* Match the star's perceived size without changing its approved geometry. */
+.browser-toolbar :is(.compact-active-tab,.classic-address-pill) :is([data-close-active],.classic-close-tab,[data-reload]) svg{width:16px;height:16px}
+.browser-toolbar :is(.compact-active-tab,.classic-address-pill) :is([data-close-active],.classic-close-tab) svg{width:14px;height:14px}

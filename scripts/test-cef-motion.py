@@ -33,7 +33,7 @@ def main():
             target=o.wait(lambda:next((t for t in s.targets() if fragment in t.get('url','')),None))
             ws=s.websocket.create_connection(target['webSocketDebuggerUrl'],timeout=30,origin=s.BASE);sockets.append(ws);return ws
         def evaluate(expression):return s.evaluate(settings,expression)
-        def settled():o.wait(lambda:evaluate('souluMotion.activeCount===0 && !document.querySelector(".motion-shared,.motion-source-hidden")'))
+        def settled():o.wait(lambda:evaluate('!document.getAnimations().some(a=>a.playState==="running") && !document.querySelector(".motion-shared,.motion-source-hidden")'))
         def click(selector):evaluate('document.querySelector('+json.dumps(selector)+').click()')
         def capture(name):
             shot=s.command(settings,'Page.captureScreenshot',{'format':'png'})
@@ -68,7 +68,7 @@ def main():
                 click('#sectionNav button:first-child');settled()
                 check(evaluate('document.querySelector("main").dataset.view==="home" && document.activeElement.dataset.section==='+json.dumps(key)),key+': reverse and card focus')
             # No source exists when search or internal links directly choose a section.
-            evaluate('souluSettings.openSection("sites","permissions-camera")')
+            evaluate('souluSettings.openSection("privacy","permissions-camera")')
             check(evaluate('!document.querySelector(".motion-shared")'),'Deep link has no fabricated card');settled()
             click('#sectionNav button:first-child');settled()
             evaluate('settingsSearch.value="camera";settingsSearch.dispatchEvent(new Event("input"))')
@@ -83,7 +83,7 @@ def main():
             s.command(settings,'Input.dispatchKeyEvent',{'type':'keyDown','key':'ArrowLeft','code':'ArrowLeft','windowsVirtualKeyCode':37,'modifiers':1})
             o.wait(lambda:evaluate('document.querySelector("main").dataset.view==="home"'));settled()
             check(True,'Alt Left returns through same transition')
-            evaluate('document.querySelector('+json.dumps(card('tabs'))+').focus()')
+            evaluate('document.querySelector('+json.dumps(card('startup'))+').focus()')
             for params in [{'type':'rawKeyDown','key':' ','code':'Space','windowsVirtualKeyCode':32},{'type':'char','text':' ','key':' ','code':'Space','windowsVirtualKeyCode':32},{'type':'keyUp','key':' ','code':'Space','windowsVirtualKeyCode':32}]:s.command(settings,'Input.dispatchKeyEvent',params)
             o.wait(lambda:evaluate('document.querySelector("main").dataset.view==="section"'));settled()
             check(True,'Space activates card')
@@ -94,14 +94,14 @@ def main():
             for theme in ['light','dark','system']:
                 for scale in [1,1.25,1.5,1.75,2]:
                     s.command(settings,'Emulation.setDeviceMetricsOverride',{'width':900,'height':740,'deviceScaleFactor':scale,'mobile':False})
-                    evaluate('souluSettings.staged.settings.theme='+json.dumps(theme)+';document.body.dataset.theme='+json.dumps(theme))
+                    evaluate('souluSettings.current.settings.theme='+json.dumps(theme)+';document.body.dataset.theme='+json.dumps(theme))
                     click(card('interface'));settled()
                     check(evaluate('document.querySelector(".nav-item.active").getBoundingClientRect().width>0 && !document.querySelector(".motion-shared")'),f'{theme} scale {scale}: geometry and cleanup')
                     click('#sectionNav button:first-child');settled()
                     report['deviceScales'].append({'theme':theme,'scale':scale})
             s.command(settings,'Emulation.clearDeviceMetricsOverride')
             for cycle in range(30):
-                evaluate('souluSettings.openSection("interface");souluSettings.openSection("");souluSettings.openSection("tabs");souluSettings.openSection("")')
+                evaluate('souluSettings.openSection("interface");souluSettings.openSection("");souluSettings.openSection("startup");souluSettings.openSection("")')
                 settled()
             check(evaluate('document.querySelector("main").dataset.view==="home"'),'Rapid repeated input settles to last intent')
             click(card('interface'))
@@ -130,7 +130,7 @@ def main():
                 return sum((t.high<<32)+t.low for t in times[2:])/10000
             host_before=cpu_ms();wall_before=time.monotonic()
             # Record monotonic rAF pacing and real transition duration over repeated cycles.
-            samples=evaluate('''(async()=>{const cycles=[];for(let i=0;i<10;i++){const frames=[];let run=true,last=performance.now();function frame(now){frames.push(now-last);last=now;if(run)requestAnimationFrame(frame)}requestAnimationFrame(frame);const start=performance.now();souluSettings.openSection("interface");while(souluMotion.activeCount)await new Promise(r=>setTimeout(r,10));run=false;cycles.push({elapsed:performance.now()-start,frames});souluSettings.openSection("");while(souluMotion.activeCount)await new Promise(r=>setTimeout(r,10));}return cycles})()''')
+            samples=evaluate('''(async()=>{const cycles=[];for(let i=0;i<10;i++){const frames=[];let run=true,last=performance.now();function frame(now){frames.push(now-last);last=now;if(run)requestAnimationFrame(frame)}requestAnimationFrame(frame);const start=performance.now();souluSettings.openSection("interface");while(document.getAnimations().some(a=>a.playState==="running"))await new Promise(r=>setTimeout(r,10));run=false;cycles.push({elapsed:performance.now()-start,frames});souluSettings.openSection("");while(document.getAnimations().some(a=>a.playState==="running"))await new Promise(r=>setTimeout(r,10));}return cycles})()''')
             report['timing']=samples
             renderer_after={m['name']:m['value'] for m in s.command(settings,'Performance.getMetrics')['metrics']}
             report['cpu']={'hostMs':cpu_ms()-host_before,'rendererTaskMs':1000*(renderer_after['TaskDuration']-renderer_before['TaskDuration']),'wallMs':1000*(time.monotonic()-wall_before)}
@@ -142,7 +142,7 @@ def main():
             report['heapBytes']={'before':heap_before,'after':heap_after}
             check(heap_after-heap_before<4*1024*1024,'No accumulating transition layers or material retained JS heap growth')
             # Close during an in-flight internal transition, then reopen canonical Settings.
-            evaluate('souluSettings.cancel()')
+            evaluate('souluSettings.flush()')
             click(card('interface'));evaluate('souluSettingsRequestClose()')
             o.wait(lambda:not o.windows(process.pid,'SouluSettingsOverlay'))
             # Tab sidebar is an overlay: webpage geometry must stay unchanged.
@@ -176,3 +176,4 @@ def main():
             output.write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
 
 if __name__=='__main__':main()
+

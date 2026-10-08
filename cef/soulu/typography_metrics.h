@@ -15,4 +15,18 @@ inline constexpr Metrics compact{13.0f,18.0f,400};
 inline constexpr Metrics compactControl{13.0f,18.0f,500};
 inline constexpr Metrics caption{12.0f,16.0f,400};
 inline constexpr Metrics menu{12.0f,16.0f,500};
+inline constexpr Metrics settings1{13.0.0f,19.5.0f,400};
+inline constexpr Metrics settings2{13.0.0f,18.2.0f,400};
+inline constexpr Metrics settings3{21.0.0f,27.3.0f,600};
+inline constexpr Metrics settings4{13.0.0f,18.2.0f,500};
+inline constexpr Metrics settings5{11.5.0f,17.25.0f,400};
+inline constexpr Metrics settings6{19.0.0f,25.650000000000002.0f,600};
+inline constexpr Metrics settings7{12.0.0f,18.0.0f,400};
+inline constexpr Metrics settings8{12.0.0f,18.0.0f,500};
+inline constexpr Metrics settings9{13.0.0f,18.849999999999998.0f,400};
+inline constexpr Metrics settings10{12.0.0f,18.6.0f,400};
+inline constexpr Metrics settings11{18.0.0f,25.2.0f,600};
+inline constexpr Metrics settings12{13.0.0f,19.5.0f,500};
+inline constexpr Metrics settings13{11.0.0f,16.5.0f,400};
+inline constexpr Metrics settings14{18.0.0f,27.0.0f,400};
 }

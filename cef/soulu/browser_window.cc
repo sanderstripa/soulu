@@ -967,8 +967,7 @@ CefRefPtr<CefDictionaryValue> BrowserWindow::SendVpnHelper(
 }
 
 void BrowserWindow::SwitchProfile(const std::string& id) {
-  if(settings_dirty_&&id!=active_profile_id_)return;
-  settings_preview_=nullptr;settings_loaded_=nullptr;settings_staged_=nullptr;
+  settings_loaded_=nullptr;
   const auto it = std::find_if(profiles_.begin(), profiles_.end(),
       [&id](const Profile& profile) { return profile.id == id; });
   if (it == profiles_.end()) return;
@@ -1058,11 +1057,11 @@ void BrowserWindow::FinishSettingsTransition() {
 }
 void BrowserWindow::SettingsClosed(CefRefPtr<CefBrowser> browser) {
   if (browser && (!settings_browser_ || !settings_browser_->IsSame(browser))) return;
-  settings_browser_ = nullptr; settings_session_id_ = 0; settings_dirty_ = false;
-  settings_loaded_ = nullptr; settings_staged_ = nullptr;
+  settings_browser_ = nullptr; settings_session_id_ = 0;
+  settings_loaded_ = nullptr;
   const bool all = settings_close_all_; settings_close_all_ = false;
   const auto pending = settings_pending_url_; settings_pending_url_.clear();
-  ResetSettingsPreview();
+  RefreshSettingsAppearance();
   settings_overlay_.reset();
   BlockSettingsBackground(false);
   const HWND previous = settings_previous_focus_; settings_previous_focus_ = nullptr;
@@ -1074,8 +1073,8 @@ void BrowserWindow::SettingsClosed(CefRefPtr<CefBrowser> browser) {
 }
 void BrowserWindow::RefreshSettingsProfile() {
   if (!settings_browser_) return;
-  settings_profile_ = active_profile_id_; settings_dirty_ = false;
-  settings_loaded_ = nullptr; settings_staged_ = nullptr; settings_preview_ = nullptr;
+  settings_profile_ = active_profile_id_;
+  settings_loaded_ = nullptr;
   settings_browser_->GetMainFrame()->ExecuteJavaScript(
       "window.souluSettingsProfileChanged&&window.souluSettingsProfileChanged()",
       settings_browser_->GetMainFrame()->GetURL(), 0);
@@ -1160,7 +1159,8 @@ void BrowserWindow::NewTab(const std::string& url, bool incognito,
   info.style &= ~WS_VISIBLE;
   CefBrowserSettings browser_settings;
   const bool dark = settings_->GetString("theme") == "dark" || (settings_->GetString("theme") == "system" && IsWindowsDarkMode());
-  browser_settings.background_color = dark && tab.url!="soulu://onboarding" ? CefColorSetARGB(255,8,9,11) : CefColorSetARGB(255,250,250,250);
+  browser_settings.background_color = dark && tab.url!="soulu://onboarding" ? CefColorSetARGB(255,8,9,11) :
+      (tab.url=="soulu://home" ? CefColorSetARGB(255,255,255,255) : CefColorSetARGB(255,250,250,250));
   const BrowserRole role = BrowserRole::kContent;
   // Resolve/create the private context and its copied policy before the client
   // captures that policy; function-argument evaluation order is unspecified.
@@ -1253,8 +1253,7 @@ void BrowserWindow::SwitchTab(int id) {
     UpdateFullscreen();
   }
   if(!tab->incognito&&tab->profile_id!=active_profile_id_){
-    if(settings_dirty_){GuardSettingsClose(settings_session_id_);return;}
-    settings_preview_=nullptr;settings_loaded_=nullptr;settings_staged_=nullptr;
+    settings_loaded_=nullptr;
     active_profile_id_=tab->profile_id;LoadProfileSettings();RefreshSettingsProfile();
   }
   if (active_tab_id_ != id) { if(auto* old=ActiveTab();old&&old->browser)HomeCancelVoice(old->browser->GetIdentifier());CancelSitePermissions(active_tab_id_); CaptureThumbnail(); }
@@ -1555,6 +1554,12 @@ void BrowserWindow::FitFullscreenMonitor() {
       SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED | SWP_NOCOPYBITS);
 }
 
+void BrowserWindow::SetCaptionHover(bool hovered) {
+  if(caption_hovered_==hovered)return;
+  caption_hovered_=hovered;
+  if(shell_)shell_->GetMainFrame()->ExecuteJavaScript(
+      hovered ? "document.body.dataset.nativeCaptionHover='true'" : "delete document.body.dataset.nativeCaptionHover", "", 0);
+}
 void BrowserWindow::SetCaptionPressed(bool pressed) {
   if (caption_pressed_ == pressed) return;
   caption_pressed_ = pressed;
@@ -2143,11 +2148,10 @@ void BrowserWindow::HandleBridge(const std::string& request,
   }
   else if (action == "browser.newIncognito") NewTab("", true);
   else if (action == "browser.profile.create") {
-    if(settings_dirty_){callback->Failure(409,"Apply or cancel settings changes first");return;}
     std::string name = payload && payload->GetType() == VTYPE_STRING
         ? payload->GetString() : "Профиль";
     CreateProfile(name);
-    settings_preview_=nullptr;settings_loaded_=nullptr;settings_staged_=nullptr;settings_dirty_=false;
+    settings_loaded_=nullptr;
     active_profile_id_ = profiles_.back().id;
     LoadProfileSettings();
     RefreshSettingsProfile();
@@ -2155,7 +2159,6 @@ void BrowserWindow::HandleBridge(const std::string& request,
     return Reply(callback, State());
   }
   else if (action == "browser.profile.switch") {
-    if(settings_dirty_){callback->Failure(409,"Apply or cancel settings changes first");return;}
     SwitchProfile(payload->GetString());
     return Reply(callback, State());
   }
@@ -2681,8 +2684,10 @@ LRESULT CALLBACK BrowserWindow::WindowProc(HWND hwnd, UINT message, WPARAM wpara
     case WM_NCHITTEST: {
       POINT point = {GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam)};
       ScreenToClient(hwnd, &point);
-      if (!self->Fullscreen() && !self->settings_overlay_ && self->surface_ &&
-          self->surface_->MaximizeHit(point)) return HTMAXBUTTON;
+      const bool maximize_hover = !self->Fullscreen() && !self->settings_overlay_ &&
+          self->surface_ && self->surface_->MaximizeHit(point);
+      self->SetCaptionHover(maximize_hover);
+      if (maximize_hover) return HTMAXBUTTON;
       if (IsZoomed(hwnd) || self->Fullscreen()) return HTCLIENT;
       const LRESULT hit = DefWindowProc(hwnd, message, wparam, lparam);
       if (hit != HTCLIENT) return hit;
@@ -2746,7 +2751,11 @@ LRESULT CALLBACK BrowserWindow::WindowProc(HWND hwnd, UINT message, WPARAM wpara
     case WM_CAPTURECHANGED:
       self->SetCaptionPressed(false);
       break;
+    case WM_NCMOUSELEAVE:
+      self->SetCaptionHover(false);break;
     case WM_NCMOUSEMOVE:
+      self->SetCaptionHover(wparam==HTMAXBUTTON);
+      if(wparam==HTMAXBUTTON){TRACKMOUSEEVENT track={sizeof(track),TME_LEAVE|TME_NONCLIENT,hwnd,0};TrackMouseEvent(&track);}
       if (wparam == HTMAXBUTTON && self->surface_) {
         POINT point = {GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam)};
         ScreenToClient(self->surface_->hwnd(), &point);

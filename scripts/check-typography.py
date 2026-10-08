@@ -39,6 +39,11 @@ for css in (ROOT/'ui').rglob('*.css'):
         if 'reader-article' in selector or selector in ('.reader-meta','.reader-deck'):
             report['exceptions'].append({'file':str(css.relative_to(ROOT)),'selector':selector,'reason':'User-selected Reader article content','values':values});continue
         for value in values:
+            if value in ('letter-spacing:var(--settings-title-tracking)','letter-spacing:var(--settings-section-tracking)'):
+                assert css.name=='settings.css'
+                assert '--settings-title-tracking:-.45px' in css.read_text(encoding='utf-8')
+                assert '--settings-section-tracking:-.3px' in css.read_text(encoding='utf-8')
+                continue
             assert 'var(--type-' in value or 'var(--glyph-' in value or value=='line-height:1',f'Unexplained typography: {css} {selector} {value}'
             for token in re.findall(r'--type-([\w]+)',value):assert token in tokens
         assert not re.search(r'Segoe|Inter|Arial|Montserrat|Roboto|Tahoma|Manrope',body),css

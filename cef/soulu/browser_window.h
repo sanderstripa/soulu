@@ -180,8 +180,8 @@ class BrowserWindow final : public CefBaseRefCounted {
   bool SaveSettings() const;
   CefRefPtr<CefDictionaryValue> EffectiveSettings() const;
   CefRefPtr<CefDictionaryValue> SettingsSnapshot();
-  bool ApplySettingsSession(std::string& error);
-  void ResetSettingsPreview();
+  bool SaveSettingsSnapshot(CefRefPtr<CefDictionaryValue> requested, std::string& error);
+  void RefreshSettingsAppearance();
   bool GuardSettingsClose(int id, bool all = false);
   void SwitchProfile(const std::string& id);
   void LoadProfileSettings();
@@ -210,12 +210,14 @@ class BrowserWindow final : public CefBaseRefCounted {
   void Layout();
   void UpdateFullscreen();
   void SetCaptionPressed(bool pressed);
+  void SetCaptionHover(bool hovered);
   void FitFullscreenMonitor();
   bool Fullscreen() const { return browser_fullscreen_ || content_fullscreen_id_ != 0; }
   bool browser_fullscreen_ = false;
   int content_fullscreen_id_ = 0;
   bool fullscreen_applied_ = false;
   bool caption_pressed_ = false;
+  bool caption_hovered_ = false;
   WINDOWPLACEMENT fullscreen_placement_ = {sizeof(WINDOWPLACEMENT)};
   RECT fullscreen_bounds_ = {};
   LONG_PTR fullscreen_style_ = 0;
@@ -278,9 +280,7 @@ class BrowserWindow final : public CefBaseRefCounted {
   CefRefPtr<CefRequestContext> incognito_context_;
   CefRefPtr<CefDictionaryValue> settings_;
   CefRefPtr<CefDictionaryValue> initial_settings_;
-  CefRefPtr<CefDictionaryValue> settings_preview_;
   CefRefPtr<CefDictionaryValue> settings_loaded_;
-  CefRefPtr<CefDictionaryValue> settings_staged_;
   static constexpr int kSettingsSession = -1;
   int settings_session_id_ = 0;
   CefRefPtr<CefBrowser> settings_browser_;
@@ -289,7 +289,6 @@ class BrowserWindow final : public CefBaseRefCounted {
   std::map<HWND, bool> settings_input_state_;
   bool settings_browser_pending_ = false;
   std::string settings_profile_;
-  bool settings_dirty_ = false;
   bool settings_close_all_ = false;
   std::string settings_pending_url_;
   CefRefPtr<CefDictionaryValue> private_page_settings_;

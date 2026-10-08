@@ -30,7 +30,7 @@ bool SettingsOverlay::Create() {
   SetFrostedBackdropOpacity(hwnd_, 0);
   BOOL animate = TRUE;
   if (SystemParametersInfoW(SPI_GETCLIENTAREAANIMATION, 0, &animate, 0)) reduced_ = !animate;
-  duration_ = reduced_ ? motion::kReducedOverlayMs : motion::kStructuralMs;
+  duration_ = reduced_ ? motion::kReducedOverlayMs : 380;
   Layout();
   // The invisible panel starts above the clipping bounds. Showing the host now
   // blocks input immediately and allows Chromium to prepare its first frame.
@@ -45,11 +45,31 @@ void SettingsOverlay::Open() {
 }
 void SettingsOverlay::Close() {
   if (state_ == State::Closing || state_ == State::Closed) return;
+  KillTimer(hwnd_,2);
   state_ = State::Closing; close_start_ = progress_; start_ = GetTickCount64();
   SetTimer(hwnd_, 1, 16, nullptr); Tick();
 }
 void SettingsOverlay::Focus() {
   if (browser_ && IsWindowVisible(hwnd_) && state_ != State::Closing) SetFocus(browser_);
+}
+void SettingsOverlay::SetPanelHeight(int height) {
+  if(state_==State::Closing||state_==State::Closed)return;
+  const int next = std::clamp(height, 160, 800);
+  if (next == requested_height_) return;
+  requested_height_ = next;
+  if (state_ != State::Open || reduced_) {
+    KillTimer(hwnd_, 2);display_height_ = static_cast<float>(next);Layout();return;
+  }
+  resize_from_ = display_height_;resize_start_ = GetTickCount64();
+  SetTimer(hwnd_, 2, 16, nullptr);ResizeTick();
+}
+void SettingsOverlay::ResizeTick() {
+  const float fraction = std::min(1.f,static_cast<float>(GetTickCount64()-resize_start_)/380.f);
+  const float eased = .5f-.5f*std::cos(fraction*3.14159265f);
+  display_height_ = resize_from_+(requested_height_-resize_from_)*eased;
+  panel_height_=std::min(height_,static_cast<int>(std::round(display_height_*GetDpiForWindow(owner_)/96.f)));
+  ClipPanel();PlacePanel();
+  if(fraction>=1)KillTimer(hwnd_,2);
 }
 void SettingsOverlay::Layout() {
   if (!hwnd_) return;
@@ -58,7 +78,7 @@ void SettingsOverlay::Layout() {
   width_ = std::max(1L, r.right); height_ = std::max(1L, r.bottom);
   const float scale = GetDpiForWindow(owner_) / 96.f;
   panel_width_ = std::min(width_, static_cast<int>(std::round(1020 * scale)));
-  panel_height_ = std::min(height_, static_cast<int>(std::round(800 * scale)));
+  panel_height_ = std::min(height_, static_cast<int>(std::round(display_height_ * scale)));
   SetWindowPos(hwnd_, HWND_TOP, p.x, p.y, width_, height_, SWP_NOACTIVATE | SWP_NOCOPYBITS);
   ResizeFrostedBackdrop(hwnd_, width_, height_);
   // Crop to the owner's client region, including its rounded normal-window
@@ -69,26 +89,32 @@ void SettingsOverlay::Layout() {
   SetWindowRgn(hwnd_, region, FALSE);
   if (IsIconic(owner_)) ShowWindow(hwnd_, SW_HIDE);
   else if (state_ != State::Closed) ShowWindow(hwnd_, SW_SHOWNOACTIVATE);
+  ClipPanel();
+  PlacePanel();
+}
+void SettingsOverlay::ClipPanel() {
   if (browser_) {
+    const float scale=GetDpiForWindow(owner_)/96.f;
     const int corner = static_cast<int>(std::round(24 * scale));
     HRGN panel = CreateRoundRectRgn(0, 0, panel_width_+1, panel_height_+1, corner, corner);
     HRGN top = CreateRectRgn(0, 0, panel_width_, std::min(corner, panel_height_));
     CombineRgn(panel, panel, top, RGN_OR); DeleteObject(top);
     SetWindowRgn(browser_, panel, FALSE);
   }
-  PlacePanel();
 }
 void SettingsOverlay::PlacePanel() {
   if (!browser_) return;
   const float distance = reduced_ ? std::min(12, panel_height_) : panel_height_;
   int y = static_cast<int>(std::round(-(1-progress_) * distance));
   if (state_ == State::Loading) y = -panel_height_;
+  SetSettingsBackdropPanel(hwnd_,(width_-panel_width_)/2.f,static_cast<float>(y),
+      static_cast<float>(panel_width_),static_cast<float>(panel_height_),GetDpiForWindow(owner_)/96.f);
   SetWindowPos(browser_, HWND_TOP, (width_-panel_width_)/2, y,
       panel_width_, panel_height_, SWP_NOACTIVATE | SWP_NOCOPYBITS | SWP_SHOWWINDOW);
 }
 void SettingsOverlay::Tick() {
   const float fraction = std::min(1.f, static_cast<float>(GetTickCount64()-start_) / duration_);
-  const float eased = fraction >= 1 ? 1 : motion::EaseOut(fraction);
+  const float eased = fraction >= 1 ? 1 : .5f-.5f*std::cos(fraction*3.14159265f);
   progress_ = state_ == State::Closing ? close_start_ * (1-eased) : eased;
   ++ticks_;
   SetFrostedBackdropOpacity(hwnd_, progress_);
@@ -111,7 +137,7 @@ LRESULT CALLBACK SettingsOverlay::Proc(HWND hwnd, UINT message, WPARAM wp, LPARA
   if (!self) return DefWindowProcW(hwnd, message, wp, lp);
   switch (message) {
     case WM_ERASEBKGND: return 1;
-    case WM_TIMER: if (wp == 1) self->Tick(); return 0;
+    case WM_TIMER: if (wp == 1) self->Tick(); else if(wp==2)self->ResizeTick(); return 0;
     case WM_CLOSE: self->request_close_(); return 0;
     case WM_SETFOCUS: self->Focus(); return 0;
     case WM_MOUSEACTIVATE: self->Focus(); return MA_NOACTIVATE;
@@ -127,7 +153,7 @@ LRESULT CALLBACK SettingsOverlay::Proc(HWND hwnd, UINT message, WPARAM wp, LPARA
       }
       return HTCLIENT;
     }
-    case WM_DESTROY: KillTimer(hwnd, 1); ReleaseFrostedBackdrop(hwnd); return 0;
+    case WM_DESTROY: KillTimer(hwnd, 1); KillTimer(hwnd, 2); ReleaseFrostedBackdrop(hwnd); return 0;
   }
   return DefWindowProcW(hwnd, message, wp, lp);
 }
