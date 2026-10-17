@@ -1,6 +1,20 @@
 {
-  "revision": 44,
+  "revision": 20261018,
   "source": "ui/branding/soulu-master.svg",
+  "source_sha256": "304cba1c64f94cbde585d6002bb49ad2607eaf349272945add4003850abe0980",
+  "png_sha256": {
+    "16": "22945811a208dac7c4212918cc34df5538d8c168825231800d3e16e5f728bb58",
+    "20": "f7a8fe68efb9db4e534fe6469041ec74a8a487689d9eeee677f46bc7977372e4",
+    "24": "1050e908edc354b3214b97b2a31753c3cb3e85cd0cc3450e50ccfec3ddeaf176",
+    "32": "4de1987ab7b746f00a163ae3c2df8cd13beabad28c2dc46c96069475233213f1",
+    "40": "11ff6b09fe32725af4f650c79c3c4b0ec927d938dc71c658e925473ce65f73f9",
+    "48": "e58b7582917e2c0a72267e61f9df8ffec8985d70d2e4b89f24edafa315539b93",
+    "64": "004efd3fb099d922ddfe6290c990e3bb0eb3c530aef362bbd5e59322e4b0a6dd",
+    "128": "f7f66087a97fa4b36a93f50b73686ed5dd317453e0a6730ed9dbb20250fdea2d",
+    "256": "9de5bea9e001356675dd24b8b4b86c138d665836124ebc91ac93224756d29407",
+    "512": "036c8e001ec9966348b91e20856bf2e8ee0c47424eb44878ea8256be71a6affb",
+    "1024": "daf3d75a17443a1105f9401cf73dcada99721037718818ba87df043f103924b8"
+  },
   "sizes": [
     16,
     20,
@@ -26,7 +40,7 @@
     1024
   ],
   "margin": "max(1px, round(size * 0.02)) per side",
-  "ico_sha256": "83afdc4746d133206e8f9a7b1f3f1bc091455f86335b7bec65ad46aa605a1f15",
+  "ico_sha256": "2292eab2196a9295282a627cb7b4eba7e1668b635891742d85b8a0826c0188b1",
   "aliases": [
     "soulu-icon.png",
     "soulu-icon-new.png",

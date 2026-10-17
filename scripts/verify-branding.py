@@ -27,6 +27,13 @@ def frames(data):
 
 def verify_assets():
     manifest = json.loads((ROOT/'ui/branding/manifest.json').read_text())
+    source = (ROOT/'ui/branding/soulu-master.svg').read_text(encoding='utf-8')
+    assert hashlib.sha256(source.encode('utf-8')).hexdigest() == manifest['source_sha256'], 'Master changed without re-exporting'
+    for size in manifest['png_sizes']:
+        data = (ROOT/f'ui/branding/soulu-{size}.png').read_bytes()
+        assert hashlib.sha256(data).hexdigest() == manifest['png_sha256'][str(size)], f'Stale PNG at {size}px'
+        im = Image.open(BytesIO(data)).convert('RGBA')
+        assert im.size == (size, size) and im.getpixel((0, 0))[3] == 0
     expected = (ROOT/'ui/soulu-icon.ico').read_bytes()
     assert hashlib.sha256(expected).hexdigest() == manifest['ico_sha256']
     for alias in manifest['aliases']:

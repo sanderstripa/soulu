@@ -1,13 +1,12 @@
 # Soulu identity and installer
 
-The supplied October 2 icon and three-panel installer concept are the visual references.
+The supplied October 18 icon and three-panel installer concept are the visual references.
 This change is confined to identity, installer rendering and their build/verification
 chain. Browser pages, navigation, storage and CEF are not redesigned.
 
 ## Production assets
 
-`ui/branding/soulu-master.svg` is the newly drawn, editable vector source. Two
-overlapping blue petals use smooth fills without a background, stroke, external
+`ui/branding/soulu-master.svg` is the newly drawn, editable vector source. Three blue petal regions with a dark central overlap use smooth fills without a background, stroke, external
 image, shadow or filter. Generated raster studies were rejected for edge artifacts;
 no generated study or previous icon is part of the master.
 
@@ -28,8 +27,8 @@ the setup wrapper and two shortcuts use that same identity. The installer uses
 `soulu-512.png` for its visible logo. The browser already requests the correct
 large/small Windows icon sizes; the installer now does too.
 
-Shortcuts use `soulu-icon-v44.ico` to avoid the v24 shell-cache entry. Installation
-replaces all shipped aliases and the old v24 ICO's content, removes the JPEG, recreates
+Shortcuts use `soulu-icon-v20261018.ico` to avoid the v24 shell-cache entry. Installation
+replaces all shipped aliases and the old v24 and v44 ICOs' content, removes the JPEG, recreates
 desktop/Start shortcuts and sends shell change notifications. Windows can retain
 a separately pinned old shortcut or an icon in a running Explorer process;
 unpin/re-pin or Explorer refresh may be needed on an upgraded machine. The
