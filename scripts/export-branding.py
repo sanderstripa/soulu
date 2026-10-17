@@ -54,7 +54,9 @@ def export(source):
     ico = struct.pack('<HHH', 0, 1, len(chunks)) + b''.join(entries) + b''.join(data for _, data in chunks)
     for alias in ICO_ALIASES:
         (ROOT / 'ui' / alias).write_bytes(ico)
-    manifest = {'revision': 44, 'source': 'ui/branding/soulu-master.svg',
+    manifest = {'revision': 20261018, 'source': 'ui/branding/soulu-master.svg',
+                'source_sha256': hashlib.sha256((ROOT / 'ui/branding/soulu-master.svg').read_text(encoding='utf-8').encode('utf-8')).hexdigest(),
+                'png_sha256': {str(size): hashlib.sha256((destination / f'soulu-{size}.png').read_bytes()).hexdigest() for size in (*SIZES, 512, 1024)},
                 'sizes': list(SIZES), 'png_sizes': [*SIZES, 512, 1024],
                 'margin': 'max(1px, round(size * 0.02)) per side',
                 'ico_sha256': hashlib.sha256(ico).hexdigest(),

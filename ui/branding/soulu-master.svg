@@ -1,43 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="56 146 1154 996">
-  <title>Soulu — two overlapping blue petals</title>
-  <desc>New editable production master, redrawn from the supplied October 2 reference. No background, stroke, filter or external images.</desc>
-  <defs>
-    <linearGradient id="rear" x1="420" y1="960" x2="1100" y2="250" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#0666ff"/>
-      <stop offset=".40" stop-color="#389bf7"/>
-      <stop offset=".72" stop-color="#92dbf5"/>
-      <stop offset="1" stop-color="#c0f1f8"/>
-    </linearGradient>
-    <radialGradient id="rearLight" cx="1070" cy="620" r="570" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#f2f8ff" stop-opacity=".94"/>
-      <stop offset="1" stop-color="#e6f7ff" stop-opacity="0"/>
-    </radialGradient>
-    <linearGradient id="front" x1="175" y1="480" x2="740" y2="1040" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#b6eef4"/>
-      <stop offset=".33" stop-color="#67c5f5"/>
-      <stop offset=".70" stop-color="#2797f8"/>
-      <stop offset="1" stop-color="#c2eafb"/>
-    </linearGradient>
-    <radialGradient id="blue" cx="460" cy="930" r="535" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#0053fc"/>
-      <stop offset=".34" stop-color="#0062ff" stop-opacity=".95"/>
-      <stop offset=".70" stop-color="#197eff" stop-opacity=".45"/>
-      <stop offset="1" stop-color="#2389ff" stop-opacity="0"/>
-    </radialGradient>
-    <radialGradient id="frontLight" cx="910" cy="965" r="470" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#effaff" stop-opacity=".88"/>
-      <stop offset="1" stop-color="#e3f6ff" stop-opacity="0"/>
-    </radialGradient>
-    <path id="backPetal" d="M416 1064 C290 1021 371 767 487 549 C655 319 927 162 1058 188 C1190 214 1190 480 1065 740 C919 961 619 1163 416 1064Z"/>
-    <path id="frontPetal" d="M487 549 C318 472 123 430 94 560 C72 790 319 1086 535 1090 C691 1118 921 1116 977 1027 C1080 869 733 644 487 549Z"/>
-    <clipPath id="overlap"><use href="#backPetal"/></clipPath>
-  </defs>
-  <use href="#backPetal" fill="url(#rear)"/>
-  <use href="#backPetal" fill="url(#rearLight)"/>
-  <use href="#frontPetal" fill="url(#front)"/>
-  <use href="#frontPetal" fill="url(#frontLight)"/>
-  <g clip-path="url(#overlap)">
-    <use href="#frontPetal" fill="url(#blue)"/>
-    <use href="#frontPetal" fill="url(#frontLight)"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="1280" viewBox="0 0 1280 1280">
+<title>Soulu — glossy blue three-petal emblem</title>
+<desc>Editable vector redrawn from the October 18 reference, with transparent background and clean curves.</desc>
+<defs>
+<linearGradient id="back" x1="457" y1="932" x2="1128" y2="220" gradientUnits="userSpaceOnUse"><stop stop-color="#0053c8"/><stop offset=".46" stop-color="#1778ec"/><stop offset=".77" stop-color="#459df7"/><stop offset="1" stop-color="#7ec5fa"/></linearGradient>
+<radialGradient id="backLight" cx="1180" cy="641" r="610" gradientUnits="userSpaceOnUse"><stop stop-color="#91cbfa" stop-opacity=".70"/><stop offset="1" stop-color="#64b1ff" stop-opacity="0"/></radialGradient>
+<linearGradient id="front" x1="111" y1="480" x2="728" y2="1116" gradientUnits="userSpaceOnUse"><stop stop-color="#74c0f6"/><stop offset=".31" stop-color="#3798f7"/><stop offset=".74" stop-color="#0867d8"/><stop offset="1" stop-color="#63b1fb"/></linearGradient>
+<radialGradient id="tip" cx="1000" cy="1002" r="485" gradientUnits="userSpaceOnUse"><stop stop-color="#a3d4fa"/><stop offset=".52" stop-color="#7cbefb" stop-opacity=".62"/><stop offset="1" stop-color="#54a4f9" stop-opacity="0"/></radialGradient>
+<linearGradient id="overlap" x1="425" y1="815" x2="919" y2="1030" gradientUnits="userSpaceOnUse"><stop stop-color="#0044aa"/><stop offset=".39" stop-color="#0566dc"/><stop offset=".74" stop-color="#3b95f5"/><stop offset="1" stop-color="#7dbcf9"/></linearGradient>
+<radialGradient id="overlapTop" cx="621" cy="559" r="435" gradientUnits="userSpaceOnUse"><stop stop-color="#0059c8"/><stop offset="1" stop-color="#0059c8" stop-opacity="0"/></radialGradient>
+<path id="backPetal" d="M525 548 C684 364 947 179 1091 189 C1190 191 1215 284 1208 416 C1204 597 1134 751 978 892 C849 1009 696 1081 567 1081 C450 1082 396 1005 399 877 C402 753 453 634 525 548Z"/>
+<path id="frontPetal" d="M525 548 C370 481 191 418 104 491 C28 553 75 708 167 835 C280 992 438 1090 591 1095 C730 1105 913 1108 981 1050 C1049 990 974 870 903 798 C806 698 666 612 525 548Z"/>
+<clipPath id="intersection"><use href="#backPetal"/></clipPath>
+</defs>
+<use href="#backPetal" fill="url(#back)"/><use href="#backPetal" fill="url(#backLight)"/>
+<use href="#frontPetal" fill="url(#front)"/><use href="#frontPetal" fill="url(#tip)"/>
+<g clip-path="url(#intersection)"><use href="#frontPetal" fill="url(#overlap)"/><use href="#frontPetal" fill="url(#overlapTop)"/></g>
 </svg>

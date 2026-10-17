@@ -28,8 +28,9 @@ Section
   Delete "$INSTDIR\shared.pdb"
   Delete "$INSTDIR\soulu.pdb"
   SetOutPath "$INSTDIR\ui"
+  File /oname=soulu-icon-v20261018.ico "${BUILD_DIR}\ui\soulu-icon.ico"
   File /oname=soulu-icon-v44.ico "${BUILD_DIR}\ui\soulu-icon.ico"
-  ; Existing pinned shortcuts may still name v24. Replace its bytes too rather
+  ; Existing pinned shortcuts may still name v24 or v44. Replace its bytes too rather
   ; than breaking their icon target; newly created shortcuts use the new path.
   File /oname=soulu-icon-v24.ico "${BUILD_DIR}\ui\soulu-icon.ico"
   Delete "$INSTDIR\ui\soulu-icon.jpg"
@@ -41,8 +42,8 @@ Section
   CreateDirectory "$SMPROGRAMS\Soulu"
   Delete "$SMPROGRAMS\Soulu\Soulu.lnk"
   Delete "$DESKTOP\Soulu.lnk"
-  CreateShortcut "$SMPROGRAMS\Soulu\Soulu.lnk" "$INSTDIR\Soulu.exe" "" "$INSTDIR\ui\soulu-icon-v44.ico" 0 SW_SHOWNORMAL
-  CreateShortcut "$DESKTOP\Soulu.lnk" "$INSTDIR\Soulu.exe" "" "$INSTDIR\ui\soulu-icon-v44.ico" 0 SW_SHOWNORMAL
+  CreateShortcut "$SMPROGRAMS\Soulu\Soulu.lnk" "$INSTDIR\Soulu.exe" "" "$INSTDIR\ui\soulu-icon-v20261018.ico" 0 SW_SHOWNORMAL
+  CreateShortcut "$DESKTOP\Soulu.lnk" "$INSTDIR\Soulu.exe" "" "$INSTDIR\ui\soulu-icon-v20261018.ico" 0 SW_SHOWNORMAL
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Soulu" "DisplayName" "Soulu"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Soulu" "DisplayIcon" "$INSTDIR\Soulu.exe"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Soulu" "UninstallString" '$"$INSTDIR\Uninstall Soulu.exe$"'
@@ -50,6 +51,7 @@ Section
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Soulu" "DisplayVersion" "1.0.53-beta"
   System::Call 'shell32::SHChangeNotify(i 0x00002000, i 0x0005, w "$INSTDIR\Soulu.exe", p 0)'
   System::Call 'shell32::SHChangeNotify(i 0x00002000, i 0x0005, w "$INSTDIR\ui\soulu-icon-v24.ico", p 0)'
+  System::Call 'shell32::SHChangeNotify(i 0x00002000, i 0x0005, w "$INSTDIR\ui\soulu-icon-v20261018.ico", p 0)'
   System::Call 'shell32::SHChangeNotify(i 0x00002000, i 0x0005, w "$INSTDIR\ui\soulu-icon-v44.ico", p 0)'
   System::Call 'shell32::SHChangeNotify(i 0x08000000, i 0, p 0, p 0)'
   IfErrors install_failed
