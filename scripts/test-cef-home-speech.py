@@ -6,6 +6,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import time
 import urllib.request
 import numpy as np
 import soundfile as sf
@@ -31,8 +32,12 @@ def main():
    assert len(audio)<=320000
    pcm=folder/(language+'.pcm');pcm.write_bytes((np.clip(audio,-1,1)*32767).astype('<i2').tobytes());text=folder/(language+'.txt')
    env=dict(os.environ,SOULU_UI_TEST_PORT='9223',LOCALAPPDATA=root,APPDATA=root)
-   result=subprocess.run([str(exe),'--home-speech-test-file='+str(pcm),'--home-speech-test-language='+language,'--home-speech-test-report='+str(text)],env=env,timeout=120)
-   assert result.returncode==0,'Native '+language+' inference failed'
+   # Shared Windows runners can still be scanning the freshly packed runtime.
+   # Give this isolated correctness probe CPU priority; retain the application's
+   # 60-second inference guard and all recognition assertions unchanged.
+   started=time.monotonic()
+   result=subprocess.run([str(exe),'--home-speech-test-file='+str(pcm),'--home-speech-test-language='+language,'--home-speech-test-report='+str(text)],env=env,timeout=120,creationflags=getattr(subprocess,'ABOVE_NORMAL_PRIORITY_CLASS',0))
+   assert result.returncode==0,f'Native {language} inference failed: exit={result.returncode}, elapsed={time.monotonic()-started:.1f}s'
    recognized=text.read_text(encoding='utf-8').strip();assert expected in recognized.lower(),language+' speech mismatch: '+recognized
    checks.append({'language':language,'recognized':recognized,'fixtureSHA256':digest});print('PASS: real local '+language+' speech inference',flush=True)
  report.parent.mkdir(parents=True,exist_ok=True)

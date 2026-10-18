@@ -102,6 +102,9 @@ def main():
    initial=wait(home)
    wait(lambda:s.evaluate(initial,"document.readyState==='complete'"))
    s.evaluate(shell,"Promise.all(document.getAnimations().map(a=>a.finished.catch(()=>{})))")
+   # The starting window must finish native activation before physical input.
+   # This is before tab creation; immediate typing after +/Ctrl+T stays unchanged.
+   wait(lambda:s.evaluate(initial,"document.hasFocus()&&document.activeElement?.id==='query'"))
    for action in ('plus','Ctrl+T'):
     before=len(s.evaluate(shell,'browserShell.getState()')['tabs']);foreground(hwnd)
     if action=='plus':
