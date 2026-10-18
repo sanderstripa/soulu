@@ -1,18 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1280" height="1280" viewBox="0 0 1280 1280">
-<title>Soulu — glossy blue three-petal emblem</title>
+<title>Soulu — glossy blue browser icon</title>
 <desc>Editable vector redrawn from the October 18 reference, with transparent background and clean curves.</desc>
 <defs>
 <linearGradient id="back" x1="457" y1="932" x2="1128" y2="220" gradientUnits="userSpaceOnUse"><stop stop-color="#0053c8"/><stop offset=".46" stop-color="#1778ec"/><stop offset=".77" stop-color="#459df7"/><stop offset="1" stop-color="#7ec5fa"/></linearGradient>
 <radialGradient id="backLight" cx="1180" cy="641" r="610" gradientUnits="userSpaceOnUse"><stop stop-color="#91cbfa" stop-opacity=".70"/><stop offset="1" stop-color="#64b1ff" stop-opacity="0"/></radialGradient>
-<linearGradient id="front" x1="111" y1="480" x2="728" y2="1116" gradientUnits="userSpaceOnUse"><stop stop-color="#74c0f6"/><stop offset=".31" stop-color="#3798f7"/><stop offset=".74" stop-color="#0867d8"/><stop offset="1" stop-color="#63b1fb"/></linearGradient>
+<linearGradient id="front" x1="111" y1="480" x2="480" y2="1090" gradientUnits="userSpaceOnUse"><stop stop-color="#74c0f6"/><stop offset=".31" stop-color="#3798f7"/><stop offset=".74" stop-color="#096bdd"/><stop offset="1" stop-color="#0559c9"/></linearGradient>
 <radialGradient id="tip" cx="1000" cy="1002" r="485" gradientUnits="userSpaceOnUse"><stop stop-color="#a3d4fa"/><stop offset=".52" stop-color="#7cbefb" stop-opacity=".62"/><stop offset="1" stop-color="#54a4f9" stop-opacity="0"/></radialGradient>
-<linearGradient id="overlap" x1="425" y1="815" x2="919" y2="1030" gradientUnits="userSpaceOnUse"><stop stop-color="#0044aa"/><stop offset=".39" stop-color="#0566dc"/><stop offset=".74" stop-color="#3b95f5"/><stop offset="1" stop-color="#7dbcf9"/></linearGradient>
+<linearGradient id="overlap" x1="425" y1="815" x2="919" y2="1030" gradientUnits="userSpaceOnUse"><stop stop-color="#003c9f"/><stop offset=".39" stop-color="#065fd3"/><stop offset=".74" stop-color="#3b95f5"/><stop offset="1" stop-color="#7dbcf9"/></linearGradient>
 <radialGradient id="overlapTop" cx="621" cy="559" r="435" gradientUnits="userSpaceOnUse"><stop stop-color="#0059c8"/><stop offset="1" stop-color="#0059c8" stop-opacity="0"/></radialGradient>
+<radialGradient id="rearGloss" cx="1082" cy="245" r="480" gradientUnits="userSpaceOnUse"><stop stop-color="#b1dfff" stop-opacity=".17"/><stop offset="1" stop-color="#b1dfff" stop-opacity="0"/></radialGradient>
+<radialGradient id="overlapDepth" cx="444" cy="864" r="425" gradientTransform="translate(0 173) scale(1 .8)" gradientUnits="userSpaceOnUse"><stop stop-color="#003c9b" stop-opacity=".65"/><stop offset=".49" stop-color="#0042a6" stop-opacity=".26"/><stop offset="1" stop-color="#0042a6" stop-opacity="0"/></radialGradient>
+<radialGradient id="leftGloss" cx="150" cy="493" r="430" gradientUnits="userSpaceOnUse"><stop stop-color="#9bd4f8" stop-opacity=".18"/><stop offset="1" stop-color="#9bd4f8" stop-opacity="0"/></radialGradient>
 <path id="backPetal" d="M525 548 C684 364 947 179 1091 189 C1190 191 1215 284 1208 416 C1204 597 1134 751 978 892 C849 1009 696 1081 567 1081 C450 1082 396 1005 399 877 C402 753 453 634 525 548Z"/>
 <path id="frontPetal" d="M525 548 C370 481 191 418 104 491 C28 553 75 708 167 835 C280 992 438 1090 591 1095 C730 1105 913 1108 981 1050 C1049 990 974 870 903 798 C806 698 666 612 525 548Z"/>
 <clipPath id="intersection"><use href="#backPetal"/></clipPath>
 </defs>
-<use href="#backPetal" fill="url(#back)"/><use href="#backPetal" fill="url(#backLight)"/>
-<use href="#frontPetal" fill="url(#front)"/><use href="#frontPetal" fill="url(#tip)"/>
-<g clip-path="url(#intersection)"><use href="#frontPetal" fill="url(#overlap)"/><use href="#frontPetal" fill="url(#overlapTop)"/></g>
+<use href="#backPetal" fill="url(#back)"/><use href="#backPetal" fill="url(#backLight)"/><use href="#backPetal" fill="url(#rearGloss)"/>
+<use href="#frontPetal" fill="url(#front)"/><use href="#frontPetal" fill="url(#leftGloss)"/><use href="#frontPetal" fill="url(#tip)"/>
+<g clip-path="url(#intersection)"><use href="#frontPetal" fill="url(#overlap)"/><use href="#frontPetal" fill="url(#overlapTop)"/><use href="#frontPetal" fill="url(#overlapDepth)"/></g>
 </svg>
