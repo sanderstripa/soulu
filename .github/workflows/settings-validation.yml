@@ -18,7 +18,7 @@ jobs:
     runs-on: windows-2025
     timeout-minutes: 60
     env:
-      BETA_VERSION: 1.0.58-beta
+      BETA_VERSION: 1.0.60-beta
       BETA_NUMBER: 58
       SOULU_REGRESSION_SKIP_FIRST_RUN: 1
       PYTHONUTF8: 1
