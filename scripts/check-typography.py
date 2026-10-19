@@ -50,12 +50,11 @@ for css in (ROOT/'ui').rglob('*.css'):
 for p in (ROOT/'ui').rglob('*.js'):
     if p.parent.name=='third_party':continue
     assert not re.search(r'font-family=|fontSize\s*=|fontFamily\s*=',p.read_text(encoding='utf-8')),p
-native=(ROOT/'installer/setup.cpp').read_text(encoding='utf-8')
-assert 'PrivateFontCollection' in native and 'AddMemoryFont' in native
-assert 'FontStyleBold' not in re.sub(r'//[^\n]*','',native)
-assert not re.search(r'Text\(g,[^\n]*?,\d+,RectF',native)
 build=(ROOT/'installer/build.ps1').read_text(encoding='utf-8')
-for name in ('Regular','Medium','SemiBold'):assert f'Onest-{name}.ttf' in build
+assert 'build-connect-installer.ps1' in build and '-TestUI:$TestUI' in build
+core=json.loads((ROOT/'installer-core.json').read_text(encoding='utf-8'))
+assert core['repository']=='sanderstripa/connect' and core['path']=='installer-core'
+assert re.fullmatch(r'[0-9a-f]{40}',core['commit'])
 assert not (ROOT/'ui/vpn/assets/Montserrat.ttf').exists()
 dialogs=(ROOT/'cef/soulu/typography_native.cc').read_text(encoding='utf-8')
 assert 'AddFontMemResourceEx' in dialogs and 'RemoveFontMemResourceEx' in dialogs
@@ -64,6 +63,6 @@ assert 'typography::onestAscent' in dialogs and 'TA_BASELINE' in dialogs
 for source in ('browser_window.cc','browser_client.cc'):
     assert 'MessageBoxW(' not in (ROOT/'cef/soulu'/source).read_text(encoding='utf-8')
     assert not re.search(r'(?<!Typography)TrackPopupMenu\(', (ROOT/'cef/soulu'/source).read_text(encoding='utf-8'))
-report['checks']=['generated outputs current','actual 400/500/600','RU/EN/URL/symbol glyph coverage','bundled OFL attribution','every internal HTML preloads local fonts','all UI CSS uses semantic tokens','Reader article exceptions explicit','no JS-generated legacy text','private native faces without synthetic bold','installer embeds all faces']
+report['checks']=['generated outputs current','actual 400/500/600','RU/EN/URL/symbol glyph coverage','bundled OFL attribution','every internal HTML preloads local fonts','all UI CSS uses semantic tokens','Reader article exceptions explicit','no JS-generated legacy text','private native faces without synthetic bold','shared installer pinned; its UI checked by shared suite']
 if len(sys.argv)>1:Path(sys.argv[1]).write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
 print('PASS:', '; '.join(report['checks']))
