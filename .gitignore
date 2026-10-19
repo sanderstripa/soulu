@@ -17,3 +17,6 @@ cef/soulu/adblock/target/
 
 # Integrity-pinned speech model is obtained during clean builds.
 ui/speech/ggml-tiny.bin
+
+/.connect-installer-source/
+/.tmp/

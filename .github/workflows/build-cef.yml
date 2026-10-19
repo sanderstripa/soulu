@@ -30,7 +30,7 @@ on:
         type: boolean
   push:
     branches: [main, codex/settings-overlay, codex/cef-stable-update, codex/beta-motion, codex/beta-typography, codex/beta-toolbar, codex/beta-adblock, codex/beta-site-reader, codex/menu-translate, codex/home-final, codex/window-polish, codex/browser-import-validation]
-    tags: [beta-1.0.60]
+    tags: [beta-1.0.61]
     paths:
       - "cef/**"
       - "installer/**"
@@ -55,8 +55,8 @@ jobs:
     runs-on: windows-2025
     timeout-minutes: 90
     env:
-      BETA_VERSION: 1.0.60-beta
-      BETA_NUMBER: 60
+      BETA_VERSION: 1.0.61-beta
+      BETA_NUMBER: 61
       SOULU_REGRESSION_SKIP_FIRST_RUN: 1
       SOULU_TEST_DEFAULT_APPS: 1
       PYTHONUTF8: 1
@@ -66,6 +66,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: browser
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.0'
+          cache: false
 
       - name: Verify canonical generated geometry and typography
         shell: pwsh
@@ -480,7 +485,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Validate native runtime before main packaging
-        if: (inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.60'))
+        if: (inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.61'))
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client pillow dxcam comtypes
@@ -517,7 +522,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Upload validation executable and evidence
-        if: (inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.60')) && always()
+        if: (inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.61')) && always()
         uses: actions/upload-artifact@v4
         with:
           name: Soulu-native-validation-${{ github.sha }}
@@ -529,7 +534,7 @@ jobs:
           if-no-files-found: error
 
       - name: Verify installer source is current main before packaging
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.60')) }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.61')) }}
         shell: pwsh
         working-directory: browser
         run: |
@@ -540,7 +545,7 @@ jobs:
           }
 
       - name: Locate output and package ZIP
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.60')) }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.61')) }}
         id: package
         shell: pwsh
         run: |
@@ -562,7 +567,7 @@ jobs:
           "build_dir=$buildDir" >> $env:GITHUB_OUTPUT
 
       - name: Upload native executable for local runtime verification
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.60')) }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.61')) }}
         uses: actions/upload-artifact@v4
         with:
           name: Soulu-native-${{ github.sha }}
@@ -571,54 +576,34 @@ jobs:
             ${{ steps.package.outputs.build_dir }}/engine-version.json
           if-no-files-found: error
 
-      - name: Build installer
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.60')) }}
+      - name: Build shared CONNECT Installer
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.61')) }}
         shell: pwsh
         run: |
-          choco install nsis -y --no-progress
           $buildDir = "${{ steps.package.outputs.build_dir }}"
           $out = Join-Path $PWD "browser/artifacts/Soulu-Beta-1.0.$env:BETA_NUMBER-x64.exe"
-          & ./browser/installer/build.ps1 -BuildDir $buildDir -OutFile $out
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          python browser/scripts/verify-branding.py --binary $out --binary browser/installer/payload.exe
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          Add-Type -AssemblyName System.Drawing
-          $setupIcon=[System.Drawing.Icon]::ExtractAssociatedIcon($out)
-          $setupIcon.ToBitmap().Save((Join-Path $PWD "browser/artifacts/installer-exe-icon.png"))
-          "SOULU_SCREENSHOT:installer-exe-icon="+[Convert]::ToBase64String([IO.File]::ReadAllBytes((Join-Path $PWD "browser/artifacts/installer-exe-icon.png")))
+          $zip = Join-Path $PWD "browser/artifacts/Soulu-Beta-1.0.$env:BETA_NUMBER-x64.zip"
+          & ./browser/installer/build.ps1 -BuildDir $buildDir -OutFile $out -PayloadZip $zip -TestUI
 
-      - name: Render installer typography at four native DPI scales
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.60')) }}
-        shell: pwsh
-        run: |
-          $installer = Join-Path $PWD "browser/artifacts/Soulu-Beta-1.0.$env:BETA_NUMBER-x64.exe"
-          $evidence = Join-Path $PWD 'browser/artifacts/installer-typography'
-          $process = Start-Process -FilePath $installer -ArgumentList "--typography-check `"$evidence`"" -WindowStyle Hidden -PassThru -Wait
-          if ($process.ExitCode -ne 0) { throw "Installer typography diagnostics failed: $($process.ExitCode)" }
-          $report = Get-Content (Join-Path $evidence 'installer-typography.json') -Raw | ConvertFrom-Json
-          if (!$report.passed -or $report.privateFaces -ne 3 -or $report.syntheticBold) { throw 'Installer faces were not verified' }
-
-      - name: Verify ZIP and installer payload before upload or release
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.60')) }}
+      - name: Verify ZIP and shared installer payload before upload or release
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.61')) }}
         id: verified
         shell: pwsh
         run: |
           $zip = Join-Path $PWD "browser/artifacts/Soulu-Beta-1.0.$env:BETA_NUMBER-x64.zip"
+          $out = Join-Path $PWD "browser/artifacts/Soulu-Beta-1.0.$env:BETA_NUMBER-x64.exe"
           $checkDir = Join-Path $env:RUNNER_TEMP ("soulu-zip-" + $env:GITHUB_RUN_ID)
           Expand-Archive -LiteralPath $zip -DestinationPath $checkDir
           & ./browser/scripts/verify-cef-engine.ps1 -BuildDir $checkDir -ReportPath browser/artifacts/engine-version.json
-          $payloadDir = Join-Path $env:RUNNER_TEMP ("soulu-payload-" + $env:GITHUB_RUN_ID)
-          $payload = Join-Path $PWD "browser/installer/payload.exe"
-          $install = Start-Process $payload -ArgumentList @("/S", "/D=$payloadDir") -WindowStyle Hidden -PassThru -Wait
-          if ($install.ExitCode -ne 0) { throw "Installer payload extraction failed" }
-          & ./browser/scripts/verify-cef-engine.ps1 -BuildDir $payloadDir
+          $manifest=Get-Content -LiteralPath "$out.build.json" -Raw | ConvertFrom-Json
+          if($manifest.payloadSHA256 -ne (Get-FileHash $zip).Hash.ToLowerInvariant()){throw 'Installer and portable package differ'}
+          if($manifest.sha256 -ne (Get-FileHash $out).Hash.ToLowerInvariant()){throw 'Installer checksum mismatch'}
           $version = Get-Content browser/artifacts/engine-version.json -Raw | ConvertFrom-Json
-          "Soulu Beta 1.0.$env:BETA_NUMBER. Verified CEF $($version.cef) / Chromium $($version.chromium). Source: $env:GITHUB_SHA. Clean build: $env:GITHUB_RUN_ID." | Set-Content browser/artifacts/release-notes.md -Encoding utf8
+          "Soulu Beta 1.0.$env:BETA_NUMBER. Verified CEF $($version.cef) / Chromium $($version.chromium). Source: $env:GITHUB_SHA. Build: $env:GITHUB_RUN_ID." | Set-Content browser/artifacts/release-notes.md -Encoding utf8
           Get-Content browser/RELEASE_NOTES.md | Add-Content browser/artifacts/release-notes.md -Encoding utf8
           "passed=true" >> $env:GITHUB_OUTPUT
-
       - name: Upload verified engine evidence
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.60')) && (success() && steps.verified.outputs.passed == 'true') }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.61')) && (success() && steps.verified.outputs.passed == 'true') }}
         uses: actions/upload-artifact@v4
         with:
           name: Soulu-engine-verification-${{ github.run_id }}
@@ -626,7 +611,7 @@ jobs:
           if-no-files-found: error
 
       - name: Test live CEF settings and toolbar on Windows
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.60')) }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.61')) }}
         # Cloud visual probes are diagnostic and must not block packaging.
         continue-on-error: true
         shell: pwsh
@@ -647,7 +632,7 @@ jobs:
           }
 
       - name: Test bookmarks persistence and native tab overview
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.60')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.61')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client
@@ -656,7 +641,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test Startup New Tab Home in native CEF
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.60')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.61')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
         shell: pwsh
         run: |
           $env:SOULU_UI_TEST_PORT = '9223'
@@ -674,7 +659,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Upload Home verification evidence
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.60')) && (always()) }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.61')) && (always()) }}
         uses: actions/upload-artifact@v4
         with:
           name: Soulu-home-evidence-${{ github.run_id }}
@@ -687,7 +672,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Test current-site popover and local Reader Mode in native CEF
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.60')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.61')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
         shell: pwsh
         run: |
           $env:SOULU_UI_TEST_PORT = '9223'
@@ -695,7 +680,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test persistent CEF cookies and site storage
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.60')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.61')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
         shell: pwsh
         run: |
           $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP 'soulu-preview36-storage'
@@ -705,7 +690,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test real public articles and reported-site navigation
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.60')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.61')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
         shell: pwsh
         run: |
           $env:SOULU_UI_TEST_PORT = '9223'
@@ -713,7 +698,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Upload Reader Mode evidence
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.60')) && (always()) }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.61')) && (always()) }}
         uses: actions/upload-artifact@v4
         with:
           name: Soulu-reader-evidence-${{ github.run_id }}
@@ -721,7 +706,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Verify all reported public sites with native CEF
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.60')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.61')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
         shell: pwsh
         run: |
           $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP 'soulu-cef-upgrade-sites'
@@ -740,7 +725,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Test two profiles, incognito disposal and password restart
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.60')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.61')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
         shell: pwsh
         run: |
           $env:SOULU_UI_TEST_PORT = '9223'
@@ -748,7 +733,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test native permission overrides and actual content filtering
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.60')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.61')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
         shell: pwsh
         run: |
           $env:SOULU_UI_TEST_PORT = '9223'
@@ -756,7 +741,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Verify internal tabs and native link context menu
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.60')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.61')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
         shell: pwsh
         run: |
           $env:SOULU_UI_TEST_PORT = '9223'
@@ -769,311 +754,21 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Verify retained layout and native resize
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.60')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.61')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
         shell: pwsh
         run: |
           $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP 'soulu-preview36-layout'
           python browser/scripts/test-cef-layout.py '${{ steps.package.outputs.build_dir }}/Soulu.exe' browser/artifacts/layout-evidence
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: Smoke-test visible installer controls with mouse on Windows
-        env:
-          GH_TOKEN: ${{ github.token }}
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.60')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
+      - name: Record shared installer acceptance scope
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.61')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
         shell: pwsh
         run: |
-          Add-Type @'
-          using System;
-          using System.Runtime.InteropServices;
-          public static class MouseTest {
-            [StructLayout(LayoutKind.Sequential)]
-            public struct RECT { public int Left, Top, Right, Bottom; }
-            public delegate bool EnumProc(IntPtr hwnd, IntPtr lParam);
-            [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr hWnd, out RECT rect);
-            [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
-            [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
-            [StructLayout(LayoutKind.Sequential)] public struct POINT { public int X, Y; }
-            [DllImport("user32.dll")] public static extern IntPtr WindowFromPoint(POINT point);
-            public static string Describe(IntPtr hwnd) {
-              var cls = new System.Text.StringBuilder(128);
-              var txt = new System.Text.StringBuilder(256);
-              GetClassName(hwnd, cls, cls.Capacity);
-              GetWindowText(hwnd, txt, txt.Capacity);
-              return $"{cls}: {txt} hwnd={hwnd}";
-            }
-            [DllImport("user32.dll")] public static extern void mouse_event(uint flags, uint dx, uint dy, uint data, UIntPtr extra);
-            [DllImport("user32.dll")] public static extern IntPtr SendMessage(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
-            [DllImport("user32.dll", EntryPoint="GetClassLongPtrW")] public static extern IntPtr GetClassLongPtr(IntPtr hWnd, int index);
-            [DllImport("user32.dll")] static extern bool EnumChildWindows(IntPtr parent, EnumProc callback, IntPtr data);
-            [DllImport("user32.dll", CharSet=CharSet.Unicode)] static extern int GetWindowText(IntPtr hwnd, System.Text.StringBuilder text, int max);
-            [DllImport("user32.dll", CharSet=CharSet.Unicode)] static extern int GetClassName(IntPtr hwnd, System.Text.StringBuilder text, int max);
-            public static IntPtr FindButton(IntPtr parent, string prefix) {
-              IntPtr found = IntPtr.Zero;
-              EnumChildWindows(parent, delegate(IntPtr hwnd, IntPtr data) {
-                var cls = new System.Text.StringBuilder(128);
-                var txt = new System.Text.StringBuilder(256);
-                GetClassName(hwnd, cls, cls.Capacity);
-                GetWindowText(hwnd, txt, txt.Capacity);
-                if (cls.ToString().Equals("Button", StringComparison.OrdinalIgnoreCase) &&
-                    txt.ToString().StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) {
-                  found = hwnd; return false;
-                }
-                return true;
-              }, IntPtr.Zero);
-              return found;
-            }
-          }
-          '@
-
-          Add-Type -AssemblyName System.Drawing
-          function Save-Window($handle, [string]$name) {
-            $bounds=New-Object MouseTest+RECT
-            [MouseTest]::GetWindowRect($handle,[ref]$bounds) | Out-Null
-            $bmp=New-Object System.Drawing.Bitmap ($bounds.Right-$bounds.Left),($bounds.Bottom-$bounds.Top)
-            $graphics=[System.Drawing.Graphics]::FromImage($bmp)
-            $graphics.CopyFromScreen($bounds.Left,$bounds.Top,0,0,$bmp.Size)
-            $bmp.Save((Join-Path $PWD "browser/artifacts/$name.png"))
-            $graphics.Dispose();$bmp.Dispose()
-            "SOULU_SCREENSHOT:$name="+[Convert]::ToBase64String([IO.File]::ReadAllBytes((Join-Path $PWD "browser/artifacts/$name.png")))
-          }
-          function Click-At([int]$x, [int]$y) {
-            [MouseTest]::SetCursorPos($x, $y) | Out-Null
-            Start-Sleep -Milliseconds 150
-            [MouseTest]::mouse_event(0x0002, 0, 0, 0, [UIntPtr]::Zero)
-            Start-Sleep -Milliseconds 100
-            [MouseTest]::mouse_event(0x0004, 0, 0, 0, [UIntPtr]::Zero)
-          }
-
-          $installer = Join-Path $PWD "browser/artifacts/Soulu-Beta-1.0.$env:BETA_NUMBER-x64.exe"
-          # Keep the installed-browser check independent of the diagnostic UI
-          # probe's settings and force-closed profile.
-          $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP 'soulu-installer-smoke'
-          $installedExe = Join-Path $env:LOCALAPPDATA "Programs/Soulu/Soulu.exe"
-          $installedDirectory = [IO.Path]::GetFullPath((Split-Path $installedExe))
-          $smokeRoot = [IO.Path]::GetFullPath($env:LOCALAPPDATA) + [IO.Path]::DirectorySeparatorChar
-          if (!$installedDirectory.StartsWith($smokeRoot, [StringComparison]::OrdinalIgnoreCase)) { throw 'Unsafe installer test directory' }
-          if (Test-Path -LiteralPath $installedDirectory) { Remove-Item -LiteralPath $installedDirectory -Recurse -Force }
-          # Simulate stale icon files from an existing installation. Existing
-          # pinned v24 icon paths must still resolve, but contain the new mark.
-          $legacyUi = Join-Path (Split-Path $installedExe) 'ui'
-          New-Item -ItemType Directory -Force $legacyUi | Out-Null
-          [IO.File]::WriteAllBytes((Join-Path $legacyUi 'soulu-icon-v24.ico'),[byte[]](1,2,3))
-          [IO.File]::WriteAllBytes((Join-Path $legacyUi 'soulu-icon-v44.ico'),[byte[]](4,5,6))
-          [IO.File]::WriteAllBytes((Join-Path $legacyUi 'soulu-icon.jpg'),[byte[]](1,2,3))
-
-          $process = Start-Process $installer -PassThru
-          $deadline = (Get-Date).AddSeconds(30)
-          while ((Get-Date) -lt $deadline -and $process.MainWindowHandle -eq 0) {
-            Start-Sleep -Milliseconds 250
-            $process.Refresh()
-          }
-          if ($process.MainWindowHandle -eq 0) { throw "Installer window did not open" }
-
-          [MouseTest]::SetForegroundWindow($process.MainWindowHandle) | Out-Null
-          Start-Sleep -Seconds 1
-          $beforeDrag = New-Object MouseTest+RECT
-          [MouseTest]::GetWindowRect($process.MainWindowHandle, [ref]$beforeDrag) | Out-Null
-          [MouseTest]::SetCursorPos(($beforeDrag.Left + 130), ($beforeDrag.Top + 25)) | Out-Null
-          Start-Sleep -Milliseconds 200
-          [MouseTest]::mouse_event(0x0002, 0, 0, 0, [UIntPtr]::Zero)
-          Start-Sleep -Milliseconds 250
-          [MouseTest]::SetCursorPos(($beforeDrag.Left + 220), ($beforeDrag.Top + 80)) | Out-Null
-          Start-Sleep -Milliseconds 350
-          [MouseTest]::mouse_event(0x0004, 0, 0, 0, [UIntPtr]::Zero)
-          Start-Sleep -Milliseconds 250
-          $afterDrag = New-Object MouseTest+RECT
-          [MouseTest]::GetWindowRect($process.MainWindowHandle, [ref]$afterDrag) | Out-Null
-          "Drag check: before=$($beforeDrag.Left),$($beforeDrag.Top) after=$($afterDrag.Left),$($afterDrag.Top)"
-          if (($afterDrag.Left - $beforeDrag.Left) -lt 40) { throw "Installer window did not move by mouse drag" }
-          Save-Window $process.MainWindowHandle "installer-welcome"
-          $deadline = (Get-Date).AddSeconds(30)
-          $installHwnd = [IntPtr]::Zero
-          while ((Get-Date) -lt $deadline -and $installHwnd -eq [IntPtr]::Zero) {
-            Start-Sleep -Milliseconds 250
-            $installHwnd = [MouseTest]::FindButton($process.MainWindowHandle, "Установить")
-          }
-          if ($installHwnd -eq [IntPtr]::Zero) { throw "Native Install button handle was not found" }
-          $rect = New-Object MouseTest+RECT
-          [MouseTest]::GetWindowRect($installHwnd, [ref]$rect) | Out-Null
-          $x = [int](($rect.Left + $rect.Right) / 2)
-          $y = [int](($rect.Top + $rect.Bottom) / 2)
-          $hit = [MouseTest]::WindowFromPoint([MouseTest+POINT]@{ X=$x; Y=$y })
-          "Install control: $([MouseTest]::Describe($installHwnd)); mouse hit: $([MouseTest]::Describe($hit)) at $x,$y"
-          if ($hit -ne $installHwnd) { throw "Visible Install button is occluded by another control" }
-          Click-At $x $y
-          Start-Sleep -Milliseconds 300
-          Save-Window $process.MainWindowHandle "installer-installing"
-          $during=New-Object MouseTest+RECT
-          [MouseTest]::GetWindowRect($process.MainWindowHandle,[ref]$during) | Out-Null
-          [MouseTest]::SetForegroundWindow($process.MainWindowHandle) | Out-Null
-          [MouseTest]::SetCursorPos(($during.Left+120),($during.Top+25)) | Out-Null
-          Start-Sleep -Milliseconds 200
-          [MouseTest]::mouse_event(0x0002,0,0,0,[UIntPtr]::Zero)
-          Start-Sleep -Milliseconds 150
-          [MouseTest]::SetCursorPos(($during.Left+170),($during.Top+50)) | Out-Null
-          Start-Sleep -Milliseconds 250
-          [MouseTest]::mouse_event(0x0004,0,0,0,[UIntPtr]::Zero)
-          $moved=New-Object MouseTest+RECT
-          [MouseTest]::GetWindowRect($process.MainWindowHandle,[ref]$moved) | Out-Null
-          if(($moved.Left-$during.Left) -lt 30){throw 'Installer did not move during extraction'}
-
-          $deadline = (Get-Date).AddMinutes(4)
-          while ((Get-Date) -lt $deadline -and -not (Test-Path $installedExe)) {
-            Start-Sleep -Seconds 1
-          }
-          if (-not (Test-Path $installedExe)) { throw "Mouse click on Install did not start installation" }
-
-          $process.Refresh()
-          [MouseTest]::SetForegroundWindow($process.MainWindowHandle) | Out-Null
-          # File creation happens before the full 387 MB payload has finished
-          # extracting. Wait for the actual finish-page control, not a timer.
-          $deadline = (Get-Date).AddMinutes(5)
-          $openHwnd = [IntPtr]::Zero
-          while ((Get-Date) -lt $deadline -and $openHwnd -eq [IntPtr]::Zero) {
-            Start-Sleep -Milliseconds 250
-            $openHwnd = [MouseTest]::FindButton($process.MainWindowHandle, "Готово")
-          }
-          if ($openHwnd -eq [IntPtr]::Zero) { throw "Native Open button handle was not found" }
-          $canonicalHash=(Get-FileHash 'browser/ui/soulu-icon.ico').Hash
-          foreach($name in @('soulu-icon-v24.ico','soulu-icon-v44.ico','soulu-icon-v20261018.ico','soulu-icon.ico','soulu-app-icon.ico','soulu-shortcut-icon.ico','soulu-installer-icon.ico','browser-icon.ico','browser-app-icon.ico')){
-            if((Get-FileHash (Join-Path $legacyUi $name)).Hash -ne $canonicalHash){throw "Stale installed icon: $name"}
-          }
-          if(Test-Path (Join-Path $legacyUi 'soulu-icon.jpg')){throw 'Legacy opaque logo was not removed'}
-          $desktopLink=Join-Path ([Environment]::GetFolderPath('Desktop')) 'Soulu.lnk'
-          $startLink=Join-Path $env:APPDATA 'Microsoft/Windows/Start Menu/Programs/Soulu/Soulu.lnk'
-          $shortcutShell=New-Object -ComObject WScript.Shell
-          foreach($link in @($desktopLink,$startLink)){
-            if(-not (Test-Path $link)){throw "Soulu shortcut missing: $link"}
-            $iconLocation=$shortcutShell.CreateShortcut($link).IconLocation
-            "Shortcut icon: $link -> $iconLocation"
-            if($iconLocation -notmatch 'soulu-icon-v20261018\.ico,0$'){throw "Shortcut still references stale icon: $iconLocation"}
-          }
-          $uninstaller=Join-Path (Split-Path $installedExe) 'Uninstall Soulu.exe'
-          if(-not (Test-Path $uninstaller)){throw 'Uninstall Soulu.exe is missing'}
-          python browser/scripts/verify-branding.py --binary $installedExe --binary $uninstaller
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          $uninstallIcon=[System.Drawing.Icon]::ExtractAssociatedIcon($uninstaller)
-          if(-not $uninstallIcon){throw 'Uninstall Soulu.exe has no associated icon'}
-          $uninstallIcon.ToBitmap().Save((Join-Path $PWD 'browser/artifacts/uninstaller-exe-icon.png'))
-          $appEntry=Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Soulu'
-          if($appEntry.DisplayIcon -ne $installedExe){throw "Installed Apps icon target is wrong: $($appEntry.DisplayIcon)"}
-          Start-Sleep -Seconds 4
-          $process.Refresh()
-          if ($process.HasExited) { throw "Installer closed without clicking Open" }
-          Save-Window $process.MainWindowHandle "installer-finished"
-          $stillOpen = [MouseTest]::FindButton($process.MainWindowHandle, "Готово")
-          if ($stillOpen -eq [IntPtr]::Zero) { throw "Finish screen disappeared without user input" }
-          [MouseTest]::GetWindowRect($openHwnd, [ref]$rect) | Out-Null
-          $openX = [int](($rect.Left + $rect.Right) / 2)
-          $openY = [int](($rect.Top + $rect.Bottom) / 2)
-          $openHit = [MouseTest]::WindowFromPoint([MouseTest+POINT]@{ X=$openX; Y=$openY })
-          "Open control: $([MouseTest]::Describe($openHwnd)); mouse hit: $([MouseTest]::Describe($openHit))"
-          if ($openHit -ne $openHwnd) { throw "Visible Open button is occluded by another control" }
-          Click-At $openX $openY
-
-          $deadline = (Get-Date).AddSeconds(45)
-          $soulu = $null
-          while ((Get-Date) -lt $deadline -and -not $soulu) {
-            Start-Sleep -Milliseconds 500
-            # CEF also starts Soulu processes with no top-level window. Wait
-            # for the browser host, rather than inspect the whole process array.
-            $soulu = Get-Process Soulu -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne [IntPtr]::Zero } | Select-Object -First 1
-          }
-          if (-not $soulu) { throw "Mouse click on Open did not create a Soulu taskbar window" }
-          $taskbarIcon=[MouseTest]::SendMessage($soulu.MainWindowHandle,0x007F,[IntPtr]2,[IntPtr]::Zero)
-          if($taskbarIcon -eq [IntPtr]::Zero){$taskbarIcon=[MouseTest]::GetClassLongPtr($soulu.MainWindowHandle,-34)}
-          if($taskbarIcon -eq [IntPtr]::Zero){$taskbarIcon=[MouseTest]::GetClassLongPtr($soulu.MainWindowHandle,-14)}
-          if($taskbarIcon -eq [IntPtr]::Zero){throw 'Soulu taskbar window has no small icon'}
-          [System.Drawing.Icon]::FromHandle($taskbarIcon).ToBitmap().Save((Join-Path $PWD 'browser/artifacts/taskbar-window-icon.png'))
-          python browser/scripts/verify-branding.py --shortcut $desktopLink --shortcut $startLink --window ($soulu.MainWindowHandle.ToInt64())
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          Add-Type -AssemblyName System.Windows.Forms
-          $desktopBounds=[System.Windows.Forms.Screen]::PrimaryScreen.Bounds
-          $shellBitmap=[System.Drawing.Bitmap]::new($desktopBounds.Width,$desktopBounds.Height)
-          $shellGraphics=[System.Drawing.Graphics]::FromImage($shellBitmap)
-          $shellGraphics.CopyFromScreen($desktopBounds.Left,$desktopBounds.Top,0,0,$shellBitmap.Size)
-          $shellBitmap.Save((Join-Path $PWD 'browser/artifacts/taskbar-desktop-shell.png'))
-          $shellGraphics.Dispose();$shellBitmap.Dispose()
-          Get-Process Soulu -ErrorAction SilentlyContinue | Stop-Process -Force
-          "Physical mouse-click, extraction drag and persistent finish checks passed."
-          # Replace the test installation with the actual published Beta 1.0.59
-          # runtime, then upgrade it with this final-main installer.
-          $previousZip = Join-Path $env:RUNNER_TEMP 'Soulu-Beta-1.0.59-x64.zip'
-          gh release download beta-1.0.59 --repo $env:GITHUB_REPOSITORY --pattern 'Soulu-Beta-1.0.59-x64.zip' --dir $env:RUNNER_TEMP --clobber
-          if ($LASTEXITCODE -ne 0) { throw 'Authenticated previous Beta download failed' }
-          if ((Get-FileHash -LiteralPath $previousZip -Algorithm SHA256).Hash.ToLowerInvariant() -cne '86066c59f9002288a7f4d7647098c89fcc3f7a930d8ee6e88ae32fd695b72fdc') { throw 'Previous Beta archive checksum mismatch' }
-          Expand-Archive -LiteralPath $previousZip -DestinationPath $installedDirectory -Force
-          $previousReport = Join-Path $env:RUNNER_TEMP 'soulu-previous-engine.json'
-          $previousProbe = Start-Process $installedExe -ArgumentList @("--engine-version-file=`"$previousReport`"") -WorkingDirectory $installedDirectory -WindowStyle Hidden -PassThru -Wait
-          if ($previousProbe.ExitCode -ne 0) { throw 'Previous Beta engine probe failed' }
-          $previousEngine = Get-Content -LiteralPath $previousReport -Raw | ConvertFrom-Json
-          if ($previousEngine.cef -cne '154.0.33' -or $previousEngine.chromium -cne '154.0.8037.94') { throw 'Upgrade baseline is not the published Beta 1.0.59 runtime' }
-          # Repeat with launch unchecked: Done must close without starting Soulu.
-          $noLaunch = Start-Process $installer -PassThru
-          Start-Sleep -Seconds 2
-          $noLaunch.Refresh()
-          $button=[MouseTest]::FindButton($noLaunch.MainWindowHandle,"Установить")
-          [MouseTest]::GetWindowRect($button,[ref]$rect) | Out-Null
-          Click-At ([int](($rect.Left+$rect.Right)/2)) ([int](($rect.Top+$rect.Bottom)/2))
-          $deadline=(Get-Date).AddMinutes(5)
-          $done=[IntPtr]::Zero
-          while((Get-Date) -lt $deadline -and $done -eq [IntPtr]::Zero){
-            Start-Sleep -Milliseconds 300
-            $done=[MouseTest]::FindButton($noLaunch.MainWindowHandle,"Готово")
-          }
-          if($done -eq [IntPtr]::Zero){throw 'Second install did not finish'}
-          $toggle=[MouseTest]::FindButton($noLaunch.MainWindowHandle,"Запустить Soulu")
-          if($toggle -eq [IntPtr]::Zero){throw 'Launch checkbox missing'}
-          [MouseTest]::GetWindowRect($toggle,[ref]$rect) | Out-Null
-          Click-At ([int](($rect.Left+$rect.Right)/2)) ([int](($rect.Top+$rect.Bottom)/2))
-          [MouseTest]::GetWindowRect($done,[ref]$rect) | Out-Null
-          Click-At ([int](($rect.Left+$rect.Right)/2)) ([int](($rect.Top+$rect.Bottom)/2))
-          if(-not $noLaunch.WaitForExit(5000)){throw 'Done did not close installer'}
-          Start-Sleep -Seconds 2
-          if(Get-Process Soulu -ErrorAction SilentlyContinue){throw 'Soulu started with launch unchecked'}
-          foreach ($artifact in @('shared.lib', 'shared.pdb', 'soulu.pdb')) {
-            if (Test-Path -LiteralPath (Join-Path $installedDirectory $artifact)) { throw "Upgrade retained a build artifact: $artifact" }
-          }
-          "Unchecked-launch scenario passed."
-          # A close click must exit directly, without a confirmation window.
-          $again = Start-Process $installer -PassThru
-          Start-Sleep -Seconds 2
-          $again.Refresh()
-          $closeHwnd=[MouseTest]::FindButton($again.MainWindowHandle,"Закрыть")
-          if($closeHwnd -eq [IntPtr]::Zero){throw 'Close control missing'}
-          [MouseTest]::GetWindowRect($closeHwnd,[ref]$rect) | Out-Null
-          Click-At ([int](($rect.Left+$rect.Right)/2)) ([int](($rect.Top+$rect.Bottom)/2))
-          if(-not $again.WaitForExit(5000)){throw 'Close click did not close installer directly'}
-
-          # Exercise the real uninstall path after both launch scenarios.
-          & ./browser/scripts/verify-cef-engine.ps1 -BuildDir (Split-Path $installedExe) -ReportPath browser/artifacts/installed-engine-version.json
-          $installedTestLocal = $env:LOCALAPPDATA
-          try {
-            $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP 'soulu-installed-storage-profile'
-            python browser/scripts/test-cef-storage.py $installedExe
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          } finally {
-            $env:LOCALAPPDATA = $installedTestLocal
-          }
-          $deadline = (Get-Date).AddSeconds(20)
-          while ((Get-Date) -lt $deadline -and (Get-Process Soulu -ErrorAction SilentlyContinue | Where-Object Path -eq $installedExe)) {
-            Start-Sleep -Milliseconds 250
-          }
-          if (Get-Process Soulu -ErrorAction SilentlyContinue | Where-Object Path -eq $installedExe) {
-            throw 'Installed Soulu left child processes after normal shutdown'
-          }
-          $uninstall = Start-Process $uninstaller -ArgumentList '/S' -WindowStyle Hidden -PassThru -Wait
-          if($uninstall.ExitCode -ne 0){throw 'Uninstaller failed'}
-          $deadline=(Get-Date).AddSeconds(30)
-          while((Get-Date) -lt $deadline -and (Test-Path $installedExe)){Start-Sleep -Milliseconds 250}
-          if(Test-Path $installedExe){throw 'Uninstaller left Soulu.exe behind'}
-          if((Test-Path $desktopLink) -or (Test-Path $startLink)){throw 'Uninstaller left shortcuts behind'}
-          if(Test-Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Soulu'){throw 'Uninstaller left Installed Apps registration behind'}
-
-
+          'The owner installed all five preceding shared installer review builds and confirmed success. This release aligns the settings action with VPN and increments the product version. Shared UI and adapter checks ran in this build; native Win32-button tests for the retired installer do not apply to Wails.' | Set-Content browser/artifacts/shared-installer-acceptance.txt
       - name: Upload visual checks
         continue-on-error: true
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.60')) && (always()) }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.61')) && (always()) }}
         uses: actions/upload-artifact@v4
         with:
           name: Soulu-visual-checks
@@ -1083,7 +778,7 @@ jobs:
       - name: Upload preview artifacts
         # Preserve the verified binary for diagnosing failed runtime tests.
         # Release publication below still requires every mandatory check.
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.60')) && (always() && steps.verified.outputs.passed == 'true') }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.61')) && (always() && steps.verified.outputs.passed == 'true') }}
         uses: actions/upload-artifact@v4
         with:
           name: Soulu-Beta-1.0.${{ env.BETA_NUMBER }}-x64
@@ -1094,7 +789,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload native data-security evidence
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.60')) && (always()) }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.61')) && (always()) }}
         uses: actions/upload-artifact@v4
         with:
           name: Soulu-data-security-${{ github.run_id }}
@@ -1134,7 +829,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Verify release source is the current main commit
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.60')) && (success() && (github.ref == 'refs/tags/beta-1.0.60' || (github.ref == 'refs/heads/main' && inputs.publish))) }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.61')) && (success() && (github.ref == 'refs/tags/beta-1.0.61' || (github.ref == 'refs/heads/main' && inputs.publish))) }}
         shell: pwsh
         working-directory: browser
         run: |
@@ -1148,7 +843,7 @@ jobs:
           Write-Host "Release source verified: HEAD == origin/main == $headSha"
 
       - name: Verify mandatory manual regression evidence belongs to this SHA
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.60')) && (success() && (github.ref == 'refs/tags/beta-1.0.60' || (github.ref == 'refs/heads/main' && inputs.publish))) }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.61')) && (success() && (github.ref == 'refs/tags/beta-1.0.61' || (github.ref == 'refs/heads/main' && inputs.publish))) }}
         shell: pwsh
         env:
           MANUAL_CHECKS_SHA: ${{ inputs.manual_checks_sha }}
@@ -1184,7 +879,7 @@ jobs:
           }
 
       - name: Publish Soulu release
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.60')) && (success() && (github.ref == 'refs/tags/beta-1.0.60' || (github.ref == 'refs/heads/main' && inputs.publish)) && steps.verified.outputs.passed == 'true') }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.61')) && (success() && (github.ref == 'refs/tags/beta-1.0.61' || (github.ref == 'refs/heads/main' && inputs.publish)) && steps.verified.outputs.passed == 'true') }}
         uses: softprops/action-gh-release@v2
         with:
           tag_name: beta-1.0.${{ env.BETA_NUMBER }}
