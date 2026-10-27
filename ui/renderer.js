@@ -65,9 +65,10 @@ function revealClassicTab(){
 }
 function classicTabMarkup(x,pinned){
   const title=x.title||x.label||tr("newTab"), symbol=title.trim().charAt(0).toUpperCase()||"•";
+  const attributeTitle=esc(title).replace(/"/g,"&quot;");
   const image=fav(x)||`<span class="favicon favicon-fallback classic-fallback" aria-hidden="true">${esc(symbol)}</span>`;
   const close=`<button class="tab-action" title="${tr("close")}" aria-label="${tr("close")}" data-close-tab="${x.id}"><svg viewBox="0 0 24 24"><path d="M4 4l16 16m0-16L4 20"/></svg></button>`;
-  return `<div class="classic-tab${pinned?" pinned":""}${x.active?" active":""}" role="tab" aria-selected="${!!x.active}" aria-label="${esc(title)}" tabindex="0" data-tooltip="${esc(title)}" data-tab-id="${x.id}">${image}<strong>${esc(title)}</strong>${close}</div>`;
+  return `<div class="classic-tab${pinned?" pinned":""}${x.active?" active":""}" role="tab" aria-selected="${!!x.active}" aria-label="${attributeTitle}" tabindex="0" data-tooltip="${attributeTitle}" data-tab-id="${x.id}">${image}<strong>${esc(title)}</strong>${close}</div>`;
 }
 function renderClassicTabs(){
   const previousScroll=tabStrip.scrollLeft,previousPinnedScroll=classicPinnedTabs.scrollLeft;
