@@ -47,7 +47,7 @@ permissions:
 
 # Only fresh source builds can package or publish.
 concurrency:
-  group: soulu-cef-main
+  group: ${{ github.ref == 'refs/heads/codex/classic-responsive-implementation' && 'soulu-classic-responsive-ci' || 'soulu-cef-main' }}
   cancel-in-progress: true
 
 jobs:
