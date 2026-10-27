@@ -95,7 +95,12 @@ def main():
             check(other!='personal' and all(not t.get('pinned') for t in state()['tabs']),'Pinned tabs do not leak into another profile')
             call('switchProfile','personal');wait(lambda:state()['activeProfileId']=='personal')
             check(any(t.get('pinned') for t in state()['tabs']),'Pinned tab returns with its own profile')
-            stop();start();wait(lambda:any(t.get('pinned') for t in state()['tabs']))
+            print('Before restart:',json.dumps(state()['tabs'],ensure_ascii=False),flush=True)
+            stop()
+            session=Path(root)/'Soulu'/'User Data'/'Profiles'/'personal'/'soulu-session.json'
+            print('Saved session:',session.read_text(encoding='utf-8') if session.exists() else '<missing>',flush=True)
+            start();print('After restart:',json.dumps(state()['tabs'],ensure_ascii=False),flush=True)
+            wait(lambda:any(t.get('pinned') for t in state()['tabs']))
             check(sum(bool(t.get('pinned')) for t in state()['tabs'])==1,'Pinned tab survives normal restart')
             call('setSettings',{'startupMode':'soulu'});stop();start()
             wait(lambda:any(t.get('pinned') for t in state()['tabs']) and len(state()['tabs'])>=2)
