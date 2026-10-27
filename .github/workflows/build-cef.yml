@@ -247,6 +247,13 @@ jobs:
             ${{ env.build_dir }}/licenses/
           if-no-files-found: error
 
+      - name: Test adaptive classic tabs, pinning and session restoration
+        shell: pwsh
+        run: |
+          python -m pip install --disable-pip-version-check websocket-client
+          python browser/scripts/test-cef-classic-responsive.py "$env:build_dir/Soulu.exe" browser/artifacts/classic-responsive-evidence.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Verify Home before broader development regressions
         if: github.ref == 'refs/heads/codex/home-final' || (github.ref == 'refs/heads/main' && !inputs.native_only)
         shell: pwsh
@@ -438,12 +445,6 @@ jobs:
         shell: pwsh
         run: |
           python browser/scripts/test-cef-toolbar.py "$env:build_dir/Soulu.exe" browser/artifacts/toolbar-evidence.json
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-      - name: Test adaptive classic tabs, pinning and session restoration
-        shell: pwsh
-        run: |
-          python browser/scripts/test-cef-classic-responsive.py "$env:build_dir/Soulu.exe" browser/artifacts/classic-responsive-evidence.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Upload toolbar verification

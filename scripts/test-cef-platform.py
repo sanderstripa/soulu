@@ -143,8 +143,12 @@ def main():
             EditWrapper(edit[0]).set_edit_text(str(saved.resolve()))
             check(EditWrapper(edit[0]).window_text() == str(saved.resolve()), 'Native Save As accepts the test path')
             ButtonWrapper(save[0]).click_input()
-            wait(lambda: saved.exists() and saved.stat().st_size == len(BODY))
-            check(saved.read_bytes() == BODY, 'Native Save As downloads exact fixture bytes to selected path')
+            def downloaded_bytes():
+                try:
+                    return saved.read_bytes() if saved.exists() and saved.stat().st_size == len(BODY) else None
+                except PermissionError:
+                    return None  # Windows may briefly retain the download's write handle.
+            check(wait(downloaded_bytes) == BODY, 'Native Save As downloads exact fixture bytes to selected path')
             downloads = wait(lambda: (rows if any(r['state'] == 'completed' for r in rows) else None) if (rows := s.evaluate(shell, 'browserShell.getDownloads()')) else None)
             check(any(r['receivedBytes'] == len(BODY) for r in downloads), 'Download completion callback reaches Soulu UI')
             s.command(page, 'Page.navigate', {'url': origin + '/download-again'})
