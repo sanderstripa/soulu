@@ -97,6 +97,8 @@ body[data-native-caption-hover=true] .browser-toolbar :is(#compactWindowMaximize
 .browser-toolbar :is(.compact-active-tab,.classic-address-pill) :is([data-close-active],.classic-close-tab) svg{width:14px;height:14px}
 
 /* Classic review: a separate row of pinned circles and rounded tabs. */
+.classic-toolbar .classic-main-row{grid-template-columns:minmax(210px,1fr) minmax(0,640px) minmax(210px,1fr)}
+.classic-toolbar .classic-address-pill{width:min(640px,100%)}
 .classic-toolbar .tabs-zone{gap:4px;padding:2px 8px 2px}
 .classic-toolbar .classic-pinned-tabs{display:flex;align-items:center;gap:4px;flex:0 1 auto;max-width:40%;height:30px;min-width:0;overflow-x:auto;scrollbar-width:none;overscroll-behavior-x:contain}
 .classic-toolbar .classic-pinned-tabs[hidden]{display:none}

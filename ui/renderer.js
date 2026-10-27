@@ -177,7 +177,6 @@ $("#addFavoriteButton").onclick=async()=>renderBookmarks(await window.browserShe
 [$("#windowMinimize"),$("#compactWindowMinimize")].forEach((button)=>button.onclick=()=>window.browserShell.minimize());
 [$("#windowMaximize"),$("#compactWindowMaximize")].forEach((button)=>button.onclick=()=>window.browserShell.maximize());
 $(".classic-reload").onclick=()=>window.browserShell.reload();
-$("#classicCloseTab").onclick=()=>window.browserShell.closeTab(state.activeTabId);
 // CEF OSR does not implement -webkit-app-region. Resolve current DOM geometry
 // on each gesture so layout switches cannot leave stale drag rectangles.
 document.addEventListener("mousedown",(event)=>{
