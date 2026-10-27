@@ -77,12 +77,18 @@ def main():
             check(narrow['activeWidth']==160 and narrow['title'] and narrow['close'] and all(w==30 for w in narrow['inactive']),'Narrow row keeps active title and close; other tabs become icons')
             normal=state()['tabs'];pinned_id=normal[0]['id'];call('pinTab',pinned_id)
             wait(lambda:any(t['id']==pinned_id and t.get('pinned') for t in state()['tabs']))
-            check(s.evaluate(shell,"document.querySelector('#classicPinnedTabs .pinned')?.getBoundingClientRect().width===30"),'Pinned tab is a separate circle')
+            check(bool(wait(lambda:s.evaluate(shell,"document.querySelector('#classicPinnedTabs .pinned')?.getBoundingClientRect().width===30"))),'Pinned tab is a separate circle')
             call('switchTab',pinned_id)
             check(bool(wait(lambda:s.evaluate(shell,"(()=>{const p=document.querySelector('#classicPinnedTabs .pinned.active');return p&&p.getBoundingClientRect().width===160&&getComputedStyle(p.querySelector('strong')).display!=='none'&&getComputedStyle(p.querySelector('[data-close-tab]')).visibility==='visible'})()"))),'Active pinned tab keeps title and close when compressed')
             active_id=next(t['id'] for t in state()['tabs'] if not t['pinned'] and not t['active']);call('switchTab',active_id)
             check(bool(wait(lambda:(v if v['visible'] and v['title'] and v['close'] else None) if (v:=sample()) else None)),'Switching reveals the active expanded tab')
-            resize(1600)
+            # Hosted Windows desktops can clamp oversized windows to their screen.
+            # Leave six ordinary tabs: they still overflow at 640px, but fit at 980px.
+            for tab in [t for t in state()['tabs'] if not t['pinned'] and not t['active']][:3]:
+                call('closeTab',tab['id'])
+            wait(lambda:len(state()['tabs'])==7)
+            wait(lambda:sample()['compact'])
+            resize(980)
             expanded=wait(lambda:(v if not v['compact'] else None) if (v:=sample()) else None)
             check(all(w>=112 for w in expanded['inactive']),'Wider window expands the other tabs again')
             call('createProfile','Classic isolation');other=state()['activeProfileId']
