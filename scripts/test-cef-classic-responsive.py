@@ -75,7 +75,7 @@ def main():
             wait(lambda:len(state()['tabs'])==10)
             resize(640);narrow=wait(lambda:(v if v['compact'] and v['visible'] else None) if (v:=sample()) else None)
             check(narrow['activeWidth']==160 and narrow['title'] and narrow['close'] and all(w==30 for w in narrow['inactive']),'Narrow row keeps active title and close; other tabs become icons')
-            normal=state()['tabs'];pinned_id=normal[0]['id'];call('pinTab',pinned_id)
+            normal=state()['tabs'];pinned_id=next(t['id'] for t in normal if t['url']=='soulu://home');call('pinTab',pinned_id)
             wait(lambda:any(t['id']==pinned_id and t.get('pinned') for t in state()['tabs']))
             check(bool(wait(lambda:s.evaluate(shell,"document.querySelector('#classicPinnedTabs .pinned')?.getBoundingClientRect().width===30"))),'Pinned tab is a separate circle')
             call('switchTab',pinned_id)
