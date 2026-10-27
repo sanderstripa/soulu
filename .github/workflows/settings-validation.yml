@@ -52,13 +52,13 @@ jobs:
           }
           $index = Invoke-RestMethod 'https://cef-builds.spotifycdn.com/index.json'
           $versions = @($index.windows64.versions | Where-Object {
-            $_.cef_version -match '^154\.0\.33\+ga03e714\+chromium-154\.0\.8037\.94$' -and
-            $_.chromium_version -eq '154.0.8037.94' -and $_.channel -eq 'stable'
+            $_.cef_version -match '^156\.0\.14\+g4fa4ab5\+chromium-156\.0\.8078\.48$' -and
+            $_.chromium_version -eq '156.0.8078.48' -and $_.channel -eq 'stable'
           })
           if ($versions.Count -ne 1) { throw 'Exactly one approved CEF distribution must exist; no fallback allowed' }
           $version = $versions[0].cef_version
           $archive = @($versions[0].files | Where-Object type -eq 'standard')
-          if ($archive.Count -ne 1 -or $archive[0].sha1 -cne '66b621e95ccae243621ecb0504803bbdbd2f0777') {
+          if ($archive.Count -ne 1 -or $archive[0].sha1 -cne '7a1049f0facf3b6ce9efc4d683cf1bac72691ba6') {
             throw 'Canonical CEF archive checksum changed'
           }
           $cmakeFile = 'cef-project/CMakeLists.txt'
@@ -156,7 +156,7 @@ jobs:
         shell: pwsh
         run: |
           $archive = Get-ChildItem cef-project/third_party/cef -Filter '*.tar.bz2'
-          if (@($archive).Count -ne 1 -or (Get-FileHash $archive.FullName -Algorithm SHA1).Hash.ToLowerInvariant() -cne '66b621e95ccae243621ecb0504803bbdbd2f0777') {
+          if (@($archive).Count -ne 1 -or (Get-FileHash $archive.FullName -Algorithm SHA1).Hash.ToLowerInvariant() -cne '7a1049f0facf3b6ce9efc4d683cf1bac72691ba6') {
             throw 'Downloaded CEF archive does not match the selected distribution'
           }
           $distribution = Get-ChildItem cef-project/third_party/cef -Directory

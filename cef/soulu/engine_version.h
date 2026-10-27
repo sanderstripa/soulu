@@ -4,11 +4,11 @@
 #include "include/cef_version_info.h"
 
 // Refuse compilation against any engine other than the approved distribution.
-static_assert(CEF_VERSION_MAJOR == 154 && CEF_VERSION_MINOR == 0 &&
-              CEF_VERSION_PATCH == 33 && CEF_COMMIT_NUMBER == 3632,
+static_assert(CEF_VERSION_MAJOR == 156 && CEF_VERSION_MINOR == 0 &&
+              CEF_VERSION_PATCH == 14 && CEF_COMMIT_NUMBER == 3659,
               "Unsupported CEF headers");
-static_assert(CHROME_VERSION_MAJOR == 154 && CHROME_VERSION_MINOR == 0 &&
-              CHROME_VERSION_BUILD == 8037 && CHROME_VERSION_PATCH == 94,
+static_assert(CHROME_VERSION_MAJOR == 156 && CHROME_VERSION_MINOR == 0 &&
+              CHROME_VERSION_BUILD == 8078 && CHROME_VERSION_PATCH == 48,
               "Unsupported Chromium headers");
 
 namespace soulu {
@@ -28,6 +28,6 @@ inline std::string RuntimeCEFBuild() {
 }
 inline bool ApprovedEngine() {
   return RuntimeCEFBuild() ==
-         "154.0.33+ga03e714+chromium-154.0.8037.94";
+         "156.0.14+g4fa4ab5+chromium-156.0.8078.48";
 }
 }

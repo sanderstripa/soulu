@@ -1,3 +1,26 @@
+# Stable CEF update — Beta 1.0.62 candidate
+
+Discovery: 2026-10-27. Source baseline: c21523f24d6010e0523954c29cf93e5597adccc5.
+
+Canonical index: https://cef-builds.spotifycdn.com/index.json (Windows x64, stable).
+Selected highest Chromium stable version, then latest CEF patch: 156.0.14+g4fa4ab5+chromium-156.0.8078.48.
+The standard archive was published 2026-10-24; SHA-1: 7a1049f0facf3b6ce9efc4d683cf1bac72691ba6.
+The minimal archive used for header inspection was independently downloaded and its SHA-1 verified:
+72dc1dd1636acc2391609fa6f410aa09f09168d4.
+
+Compared with the 154.0.33 distribution, public handler interfaces retain their signatures.
+CefPreferenceRegistrar adds version-gated default preference methods. Color/command/resource
+identifiers changed; the source is rebuilt against the selected distribution rather than reusing binaries.
+CEF_COMMIT_NUMBER is 3659. The sandbox compatibility hash changes to 3b66cadf26145637;
+Soulu retains its existing USE_SANDBOX=OFF configuration and does not reuse sandbox libraries.
+
+Build workflow archive pins, compile-time guards, loaded-DLL guards, runtime manifests,
+DevTools version assertions and product/installer versions are updated together.
+The full Windows build and regression pipeline remains required. Publication gates and
+manual acceptance requirements are retained; this document does not assert their success.
+
+## Previous upgrade record
+
 # Stable CEF update — Preview 49 candidate
 
 Discovery date: 2026-10-03. Baseline `origin/main`:

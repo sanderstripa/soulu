@@ -28,12 +28,12 @@ if ($DistributionDir) {
       $files += @{ path = $name; sha256 = (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash }
     }
   }
-  @{ distribution = '154.0.33+ga03e714+chromium-154.0.8037.94'; files = $files } |
+  @{ distribution = '156.0.14+g4fa4ab5+chromium-156.0.8078.48'; files = $files } |
     ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $manifestPath -Encoding utf8
 }
 if (!(Test-Path -LiteralPath $manifestPath)) { throw 'CEF runtime manifest is missing' }
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
-if ($manifest.distribution -cne '154.0.33+ga03e714+chromium-154.0.8037.94') {
+if ($manifest.distribution -cne '156.0.14+g4fa4ab5+chromium-156.0.8078.48') {
   throw 'CEF runtime manifest belongs to another distribution'
 }
 foreach ($file in $manifest.files) {
@@ -54,8 +54,8 @@ try {
     throw "Engine version probe failed: exit $($process.ExitCode)"
   }
   $version = Get-Content -LiteralPath $probe -Raw | ConvertFrom-Json
-  if ($version.cef -cne '154.0.33' -or $version.chromium -cne '154.0.8037.94' -or
-      $version.cef_build -cne '154.0.33+ga03e714+chromium-154.0.8037.94') {
+  if ($version.cef -cne '156.0.14' -or $version.chromium -cne '156.0.8078.48' -or
+      $version.cef_build -cne '156.0.14+g4fa4ab5+chromium-156.0.8078.48') {
     throw "Unsupported engine: CEF $($version.cef), Chromium $($version.chromium)"
   }
   $report = [ordered]@{
