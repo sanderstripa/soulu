@@ -45,6 +45,12 @@ def main():
             shell=s.websocket.create_connection(target['webSocketDebuggerUrl'],timeout=30,origin=s.BASE)
             wait(lambda:s.evaluate(shell,'!!window.browserShell && !!document.querySelector("#classicPinnedTabs")'))
             wait(lambda:state().get('tabs'))
+            # The shell may appear before onboarding; finish it before testing restart.
+            def onboarding_finished():
+                s.targets()
+                settings=Path(root)/'Soulu'/'User Data'/'Profiles'/'personal'/'soulu-settings.json'
+                return settings.exists() and json.loads(settings.read_text(encoding='utf-8')).get('onboarding',{}).get('status') in ('skipped','completed')
+            wait(onboarding_finished)
         def stop():
             nonlocal process,shell
             if shell:
