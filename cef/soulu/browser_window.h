@@ -129,6 +129,7 @@ class BrowserWindow final : public CefBaseRefCounted {
     CefRefPtr<CefRegistration> thumbnail_registration;
     std::string profile_id = "personal";
     bool incognito = false;
+    bool pinned = false;
     bool activate_on_attach = false;
     bool focus_address_on_attach = false;
     bool focus_home_on_load = false;

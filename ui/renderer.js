@@ -1,4 +1,4 @@
-const $=(s)=>document.querySelector(s),$$=(s)=>[...document.querySelectorAll(s)],tabStrip=$("#tabStrip"),compactToolbar=$(".compact-toolbar"),compactTabsAnchor=$("#compactTabsAnchor"),sidebar=$("#sidebar"),sidebarButton=$("#sidebarButton"),backButton=$("#backButton"),favoritesPanel=$("#favoritesPanel"),downloadsButton=$("#downloadsButton"),downloadsPanel=$("#downloadsPanel"),downloadsBadge=$("#downloadsBadge"),vpnPanel=$("#vpnPanel"),vpnFrame=$("#vpnFrame"),sidebarButtons=[sidebarButton,$("#compactSidebarButton")],backButtons=[backButton,$("#compactBackButton")],favoritesButtons=[$("#favoritesButton")],downloadsButtons=[downloadsButton,$("#compactDownloadsButton")],downloadsBadges=[downloadsBadge,$("#compactDownloadsBadge")],vpnButtons=[$("#vpnButton"),$("#vpnButtonRight"),$("#compactVpnButton"),$("#compactVpnButtonRight")],settingsButtons=[];
+const $=(s)=>document.querySelector(s),$$=(s)=>[...document.querySelectorAll(s)],tabStrip=$("#tabStrip"),classicPinnedTabs=$("#classicPinnedTabs"),compactToolbar=$(".compact-toolbar"),compactTabsAnchor=$("#compactTabsAnchor"),sidebar=$("#sidebar"),sidebarButton=$("#sidebarButton"),backButton=$("#backButton"),favoritesPanel=$("#favoritesPanel"),downloadsButton=$("#downloadsButton"),downloadsPanel=$("#downloadsPanel"),downloadsBadge=$("#downloadsBadge"),vpnPanel=$("#vpnPanel"),vpnFrame=$("#vpnFrame"),sidebarButtons=[sidebarButton,$("#compactSidebarButton")],backButtons=[backButton,$("#compactBackButton")],favoritesButtons=[$("#favoritesButton")],downloadsButtons=[downloadsButton,$("#compactDownloadsButton")],downloadsBadges=[downloadsBadge,$("#compactDownloadsBadge")],vpnButtons=[$("#vpnButton"),$("#vpnButtonRight"),$("#compactVpnButton"),$("#compactVpnButtonRight")],settingsButtons=[];
 let state={tabs:[],page:null,settings:{layout:"compact",theme:"system",language:"ru",mattePanel:true,addressOpenMode:"current",addressPosition:"center",extensionsPosition:"left",vpnToolbarVisible:true,downloadsMode:"dynamic"}},rightPanel="",editing=false,token=0,lastDownloads=[],downloadHideTimer=0,vpnState="disconnected",vpnBusy=false;
 const I={
 ru:{tabs:"Вкладки",back:"Назад",favorites:"Избранное",downloads:"Загрузки",share:"Поделиться",newTab:"Новая вкладка",settings:"Настройки",minimize:"Свернуть",maximize:"Развернуть",restore:"Восстановить",close:"Закрыть",reload:"Обновить",stop:"Остановить",addressPlaceholder:"Поиск или адрес",savedPages:"Сохранённые страницы",recentDownloads:"Текущие и недавние",appearance:"Оформление",classic:"Классический",classicHint:"Адрес сверху, вкладки ниже",compact:"Основная",compactHint:"Основная компактная панель",theme:"Тема",system:"Системная",light:"Светлая",dark:"Тёмная",mattePanel:"Матовая панель",mattePanelHint:"Полупрозрачность с размытием фона",language:"Язык",search:"Поиск",defaultSearch:"Поисковая система",searchHint:"Используется для запросов из адресной строки",addressBehavior:"Переход из адресной строки",addressBehaviorHint:"Куда открывать введённый адрес",openCurrentTab:"В текущей вкладке",openNewIfOccupied:"В новой, если текущая занята",startup:"Стартовая страница",blankPage:"Пустая страница",customPage:"Свой адрес",askDownload:"Всегда спрашивать место сохранения",choose:"Выбрать…",vpnSettings:"Настройки VPN",vpnHint:"Профили, подключение и защита WebRTC",open:"Открыть",googleAccounts:"Учётные записи Google",googleHint:"Можно добавить несколько аккаунтов. Они работают в общей сессии браузера; синхронизация Chrome не включается.",addAccount:"Добавить аккаунт",manageAccounts:"Управление",passwords:"Пароли",passwordHint:"Пароли шифруются средствами Windows и хранятся рядом с данными браузера. Автозаполнение пока не выполняется.",site:"Сайт",login:"Логин",password:"Пароль",save:"Сохранить",opened:"открыто",emptyDownloads:"Загрузок пока нет",downloadHint:"Текущие и недавние файлы появятся здесь",done:"Готово",cancelled:"Отменено",error:"Ошибка",emptyFavorites:"Избранное пусто",favoriteHint:"Нажмите звезду, чтобы сохранить текущую страницу",find:"Найти на странице:",searchFor:"Искать",openTab:"Открытая вкладка",bookmark:"Избранное",history:"История",copyLogin:"Копировать логин",copyPassword:"Копировать пароль",remove:"Удалить",noPasswords:"Сохранённых паролей пока нет",fillPassword:"Заполните сайт, логин и пароль.",folderNone:"Папка не выбрана"},
@@ -42,34 +42,63 @@ function bindAddress(form,input,box){
 function addressDisplay(x){return x?.url && x.url!=="soulu://home"?x.label||x.url:"";}
 function activeTab(x){const hasFavicon=Boolean(x.favicon),display=addressDisplay(x);return`<form class="compact-active-tab${hasFavicon?"":" no-favicon"}" data-compact-rendered data-active-tab="${x.id}"><button class="tab-action page-action" type="button" data-page-menu title="${tr("pageMenu")}"><svg viewBox="0 0 20 20"><path d="M4 5.5h12M4 10h12M4 14.5h7"/></svg></button>${fav(x)}<input id="compactAddress" class="active-address" value="${esc(display)}" placeholder="${x.url==='soulu://home'?'':tr("addressPlaceholder")}" autocomplete="off" spellcheck="false"><button class="tab-action address-favorite" type="button" data-favorites title="${tr("favorites")}"><svg viewBox="0 0 24 24"><path d="m12 4 2.47 5.27L20 10.12l-4 4.1.94 5.78L12 17.27 7.06 20 8 14.22 4 10.12l5.53-.85L12 4Z"/></svg></button><button class="tab-action reload-action${x.loading?" loading":""}" type="button" data-reload title="${x.loading?tr("stop"):tr("reload")}"><svg class="reload-svg" viewBox="0 0 24 24"><path d="M19 8.13A8 8 0 1 0 20 12M19 4v4h-4"/></svg><svg class="stop-svg" viewBox="0 0 20 20"><rect x="4.5" y="4.5" width="11" height="11" rx="2"/></svg></button><button class="tab-action close-action" type="button" data-close-active title="${tr("close")}"><svg viewBox="0 0 24 24"><path d="M4 4l16 16m0-16L4 20"/></svg></button><div class="suggestions active-suggestions" id="compactSuggestions"></div></form>`;}
 let classicVisibleTabId=null;
+function sizeClassicTabs(){
+  if(document.body.dataset.layout!=="classic")return;
+  const ordinary=[...tabStrip.querySelectorAll(".classic-tab")];
+  const needed=ordinary.length*112+Math.max(0,ordinary.length-1)*4;
+  const zone=tabStrip.closest(".tabs-zone");
+  const expandedPin=zone?.classList.contains("is-compressed")&&classicPinnedTabs.querySelector(".pinned.active");
+  const available=tabStrip.clientWidth+(expandedPin?130:0);
+  const compressed=needed>available;
+  tabStrip.classList.toggle("icons-only",compressed);
+  zone?.classList.toggle("is-compressed",compressed);
+}
 function revealClassicTab(){
   if(document.body.dataset.layout!=="classic")return;
-  const active=tabStrip.querySelector(".active");
-  if(!active)return;
-  const left=active.offsetLeft-tabStrip.offsetLeft,right=left+active.offsetWidth;
-  if(left<tabStrip.scrollLeft)tabStrip.scrollLeft=left;
-  else if(right>tabStrip.scrollLeft+tabStrip.clientWidth)tabStrip.scrollLeft=right-tabStrip.clientWidth;
+  const container=classicPinnedTabs.querySelector(".active")?classicPinnedTabs:tabStrip;
+  const active=container.querySelector(".active");if(!active)return;
+  const a=active.getBoundingClientRect(),r=container.getBoundingClientRect();
+  if(a.left<r.left)container.scrollLeft+=a.left-r.left;
+  else if(a.right>r.right)container.scrollLeft+=a.right-r.right;
+}
+function classicTabMarkup(x,pinned){
+  const title=x.title||x.label||tr("newTab"), symbol=title.trim().charAt(0).toUpperCase()||"•";
+  const image=fav(x)||`<span class="favicon favicon-fallback classic-fallback" aria-hidden="true">${esc(symbol)}</span>`;
+  const close=`<button class="tab-action" title="${tr("close")}" aria-label="${tr("close")}" data-close-tab="${x.id}"><svg viewBox="0 0 24 24"><path d="M4 4l16 16m0-16L4 20"/></svg></button>`;
+  return `<div class="classic-tab${pinned?" pinned":""}${x.active?" active":""}" role="tab" aria-selected="${!!x.active}" aria-label="${esc(title)}" tabindex="0" data-tooltip="${esc(title)}" data-tab-id="${x.id}">${image}<strong>${esc(title)}</strong>${close}</div>`;
 }
 function renderClassicTabs(){
-  tabStrip.innerHTML=state.tabs.map((x)=>`<div class="classic-tab${x.active?" active":""}" role="tab" aria-selected="${!!x.active}" tabindex="0" data-tooltip="${esc(x.title||x.label)}" data-tab-id="${x.id}">${fav(x)}<strong>${esc(x.title||x.label)}</strong><button class="tab-action" title="${tr("close")}" aria-label="${tr("close")}" data-close-tab="${x.id}"><svg viewBox="0 0 24 24"><path d="M4 4l16 16m0-16L4 20"/></svg></button></div>`).join("");
-  fallbacks(tabStrip);
-  tabStrip.querySelectorAll("[data-tab-id]").forEach((e)=>{
-    e.onclick=(v)=>{if(!v.target.closest("[data-close-tab]"))window.browserShell.switchTab(+e.dataset.tabId);};
-    e.onkeydown=(v)=>{if(v.target===e&&(v.key==="Enter"||v.key===" ")){v.preventDefault();window.browserShell.switchTab(+e.dataset.tabId);}};
-  });
-  tabStrip.querySelectorAll("[data-close-tab]").forEach((b)=>b.onclick=(e)=>{e.stopPropagation();window.browserShell.closeTab(+b.dataset.closeTab);});
-  const active=state.tabs.find(x=>x.active)?.id;
-  // Only reveal on a switch; background title/loading updates must not undo
-  // the user's scrolling to other tabs.
-  if(active!==classicVisibleTabId){classicVisibleTabId=active;requestAnimationFrame(revealClassicTab);}
+  const pinned=state.tabs.filter(x=>x.pinned),normal=state.tabs.filter(x=>!x.pinned);
+  classicPinnedTabs.innerHTML=pinned.map(x=>classicTabMarkup(x,true)).join("");
+  classicPinnedTabs.hidden=!pinned.length;
+  tabStrip.innerHTML=normal.map(x=>classicTabMarkup(x,false)).join("");
+  for(const container of [classicPinnedTabs,tabStrip]){
+    container.querySelectorAll("img.favicon").forEach(img=>img.addEventListener("error",()=>{
+      const fallback=document.createElement("span");fallback.className="favicon favicon-fallback classic-fallback";
+      fallback.setAttribute("aria-hidden","true");fallback.textContent=(img.closest("[data-tab-id]")?.getAttribute("aria-label")||"•").trim().charAt(0).toUpperCase()||"•";img.replaceWith(fallback);
+    },{once:true}));
+    container.querySelectorAll("[data-tab-id]").forEach((e)=>{
+      e.onclick=(v)=>{if(!v.target.closest("[data-close-tab]"))window.browserShell.switchTab(+e.dataset.tabId);};
+      e.onkeydown=(v)=>{if(v.target===e&&(v.key==="Enter"||v.key===" ")){v.preventDefault();window.browserShell.switchTab(+e.dataset.tabId);}};
+      e.oncontextmenu=async(v)=>{v.preventDefault();v.stopPropagation();const id=+e.dataset.tabId,tab=state.tabs.find(t=>t.id===id);if(!tab)return;
+        const en=state.settings?.language==="en";
+        const choice=await window.browserShell.showMenu([{command:1,label:tab.pinned?(en?"Unpin tab":"Открепить вкладку"):(en?"Pin tab":"Закрепить вкладку")},{command:2,label:en?"Close tab":"Закрыть вкладку"}],v.clientX,v.clientY);
+        if(choice===1)await window.browserShell.pinTab(id);else if(choice===2)await window.browserShell.closeTab(id);
+      };
+    });
+    container.querySelectorAll("[data-close-tab]").forEach((b)=>b.onclick=(e)=>{e.stopPropagation();window.browserShell.closeTab(+b.dataset.closeTab);});
+  }
+  requestAnimationFrame(()=>{sizeClassicTabs();const active=state.tabs.find(x=>x.active)?.id;
+    if(active!==classicVisibleTabId){classicVisibleTabId=active;revealClassicTab();}});
   const input=$("#classicAddress");if(document.activeElement!==input)input.value=addressDisplay(state.page);input.placeholder=state.page?.url==='soulu://home'?'':tr("addressPlaceholder");
   $(".classic-reload").classList.toggle("loading",!!state.page?.loading);
 }
-new ResizeObserver(revealClassicTab).observe(tabStrip);
-tabStrip.addEventListener("wheel",e=>{
-  if(tabStrip.scrollWidth<=tabStrip.clientWidth||e.ctrlKey||Math.abs(e.deltaX)>=Math.abs(e.deltaY))return;
-  e.preventDefault();tabStrip.scrollLeft+=e.deltaY*(e.deltaMode===1?28:e.deltaMode===2?tabStrip.clientWidth:1);
+new ResizeObserver(()=>{sizeClassicTabs();revealClassicTab();}).observe(tabStrip);
+for(const strip of [tabStrip,classicPinnedTabs])strip.addEventListener("wheel",e=>{
+  if(strip.scrollWidth<=strip.clientWidth||e.ctrlKey||Math.abs(e.deltaX)>=Math.abs(e.deltaY))return;
+  e.preventDefault();strip.scrollLeft+=e.deltaY*(e.deltaMode===1?30:e.deltaMode===2?strip.clientWidth:1);
 },{passive:false});
+
 function renderCompactTabs(){
   const wanted = state.tabs.filter(x=>x.active||x.url||x.favicon);
   const keys=new Set(wanted.map(x=>String(x.id)));

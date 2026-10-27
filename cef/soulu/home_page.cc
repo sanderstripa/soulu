@@ -319,29 +319,36 @@ void BrowserWindow::ReplaceLastTab(bool incognito,const std::string& profile) {
 }
 void BrowserWindow::SaveSession() {
   for(const auto& profile:profiles_){
-    auto data=CefDictionaryValue::Create();auto rows=CefListValue::Create();int active=0;
+    if(profile.id!=active_profile_id_ && std::none_of(tabs_.begin(),tabs_.end(),[&](const Tab& t){return !t.incognito&&t.profile_id==profile.id;}))continue;
+    auto data=CefDictionaryValue::Create();auto rows=CefListValue::Create();
+    auto pins=CefListValue::Create();int active=0;
     for(const auto& tab:tabs_)if(!tab.incognito&&tab.profile_id==profile.id&&rows->GetSize()<100){
       if(tab.url!="about:blank"&&tab.url!="soulu://home"&&WebUrl(tab.url).empty())continue;
-      if(tab.id==active_tab_id_||tab.id==last_normal_active_[profile.id])active=static_cast<int>(rows->GetSize());
-      rows->SetString(rows->GetSize(),tab.url);
+      const size_t index=rows->GetSize();
+      if(tab.id==active_tab_id_||tab.id==last_normal_active_[profile.id])active=static_cast<int>(index);
+      rows->SetString(index,tab.url);pins->SetBool(index,tab.pinned);
     }
-    data->SetList("tabs",rows);data->SetInt("active",active);
+    data->SetList("tabs",rows);data->SetList("pinned",pins);data->SetInt("active",active);
     WriteJson(ProfileRoot(profile.id)/L"soulu-session.json",AsValue(data));
   }
 }
 bool BrowserWindow::RestoreSession() {
-  if(settings_->GetString("startupMode")!="continue")return false;
+  const bool restore_all=settings_->GetString("startupMode")=="continue";
   auto value=ReadJson(ProfileRoot(active_profile_id_)/L"soulu-session.json");
   if(!value||value->GetType()!=VTYPE_DICTIONARY)return false;
-  auto data=value->GetDictionary();auto rows=data->GetList("tabs");
+  auto data=value->GetDictionary();auto rows=data->GetList("tabs");auto pins=data->GetList("pinned");
   if(!rows||rows->GetSize()==0||rows->GetSize()>100)return false;
-  int selected=data->GetInt("active");std::vector<int> ids;
+  const int selected=data->GetInt("active");int selected_id=0;std::vector<int> ids;
   for(size_t i=0;i<rows->GetSize();++i){
-    if(rows->GetType(i)!=VTYPE_STRING)continue;const std::string url=rows->GetString(i);
+    const bool pinned=pins&&i<pins->GetSize()&&pins->GetType(i)==VTYPE_BOOL&&pins->GetBool(i);
+    if((!restore_all&&!pinned)||rows->GetType(i)!=VTYPE_STRING)continue;
+    const std::string url=rows->GetString(i);
     if(url!="about:blank"&&url!="soulu://home"&&WebUrl(url).empty())continue;
-    const int id=next_tab_id_;NewTab(url,false,false);if(FindTab(id))ids.push_back(id);
+    const int id=next_tab_id_;NewTab(url,false,false);
+    if(auto* tab=FindTab(id)){tab->pinned=pinned;ids.push_back(id);if(static_cast<int>(i)==selected)selected_id=id;}
   }
   if(ids.empty())return false;
-  active_tab_id_=ids[std::clamp(selected,0,static_cast<int>(ids.size())-1)];last_normal_active_[active_profile_id_]=active_tab_id_;return true;
+  if(!restore_all)return false; // Let the configured start page open after restoring pinned tabs.
+  active_tab_id_=selected_id?selected_id:ids.front();last_normal_active_[active_profile_id_]=active_tab_id_;return true;
 }
 }

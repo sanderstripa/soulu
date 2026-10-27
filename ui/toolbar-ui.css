@@ -95,3 +95,27 @@ body[data-native-caption-hover=true] .browser-toolbar :is(#compactWindowMaximize
 /* Match the star's perceived size without changing its approved geometry. */
 .browser-toolbar :is(.compact-active-tab,.classic-address-pill) :is([data-close-active],.classic-close-tab,[data-reload]) svg{width:16px;height:16px}
 .browser-toolbar :is(.compact-active-tab,.classic-address-pill) :is([data-close-active],.classic-close-tab) svg{width:14px;height:14px}
+
+/* Classic review: a separate row of pinned circles and rounded tabs. */
+.classic-toolbar .tabs-zone{gap:4px;padding:2px 8px 2px}
+.classic-toolbar .classic-pinned-tabs{display:flex;align-items:center;gap:4px;flex:0 1 auto;max-width:40%;height:30px;min-width:0;overflow-x:auto;scrollbar-width:none;overscroll-behavior-x:contain}
+.classic-toolbar .classic-pinned-tabs[hidden]{display:none}
+.classic-toolbar .classic-pinned-tabs::-webkit-scrollbar{display:none}
+.classic-toolbar .tab-strip{flex:1 1 0;min-width:0;height:30px;gap:4px;overflow-x:auto}
+.classic-toolbar .classic-tabs-drag{flex:0 0 12px;min-width:12px}
+.classic-toolbar .classic-tab{flex:1 0 112px;min-width:112px;max-width:240px;height:30px;gap:6px;padding:0 5px 0 9px;border:1px solid transparent;border-radius:15px;background:color-mix(in srgb,var(--text) 8%,var(--solid));color:var(--muted)}
+.classic-toolbar .classic-tab:hover{background:color-mix(in srgb,var(--text) 13%,var(--solid));color:var(--text)}
+.classic-toolbar .classic-tab.active{background:var(--field);border-color:color-mix(in srgb,var(--text) 15%,transparent);color:var(--text);box-shadow:0 1px 3px #00000012}
+.classic-toolbar .classic-tab .tab-action{visibility:hidden;opacity:0}
+.classic-toolbar .classic-tab.active .tab-action,.classic-toolbar .classic-tab:hover .tab-action,.classic-toolbar .classic-tab:focus-within .tab-action{visibility:visible;opacity:.8}
+.classic-toolbar .classic-tab .classic-fallback{display:none;width:16px;height:16px}
+.classic-toolbar .classic-tab.pinned,.classic-toolbar .icons-only .classic-tab:not(.active){flex:0 0 30px;width:30px;min-width:30px;max-width:30px;padding:0;justify-content:center;border-radius:50%}
+.classic-toolbar .classic-tab.pinned strong,.classic-toolbar .classic-tab.pinned .tab-action,.classic-toolbar .icons-only .classic-tab:not(.active) strong,.classic-toolbar .icons-only .classic-tab:not(.active) .tab-action{display:none}
+/* In the compressed state even an active pinned tab retains its title and close button. */
+.classic-toolbar .tabs-zone.is-compressed .classic-pinned-tabs:has(.pinned.active){max-width:calc(100% - 60px)}
+.classic-toolbar .tabs-zone.is-compressed .classic-tab.pinned.active{flex:0 0 160px;width:160px;min-width:160px;max-width:160px;padding:0 5px 0 9px;justify-content:flex-start;border-radius:15px}
+.classic-toolbar .tabs-zone.is-compressed .classic-tab.pinned.active strong{display:block}
+.classic-toolbar .tabs-zone.is-compressed .classic-tab.pinned.active .tab-action{display:grid;visibility:visible;opacity:.8}
+.classic-toolbar .classic-tab.pinned .classic-fallback,.classic-toolbar .icons-only .classic-tab:not(.active) .classic-fallback{display:grid}
+.classic-toolbar .icons-only .classic-tab.active{flex:0 0 160px;min-width:160px;max-width:160px}
+.classic-toolbar .icons-only .classic-tab.active .classic-fallback{display:grid}

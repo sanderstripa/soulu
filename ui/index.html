@@ -93,6 +93,7 @@
       </button>
 
 
+      <button class="toolbar-button tabs-new-button" id="newTabButton" data-i18n-title="newTab"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
       <div class="window-controls">
         <button id="windowMinimize" data-i18n-title="minimize"><svg viewBox="0 0 24 24"><path d="M4.5 12h15"/></svg></button>
         <button id="windowMaximize" data-i18n-title="maximize"><svg viewBox="0 0 24 24"><rect x="5.25" y="5.25" width="13.5" height="13.5"/></svg></button>
@@ -103,8 +104,9 @@
 
 
     <div class="tabs-zone" data-toolbar-surface>
+      <div class="classic-pinned-tabs" id="classicPinnedTabs" role="tablist" aria-label="Закреплённые вкладки"></div>
       <div class="tab-strip" id="tabStrip" role="tablist"></div>
-      <button class="toolbar-button tabs-new-button" id="newTabButton" data-i18n-title="newTab"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+
       <span class="classic-tabs-drag" aria-hidden="true"></span>
     </div>
   </header>

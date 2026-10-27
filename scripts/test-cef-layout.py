@@ -321,12 +321,13 @@ with tempfile.TemporaryDirectory(prefix='soulu-layout-', ignore_cleanup_errors=T
         def overflow_sample():
             return evaluate(shell, '''(() => {
                 const strip=document.querySelector('#tabStrip'),s=strip.getBoundingClientRect(),a=strip.querySelector('.active').getBoundingClientRect(),b=document.querySelector('#newTabButton').getBoundingClientRect();
-                return {overflow:strip.scrollWidth>strip.clientWidth,visible:a.left>=s.left-1&&a.right<=s.right+1,buttonFits:b.left>=s.right&&b.right<=innerWidth,widths:[...strip.children].map(t=>t.getBoundingClientRect().width)};
+                return {visible:a.left>=s.left-1&&a.right<=s.right+1,buttonFits:b.top<a.top&&b.right<=innerWidth,compact:strip.classList.contains('icons-only'),activeWidth:a.width,inactiveWidths:[...strip.querySelectorAll('.classic-tab:not(.active)')].map(t=>t.getBoundingClientRect().width),activeTitleVisible:getComputedStyle(strip.querySelector('.active strong')).display!=='none',activeCloseVisible:getComputedStyle(strip.querySelector('.active [data-close-tab]')).visibility==='visible'};
             })()''')
         wait(lambda: (v if v['visible'] else None) if (v:=overflow_sample()) else None)
         overflow = overflow_sample()
-        assert overflow['overflow'] and overflow['buttonFits'], overflow
-        assert all(112 <= w <= 220 for w in overflow['widths']), overflow
+        assert overflow['compact'] and overflow['buttonFits'], overflow
+        assert overflow['activeWidth'] == 160 and all(w == 30 for w in overflow['inactiveWidths']), overflow
+        assert overflow['activeTitleVisible'] and overflow['activeCloseVisible'], overflow
         evaluate(shell, f'window.browserShell.switchTab({first_id})')
         wait(lambda: overflow_sample()['visible'])
         check('classic-many-tabs', screenshot=True)

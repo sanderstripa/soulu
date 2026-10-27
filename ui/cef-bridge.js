@@ -58,6 +58,7 @@
     checkUpdates: () => invoke("browser.update.check"),
     switchTab: id => invoke("browser.switchTab", id),
     closeTab: id => invoke("browser.closeTab", id),
+    pinTab: id => invoke("browser.pinTab", id),
     setBookmarksSidebar: value => invoke("browser.bookmarks.sidebar", value),
     toggleSidebar: () => invoke("browser.toggleSidebar"),
     setRightPanel: width => invoke("browser.setRightPanel", width),

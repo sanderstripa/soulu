@@ -37,7 +37,7 @@ Light and dark themes are supported, as well as Windows-style frosted transparen
 
 The browser uses Chromium through Chromium Embedded Framework (CEF), while the native Soulu shell handles the window, interface, and Windows integration.
 
-Soulu Beta 1.0.62 targets stable CEF 156.0.14 / Chromium 156.0.8078.48.
+Soulu Beta 1.0.63 uses stable CEF 156.0.14 / Chromium 156.0.8078.48.
 See [CEF_UPGRADE.md](CEF_UPGRADE.md) for dependency provenance, runtime checks
 and the mandatory release gates.
 

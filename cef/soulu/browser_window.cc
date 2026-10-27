@@ -1013,8 +1013,10 @@ void BrowserWindow::SwitchProfile(const std::string& id) {
   RefreshSettingsProfile();
   auto tab = std::find_if(tabs_.begin(), tabs_.end(),
       [&id](const Tab& item) { return !item.incognito && item.profile_id == id; });
-  if (tab == tabs_.end()) NewTab();
-  else {
+  if (tab == tabs_.end()) {
+    if (!RestoreSession()) NewTab();
+    else { Layout(); EmitState(); }
+  } else {
     active_tab_id_ = tab->id;
     last_normal_active_[tab->profile_id]=tab->id;
     Layout();
@@ -1787,6 +1789,7 @@ CefRefPtr<CefDictionaryValue> BrowserWindow::State() const {
     if (overview_visible_) row->SetString("thumbnail", tab.thumbnail);
     row->SetBool("loading", tab.loading);
     row->SetBool("active", tab.id == active_tab_id_);
+    row->SetBool("pinned", tab.pinned);
     row->SetBool("incognito", tab.incognito);
     list->SetDictionary(output_index++, row);
   }
@@ -2405,6 +2408,15 @@ void BrowserWindow::HandleBridge(const std::string& request,
   }
   else if (action == "browser.switchTab") SwitchTab(payload->GetInt());
   else if (action == "browser.closeTab") CloseTab(payload->GetInt());
+  else if (action == "browser.pinTab") {
+    auto* tab = payload && payload->GetType()==VTYPE_INT ? FindTab(payload->GetInt()) : nullptr;
+    const auto visible_profile = VisibleProfileId();
+    if (!tab || (tab->incognito ? visible_profile != "__incognito__" : tab->profile_id != visible_profile)) {
+      callback->Failure(404,"Tab is not available in the current profile"); return;
+    }
+    tab->pinned = !tab->pinned;
+    EmitState();
+  }
   else if (action == "browser.bookmarks.sidebar" || action == "browser.toggleSidebar") {
     const bool tab_toggle = action == "browser.toggleSidebar";
     const bool show_bookmarks = !tab_toggle && payload && payload->GetType()==VTYPE_BOOL && payload->GetBool();
