@@ -106,9 +106,9 @@ body[data-native-caption-hover=true] .browser-toolbar :is(#compactWindowMaximize
 .classic-toolbar .classic-pinned-tabs::-webkit-scrollbar{display:none}
 .classic-toolbar .tab-strip{flex:1 1 0;min-width:0;height:30px;gap:4px;overflow-x:auto}
 .classic-toolbar .classic-tabs-drag{flex:0 0 12px;min-width:12px}
-.classic-toolbar .classic-tab{flex:1 0 112px;min-width:112px;max-width:240px;height:30px;gap:6px;padding:0 5px 0 9px;border:1px solid transparent;border-radius:15px;background:color-mix(in srgb,var(--text) 8%,var(--solid));color:var(--muted)}
-.classic-toolbar .classic-tab:hover{background:color-mix(in srgb,var(--text) 13%,var(--solid));color:var(--text)}
-.classic-toolbar .classic-tab.active{background:var(--field);border-color:color-mix(in srgb,var(--text) 15%,transparent);color:var(--text);box-shadow:0 1px 3px #00000012}
+.classic-toolbar .classic-tab{flex:1 0 112px;min-width:112px;max-width:240px;height:30px;gap:6px;padding:0 5px 0 9px;border:1px solid transparent;border-radius:15px;background:light-dark(#e9e9ed,#2b2c33);color:var(--muted)}
+.classic-toolbar .classic-tab:hover{background:light-dark(#dedee5,#383a43);color:var(--text)}
+.classic-toolbar .classic-tab.active{background:light-dark(#fff,#494b55);border-color:light-dark(#d0d1d8,#60636f);color:var(--text);box-shadow:0 1px 3px #00000012}
 .classic-toolbar .classic-tab .tab-action{visibility:hidden;opacity:0}
 .classic-toolbar .classic-tab.active .tab-action,.classic-toolbar .classic-tab:hover .tab-action,.classic-toolbar .classic-tab:focus-within .tab-action{visibility:visible;opacity:.8}
 .classic-toolbar .classic-tab .classic-fallback{display:none;width:16px;height:16px}
