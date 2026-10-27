@@ -19,6 +19,14 @@ DevTools version assertions and product/installer versions are updated together.
 The full Windows build and regression pipeline remains required. Publication gates and
 manual acceptance requirements are retained; this document does not assert their success.
 
+The first Windows run compiled and passed pre-packaging browser regressions, then
+caught a stale CEF 154 allowlist in the pinned shared CONNECT installer adapter.
+Soulu now specializes that single literal only after verifying the upstream adapter
+source SHA-256, restores the checkout in finally, and records the specialized
+adapter hash and CEF distribution in installer provenance. The adapter's installation
+lifecycle and bundled-payload tests remain enabled. Added negative tests reject the
+old engine, missing manifest/files and incorrect component hashes.
+
 ## Previous upgrade record
 
 # Stable CEF update — Preview 49 candidate
