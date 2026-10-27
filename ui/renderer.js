@@ -49,7 +49,9 @@ function sizeClassicTabs(){
   const zone=tabStrip.closest(".tabs-zone");
   const expandedPin=zone?.classList.contains("is-compressed")&&classicPinnedTabs.querySelector(".pinned.active");
   const available=tabStrip.clientWidth+(expandedPin?130:0);
-  const compressed=needed>available;
+  const pinWidth=classicPinnedTabs.scrollWidth-(expandedPin?130:0);
+  const pinCapacity=zone?.classList.contains("no-ordinary")?zone.clientWidth-28:(zone?.clientWidth||0)*.4;
+  const compressed=needed>available||pinWidth>pinCapacity+1;
   tabStrip.classList.toggle("icons-only",compressed);
   zone?.classList.toggle("is-compressed",compressed);
 }
@@ -71,6 +73,8 @@ function renderClassicTabs(){
   const pinned=state.tabs.filter(x=>x.pinned),normal=state.tabs.filter(x=>!x.pinned);
   classicPinnedTabs.innerHTML=pinned.map(x=>classicTabMarkup(x,true)).join("");
   classicPinnedTabs.hidden=!pinned.length;
+  classicPinnedTabs.setAttribute("aria-label",state.settings?.language==="en"?"Pinned tabs":"Закреплённые вкладки");
+  tabStrip.closest(".tabs-zone")?.classList.toggle("no-ordinary",!normal.length);
   tabStrip.innerHTML=normal.map(x=>classicTabMarkup(x,false)).join("");
   for(const container of [classicPinnedTabs,tabStrip]){
     container.querySelectorAll("img.favicon").forEach(img=>img.addEventListener("error",()=>{
