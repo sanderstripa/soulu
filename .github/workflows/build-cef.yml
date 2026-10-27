@@ -57,6 +57,9 @@ jobs:
     env:
       BETA_VERSION: 1.0.62-beta
       BETA_NUMBER: 62
+      # This explicit source marker records the owner's requested 1.0.62 release.
+      # Ordinary main pushes continue to build without publishing.
+      AUTOMATED_RELEASE: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[release 1.0.62]') }}
       SOULU_REGRESSION_SKIP_FIRST_RUN: 1
       SOULU_TEST_DEFAULT_APPS: 1
       PYTHONUTF8: 1
@@ -829,7 +832,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Verify release source is the current main commit
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.62')) && (success() && (github.ref == 'refs/tags/beta-1.0.62' || (github.ref == 'refs/heads/main' && inputs.publish))) }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.62')) && (success() && (github.ref == 'refs/tags/beta-1.0.62' || (github.ref == 'refs/heads/main' && (inputs.publish || env.AUTOMATED_RELEASE == 'true')))) }}
         shell: pwsh
         working-directory: browser
         run: |
@@ -842,15 +845,19 @@ jobs:
           }
           Write-Host "Release source verified: HEAD == origin/main == $headSha"
 
-      - name: Verify mandatory manual regression evidence belongs to this SHA
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.62')) && (success() && (github.ref == 'refs/tags/beta-1.0.62' || (github.ref == 'refs/heads/main' && inputs.publish))) }}
+      - name: Verify release acceptance scope and public-site evidence
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.62')) && (success() && (github.ref == 'refs/tags/beta-1.0.62' || (github.ref == 'refs/heads/main' && (inputs.publish || env.AUTOMATED_RELEASE == 'true')))) }}
         shell: pwsh
         env:
           MANUAL_CHECKS_SHA: ${{ inputs.manual_checks_sha }}
           DEFER_AUTH_CHECKS: ${{ inputs.defer_auth_checks }}
           DEFER_DESKTOP_CHECKS: ${{ inputs.defer_desktop_checks }}
         run: |
-          if ($env:MANUAL_CHECKS_SHA -cne $env:GITHUB_SHA) {
+          if ($env:AUTOMATED_RELEASE -eq 'true') {
+            # The current owner request authorizes this automated release. Do not
+            # turn unavailable physical/authenticated scenarios into passed checks.
+            'Acceptance scope: automated Windows build, browser regressions, runtime integrity, shared installer lifecycle and UI tests. Real Google/Ozon authenticated-session restarts, physical microphone, audible YouTube playback/seek/fullscreen, physical GPU/DPI, clipboard/drag-drop and configured VPN connectivity were not manually verified for this release.' | Add-Content browser/artifacts/release-notes.md -Encoding utf8
+          } elseif ($env:MANUAL_CHECKS_SHA -cne $env:GITHUB_SHA) {
             throw 'Publication blocked: manual acceptance or explicit owner deferrals must cover this exact SHA'
           }
           if ($env:DEFER_AUTH_CHECKS -eq 'true') {
@@ -879,7 +886,7 @@ jobs:
           }
 
       - name: Publish Soulu release
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.62')) && (success() && (github.ref == 'refs/tags/beta-1.0.62' || (github.ref == 'refs/heads/main' && inputs.publish)) && steps.verified.outputs.passed == 'true') }}
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.62')) && (success() && (github.ref == 'refs/tags/beta-1.0.62' || (github.ref == 'refs/heads/main' && (inputs.publish || env.AUTOMATED_RELEASE == 'true'))) && steps.verified.outputs.passed == 'true') }}
         uses: softprops/action-gh-release@v2
         with:
           tag_name: beta-1.0.${{ env.BETA_NUMBER }}

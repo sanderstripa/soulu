@@ -16,8 +16,12 @@ Soulu retains its existing USE_SANDBOX=OFF configuration and does not reuse sand
 
 Build workflow archive pins, compile-time guards, loaded-DLL guards, runtime manifests,
 DevTools version assertions and product/installer versions are updated together.
-The full Windows build and regression pipeline remains required. Publication gates and
-manual acceptance requirements are retained; this document does not assert their success.
+The full Windows build and regression pipeline remains required. Automatic publication is authorized only by the explicit `[release 1.0.62]` source
+commit marker on main for the current owner request. Ordinary pushes do not publish.
+All automated test, payload-integrity, current-main and usable-public-site gates remain
+required. This route records unavailable physical/authenticated checks as unverified
+in release notes; it does not claim manual acceptance. Workflow dispatch retains its
+existing exact-SHA manual acceptance/deferral path. This document does not assert CI success.
 
 The first Windows run compiled and passed pre-packaging browser regressions, then
 caught a stale CEF 154 allowlist in the pinned shared CONNECT installer adapter.
