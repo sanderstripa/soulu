@@ -70,6 +70,7 @@ function classicTabMarkup(x,pinned){
   return `<div class="classic-tab${pinned?" pinned":""}${x.active?" active":""}" role="tab" aria-selected="${!!x.active}" aria-label="${esc(title)}" tabindex="0" data-tooltip="${esc(title)}" data-tab-id="${x.id}">${image}<strong>${esc(title)}</strong>${close}</div>`;
 }
 function renderClassicTabs(){
+  const previousScroll=tabStrip.scrollLeft,previousPinnedScroll=classicPinnedTabs.scrollLeft;
   const pinned=state.tabs.filter(x=>x.pinned),normal=state.tabs.filter(x=>!x.pinned);
   classicPinnedTabs.innerHTML=pinned.map(x=>classicTabMarkup(x,true)).join("");
   classicPinnedTabs.hidden=!pinned.length;
@@ -92,8 +93,10 @@ function renderClassicTabs(){
     });
     container.querySelectorAll("[data-close-tab]").forEach((b)=>b.onclick=(e)=>{e.stopPropagation();window.browserShell.closeTab(+b.dataset.closeTab);});
   }
-  requestAnimationFrame(()=>{sizeClassicTabs();const active=state.tabs.find(x=>x.active)?.id;
-    if(active!==classicVisibleTabId){classicVisibleTabId=active;revealClassicTab();}});
+  requestAnimationFrame(()=>{sizeClassicTabs();const selected=state.tabs.find(x=>x.active);
+    const signature=selected?`${selected.id}:${!!selected.pinned}`:null;
+    if(signature!==classicVisibleTabId){classicVisibleTabId=signature;revealClassicTab();}
+    else {tabStrip.scrollLeft=previousScroll;classicPinnedTabs.scrollLeft=previousPinnedScroll;}});
   const input=$("#classicAddress");if(document.activeElement!==input)input.value=addressDisplay(state.page);input.placeholder=state.page?.url==='soulu://home'?'':tr("addressPlaceholder");
   $(".classic-reload").classList.toggle("loading",!!state.page?.loading);
 }
