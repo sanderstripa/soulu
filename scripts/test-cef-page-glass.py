@@ -8,7 +8,7 @@ os.environ['SOULU_REGRESSION_SKIP_FIRST_RUN']='1';os.environ['NO_PROXY']='localh
 u=C.windll.user32;u.GetWindowRect.argtypes=[W.HWND,C.POINTER(W.RECT)];u.SetWindowPos.argtypes=[W.HWND,W.HWND,C.c_int,C.c_int,C.c_int,C.c_int,W.UINT]
 class Fixture(BaseHTTPRequestHandler):
  def do_GET(self):
-  b=b'<style>html,body{margin:0}section{height:230px;background:#d44332}section:nth-child(2n){background:#228866}section:nth-child(3n){background:#376bd0}h1{margin:0;padding:30px;font:48px sans-serif;color:white}</style><section><h1>VISIBLE TOP / 0</h1></section><section><h1>SECOND / 230</h1></section><section><h1>THIRD / 460</h1></section><section><h1>FOURTH</h1></section><section><h1>FIFTH</h1></section><script>window.identity=Math.random()</script>'
+  b=b'<style>html,body{margin:0}section{height:230px;background:#d44332}section:nth-child(2n){background:#228866}section:nth-child(3n){background:#376bd0}h1{margin:0;padding:30px;font:48px sans-serif;color:white}</style><section><h1>VISIBLE TOP / 0</h1></section><section><h1>SECOND / 230</h1></section><section><h1>THIRD / 460</h1></section><section><h1>FOURTH</h1></section><section><h1>FIFTH</h1></section><script>window.identity=Math.random();window.clicks=0;document.addEventListener("click",()=>clicks++)</script>'
   self.send_response(200);self.send_header('Content-Type','text/html');self.send_header('Content-Length',str(len(b)));self.end_headers();self.wfile.write(b)
  def log_message(self,*a):pass
 server=ThreadingHTTPServer(('127.0.0.1',0),Fixture);threading.Thread(target=server.serve_forever,daemon=True).start()
@@ -50,6 +50,12 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as root:
   s.evaluate(page,'scrollTo(0,500)');wait(lambda:s.evaluate(page,'scrollY>=490'));blue=capture('scroll-500')
   a=green.getpixel((round(130*scale),round(64*scale)))[:3];b=blue.getpixel((round(130*scale),round(64*scale)))[:3];evidence['underGlassPixels']=[a,b]
   assert sum(abs(x-y) for x,y in zip(a,b))>14, 'Glass must sample the changing live page, not a constant background'
+  def click_at(x,y):
+   r=W.RECT();u.GetWindowRect(hwnd,C.byref(r));u.SetCursorPos(r.left+round(x*scale),r.top+round(y*scale));u.mouse_event(2,0,0,0,0);time.sleep(.05);u.mouse_event(4,0,0,0,0);time.sleep(.15)
+  click_at(150,20)
+  assert s.evaluate(page,'clicks')==0, 'Toolbar background must block clicks to hidden site content'
+  click_at(150,76)
+  assert s.evaluate(page,'clicks')==1, 'Feathered edge must not block the page below the toolbar'
   call('setSettings',{'mattePanel':False});wait(lambda:s.evaluate(ws,"document.body.dataset.matte==='false'"));capture('off')
   evidence['offStyle']=s.evaluate(ws,"getComputedStyle(document.querySelector('.classic-toolbar')).backgroundColor")
   assert evidence['offStyle']=='rgb(255, 255, 255)',evidence

@@ -1,3 +1,4 @@
+#include <unknwn.h>
 #include "examples/soulu/page_glass.h"
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Foundation.Collections.h>

@@ -91,7 +91,7 @@ jobs:
       shell: pwsh
       run: '$vs = & "${env:ProgramFiles(x86)}/Microsoft Visual Studio/Installer/vswhere.exe" -latest -property installationPath
 
-        $command = ''"'' + $vs + ''\VC\Auxiliary\Build\vcvars64.bat" && cl /nologo /std:c++20 /EHsc /c /I cef-project browser\cef\soulu\page_glass.cc /Fopage-glass-check.obj''
+        $command = ''"'' + $vs + ''\VC\Auxiliary\Build\vcvars64.bat" && cl /nologo /std:c++20 /EHsc /DWIN32_LEAN_AND_MEAN /DNOMINMAX /c /I cef-project browser\cef\soulu\page_glass.cc /Fopage-glass-check.obj''
 
         cmd /d /s /c $command
 
