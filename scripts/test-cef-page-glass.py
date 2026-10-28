@@ -5,10 +5,11 @@ from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 from PIL import ImageGrab
 spec=importlib.util.spec_from_file_location('storage',Path(__file__).with_name('test-cef-storage.py'));s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
 os.environ['SOULU_REGRESSION_SKIP_FIRST_RUN']='1';os.environ['NO_PROXY']='localhost,127.0.0.1,::1'
-u=C.windll.user32;u.GetWindowRect.argtypes=[W.HWND,C.POINTER(W.RECT)];u.SetWindowPos.argtypes=[W.HWND,W.HWND,C.c_int,C.c_int,C.c_int,C.c_int,W.UINT]
+u=C.windll.user32;u.GetWindowRect.argtypes=[W.HWND,C.POINTER(W.RECT)];u.GetParent.argtypes=[W.HWND];u.GetParent.restype=W.HWND;u.MapWindowPoints.argtypes=[W.HWND,W.HWND,C.POINTER(W.POINT),W.UINT];u.GetDpiForWindow.argtypes=[W.HWND];u.GetDpiForWindow.restype=W.UINT
+u.SetWindowPos.argtypes=[W.HWND,W.HWND,C.c_int,C.c_int,C.c_int,C.c_int,W.UINT]
 class Fixture(BaseHTTPRequestHandler):
  def do_GET(self):
-  b=b'<style>html,body{margin:0}section{height:230px;background:#d44332}section:nth-child(2n){background:#228866}section:nth-child(3n){background:#376bd0}nav{position:fixed;top:0;left:0;right:0;height:24px;background:#263c38;color:white;z-index:10}h1{margin:0;padding:30px;font:48px sans-serif;color:white}</style><nav>Site navigation</nav><section><h1>VISIBLE TOP / 0</h1></section><section><h1>SECOND / 230</h1></section><section><h1>THIRD / 460</h1></section><section><h1>FOURTH</h1></section><section><h1>FIFTH</h1></section><script>window.identity=Math.random();window.clicks=0;document.addEventListener("click",()=>clicks++)</script>'
+  b=b'<style>html,body{margin:0}section{height:230px;background:#d44332}section:nth-of-type(2n){background:#228866}section:nth-of-type(3n){background:#376bd0}nav{position:fixed;top:0;left:0;right:0;height:24px;background:#263c38;color:white;z-index:10}h1{margin:0;padding:30px;font:48px sans-serif;color:white}</style><nav>Site navigation</nav><section><h1>VISIBLE TOP / 0</h1></section><section><h1>SECOND / 230</h1></section><section><h1>THIRD / 460</h1></section><section><h1>FOURTH</h1></section><section><h1>FIFTH</h1></section><script>window.identity=Math.random();window.clicks=0;document.addEventListener("click",()=>clicks++)</script>'
   self.send_response(200);self.send_header('Content-Type','text/html');self.send_header('Content-Length',str(len(b)));self.end_headers();self.wfile.write(b)
  def log_message(self,*a):pass
 server=ThreadingHTTPServer(('127.0.0.1',0),Fixture);threading.Thread(target=server.serve_forever,daemon=True).start()
@@ -43,6 +44,17 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as root:
   t=wait(lambda:next((x for x in s.targets() if '/glass' in x.get('url','')),None));page=s.websocket.create_connection(t['webSocketDebuggerUrl'],timeout=30,origin=s.BASE)
   wait(lambda:s.evaluate(page,'typeof identity==="number"'));call('setSettings',{'mattePanel':True});identity=s.evaluate(page,'identity');evidence['glassReady']=state().get('pageGlassReady');evidence['glassError']=state().get('pageGlassError');initial=capture('initial')
   scale=u.GetDpiForWindow(hwnd)/96
+  content_tops=[]
+  @C.WINFUNCTYPE(W.BOOL,W.HWND,W.LPARAM)
+  def child_visit(child,_):
+   name=C.create_unicode_buffer(128);u.GetClassNameW(child,name,128)
+   if u.GetParent(child)==hwnd and u.IsWindowVisible(child) and name.value in ('CefBrowserWindow','Chrome_WidgetWin_1'):
+    r=W.RECT();u.GetWindowRect(child,C.byref(r));point=W.POINT(r.left,r.top);u.MapWindowPoints(None,hwnd,C.byref(point),1);content_tops.append(point.y)
+   return True
+  u.EnumChildWindows(hwnd,child_visit,0)
+  evidence['initialNativeContentTops']=content_tops
+  assert any(abs(top-68*scale)<=1 for top in content_tops),'Initial website must begin below the 68px toolbar'
+
   evidence['initialPagePixel']=initial.getpixel((round(20*scale),round(120*scale)))[:3]
   assert evidence['initialPagePixel'][0]>evidence['initialPagePixel'][1]+50, 'Initial document must remain visible below the panel'
   assert evidence['glassReady'],evidence
