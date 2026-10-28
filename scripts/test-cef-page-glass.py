@@ -41,11 +41,11 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as root:
    time.sleep(.4);r=W.RECT();u.GetWindowRect(hwnd,C.byref(r));im=ImageGrab.grab(all_screens=True).crop((r.left,r.top,r.right,r.bottom));im.save(out/(name+'.png'));return im
   call('navigate',f'http://127.0.0.1:{server.server_port}/glass')
   t=wait(lambda:next((x for x in s.targets() if '/glass' in x.get('url','')),None));page=s.websocket.create_connection(t['webSocketDebuggerUrl'],timeout=30,origin=s.BASE)
-  wait(lambda:s.evaluate(page,'typeof identity==="number"'));identity=s.evaluate(page,'identity');evidence['glassReady']=state().get('pageGlassReady');initial=capture('initial')
+  wait(lambda:s.evaluate(page,'typeof identity==="number"'));identity=s.evaluate(page,'identity');evidence['glassReady']=state().get('pageGlassReady');evidence['glassError']=state().get('pageGlassError');initial=capture('initial')
   scale=u.GetDpiForWindow(hwnd)/96
   evidence['initialPagePixel']=initial.getpixel((round(20*scale),round(80*scale)))[:3]
   assert evidence['initialPagePixel'][0]>evidence['initialPagePixel'][1]+50, 'Initial document must remain visible below the panel'
-  assert evidence['glassReady'],'Native page backdrop effect did not initialize'
+  assert evidence['glassReady'],evidence
   s.evaluate(page,'scrollTo(0,260)');wait(lambda:s.evaluate(page,'scrollY>=250'));green=capture('scroll-260')
   s.evaluate(page,'scrollTo(0,500)');wait(lambda:s.evaluate(page,'scrollY>=490'));blue=capture('scroll-500')
   a=green.getpixel((round(130*scale),round(64*scale)))[:3];b=blue.getpixel((round(130*scale),round(64*scale)))[:3];evidence['underGlassPixels']=[a,b]

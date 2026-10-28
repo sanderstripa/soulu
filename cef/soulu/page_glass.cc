@@ -1,5 +1,6 @@
 #include "examples/soulu/page_glass.h"
 #include <winrt/Windows.Foundation.h>
+#include <winrt/Windows.Foundation.Collections.h>
 #include <winrt/Windows.Graphics.Effects.h>
 #include <winrt/Windows.UI.Composition.h>
 #include <winrt/Windows.UI.Composition.Desktop.h>
@@ -35,7 +36,7 @@ struct Blur : implements<Blur,IGraphicsEffect,IGraphicsEffectSource,IGraphicsEff
     if(index)return E_INVALIDARG;auto copy=source;*value=reinterpret_cast<ABI::Windows::Graphics::Effects::IGraphicsEffectSource*>(detach_abi(copy));return S_OK;
   }
 };
-struct Glass {HWND hwnd=nullptr;Compositor compositor{nullptr};Desktop::DesktopWindowTarget target{nullptr};ContainerVisual root{nullptr};SpriteVisual blur{nullptr},tint{nullptr};};
+struct Glass {int error=0;HWND hwnd=nullptr;Compositor compositor{nullptr};Desktop::DesktopWindowTarget target{nullptr};ContainerVisual root{nullptr};SpriteVisual blur{nullptr},tint{nullptr};};
 std::map<HWND,Glass> glasses;
 LRESULT CALLBACK GlassProc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp){if(msg==WM_NCHITTEST)return HTTRANSPARENT;if(msg==WM_ERASEBKGND)return 1;return DefWindowProcW(hwnd,msg,wp,lp);}
 }
@@ -69,7 +70,8 @@ HWND UpdatePageGlass(HWND parent,int width,int height,float /*scale*/,bool enabl
     gradient.ColorStops().Append(g.compositor.CreateColorGradientStop(1,{0,c,c,c}));
     g.tint.Brush(gradient);g.root.Size({float(width),float(height)});g.blur.Size(g.root.Size());g.tint.Size(g.root.Size());
     return g.hwnd;
-  }catch(...){auto i=glasses.find(parent);if(i!=glasses.end()&&i->second.hwnd)ShowWindow(i->second.hwnd,SW_HIDE);return nullptr;}
+  }catch(...){auto& g=glasses[parent];g.error=static_cast<int>(to_hresult());if(g.hwnd)ShowWindow(g.hwnd,SW_HIDE);return nullptr;}
 }
+int PageGlassError(HWND parent){auto i=glasses.find(parent);return i==glasses.end()?0:i->second.error;}
 void ReleasePageGlass(HWND parent){auto i=glasses.find(parent);if(i!=glasses.end()){if(i->second.hwnd)DestroyWindow(i->second.hwnd);glasses.erase(i);}}
 }

@@ -1859,6 +1859,7 @@ CefRefPtr<CefDictionaryValue> BrowserWindow::State() const {
   }
   const auto client = CurrentGeometry();
   state->SetBool("pageGlassReady",native_blur_);
+  state->SetInt("pageGlassError",PageGlassError(hwnd_));
   state->SetDictionary("adaptiveToolbar", AdaptiveToolbarState());
   state->SetInt("clientHeight", static_cast<int>(std::ceil(client.height / client.scale)));
   state->SetBool("settingsOverlayOpen", settings_overlay_ != nullptr);
