@@ -1,0 +1,62 @@
+name: Recheck compiled page glass
+on:
+  push:
+    branches: [codex/page-glass-recheck]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  recheck:
+    runs-on: windows-2025
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: browser
+          fetch-depth: 4
+      - name: Verify identical native and UI source
+        shell: pwsh
+        run: |
+          git -C browser diff --exit-code 086fb12a2eac4e3652febb1291c7a91d252a3cda HEAD -- cef ui geometry.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Download unchanged CEF distribution from the previous release
+        shell: pwsh
+        run: |
+          Invoke-WebRequest https://github.com/sanderstripa/soulu/releases/download/beta-1.0.66/Soulu-Beta-1.0.66-x64.zip -OutFile runtime.zip
+          Expand-Archive runtime.zip runtime
+      - uses: actions/download-artifact@v4
+        with:
+          name: Soulu-cef-candidate-086fb12a2eac4e3652febb1291c7a91d252a3cda
+          run-id: 40769480160
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: candidate
+      - name: Overlay the exactly matching experimental binary and UI
+        shell: pwsh
+        run: |
+          $runtime = (Get-ChildItem runtime -Filter Soulu.exe -Recurse | Select-Object -First 1).Directory.FullName
+          $candidate = (Get-ChildItem candidate -Filter Soulu.exe -Recurse | Select-Object -First 1).Directory.FullName
+          if (!$runtime -or !$candidate) { throw 'Runtime or experimental executable missing' }
+          Copy-Item "$candidate/*" $runtime -Recurse -Force
+          "test_exe=$runtime/Soulu.exe" >> $env:GITHUB_ENV
+      - name: Test live page glass, initial inset and opaque off state
+        shell: pwsh
+        env:
+          SOULU_REGRESSION_SKIP_FIRST_RUN: '1'
+          PYTHONUTF8: '1'
+        run: |
+          python -m pip install --disable-pip-version-check websocket-client pillow
+          python browser/scripts/test-cef-page-glass.py "$env:test_exe" artifacts/page-glass
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Print native screenshots
+        if: always()
+        shell: pwsh
+        run: |
+          python -c "from pathlib import Path; import base64; [print('GLASS_IMAGE:'+p.name+':'+base64.b64encode(p.read_bytes()).decode()+':END_IMAGE',flush=True) for p in Path('artifacts/page-glass').glob('*.png')]"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Soulu-page-glass-recheck
+          path: artifacts/page-glass/
