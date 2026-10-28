@@ -78,6 +78,7 @@ class BrowserWindow final : public CefBaseRefCounted {
       CefRefPtr<CefMessageRouterBrowserSide::Callback> callback);
   CefRefPtr<ShellSurface> surface() const { return surface_; }
   void ApplyContentTheme();
+  void PageScroll(int tab_id,double y);
   void OpenIncognitoLink(int source_id, CefRefPtr<CefBrowser> source,
                          const std::string& url);
   int PreparePopup(int source_id, const std::string& url, bool background,
@@ -130,6 +131,7 @@ class BrowserWindow final : public CefBaseRefCounted {
     std::string profile_id = "personal";
     bool incognito = false;
     bool pinned = false;
+    double scroll_y = 0;
     bool activate_on_attach = false;
     bool focus_address_on_attach = false;
     bool focus_home_on_load = false;

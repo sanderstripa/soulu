@@ -6,6 +6,15 @@
 #include "examples/soulu/adblock_cosmetic.h"
 
 namespace soulu {
+class PageScrollSubmit final : public CefV8Handler {
+ public:
+  bool Execute(const CefString&,CefRefPtr<CefV8Value>,const CefV8ValueList& args,CefRefPtr<CefV8Value>&,CefString&) override {
+    auto c=CefV8Context::GetCurrentContext();if(!c||!c->GetFrame()->IsMain()||args.size()!=1||!args[0]->IsDouble())return true;
+    auto message=CefProcessMessage::Create("soulu.page.scroll");message->GetArgumentList()->SetDouble(0,args[0]->GetDoubleValue());
+    c->GetFrame()->SendProcessMessage(PID_BROWSER,message);return true;
+  }
+ private: IMPLEMENT_REFCOUNTING(PageScrollSubmit);
+};
 class CredentialSubmit final : public CefV8Handler {
  public:
   bool Execute(const CefString&,CefRefPtr<CefV8Value>,const CefV8ValueList& args,
@@ -53,6 +62,17 @@ class RendererApp final : public CefApp, public CefRenderProcessHandler {
     context->GetGlobal()->SetValue("__souluCosmeticSend",CefV8Value::CreateFunction("send",new CosmeticSubmit()),V8_PROPERTY_ATTRIBUTE_NONE);
     {CefRefPtr<CefV8Value> result;CefRefPtr<CefV8Exception> error;
       context->Eval(kCosmeticBootstrap,frame->GetURL(),0,result,error);}
+    if(frame->IsMain()){
+      context->GetGlobal()->SetValue("__souluPageScroll",CefV8Value::CreateFunction("scroll",new PageScrollSubmit()),V8_PROPERTY_ATTRIBUTE_NONE);
+      CefRefPtr<CefV8Value> result;CefRefPtr<CefV8Exception> error;
+      context->Eval(R"JS((()=>{const send=window.__souluPageScroll;delete window.__souluPageScroll;let pending=false,y=0;
+        const report=()=>{pending=false;send(y)};
+        addEventListener('scroll',event=>{const node=event.target;let value=scrollY;
+          if(node instanceof Element){const r=node.getBoundingClientRect();if(r.top<=64&&r.height>=innerHeight*.65)value=node.scrollTop;}
+          y=Math.max(0,value);if(!pending){pending=true;requestAnimationFrame(report)}
+        },{capture:true,passive:true});addEventListener('pageshow',()=>{y=Math.max(0,scrollY);report()});
+      })())JS",frame->GetURL(),0,result,error);
+    }
     if(!frame->IsMain()||private_browsers_.count(browser->GetIdentifier()))return;
     context->GetGlobal()->SetValue("__souluCredentialSubmit",
       CefV8Value::CreateFunction("submit",new CredentialSubmit()),V8_PROPERTY_ATTRIBUTE_NONE);

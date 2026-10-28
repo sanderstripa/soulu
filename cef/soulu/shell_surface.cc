@@ -165,7 +165,9 @@ void ShellSurface::Present() {
   update.psize = &size; update.hdcSrc = memory_; update.pptSrc = &source;
   update.pblend = &blend; update.dwFlags = ULW_ALPHA | ULW_EX_NORESIZE;
   paint_error_ = UpdateLayeredWindowIndirect(hwnd_, &update) ? 0 : static_cast<int>(GetLastError());
-  if (!paint_error_ && !first_frame_ && toolbar_alpha_ > 0) {
+  bool visible_pixels=false;
+  if(!first_frame_){const auto* data=static_cast<const unsigned char*>(pixels_);for(size_t i=3;i<static_cast<size_t>(width)*height*4;i+=4)if(data[i]){visible_pixels=true;break;}}
+  if (!paint_error_ && !first_frame_ && visible_pixels) {
     first_frame_ = true;
     PostMessageW(parent_, kFirstFrame, 0, 0);
   }

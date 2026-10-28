@@ -446,6 +446,9 @@ bool BrowserClient::OnProcessMessageReceived(CefRefPtr<CefBrowser> browser,
                                              CefProcessId source_process,
                                              CefRefPtr<CefProcessMessage> message) {
   CEF_REQUIRE_UI_THREAD();
+  if(role_==BrowserRole::kContent&&source_process==PID_RENDERER&&frame&&frame->IsMain()&&message->GetName()=="soulu.page.scroll"){
+    auto args=message->GetArgumentList();if(args->GetSize()==1&&args->GetType(0)==VTYPE_DOUBLE)owner_->PageScroll(tab_id_,args->GetDouble(0));return true;
+  }
   if(role_==BrowserRole::kContent&&source_process==PID_RENDERER&&frame&&
      message->GetName()=="soulu.adblock.cosmetic") {
     auto args=message->GetArgumentList();
