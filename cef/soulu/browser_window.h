@@ -230,6 +230,16 @@ class BrowserWindow final : public CefBaseRefCounted {
     CefRect content;
   };
   Geometry CurrentGeometry() const;
+  void SyncAdaptiveToolbar();
+  void AdvanceAdaptiveToolbar(unsigned generation);
+  CefRefPtr<CefDictionaryValue> AdaptiveToolbarState() const;
+  bool adaptive_initialized_ = false, adaptive_expanded_ = false, adaptive_running_ = false;
+  unsigned adaptive_generation_ = 0;
+  ULONGLONG adaptive_started_ = 0;
+  double adaptive_height_ = 68, adaptive_progress_ = 0;
+  double adaptive_from_height_ = 68, adaptive_from_progress_ = 0;
+  int adaptive_duration_ = 200;
+
   void ShowWhenReady();
   void CloseAll();
   void FinishClose();

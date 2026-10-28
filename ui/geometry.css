@@ -12,4 +12,6 @@
   --geometry-bookmarks: 28px;
   --geometry-address-glyph: 16px;
   --geometry-page-right-inset: 20px;
+  --geometry-adaptive-single-toolbar: 68px;
+  --geometry-adaptive-expanded-toolbar: 88px;
 }

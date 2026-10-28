@@ -1651,6 +1651,82 @@ void BrowserWindow::UpdateFullscreen() {
     tab->browser->GetHost()->SetFocus(true);
 }
 
+CefRefPtr<CefDictionaryValue> BrowserWindow::AdaptiveToolbarState() const {
+  auto frame = CefDictionaryValue::Create();
+  frame->SetBool("active", adaptive_initialized_);
+  frame->SetDouble("height", adaptive_height_);
+  frame->SetDouble("progress", adaptive_progress_);
+  frame->SetBool("expanded", adaptive_expanded_);
+  frame->SetBool("running", adaptive_running_);
+  frame->SetInt("duration", adaptive_duration_);
+  return frame;
+}
+
+void BrowserWindow::SyncAdaptiveToolbar() {
+  if (EffectiveSettings()->GetString("layout") != "adaptive") {
+    if (adaptive_initialized_) {
+      ++adaptive_generation_;
+      adaptive_initialized_ = adaptive_running_ = false;
+      if (shell_ && !sidebar_motion_)
+        shell_->GetHost()->SetWindowlessFrameRate(motion::kShellIdleFrameRate);
+    }
+    return;
+  }
+  const std::string profile = VisibleProfileId();
+  const auto count = std::count_if(tabs_.begin(), tabs_.end(), [&](const Tab& tab) {
+    return tab.incognito ? profile == "__incognito__" : tab.profile_id == profile;
+  });
+  const bool expanded = count > 1;
+  const double target = expanded ? geometry::adaptiveExpandedToolbar : geometry::adaptiveSingleToolbar;
+  if (!adaptive_initialized_ || Fullscreen()) {
+    ++adaptive_generation_;
+    adaptive_initialized_ = true;
+    adaptive_expanded_ = expanded;
+    adaptive_running_ = false;
+    adaptive_height_ = target;
+    adaptive_progress_ = expanded ? 1 : 0;
+    return;
+  }
+  if (expanded == adaptive_expanded_) return;
+  adaptive_expanded_ = expanded;
+  adaptive_from_height_ = adaptive_height_;
+  adaptive_from_progress_ = adaptive_progress_;
+  adaptive_started_ = GetTickCount64();
+  BOOL animate = TRUE;
+  SystemParametersInfoW(SPI_GETCLIENTAREAANIMATION, 0, &animate, 0);
+  adaptive_duration_ = animate ? motion::kAdaptiveToolbarMs : motion::kReducedOverlayMs;
+  adaptive_running_ = true;
+  const unsigned generation = ++adaptive_generation_;
+  if (shell_) shell_->GetHost()->SetWindowlessFrameRate(motion::kShellMotionFrameRate);
+  CefRefPtr<BrowserWindow> self = this;
+  CefPostDelayedTask(TID_UI, new FunctionTask([self,generation] {
+    self->AdvanceAdaptiveToolbar(generation);
+  }), 16);
+}
+
+void BrowserWindow::AdvanceAdaptiveToolbar(unsigned generation) {
+  if (generation != adaptive_generation_ || closing_ || !hwnd_ || !adaptive_running_) return;
+  const double t = std::clamp(static_cast<double>(GetTickCount64() - adaptive_started_) /
+      adaptive_duration_, 0.0, 1.0);
+  const double eased = t * t * (3 - 2 * t);
+  const double target = adaptive_expanded_ ? geometry::adaptiveExpandedToolbar : geometry::adaptiveSingleToolbar;
+  adaptive_height_ = adaptive_from_height_ + (target - adaptive_from_height_) * eased;
+  adaptive_progress_ = adaptive_from_progress_ + ((adaptive_expanded_ ? 1.0 : 0.0) - adaptive_from_progress_) * eased;
+  adaptive_running_ = t < 1;
+  // Reposition existing CefBrowser hosts. No navigation, reload or tab creation.
+  Layout();
+  Emit("adaptiveGeometry", Wrap(AdaptiveToolbarState()));
+  if (!adaptive_running_) {
+    if (shell_ && !sidebar_motion_)
+      shell_->GetHost()->SetWindowlessFrameRate(motion::kShellIdleFrameRate);
+    return;
+  }
+  CefRefPtr<BrowserWindow> self = this;
+  CefPostDelayedTask(TID_UI, new FunctionTask([self,generation] {
+    self->AdvanceAdaptiveToolbar(generation);
+  }), 16);
+}
+
 BrowserWindow::Geometry BrowserWindow::CurrentGeometry() const {
   RECT client = {}; GetClientRect(hwnd_, &client);
   const float scale = GetDpiForWindow(hwnd_) / 96.0f;
@@ -1659,7 +1735,10 @@ BrowserWindow::Geometry BrowserWindow::CurrentGeometry() const {
   g.scale = scale;
   g.width = std::max(1L, client.right - client.left);
   g.height = std::max(1L, client.bottom - client.top);
-  g.toolbar = px((EffectiveSettings()->GetString("layout") == "classic" ? geometry::classicToolbar : geometry::mainToolbar) + (BookmarksBarVisible() ? geometry::bookmarks : 0));
+  const std::string layout = EffectiveSettings()->GetString("layout");
+  const double height = layout == "adaptive" ? adaptive_height_ :
+      layout == "classic" ? geometry::classicToolbar : geometry::mainToolbar;
+  g.toolbar = static_cast<int>(std::round((height + (BookmarksBarVisible() ? geometry::bookmarks : 0)) * scale));
   if (Fullscreen()) g.toolbar = 0;
   g.sidebar = sidebar_visible_ && bookmarks_sidebar_ ? px(276) : 0;
   g.panel = px(std::max(0, right_panel_width_));
@@ -1675,6 +1754,7 @@ BrowserWindow::Geometry BrowserWindow::CurrentGeometry() const {
 void BrowserWindow::Layout() {
   CEF_REQUIRE_UI_THREAD();
   if (!hwnd_ || IsIconic(hwnd_)) return;
+  SyncAdaptiveToolbar();
   const auto g = CurrentGeometry();
   struct Position { HWND hwnd, after; int x, y, width, height; UINT flags; };
   std::vector<Position> positions;
@@ -1760,6 +1840,7 @@ CefRefPtr<CefDictionaryValue> BrowserWindow::State() const {
     }
   }
   const auto client = CurrentGeometry();
+  state->SetDictionary("adaptiveToolbar", AdaptiveToolbarState());
   state->SetInt("clientHeight", static_cast<int>(std::ceil(client.height / client.scale)));
   state->SetBool("settingsOverlayOpen", settings_overlay_ != nullptr);
   state->SetBool("settingsOverlayReady", settings_overlay_ && settings_overlay_->ready());
@@ -1869,7 +1950,7 @@ void BrowserWindow::Emit(const std::string& event, CefRefPtr<CefValue> value) {
   if (settings_browser_ && settings_browser_->GetMainFrame())
     settings_browser_->GetMainFrame()->ExecuteJavaScript(script, settings_browser_->GetMainFrame()->GetURL(), 0);
 }
-void BrowserWindow::EmitState() { Emit("state", Wrap(State())); }
+void BrowserWindow::EmitState() { SyncAdaptiveToolbar(); Emit("state", Wrap(State())); }
 
 void BrowserWindow::RequestFind() { if (settings_overlay_) { FocusSettings(); return; } if(surface_)surface_->Focus();Emit("requestFind",EmptyValue()); }
 

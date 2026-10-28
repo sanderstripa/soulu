@@ -1,0 +1,59 @@
+/* A third layout. Classic and compact retain their own geometry and styling. */
+body[data-layout=adaptive] {
+  --adaptive-progress:0;
+  --adaptive-toolbar-height:var(--geometry-adaptive-single-toolbar);
+  --chrome-height:var(--adaptive-toolbar-height);
+  --caption-height:calc(68px - 20px * var(--adaptive-progress));
+}
+body[data-layout=adaptive] .compact-toolbar {display:none}
+body[data-layout=adaptive] .classic-toolbar {
+  display:block;position:relative;height:var(--chrome-height);padding:0;
+}
+body[data-layout=adaptive] .classic-main-row {
+  height:calc(68px - 20px * var(--adaptive-progress));
+  grid-template-columns:minmax(210px,1fr) minmax(0,640px) minmax(210px,1fr);
+}
+body[data-layout=adaptive] .classic-toolbar .tabs-zone {
+  position:absolute;top:48px;left:0;right:0;height:40px;padding:2px 8px 6px;
+  opacity:var(--adaptive-progress);
+  transform:translateY(calc(12px * (1 - var(--adaptive-progress))));
+}
+body[data-layout=adaptive][data-adaptive-expanded=false] .tabs-zone {pointer-events:none}
+body[data-layout=adaptive] .classic-toolbar .tab-strip {
+  height:32px;padding:1px;gap:0;border-radius:16px;
+  background:light-dark(#e9e9ed,#24252c);
+}
+body[data-layout=adaptive] .classic-toolbar .classic-tab:not(.pinned) {
+  position:relative;flex:1 1 0;min-width:30px;max-width:none;
+  height:30px;padding:0 32px;background:transparent;justify-content:center;
+}
+body[data-layout=adaptive] .classic-toolbar .classic-tab:not(.pinned) strong {
+  flex:0 1 auto;text-align:center;
+}
+body[data-layout=adaptive] .classic-toolbar .classic-tab:not(.pinned).active {
+  flex:1 1 0;min-width:160px;max-width:none;
+  background:light-dark(#fff,#494b55);border-color:light-dark(#d0d1d8,#60636f);
+}
+body[data-layout=adaptive] .classic-toolbar .classic-tab:not(.pinned) .tab-action {
+  position:absolute;left:5px;top:3px;flex:0 0 22px;min-width:22px;width:22px;height:22px;
+}
+body[data-layout=adaptive] .classic-toolbar .classic-tab:not(.pinned):not(.active):not(:last-child):not(:has(+.active))::after {
+  content:"";position:absolute;right:0;top:7px;bottom:7px;width:1px;background:var(--line);
+}
+body[data-layout=adaptive] .classic-toolbar .icons-only .classic-tab:not(.active) {
+  padding:0;justify-content:center;border-radius:15px;
+}
+body[data-layout=adaptive] .classic-toolbar .classic-tab.active .classic-fallback {display:grid}
+body[data-layout=adaptive][data-bookmarks-bar=true] .classic-toolbar {
+  height:calc(var(--chrome-height) + var(--geometry-bookmarks));
+}
+body[data-layout=adaptive][data-bookmarks-bar=true][data-bookmarks-position=above] .tabs-zone {
+  top:calc(48px + var(--geometry-bookmarks));
+}
+body[data-layout=adaptive][data-bookmarks-bar=true][data-bookmarks-position=above] .bookmarks-bar {
+  top:calc(68px - 20px * var(--adaptive-progress));
+}
+body[data-layout=adaptive] :is(.sidebar,.side-panel,.vpn-panel,.settings-panel,.bookmarks-menu,.tab-overview,.reader-view,.navigation-shield) {
+  top:var(--content-top);
+}
+body[data-layout=adaptive][data-fullscreen=true] {--chrome-height:0px;--content-top:0px}

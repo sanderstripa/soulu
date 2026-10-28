@@ -106,6 +106,7 @@
     toolbarMenu: () => invoke("window.toolbarMenu"),
     getState: () => invoke("browser.state.get"),
     onState: callback => subscribe("state", callback),
+    onAdaptiveGeometry: callback => subscribe("adaptiveGeometry", callback),
     onSettings: callback => subscribe("settings", callback),
     onDownloads: callback => subscribe("downloads", callback),
     onFocusAddress: callback => subscribe("focusAddress", callback),

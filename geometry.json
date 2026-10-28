@@ -10,5 +10,7 @@
   "captionWidth": 42,
   "bookmarks": 28,
   "addressGlyph": 16,
-  "pageRightInset": 20
+  "pageRightInset": 20,
+  "adaptiveSingleToolbar": 68,
+  "adaptiveExpandedToolbar": 88
 }

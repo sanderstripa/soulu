@@ -4,7 +4,7 @@
   let pending = false, previous = '';
   function update() {
     pending = false;
-    const node = document.body.dataset.layout === 'classic' ?
+    const node = document.body.dataset.layout !== 'compact' ?
       document.querySelector('#windowMaximize') : document.querySelector('#compactWindowMaximize');
     const r = node?.getClientRects().length ? node.getBoundingClientRect() : null;
     const rect = r ? {x:Math.round(r.x),y:Math.round(r.y),width:Math.round(r.width),height:Math.round(r.height)} : {x:0,y:0,width:0,height:0};

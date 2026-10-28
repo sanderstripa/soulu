@@ -13,4 +13,6 @@ inline constexpr int captionWidth = 42;
 inline constexpr int bookmarks = 28;
 inline constexpr int addressGlyph = 16;
 inline constexpr int pageRightInset = 20;
+inline constexpr int adaptiveSingleToolbar = 68;
+inline constexpr int adaptiveExpandedToolbar = 88;
 }

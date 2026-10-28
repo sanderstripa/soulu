@@ -54,7 +54,7 @@
   function chromeHeight(includeBookmarks = true) {
     if (state.fullscreen) return 0;
     const css = getComputedStyle(document.documentElement);
-    const height = parseFloat(css.getPropertyValue(state.settings?.layout === 'classic' ? '--geometry-classic-toolbar' : '--geometry-main-toolbar'));
+    const height = state.settings?.layout === 'adaptive' ? parseFloat(getComputedStyle(document.body).getPropertyValue('--chrome-height')) : parseFloat(css.getPropertyValue(state.settings?.layout === 'classic' ? '--geometry-classic-toolbar' : '--geometry-main-toolbar'));
     return height + (includeBookmarks && state.bookmarksBarVisible ? parseFloat(css.getPropertyValue('--geometry-bookmarks')) : 0);
   }
   function position() {
@@ -74,7 +74,7 @@
   }
   async function open() {
     closeLink(); settings.hidden = true; style.setAttribute('aria-expanded', 'false');
-    anchor = document.querySelector('body[data-layout=classic] #classicPageMenu') || document.querySelector('[data-page-menu]') || document.querySelector('#classicPageMenu');
+    anchor = document.querySelector('body:is([data-layout=classic],[data-layout=adaptive]) #classicPageMenu') || document.querySelector('[data-page-menu]') || document.querySelector('#classicPageMenu');
     const request = ++revision; const snapshot = await api.getCurrentSite();
     if (request !== revision) return;
     // Request native bounds before exposing or focusing client-area content.

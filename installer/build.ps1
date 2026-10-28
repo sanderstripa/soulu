@@ -3,4 +3,4 @@ $ErrorActionPreference='Stop'
 $root=(Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 & (Join-Path $root 'scripts/verify-cef-engine.ps1') -BuildDir $BuildDir
 $payload=if($PayloadZip){$PayloadZip}else{$BuildDir}
-& (Join-Path $root 'scripts/build-connect-installer.ps1') -PayloadPath $payload -Version '1.0.64-beta' -OutFile $OutFile -TestUI:$TestUI
+& (Join-Path $root 'scripts/build-connect-installer.ps1') -PayloadPath $payload -Version '1.0.65-beta' -OutFile $OutFile -TestUI:$TestUI
