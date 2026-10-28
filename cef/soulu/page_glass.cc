@@ -62,6 +62,7 @@ HWND UpdatePageGlass(HWND parent,int width,int height,float /*scale*/,bool enabl
       g.blur=g.compositor.CreateSpriteVisual();g.blur.Brush(masked);g.root.Children().InsertAtBottom(g.blur);
       g.tint=g.compositor.CreateSpriteVisual();g.root.Children().InsertAtTop(g.tint);
     }
+    if(!g.root||!g.tint||!g.blur)return nullptr;
     auto gradient=g.compositor.CreateLinearGradientBrush();gradient.StartPoint({0,0});gradient.EndPoint({0,1});
     const BYTE c=dark?14:250;
     gradient.ColorStops().Append(g.compositor.CreateColorGradientStop(0,{254,c,c,c}));

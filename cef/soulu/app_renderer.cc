@@ -1,4 +1,5 @@
 #include "examples/soulu/app_factory.h"
+#include "examples/soulu/page_glass_script.h"
 #include "include/wrapper/cef_message_router.h"
 #include "include/cef_parser.h"
 #include "include/cef_process_message.h"
@@ -65,11 +66,12 @@ class RendererApp final : public CefApp, public CefRenderProcessHandler {
     if(frame->IsMain()){
       context->GetGlobal()->SetValue("__souluPageScroll",CefV8Value::CreateFunction("scroll",new PageScrollSubmit()),V8_PROPERTY_ATTRIBUTE_NONE);
       CefRefPtr<CefV8Value> result;CefRefPtr<CefV8Exception> error;
-      context->Eval(R"JS((()=>{const send=window.__souluPageScroll;delete window.__souluPageScroll;let pending=false,y=0;
+      context->Eval(kPageGlassInsetScript,frame->GetURL(),0,result,error);
+      context->Eval(R"JS((()=>{const send=window.__souluPageScroll;delete window.__souluPageScroll;const raf=requestAnimationFrame.bind(window);let pending=false,y=0;
         const report=()=>{pending=false;send(y)};
         addEventListener('scroll',event=>{const node=event.target;let value=scrollY;
           if(node instanceof Element){const r=node.getBoundingClientRect();if(r.top<=64&&r.height>=innerHeight*.65)value=node.scrollTop;}
-          y=Math.max(0,value);if(!pending){pending=true;requestAnimationFrame(report)}
+          y=Math.max(0,value);if(!pending){pending=true;raf(report)}
         },{capture:true,passive:true});addEventListener('pageshow',()=>{y=Math.max(0,scrollY);report()});
       })())JS",frame->GetURL(),0,result,error);
     }

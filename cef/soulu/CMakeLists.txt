@@ -17,6 +17,7 @@ set(SOULU_SRCS
   browser_window.h
   browser_window.cc
   page_glass.h
+  page_glass_script.h
   page_glass.cc
   settings_session.cc
   settings_overlay.h

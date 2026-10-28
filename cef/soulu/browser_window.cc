@@ -1821,6 +1821,13 @@ void BrowserWindow::Layout() {
     }
   }
   if(page_glass&&surface_)SetWindowPos(page_glass,surface_->hwnd(),0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE);
+  if(auto* page=ActiveTab();page&&page->browser){
+    const double cover=Fullscreen()||!EffectiveSettings()->GetBool("mattePanel")?0:(g.toolbar-g.content.y)/g.scale;
+    if(page->glass_inset!=cover){page->glass_inset=cover;
+      auto frame=page->browser->GetMainFrame();
+      if(frame)frame->ExecuteJavaScript("window.__souluApplyGlassInset&&window.__souluApplyGlassInset("+std::to_string(cover)+")",frame->GetURL(),0);
+    }
+  }
   ResizeFrostedBackdrop(hwnd_, g.width, std::min(g.height, g.toolbar));
   if (surface_) surface_->CommitResize();
   if (settings_overlay_) { settings_overlay_->Layout(); BlockSettingsBackground(true); }
@@ -1977,7 +1984,7 @@ void BrowserWindow::RequestFind() { if (settings_overlay_) { FocusSettings(); re
 void BrowserWindow::ReaderDocumentNavigation(int id) {
   DismissSouluMenus(hwnd_);
   CancelSitePermissions(id);
-  if(auto* tab=FindTab(id))tab->scroll_y=0;
+  if(auto* tab=FindTab(id)){tab->scroll_y=0;tab->glass_inset=-1;}
   if(auto* tab=FindTab(id)){HomeCancelVoice(tab->browser?tab->browser->GetIdentifier():0);++tab->home_voice_generation;++tab->document_generation;++tab->translation_generation;tab->translation_active=false;tab->translation_resetting=false;tab->main_loading=true;tab->reader_active=false;tab->reader_article=nullptr;}
   Layout();EmitState();
 }

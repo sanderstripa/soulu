@@ -8,7 +8,7 @@ os.environ['SOULU_REGRESSION_SKIP_FIRST_RUN']='1';os.environ['NO_PROXY']='localh
 u=C.windll.user32;u.GetWindowRect.argtypes=[W.HWND,C.POINTER(W.RECT)];u.SetWindowPos.argtypes=[W.HWND,W.HWND,C.c_int,C.c_int,C.c_int,C.c_int,W.UINT]
 class Fixture(BaseHTTPRequestHandler):
  def do_GET(self):
-  b=b'<style>html,body{margin:0}section{height:230px;background:#d44332}section:nth-child(2n){background:#228866}section:nth-child(3n){background:#376bd0}h1{margin:0;padding:30px;font:48px sans-serif;color:white}</style><section><h1>VISIBLE TOP / 0</h1></section><section><h1>SECOND / 230</h1></section><section><h1>THIRD / 460</h1></section><section><h1>FOURTH</h1></section><section><h1>FIFTH</h1></section><script>window.identity=Math.random();window.clicks=0;document.addEventListener("click",()=>clicks++)</script>'
+  b=b'<style>html,body{margin:0}section{height:230px;background:#d44332}section:nth-child(2n){background:#228866}section:nth-child(3n){background:#376bd0}nav{position:fixed;top:0;left:0;right:0;height:24px;background:#263c38;color:white;z-index:10}h1{margin:0;padding:30px;font:48px sans-serif;color:white}</style><nav>Site navigation</nav><section><h1>VISIBLE TOP / 0</h1></section><section><h1>SECOND / 230</h1></section><section><h1>THIRD / 460</h1></section><section><h1>FOURTH</h1></section><section><h1>FIFTH</h1></section><script>window.identity=Math.random();window.clicks=0;document.addEventListener("click",()=>clicks++)</script>'
   self.send_response(200);self.send_header('Content-Type','text/html');self.send_header('Content-Length',str(len(b)));self.end_headers();self.wfile.write(b)
  def log_message(self,*a):pass
 server=ThreadingHTTPServer(('127.0.0.1',0),Fixture);threading.Thread(target=server.serve_forever,daemon=True).start()
@@ -23,9 +23,9 @@ def wait(fn,timeout=40):
  raise AssertionError('Page glass wait timeout')
 out=Path(sys.argv[2]);out.mkdir(parents=True,exist_ok=True);evidence={};p=None;ws=None;page=None
 with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as root:
- folder=Path(root)/'Soulu'/'User Data'/'Profiles'/'personal';folder.mkdir(parents=True);(folder/'soulu-settings.json').write_text(json.dumps({'onboarding':{'status':'skipped'},'layout':'adaptive','mattePanel':True,'theme':'light','bookmarksBarMode':'never'}))
+ folder=Path(root)/'Soulu'/'User Data'/'Profiles'/'personal';folder.mkdir(parents=True);(folder/'soulu-settings.json').write_text(json.dumps({'onboarding':{'status':'skipped'},'layout':'adaptive','mattePanel':False,'theme':'light','bookmarksBarMode':'never'}))
  try:
-  p=subprocess.Popen([str(Path(sys.argv[1]).resolve()),'--no-proxy-server'],env=dict(os.environ,LOCALAPPDATA=root,SOULU_UI_TEST_PORT=str(s.DEBUG_PORT)))
+  log=(out/'process.log').open('w',encoding='utf-8');p=subprocess.Popen([str(Path(sys.argv[1]).resolve()),'--no-proxy-server','--log-file='+str((out/'cef.log').resolve())],stdout=log,stderr=subprocess.STDOUT,env=dict(os.environ,LOCALAPPDATA=root,SOULU_UI_TEST_PORT=str(s.DEBUG_PORT)))
   t=wait(lambda:next((x for x in s.targets() if '/ui/index.html' in x.get('url','')),None));ws=s.websocket.create_connection(t['webSocketDebuggerUrl'],timeout=30,origin=s.BASE)
   wait(lambda:s.evaluate(ws,"document.documentElement.classList.contains('typography-ready')&&!!window.browserShell"))
   def state():return s.evaluate(ws,'browserShell.getState()')
@@ -41,13 +41,15 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as root:
    time.sleep(.4);r=W.RECT();u.GetWindowRect(hwnd,C.byref(r));im=ImageGrab.grab(all_screens=True).crop((r.left,r.top,r.right,r.bottom));im.save(out/(name+'.png'));return im
   call('navigate',f'http://127.0.0.1:{server.server_port}/glass')
   t=wait(lambda:next((x for x in s.targets() if '/glass' in x.get('url','')),None));page=s.websocket.create_connection(t['webSocketDebuggerUrl'],timeout=30,origin=s.BASE)
-  wait(lambda:s.evaluate(page,'typeof identity==="number"'));identity=s.evaluate(page,'identity');evidence['glassReady']=state().get('pageGlassReady');evidence['glassError']=state().get('pageGlassError');initial=capture('initial')
+  wait(lambda:s.evaluate(page,'typeof identity==="number"'));call('setSettings',{'mattePanel':True});identity=s.evaluate(page,'identity');evidence['glassReady']=state().get('pageGlassReady');evidence['glassError']=state().get('pageGlassError');initial=capture('initial')
   scale=u.GetDpiForWindow(hwnd)/96
-  evidence['initialPagePixel']=initial.getpixel((round(20*scale),round(80*scale)))[:3]
+  evidence['initialPagePixel']=initial.getpixel((round(20*scale),round(120*scale)))[:3]
   assert evidence['initialPagePixel'][0]>evidence['initialPagePixel'][1]+50, 'Initial document must remain visible below the panel'
   assert evidence['glassReady'],evidence
   s.evaluate(page,'scrollTo(0,260)');wait(lambda:s.evaluate(page,'scrollY>=250'));green=capture('scroll-260')
   s.evaluate(page,'scrollTo(0,500)');wait(lambda:s.evaluate(page,'scrollY>=490'));blue=capture('scroll-500')
+  evidence['fixedHeaderTop']=s.evaluate(page,"document.querySelector('nav').getBoundingClientRect().top")
+  assert abs(evidence['fixedHeaderTop']-68)<1, 'Fixed site navigation must stay below the browser panel'
   a=green.getpixel((round(130*scale),round(64*scale)))[:3];b=blue.getpixel((round(130*scale),round(64*scale)))[:3];evidence['underGlassPixels']=[a,b]
   assert sum(abs(x-y) for x,y in zip(a,b))>14, 'Glass must sample the changing live page, not a constant background'
   def click_at(x,y):
@@ -63,8 +65,12 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as root:
   s.evaluate(page,'scrollTo(0,0)');capture('off-top');call('setSettings',{'mattePanel':True});capture('back-top')
   evidence['passed']=True
  finally:
+  evidence['exitCodeBeforeClose']=p.poll() if p else None
+  print(json.dumps(evidence),flush=True)
   (out/'evidence.json').write_text(json.dumps(evidence,indent=2))
   if page:page.close()
   if ws:ws.close()
-  if p:s.close_normally(p)
+  if p and p.poll() is None:
+   try:s.close_normally(p)
+   except Exception:p.kill();p.wait()
   server.shutdown()
