@@ -1777,7 +1777,7 @@ void BrowserWindow::Layout() {
   }
   const auto theme=EffectiveSettings()->GetString("theme").ToString();
   const bool dark=theme=="dark"||(theme=="system"&&IsWindowsDarkMode());
-  HWND page_glass=UpdatePageGlass(hwnd_,g.width,g.toolbar+static_cast<int>(12*g.scale),g.scale,EffectiveSettings()->GetBool("mattePanel")&&!Fullscreen(),dark);
+  HWND page_glass=UpdatePageGlass(hwnd_,g.width,g.toolbar+static_cast<int>(12*g.scale),g.scale,EffectiveSettings()->GetBool("mattePanel")&&!Fullscreen()&&shell_&&surface_&&ActiveTab()&&ActiveTab()->browser&&IsWindowVisible(hwnd_),dark);
   native_blur_=page_glass!=nullptr;
   if(page_glass) positions.push_back({page_glass,HWND_TOP,0,0,g.width,g.toolbar+static_cast<int>(12*g.scale),flags|SWP_SHOWWINDOW});
   if (surface_) {
