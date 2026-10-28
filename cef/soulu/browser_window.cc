@@ -904,7 +904,6 @@ void BrowserWindow::ApplyWindowAppearance() {
   DwmSetWindowAttribute(hwnd_,33,&corner,sizeof(corner));
   DwmSetWindowAttribute(hwnd_,34,&noBorder,sizeof(noBorder));
   DwmSetWindowAttribute(hwnd_,38,&noBackdrop,sizeof(noBackdrop));
-  const bool matte=EffectiveSettings()->GetBool("mattePanel");
   const auto compose=reinterpret_cast<SetComposition>(GetProcAddress(GetModuleHandleW(L"user32.dll"),"SetWindowCompositionAttribute"));
   AccentPolicy policy={0,0,0,0};
   CompositionData data={19,&policy,sizeof(policy)};
@@ -1778,9 +1777,9 @@ void BrowserWindow::Layout() {
   }
   const auto theme=EffectiveSettings()->GetString("theme").ToString();
   const bool dark=theme=="dark"||(theme=="system"&&IsWindowsDarkMode());
-  HWND page_glass=UpdatePageGlass(hwnd_,g.width,g.toolbar,g.scale,EffectiveSettings()->GetBool("mattePanel")&&!Fullscreen(),dark);
+  HWND page_glass=UpdatePageGlass(hwnd_,g.width,g.toolbar+static_cast<int>(12*g.scale),g.scale,EffectiveSettings()->GetBool("mattePanel")&&!Fullscreen(),dark);
   native_blur_=page_glass!=nullptr;
-  if(page_glass) positions.push_back({page_glass,HWND_TOP,0,0,g.width,g.toolbar,flags|SWP_SHOWWINDOW});
+  if(page_glass) positions.push_back({page_glass,HWND_TOP,0,0,g.width,g.toolbar+static_cast<int>(12*g.scale),flags|SWP_SHOWWINDOW});
   if (surface_) {
     surface_->PrepareResize(g.width, g.shell_height, g.scale);
     const auto* active = ActiveTab();
@@ -1828,6 +1827,7 @@ void BrowserWindow::Layout() {
 }
 
 void BrowserWindow::PageScroll(int tab_id,double y) {
+  if(!std::isfinite(y))return;
   auto* tab=FindTab(tab_id);if(!tab)return;
   tab->scroll_y=std::clamp(y,0.0,10000000.0);
   if(tab_id==active_tab_id_&&EffectiveSettings()->GetBool("mattePanel"))Layout();

@@ -87,6 +87,17 @@ jobs:
         Add-Content cef-project/examples/CMakeLists.txt "`nadd_subdirectory(soulu)`n"
 
         '
+    - name: Compile page-glass Windows interop before the full CEF build
+      shell: pwsh
+      run: '$vs = & "${env:ProgramFiles(x86)}/Microsoft Visual Studio/Installer/vswhere.exe" -latest -property installationPath
+
+        $command = ''"'' + $vs + ''\VC\Auxiliary\Build\vcvars64.bat" && cl /nologo /std:c++20 /EHsc /c /I cef-project browser\cef\soulu\page_glass.cc /Fopage-glass-check.obj''
+
+        cmd /d /s /c $command
+
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+        '
     - name: Use CEF-compatible Python
       uses: actions/setup-python@v5
       with:

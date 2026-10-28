@@ -12,7 +12,9 @@ namespace {
 using namespace winrt;
 using namespace Windows::UI::Composition;
 using namespace Windows::Graphics::Effects;
-struct Blur final : implements<Blur,IGraphicsEffect,IGraphicsEffectSource,IGraphicsEffectD2D1Interop> {
+using ABI::Windows::Graphics::Effects::IGraphicsEffectD2D1Interop;
+using ABI::Windows::Graphics::Effects::GRAPHICS_EFFECT_PROPERTY_MAPPING;
+struct Blur : implements<Blur,IGraphicsEffect,IGraphicsEffectSource,IGraphicsEffectD2D1Interop> {
   IGraphicsEffectSource source;
   explicit Blur(IGraphicsEffectSource const& value):source(value){}
   hstring Name() const {return L"PageBlur";} void Name(hstring const&) {}
@@ -35,12 +37,14 @@ struct Blur final : implements<Blur,IGraphicsEffect,IGraphicsEffectSource,IGraph
 };
 struct Glass {HWND hwnd=nullptr;Compositor compositor{nullptr};Desktop::DesktopWindowTarget target{nullptr};ContainerVisual root{nullptr};SpriteVisual blur{nullptr},tint{nullptr};};
 std::map<HWND,Glass> glasses;
+LRESULT CALLBACK GlassProc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp){if(msg==WM_NCHITTEST)return HTTRANSPARENT;if(msg==WM_ERASEBKGND)return 1;return DefWindowProcW(hwnd,msg,wp,lp);}
 }
-HWND UpdatePageGlass(HWND parent,int width,int height,float scale,bool enabled,bool dark){
+HWND UpdatePageGlass(HWND parent,int width,int height,float /*scale*/,bool enabled,bool dark){
   if(!enabled){auto i=glasses.find(parent);if(i!=glasses.end())ShowWindow(i->second.hwnd,SW_HIDE);return nullptr;}
   try {auto& g=glasses[parent];
     if(!g.hwnd){
-      g.hwnd=CreateWindowExW(WS_EX_NOREDIRECTIONBITMAP|WS_EX_TRANSPARENT|WS_EX_NOACTIVATE,L"STATIC",L"Soulu page glass",WS_CHILD,0,0,1,1,parent,nullptr,GetModuleHandleW(nullptr),nullptr);
+      WNDCLASSW wc={};wc.lpfnWndProc=GlassProc;wc.hInstance=GetModuleHandleW(nullptr);wc.lpszClassName=L"SouluPageGlass";RegisterClassW(&wc);
+      g.hwnd=CreateWindowExW(WS_EX_NOREDIRECTIONBITMAP|WS_EX_TRANSPARENT|WS_EX_NOACTIVATE,wc.lpszClassName,L"Soulu page glass",WS_CHILD,0,0,1,1,parent,nullptr,GetModuleHandleW(nullptr),nullptr);
       if(!g.hwnd)throw hresult_error(HRESULT_FROM_WIN32(GetLastError()));
       g.compositor=Compositor();auto interop=g.compositor.as<ABI::Windows::UI::Composition::Desktop::ICompositorDesktopInterop>();
       check_hresult(interop->CreateDesktopWindowTarget(g.hwnd,true,reinterpret_cast<ABI::Windows::UI::Composition::Desktop::IDesktopWindowTarget**>(put_abi(g.target))));
@@ -48,7 +52,12 @@ HWND UpdatePageGlass(HWND parent,int width,int height,float scale,bool enabled,b
       auto source=CompositionEffectSourceParameter(L"Page");
       auto effect=g.compositor.CreateEffectFactory(make<Blur>(source.as<IGraphicsEffectSource>()));auto brush=effect.CreateBrush();
       brush.SetSourceParameter(L"Page",g.compositor.CreateBackdropBrush());
-      g.blur=g.compositor.CreateSpriteVisual();g.blur.Brush(brush);g.root.Children().InsertAtBottom(g.blur);
+      auto mask=g.compositor.CreateLinearGradientBrush();mask.StartPoint({0,0});mask.EndPoint({0,1});
+      mask.ColorStops().Append(g.compositor.CreateColorGradientStop(0,{255,255,255,255}));
+      mask.ColorStops().Append(g.compositor.CreateColorGradientStop(.82f,{255,255,255,255}));
+      mask.ColorStops().Append(g.compositor.CreateColorGradientStop(1,{0,255,255,255}));
+      auto masked=g.compositor.CreateMaskBrush();masked.Source(brush);masked.Mask(mask);
+      g.blur=g.compositor.CreateSpriteVisual();g.blur.Brush(masked);g.root.Children().InsertAtBottom(g.blur);
       g.tint=g.compositor.CreateSpriteVisual();g.root.Children().InsertAtTop(g.tint);
     }
     auto gradient=g.compositor.CreateLinearGradientBrush();gradient.StartPoint({0,0});gradient.EndPoint({0,1});
@@ -56,7 +65,8 @@ HWND UpdatePageGlass(HWND parent,int width,int height,float scale,bool enabled,b
     gradient.ColorStops().Append(g.compositor.CreateColorGradientStop(0,{254,c,c,c}));
     gradient.ColorStops().Append(g.compositor.CreateColorGradientStop(.35f,{249,c,c,c}));
     gradient.ColorStops().Append(g.compositor.CreateColorGradientStop(.7f,{232,c,c,c}));
-    gradient.ColorStops().Append(g.compositor.CreateColorGradientStop(1,{190,c,c,c}));
+    gradient.ColorStops().Append(g.compositor.CreateColorGradientStop(.84f,{190,c,c,c}));
+    gradient.ColorStops().Append(g.compositor.CreateColorGradientStop(1,{0,c,c,c}));
     g.tint.Brush(gradient);g.root.Size({float(width),float(height)});g.blur.Size(g.root.Size());g.tint.Size(g.root.Size());
     return g.hwnd;
   }catch(...){auto i=glasses.find(parent);if(i!=glasses.end()&&i->second.hwnd)ShowWindow(i->second.hwnd,SW_HIDE);return nullptr;}
