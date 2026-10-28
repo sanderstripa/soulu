@@ -238,7 +238,7 @@ try:
                     m = monitor(hwnd)
                     u.SetWindowPos(hwnd,None,m.work.left+30,m.work.top+30,900,640,0x14)
                     original = rect(hwnd)
-                    inset = round((58 if layout=='compact' else 82)*u.GetDpiForWindow(hwnd)/96)
+                    inset = round((58 if layout=='compact' else 86)*u.GetDpiForWindow(hwnd)/96)
                     viewport(page,hwnd,inset)
                     selector = '#windowMaximize' if layout=='classic' else '#compactWindowMaximize'
                     point=wait(lambda:ready_caption(shell,hwnd,selector))

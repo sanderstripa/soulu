@@ -73,7 +73,7 @@ body[data-address-position=left] .compact-tab-flow{justify-content:flex-start}
 
 
 /* Classic: address row above a dedicated tab row. */
-.classic-toolbar{height:82px;padding:0}
+.classic-toolbar{height:var(--geometry-classic-toolbar);padding:0}
 .classic-main-row{display:grid;grid-template-columns:minmax(210px,1fr) minmax(0,760px) minmax(210px,1fr);align-items:center;width:100%;height:48px;gap:6px;-webkit-app-region:no-drag}
 .classic-navigation-left,.classic-navigation-right{display:flex;align-items:center;gap:4px;min-width:0;height:100%}.classic-navigation-left{padding-left:8px}.classic-navigation-right{justify-content:flex-end}.classic-main-row .left-controls{display:flex;gap:2px}.classic-extension-slot{height:34px}.classic-address-wrap{display:flex;justify-content:center;min-width:0}
 body[data-address-position=left] .classic-main-row{grid-template-columns:auto minmax(0,1fr) auto}
@@ -82,8 +82,8 @@ body[data-address-position=left] .classic-address-wrap{justify-content:flex-star
 .classic-address-pill input{flex:1;min-width:0;height:30px;padding:0 6px;color:var(--text);background:transparent;border:0;outline:0;text-align:center}.classic-address-pill input:focus{text-align:left}.classic-address-pill .address-favorite svg{fill:none;stroke:currentColor}
 .address-menu-button{display:grid;place-items:center;color:var(--muted);background:transparent}.address-menu-button:hover{color:var(--text);background:color-mix(in srgb,var(--text) 7%,transparent)}.address-menu-button svg{fill:none;stroke:currentColor}
 .classic-navigation-right>.downloads-control{margin-left:2px}.window-controls{display:flex;align-items:center;margin-left:3px;}.window-controls button{display:grid;place-items:center;background:transparent}.window-controls svg{fill:none;stroke:currentColor}
-/* 48px navigation + 34px tabs retain the existing native 82px content inset. */
-.classic-toolbar .tabs-zone{display:flex;align-items:center;width:100%;height:34px;gap:4px;padding:2px 8px 3px;background:transparent;border-top:1px solid color-mix(in srgb,var(--text) 5%,transparent);-webkit-app-region:no-drag}
+/* Keep the native content inset aligned with the navigation and tab rows. */
+.classic-toolbar .tabs-zone{display:flex;align-items:center;width:100%;height:calc(var(--geometry-classic-toolbar) - var(--geometry-classic-caption));gap:4px;padding:2px 8px 6px;background:transparent;border:0;-webkit-app-region:no-drag}
 .classic-toolbar .tab-strip{flex:0 1 auto;min-width:0;height:28px;padding:0;gap:4px;overflow-x:auto;overscroll-behavior-x:contain}
 .classic-tabs-drag{flex:1 0 16px;height:100%;-webkit-app-region:no-drag}
 .classic-toolbar .classic-tab{flex:1 1 180px;min-width:112px;max-width:220px;height:28px;gap:6px;padding:0 6px 0 8px;border:1px solid transparent;border-radius:8px;background:color-mix(in srgb,var(--text) 3%,transparent);color:var(--muted)}
@@ -97,7 +97,7 @@ body[data-address-position=left] .classic-address-wrap{justify-content:flex-star
 
 
 body[data-layout=compact] .classic-toolbar{display:none}body[data-layout=compact] .compact-toolbar{display:block}body[data-layout=compact] .sidebar,body[data-layout=compact] .side-panel,body[data-layout=compact] .vpn-panel,body[data-layout=compact] .settings-panel{top:var(--geometry-main-toolbar)}
-body[data-layout=classic] .compact-toolbar{display:none}body[data-layout=classic] .classic-toolbar{display:block}body[data-layout=classic] .sidebar,body[data-layout=classic] .side-panel,body[data-layout=classic] .vpn-panel,body[data-layout=classic] .settings-panel{top:82px}
+body[data-layout=classic] .compact-toolbar{display:none}body[data-layout=classic] .classic-toolbar{display:block}body[data-layout=classic] .sidebar,body[data-layout=classic] .side-panel,body[data-layout=classic] .vpn-panel,body[data-layout=classic] .settings-panel{top:var(--geometry-classic-toolbar)}
 body[data-matte=true] .browser-toolbar{background:linear-gradient(112deg,color-mix(in srgb,var(--surface) 82%,#fff 18%),color-mix(in srgb,var(--surface) 70%,#a9c9e8 30%));backdrop-filter:saturate(145%) blur(22px)}
 
 
