@@ -94,6 +94,7 @@ def main():
             check(evaluate("!document.querySelector('#applySettings') && !document.querySelector('#cancelSettings') && !document.querySelector('#closeDialog')"),'No global Apply, Cancel or dirty-close dialog')
             check(evaluate('souluSettings.current.settings.startupMode')=='blank','Legacy startup migration survives redesign')
             check(evaluate('souluSettings.current.reader.size')==21,'Reader migration preserves canonical values')
+            check(saved()['layout']=='adaptive','Legacy Classic selection migrates to Main')
             capture('cards-dark')
             sections=['general','interface','startup','search','privacy','vpn','reading','profiles','about']
             check(evaluate("[...document.querySelectorAll('#homeCards [data-section]')].map(n=>n.dataset.section)")==sections,'Exactly nine canonical Settings sections')
@@ -109,7 +110,7 @@ def main():
             check(saved()['theme']=='light' and s.evaluate(shell,"document.body.dataset.theme==='light'"),'Theme applies and persists immediately')
             section('interface');click('[name="settings-layout"][value="adaptive"]');evaluate('souluSettings.flush()')
             check(saved()['layout']=='adaptive' and s.evaluate(shell,"document.body.dataset.layout==='adaptive'"),'Third Adaptive layout saves through the canonical settings transaction')
-            click('[name="settings-layout"][value="classic"]');evaluate('souluSettings.flush()')
+            click('[name="settings-layout"][value="compact"]');evaluate('souluSettings.flush()')
             section('startup');change('#startupMode','custom');change('#startupUrl','javascript:alert(1)');evaluate('souluSettings.flush()')
             check(saved()['startupMode']=='blank' and evaluate("document.querySelector('#dataMessage').textContent.length>0"),'Invalid URL reports error and retains disk values')
             change('#startupMode','custom');change('#startupUrl','https://example.com/start');evaluate('souluSettings.flush()')

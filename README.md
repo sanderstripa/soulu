@@ -27,11 +27,9 @@ Soulu uses a compact top bar where tabs, the address bar, and the main actions a
 
 Two interface modes are available:
 
-**Main** — Soulu’s compact panel.
+**Main** — the expanding toolbar: the tab row appears with the second tab.
 
-**Adaptive** — a third toolbar mode in Settings → Interface. A single tab keeps the address bar centered; opening another reveals the rounded tab row in a synchronized 200 ms animation. Classic remains available separately.
-
-**Classic** — a more familiar browser layout.
+**Compact** — the single-row toolbar.
 
 Light and dark themes are supported, as well as Windows-style frosted transparency.
 
@@ -39,7 +37,7 @@ Light and dark themes are supported, as well as Windows-style frosted transparen
 
 The browser uses Chromium through Chromium Embedded Framework (CEF), while the native Soulu shell handles the window, interface, and Windows integration.
 
-Soulu Beta 1.0.65 uses stable CEF 156.0.14 / Chromium 156.0.8078.48.
+Soulu Beta 1.0.66 uses stable CEF 156.0.14 / Chromium 156.0.8078.48.
 See [CEF_UPGRADE.md](CEF_UPGRADE.md) for dependency provenance, runtime checks
 and the mandatory release gates.
 

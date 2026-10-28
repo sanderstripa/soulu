@@ -36,7 +36,7 @@ body[data-layout=adaptive] .classic-toolbar .classic-tab:not(.pinned).active {
   background:light-dark(#fff,#494b55);border-color:light-dark(#d0d1d8,#60636f);
 }
 body[data-layout=adaptive] .classic-toolbar .classic-tab:not(.pinned) .tab-action {
-  position:absolute;left:5px;top:3px;flex:0 0 22px;min-width:22px;width:22px;height:22px;
+  position:absolute;right:5px;left:auto;top:3px;flex:0 0 22px;min-width:22px;width:22px;height:22px;
 }
 body[data-layout=adaptive] .classic-toolbar .classic-tab:not(.pinned):not(.active):not(:last-child):not(:has(+.active))::after {
   content:"";position:absolute;right:0;top:7px;bottom:7px;width:1px;background:var(--line);
@@ -58,3 +58,5 @@ body[data-layout=adaptive] :is(.sidebar,.side-panel,.vpn-panel,.settings-panel,.
   top:var(--content-top);
 }
 body[data-layout=adaptive][data-fullscreen=true] {--chrome-height:0px;--content-top:0px}
+
+body[data-layout=adaptive] .classic-toolbar .classic-tab .tab-action svg{width:11px;height:11px;stroke-width:1.25}
