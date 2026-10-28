@@ -29,6 +29,8 @@ Two interface modes are available:
 
 **Main** — Soulu’s compact panel.
 
+**Adaptive** — a third toolbar mode in Settings → Interface. A single tab keeps the address bar centered; opening another reveals the rounded tab row in a synchronized 200 ms animation. Classic remains available separately.
+
 **Classic** — a more familiar browser layout.
 
 Light and dark themes are supported, as well as Windows-style frosted transparency.

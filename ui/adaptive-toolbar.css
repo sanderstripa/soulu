@@ -19,6 +19,7 @@ body[data-layout=adaptive] .classic-toolbar .tabs-zone {
   transform:translateY(calc(12px * (1 - var(--adaptive-progress))));
 }
 body[data-layout=adaptive][data-adaptive-expanded=false] .tabs-zone {pointer-events:none}
+body[data-layout=adaptive] .classic-toolbar .tabs-zone.no-ordinary .tab-strip {display:none}
 body[data-layout=adaptive] .classic-toolbar .tab-strip {
   height:32px;padding:1px;gap:0;border-radius:16px;
   background:light-dark(#e9e9ed,#24252c);
