@@ -12,6 +12,7 @@
 #include "examples/soulu/motion.h"
 #include "examples/soulu/page_glass.h"
 #include "examples/soulu/vpn_routing.h"
+#include "examples/soulu/vpn_profiles.h"
 #include "include/cef_app.h"
 #include "include/cef_command_line.h"
 #include "include/cef_devtools_message_observer.h"
@@ -447,6 +448,7 @@ BrowserWindow::BrowserWindow()
   settings_->SetString("bookmarksBarPosition", "above");
   settings_->SetBool("bookmarksIconsOnly", false);
   LoadSettings();
+  {std::string error;NormalizeVpnProfiles(vpn_settings_,error);}
   initial_settings_ = settings_->Copy(false);
   initial_settings_->Remove("onboarding");
   std::ifstream marks(UserDataDirectory() / L"bookmarks.json", std::ios::binary);
@@ -935,6 +937,20 @@ CefRefPtr<CefDictionaryValue> BrowserWindow::SendVpnHelper(CefRefPtr<CefDictiona
   return VpnHelperRequest(request);
 }
 
+bool BrowserWindow::CommitVpnSettings(CefRefPtr<CefDictionaryValue> next,std::string& error){
+  MergeLegacyVpnSelection(next,vpn_settings_);
+  if(!NormalizeVpnRouting(next,error)||!NormalizeVpnProfiles(next,error))return false;
+  auto rows=next->GetList("profiles");
+  std::map<std::string,CefRefPtr<CefDictionaryValue>> old_by_id;auto previous_rows=vpn_settings_->GetList("profiles");if(previous_rows)for(size_t i=0;i<previous_rows->GetSize();++i){auto row=previous_rows->GetDictionary(i);old_by_id.emplace(row->GetString("id").ToString(),row);}
+  for(size_t i=0;i<rows->GetSize();++i){auto row=rows->GetDictionary(i);auto found=old_by_id.find(row->GetString("id").ToString());CefRefPtr<CefDictionaryValue> old=found==old_by_id.end()?nullptr:found->second;if(old&&old->GetString("link")==row->GetString("link"))continue;auto command=CefDictionaryValue::Create();command->SetString("action","save_profile");command->SetString("id",row->GetString("id"));command->SetString("url",row->GetString("link"));auto result=SendVpnHelper(command);if(!result->GetBool("ok")){error="VPN: "+result->GetString("error").ToString();return false;}}
+  auto previous=vpn_settings_;vpn_settings_=next;
+  if(!SaveSettings()){vpn_settings_=previous;error="VPN: не удалось сохранить подключения.";return false;}
+  bool removed_active=vpn_enabled_&&!vpn_active_profile_id_.empty()&&!VpnProfileById(next,vpn_active_profile_id_);
+  if(removed_active){auto command=CefDictionaryValue::Create();command->SetString("action","disconnect");SendVpnHelper(command);}
+  for(auto* window:windows_){window->vpn_settings_=next;if(removed_active){window->vpn_enabled_=false;window->vpn_active_profile_id_.clear();auto state=CefDictionaryValue::Create();state->SetString("state","disconnected");state->SetBool("connected",false);window->Emit("vpnState",Wrap(state));}for(auto& profile:window->profiles_)window->ApplyProxy(profile.context);window->ApplyProxy(window->incognito_context_);}
+  return true;
+}
+
 void BrowserWindow::SwitchProfile(const std::string& id) {
   settings_loaded_=nullptr;
   const auto it = std::find_if(profiles_.begin(), profiles_.end(),
@@ -1318,7 +1334,7 @@ void BrowserWindow::OpenLinkWindow(int id,CefRefPtr<CefBrowser> source,const std
   auto* tab=FindTab(id);if(!tab||!tab->browser||!tab->browser->IsSame(source)||WebOrigin(url).empty())return;
   CefRefPtr<BrowserWindow> window=new BrowserWindow();
   window->profiles_=profiles_;window->active_profile_id_=active_profile_id_;window->settings_=settings_->Copy(false);
-  window->bookmarks_=bookmarks_;window->policies_=policies_;window->vpn_settings_=vpn_settings_;
+  window->bookmarks_=bookmarks_;window->policies_=policies_;window->vpn_settings_=vpn_settings_;window->vpn_enabled_=vpn_enabled_;window->vpn_active_profile_id_=vpn_active_profile_id_;
   window->secondary_url_=url;window->secondary_incognito_=incognito||tab->incognito;
   window->secondary_profile_=window->secondary_incognito_?"__incognito__":tab->profile_id;
   window->secondary_context_=window->secondary_incognito_?ContextForNewTab(true):source->GetHost()->GetRequestContext();
@@ -2595,7 +2611,11 @@ void BrowserWindow::HandleBridge(const std::string& request,
     return Reply(callback,Wrap(ProfileBookmarks()));
   }
   else if (action == "browser.bookmarks.open") Navigate(payload->GetString());
-  else if (action == "browser.settings.openWindow") OpenSettingsOverlay();
+  else if (action == "browser.settings.openWindow") {
+    if(payload&&payload->GetType()==VTYPE_STRING&&payload->GetString()=="vpn")settings_requested_section_="vpn";
+    OpenSettingsOverlay();
+    if(settings_browser_&&settings_overlay_&&settings_overlay_->ready()&&!settings_requested_section_.empty()){settings_browser_->GetMainFrame()->ExecuteJavaScript("window.souluSettings&&window.souluSettings.openSection('vpn')",settings_browser_->GetMainFrame()->GetURL(),0);settings_requested_section_.clear();}
+  }
   else if (action == "browser.settings.get") return Reply(callback, EffectiveSettings()->Copy(false));
   else if (action == "browser.settings.set") {
     if (payload && payload->GetType() == VTYPE_DICTIONARY) {
@@ -2723,22 +2743,7 @@ void BrowserWindow::HandleBridge(const std::string& request,
     return Reply(callback, vpn_settings_->Copy(false));
   }
   else if (action == "vpn.settings.set") {
-    if(payload&&payload->GetType()==VTYPE_DICTIONARY){
-      auto next=vpn_settings_->Copy(false),patch=payload->GetDictionary();CefDictionaryValue::KeyList keys;patch->GetKeys(keys);
-      for(const auto& key:keys)next->SetValue(key,patch->GetValue(key)->Copy());
-      std::string error;if(!NormalizeVpnRouting(next,error)){callback->Failure(400,error);return;}
-      const std::string protocol=next->GetString("protocol"),link=next->GetString("link");
-      if((protocol!="vless"&&protocol!="sudoku")||(!link.empty()&&link.rfind(protocol+"://",0)!=0)){callback->Failure(400,"Invalid VPN connection key");return;}
-      if(!link.empty()){
-        auto native=CefDictionaryValue::Create();native->SetString("action","save_profile");
-        native->SetString("id",next->GetString("lastProfileId"));native->SetString("name",next->GetString("region"));native->SetString("url",link);
-        auto saved=SendVpnHelper(native);if(!saved->GetBool("ok"))return Reply(callback,saved);
-        const std::string id=saved->GetString("id");if(!id.empty())next->SetString("lastProfileId",id);
-      }
-      auto previous=vpn_settings_;vpn_settings_=next;
-      if(!SaveSettings()){vpn_settings_=previous;callback->Failure(500,"VPN settings could not be saved");return;}
-      for(auto& profile:profiles_)ApplyProxy(profile.context);ApplyProxy(incognito_context_);
-    }
+    if(payload&&payload->GetType()==VTYPE_DICTIONARY){auto next=vpn_settings_->Copy(false),patch=payload->GetDictionary();CefDictionaryValue::KeyList keys;patch->GetKeys(keys);for(const auto& key:keys)next->SetValue(key,patch->GetValue(key)->Copy());std::string error;if(!CommitVpnSettings(next,error)){callback->Failure(400,error);return;}}
     return Reply(callback,vpn_settings_->Copy(false));
   }
   else if (action == "vpn.send") {
@@ -2746,6 +2751,7 @@ void BrowserWindow::HandleBridge(const std::string& request,
     auto arguments = CefDictionaryValue::Create();
     if (payload && payload->GetType() == VTYPE_DICTIONARY)
       command = payload->GetDictionary()->GetString("action");
+    if(command!="status"&&command!="connect"&&command!="disconnect"){callback->Failure(400,"Unsupported VPN operation");return;}
     arguments->SetString("action", command == "status" ? "status" : command);
     if (command == "connect") {
       std::string id = vpn_settings_->GetString("lastProfileId");
@@ -2754,8 +2760,10 @@ void BrowserWindow::HandleBridge(const std::string& request,
         if (options && !options->GetString("profileId").empty())
           id = options->GetString("profileId");
       }
+      auto profile=VpnProfileById(vpn_settings_,id);
+      if(!profile){callback->Failure(400,"Выберите подключение в настройках VPN.");return;}
       arguments->SetString("profileId", id);
-      arguments->SetString("url",vpn_settings_->GetString("link"));
+      arguments->SetString("url",profile->GetString("link"));
     }
     CefRefPtr<BrowserWindow> self=this;
     CefPostTask(TID_FILE_USER_BLOCKING,new FunctionTask([self,arguments,command,callback]{
@@ -2763,11 +2771,10 @@ void BrowserWindow::HandleBridge(const std::string& request,
       CefPostTask(TID_UI,new FunctionTask([self,result,command,callback]{
         if(self->closing_){callback->Failure(499,"Browser is closing");return;}
         if(!result->GetBool("ok")){self->Reply(callback,result);return;}
-        self->vpn_enabled_=command=="connect"||(command=="status"&&result->GetBool("connected"));
-        if(command=="disconnect")self->vpn_enabled_=false;
-        for(auto& profile:self->profiles_)self->ApplyProxy(profile.context);self->ApplyProxy(self->incognito_context_);
-        result->SetString("state",self->vpn_enabled_?"connected":"disconnected");result->SetString("scope","soulu-only");
-        self->Emit("vpnState",Wrap(result->Copy(false)));self->Reply(callback,result);
+        const bool connected=result->GetBool("connected");
+        result->SetString("state",connected?"connected":"disconnected");result->SetString("scope","soulu-only");
+        for(auto* window:windows_){window->vpn_enabled_=connected;window->vpn_active_profile_id_=connected?result->GetString("activeProfileId").ToString():"";for(auto& profile:window->profiles_)window->ApplyProxy(profile.context);window->ApplyProxy(window->incognito_context_);window->Emit("vpnState",Wrap(result->Copy(false)));}
+        self->Reply(callback,result);
       }));
     }));
     return;

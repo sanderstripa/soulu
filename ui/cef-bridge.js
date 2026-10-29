@@ -87,7 +87,7 @@
     openBookmark: url => invoke("browser.bookmarks.open", url),
     getSettingsSite: tabId => invoke("browser.settings.siteSnapshot", {tabId}),
     clearSettingsSite: snapshot => invoke("browser.settings.clearSite", snapshot),
-    openSettingsWindow: () => invoke("browser.settings.openWindow"),
+    openSettingsWindow: section => invoke("browser.settings.openWindow",section||null),
     getSettings: () => invoke("browser.settings.get"),
     setSettings: value => invoke("browser.settings.set", value),
     chooseDownloadFolder: () => invoke("browser.downloads.chooseFolder"),

@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="navigation.css">
   <link rel="stylesheet" href="site-reader.css">
   <link rel="stylesheet" href="toolbar-ui.css">
+  <link rel="stylesheet" href="vpn-toolbar.css">
   <link rel="stylesheet" href="adaptive-toolbar.css">
 <link rel="stylesheet" href="page-glass.css">
 <link rel="stylesheet" href="motion.css"><link rel="preload" href="fonts/Onest-Regular.ttf" as="font" type="font/ttf" crossorigin><link rel="preload" href="fonts/Onest-Medium.ttf" as="font" type="font/ttf" crossorigin><link rel="preload" href="fonts/Onest-SemiBold.ttf" as="font" type="font/ttf" crossorigin><link rel="stylesheet" href="typography.css"><script src="typography.js" defer></script>  <link rel="stylesheet" href="translation-ui.css">
@@ -27,17 +28,13 @@
 
 
       <div class="compact-center-cluster">
-        <div class="extension-slot compact-extension-slot extension-left" aria-label="Закреплённые расширения">
-          <button class="compact-control vpn-button" id="compactVpnButton" title="VPN" aria-pressed="false"><img id="compactVpnToolbarIcon" src="vpn/icons/icon-off-32.svg" alt=""></button>
-        </div>
+        <button class="compact-control vpn-button" id="compactVpnButton" title="VPN" aria-pressed="false"><svg class="vpn-connect-glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6a8.5 8.5 0 1 0 0 12M12 12h8"/><circle cx="20.5" cy="12" r="1" fill="currentColor" stroke="none"/></svg></button>
 
 
         <div class="compact-tab-flow" id="compactTabFlow"><template id="compactTabsAnchor"></template></div>
 
 
-        <div class="extension-slot compact-extension-slot extension-right" aria-label="Закреплённые расширения">
-          <button class="compact-control vpn-button" id="compactVpnButtonRight" title="VPN" aria-pressed="false"><img id="compactVpnToolbarIconRight" src="vpn/icons/icon-off-32.svg" alt=""></button>
-        </div>
+
         <button class="compact-control compact-new-tab" id="compactNewTabButton" data-i18n-title="newTab"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
       </div>
 
@@ -64,13 +61,12 @@
       </div>
 
 
-      <div class="extension-slot classic-extension-slot extension-left" aria-label="Закреплённые расширения">
-        <button class="toolbar-button vpn-button" id="vpnButton" title="VPN" aria-pressed="false"><img id="vpnToolbarIcon" src="vpn/icons/icon-off-32.svg" alt=""></button>
-      </div>
+
 
 
       </div>
       <div class="classic-address-wrap">
+<button class="toolbar-button vpn-button" id="vpnButton" title="VPN" aria-pressed="false"><svg class="vpn-connect-glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6a8.5 8.5 0 1 0 0 12M12 12h8"/><circle cx="20.5" cy="12" r="1" fill="currentColor" stroke="none"/></svg></button>
         <form class="classic-address-pill" id="classicAddressForm">
           <button class="address-menu-button" type="button" id="classicPageMenu" data-i18n-title="pageMenu"><svg viewBox="0 0 20 20"><path d="M4 5.5h12M4 10h12M4 14.5h7"/></svg></button>
           <input id="classicAddress" data-i18n-placeholder="addressPlaceholder" placeholder="Поиск или адрес" autocomplete="off" spellcheck="false">
@@ -82,9 +78,7 @@
 
 
       <div class="classic-navigation-right">
-      <div class="extension-slot classic-extension-slot extension-right" aria-label="Закреплённые расширения">
-        <button class="toolbar-button vpn-button" id="vpnButtonRight" title="VPN" aria-pressed="false"><img id="vpnToolbarIconRight" src="vpn/icons/icon-off-32.svg" alt=""></button>
-      </div>
+
 
 
       <button class="toolbar-button downloads-control auto-hidden" id="downloadsButton" data-i18n-title="downloads" aria-expanded="false">
@@ -116,7 +110,6 @@
   <aside class="sidebar" id="sidebar"><div class="panel-heading"><div><strong data-i18n="tabs">Вкладки</strong><small id="sidebarCount"></small></div><button id="sidebarNewTab">+</button></div><div id="sidebarTabs"></div></aside>
   <aside class="side-panel" id="favoritesPanel"><div class="panel-heading"><div><strong data-i18n="favorites">Избранное</strong><small data-i18n="savedPages">Сохранённые страницы</small></div><button id="addFavoriteButton">☆</button></div><div id="favoritesList"></div></aside>
   <aside class="side-panel downloads-panel" id="downloadsPanel"><div class="panel-heading"><div><strong data-i18n="downloads">Загрузки</strong><small data-i18n="recentDownloads">Текущие и недавние</small></div></div><div id="downloadsList"></div></aside>
-  <aside class="vpn-panel" id="vpnPanel"><iframe id="vpnFrame" src="vpn/popup.html" title="VPN"></iframe></aside>
 
 
   <script src="motion.js"></script><script src="cef-bridge.js"></script>

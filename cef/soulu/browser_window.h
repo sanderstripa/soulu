@@ -187,6 +187,7 @@ class BrowserWindow final : public CefBaseRefCounted {
   bool SaveSettings() const;
   CefRefPtr<CefDictionaryValue> EffectiveSettings() const;
   CefRefPtr<CefDictionaryValue> SettingsSnapshot();
+  bool CommitVpnSettings(CefRefPtr<CefDictionaryValue> next, std::string& error);
   bool SaveSettingsSnapshot(CefRefPtr<CefDictionaryValue> requested, std::string& error);
   void RefreshSettingsAppearance();
   bool GuardSettingsClose(int id, bool all = false);
@@ -329,6 +330,8 @@ class BrowserWindow final : public CefBaseRefCounted {
   bool reported_maximized_ = false;
   bool bookmarks_auto_visible_ = false;
   bool vpn_enabled_ = false;
+  std::string vpn_active_profile_id_;
+  std::string settings_requested_section_;
   bool closing_ = false;
   bool importing_ = false;
   std::shared_ptr<ImportControl> import_control_;

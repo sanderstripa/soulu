@@ -1,0 +1,11 @@
+/* Connect's standalone mark follows the toolbar's ink and shared hit target. */
+.browser-toolbar .vpn-button{color:var(--text);box-shadow:none;background:transparent}
+.browser-toolbar .vpn-button.connected{color:light-dark(#087f5b,#57d6a3);background:transparent;box-shadow:none}
+.browser-toolbar .vpn-button:hover{background:var(--soft)}
+.browser-toolbar .vpn-button .vpn-connect-glyph{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.25;stroke-linecap:round;stroke-linejoin:round;filter:none;opacity:1}
+.browser-toolbar .vpn-button.busy .vpn-connect-glyph{animation:vpn-pulse .85s ease-in-out infinite alternate}
+.classic-address-wrap{position:relative}
+.classic-address-wrap>.vpn-button{position:absolute;right:calc(100% + 6px);top:50%;transform:translateY(-50%)}
+body[data-address-position=left][data-show-vpn=true] .classic-address-wrap{padding-left:38px}
+body[data-address-position=left] .classic-address-wrap>.vpn-button{right:auto;left:0}
+@media(prefers-reduced-motion:reduce){.browser-toolbar .vpn-button.busy .vpn-connect-glyph{animation:none;opacity:.6}}
