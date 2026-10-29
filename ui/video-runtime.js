@@ -5,7 +5,9 @@ function(run){
  const encode=async value=>{if(value===undefined||value===null)return '';if(typeof value==='string')return value;if(value instanceof Blob)value=await value.arrayBuffer();if(value instanceof ArrayBuffer)value=new Uint8Array(value);if(ArrayBuffer.isView(value)){let text='';const bytes=new Uint8Array(value.buffer,value.byteOffset,value.byteLength);for(let i=0;i<bytes.length;i+=16384)text+=String.fromCharCode(...bytes.subarray(i,i+16384));return btoa(text)}throw Error('Unsupported video request body')};
  const decode=text=>{const raw=atob(text||''),bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);return bytes};
  call({op:'init'}).then(init=>{
+  globalThis.performance?.mark?.('soulu.video.runtime.initialized');
   if(!init.enabled)return;
+  globalThis.performance?.mark?.('soulu.video.runtime.enabled');
   const storage=init.values||{},listeners=new Map();let listenerId=0,xhrId=0;
 
   native(JSON.stringify({op:'watch'}),raw=>{try{const update=JSON.parse(raw);if(!update.values)return;const fresh=update.values;for(const key of new Set([...Object.keys(storage),...Object.keys(fresh)])){const old=storage[key],value=fresh[key];if(JSON.stringify(old)===JSON.stringify(value))continue;if(Object.hasOwn(fresh,key))storage[key]=structuredClone(value);else delete storage[key];for(const entry of listeners.values())if(entry.key===key)entry.fn(key,old,value,true)}}catch(error){console.error('Video preferences:',error)}});
