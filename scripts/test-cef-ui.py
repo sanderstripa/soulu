@@ -223,15 +223,40 @@ try:
     hit=user.WindowFromPoint(point)
     desktop_ready=desktop_ready and user.GetAncestor(hit,2)==hwnd
     physical_input=False
+    class GUIINFO(ctypes.Structure):
+        _fields_=[('size',wintypes.DWORD),('flags',wintypes.DWORD),('active',wintypes.HWND),('focus',wintypes.HWND),('capture',wintypes.HWND),('menu',wintypes.HWND),('move',wintypes.HWND),('caret',wintypes.HWND),('rect',wintypes.RECT)]
+    user.GetGUIThreadInfo.argtypes=[wintypes.DWORD,ctypes.POINTER(GUIINFO)]
+    user.SendMessageW.argtypes=[wintypes.HWND,wintypes.UINT,wintypes.WPARAM,wintypes.LPARAM]
+    user.SendMessageW.restype=wintypes.LPARAM
+    def native_input_state():
+        gui=GUIINFO();gui.size=ctypes.sizeof(gui);user.GetGUIThreadInfo(target_thread,ctypes.byref(gui))
+        def name(window):
+            value=ctypes.create_unicode_buffer(128);user.GetClassNameW(window,value,128);return value.value
+        return {'focus':int(gui.focus or 0),'focusClass':name(gui.focus),'hitClass':name(user.WindowFromPoint(point)),'rootHitTest':user.SendMessageW(hwnd,0x84,0,(point.y<<16)|(point.x&65535)),'dom':evaluate(shell,"({active:document.activeElement?.id,dpr:devicePixelRatio,hit:document.elementFromPoint("+str(pos['x'])+","+str(pos['y'])+")?.id})")}
     if desktop_ready:
         user.SetCursorPos(point.x,point.y)
         user.mouse_event(2,0,0,0,0);user.mouse_event(4,0,0,0,0);time.sleep(.2)
+        print('Native input after click:',json.dumps(native_input_state()),flush=True)
         assert user.GetForegroundWindow()==hwnd, 'Browser lost physical desktop focus before input'
-        user.keybd_event(0x11,0,0,0);user.keybd_event(0x41,0,0,0);user.keybd_event(0x41,0,2,0);user.keybd_event(0x11,0,2,0)
-        for character in 'SOULU TEST':
-            user.keybd_event(ord(character),0,0,0);user.keybd_event(ord(character),0,2,0)
-        time.sleep(.4)
+        class KEYBD(ctypes.Structure):
+            _fields_=[('vk',wintypes.WORD),('scan',wintypes.WORD),('flags',wintypes.DWORD),('time',wintypes.DWORD),('extra',ctypes.c_size_t)]
+        class MOUSE(ctypes.Structure):
+            _fields_=[('x',wintypes.LONG),('y',wintypes.LONG),('data',wintypes.DWORD),('flags',wintypes.DWORD),('time',wintypes.DWORD),('extra',ctypes.c_size_t)]
+        class PAYLOAD(ctypes.Union):
+            _fields_=[('keyboard',KEYBD),('mouse',MOUSE)]
+        class INPUT(ctypes.Structure):
+            _fields_=[('type',wintypes.DWORD),('payload',PAYLOAD)]
+        user.SendInput.argtypes=[wintypes.UINT,ctypes.POINTER(INPUT),ctypes.c_int]
+        def send_key(vk,flags=0,scan=0):
+            value=INPUT();value.type=1;value.payload.keyboard=KEYBD(vk,scan or user.MapVirtualKeyW(vk,0),flags,0,0)
+            assert user.SendInput(1,ctypes.byref(value),ctypes.sizeof(value))==1, 'Windows rejected keyboard injection'
+        send_key(0x11);send_key(0x41);send_key(0x41,2);send_key(0x11,2)
+        time.sleep(.05)
+        for character in 'soulu test':
+            send_key(0,4,ord(character));send_key(0,6,ord(character))
+        time.sleep(.5)
         typed=evaluate(shell,"document.querySelector('#compactAddress').value")
+        print('Native input after keys:',json.dumps(native_input_state()),flush=True)
         assert typed.lower()=='soulu test', ('Physical address input failed with confirmed foreground',typed)
         physical_input=True
     else:
@@ -287,3 +312,4 @@ try:
 finally:
     if settings: settings.close()
     shell.close()
+
