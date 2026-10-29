@@ -1,0 +1,2673 @@
+{
+  "timezone": "Asia/Yekaterinburg",
+  "coverageStart": "2026-10-28T20:12:00Z",
+  "coverageReason": "Первый сохранённый коммит матового режима, 29.10.2026 01:12 UTC+5. Точное начало подготовки до этого коммита неизвестно.",
+  "runs": [
+    {
+      "id": 40826822181,
+      "name": "Build Soulu Beta",
+      "branch": "main",
+      "sha": "acdb0bcf0cc5910acdd51bbc82e78a5c7dc078f9",
+      "start": "2026-10-29T06:02:25Z",
+      "end": "2026-10-29T06:38:49Z",
+      "status": "completed",
+      "result": "success",
+      "url": "https://github.com/sanderstripa/soulu/actions/runs/40826822181"
+    },
+    {
+      "id": 40811164252,
+      "name": "Recheck compiled page glass",
+      "branch": "codex/page-glass-recheck",
+      "sha": "d12a0e8d52eb72775567db6b3ed8d5eb2251ac35",
+      "start": "2026-10-29T03:16:00Z",
+      "end": "2026-10-29T03:17:31Z",
+      "status": "completed",
+      "result": "success",
+      "url": "https://github.com/sanderstripa/soulu/actions/runs/40811164252"
+    },
+    {
+      "id": 40810921922,
+      "name": "Recheck compiled page glass",
+      "branch": "codex/page-glass-recheck",
+      "sha": "92cc0555bd65a6889aa69fa6ca879d8858638b36",
+      "start": "2026-10-29T03:13:33Z",
+      "end": "2026-10-29T03:14:31Z",
+      "status": "completed",
+      "result": "success",
+      "url": "https://github.com/sanderstripa/soulu/actions/runs/40810921922"
+    },
+    {
+      "id": 40771552082,
+      "name": "Recheck compiled page glass",
+      "branch": "codex/page-glass-recheck",
+      "sha": "15b722c1bd8a109dd6595dc3c90fea3c9bae49ad",
+      "start": "2026-10-28T21:23:32Z",
+      "end": "2026-10-28T21:24:20Z",
+      "status": "completed",
+      "result": "success",
+      "url": "https://github.com/sanderstripa/soulu/actions/runs/40771552082"
+    },
+    {
+      "id": 40771343188,
+      "name": "Test page-content glass prototype",
+      "branch": "codex/page-glass",
+      "sha": "1c44e7b1772dd2061593c9761da25d8563663ce3",
+      "start": "2026-10-28T21:22:02Z",
+      "end": "2026-10-28T21:32:24Z",
+      "status": "completed",
+      "result": "success",
+      "url": "https://github.com/sanderstripa/soulu/actions/runs/40771343188"
+    },
+    {
+      "id": 40769480160,
+      "name": "Test page-content glass prototype",
+      "branch": "codex/page-glass",
+      "sha": "086fb12a2eac4e3652febb1291c7a91d252a3cda",
+      "start": "2026-10-28T21:08:53Z",
+      "end": "2026-10-28T21:19:17Z",
+      "status": "completed",
+      "result": "failure",
+      "url": "https://github.com/sanderstripa/soulu/actions/runs/40769480160"
+    },
+    {
+      "id": 40767561416,
+      "name": "Test page-content glass prototype",
+      "branch": "codex/page-glass",
+      "sha": "f26cdb91ffc506d437e212e07d8e829c924ecbde",
+      "start": "2026-10-28T20:55:32Z",
+      "end": "2026-10-28T21:04:00Z",
+      "status": "completed",
+      "result": "failure",
+      "url": "https://github.com/sanderstripa/soulu/actions/runs/40767561416"
+    },
+    {
+      "id": 40765028830,
+      "name": "Test page-content glass prototype",
+      "branch": "codex/page-glass",
+      "sha": "90d2a1f202d28d5259b896a94b646fff33bcdd3c",
+      "start": "2026-10-28T20:38:07Z",
+      "end": "2026-10-28T20:49:21Z",
+      "status": "completed",
+      "result": "failure",
+      "url": "https://github.com/sanderstripa/soulu/actions/runs/40765028830"
+    },
+    {
+      "id": 40763405891,
+      "name": "Test page-content glass prototype",
+      "branch": "codex/page-glass",
+      "sha": "08dd1cec36e322db9ee944f9cc5c47265f9af13d",
+      "start": "2026-10-28T20:27:10Z",
+      "end": "2026-10-28T20:36:38Z",
+      "status": "completed",
+      "result": "failure",
+      "url": "https://github.com/sanderstripa/soulu/actions/runs/40763405891"
+    },
+    {
+      "id": 40763077454,
+      "name": "Test page-content glass prototype",
+      "branch": "codex/page-glass",
+      "sha": "ffb3c68f242ea5d15ebe4f1935463a77ba68d0ea",
+      "start": "2026-10-28T20:25:00Z",
+      "end": "2026-10-28T20:26:23Z",
+      "status": "completed",
+      "result": "failure",
+      "url": "https://github.com/sanderstripa/soulu/actions/runs/40763077454"
+    },
+    {
+      "id": 40761152159,
+      "name": "Test page-content glass prototype",
+      "branch": "codex/page-glass",
+      "sha": "f84995a573069ced36817c2709f78c59060ee4bc",
+      "start": "2026-10-28T20:12:17Z",
+      "end": "2026-10-28T20:22:12Z",
+      "status": "completed",
+      "result": "failure",
+      "url": "https://github.com/sanderstripa/soulu/actions/runs/40761152159"
+    }
+  ],
+  "jobs": [
+    {
+      "runId": 40811164252,
+      "id": 123241543262,
+      "name": "recheck",
+      "start": "2026-10-29T03:16:02Z",
+      "end": "2026-10-29T03:17:30Z",
+      "result": "success",
+      "steps": [
+        {
+          "name": "Set up job",
+          "start": "2026-10-29T03:16:03Z",
+          "end": "2026-10-29T03:16:04Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "start": "2026-10-29T03:16:04Z",
+          "end": "2026-10-29T03:16:10Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Verify identical native and UI source",
+          "start": "2026-10-29T03:16:10Z",
+          "end": "2026-10-29T03:16:11Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Run actions/setup-python@v5",
+          "start": "2026-10-29T03:16:11Z",
+          "end": "2026-10-29T03:16:11Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Download unchanged CEF distribution from the previous release",
+          "start": "2026-10-29T03:16:11Z",
+          "end": "2026-10-29T03:16:15Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Run actions/download-artifact@v4",
+          "start": "2026-10-29T03:16:15Z",
+          "end": "2026-10-29T03:16:17Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Overlay the exactly matching experimental binary and UI",
+          "start": "2026-10-29T03:16:17Z",
+          "end": "2026-10-29T03:16:18Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Test live page glass, initial inset and opaque off state",
+          "start": "2026-10-29T03:16:18Z",
+          "end": "2026-10-29T03:16:46Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Check existing toolbar, adaptive animation and storage regressions",
+          "start": "2026-10-29T03:16:46Z",
+          "end": "2026-10-29T03:17:25Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Print native screenshots",
+          "start": "2026-10-29T03:17:25Z",
+          "end": "2026-10-29T03:17:26Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Run actions/upload-artifact@v4",
+          "start": "2026-10-29T03:17:26Z",
+          "end": "2026-10-29T03:17:27Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Post Run actions/setup-python@v5",
+          "start": "2026-10-29T03:17:27Z",
+          "end": "2026-10-29T03:17:27Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "start": "2026-10-29T03:17:27Z",
+          "end": "2026-10-29T03:17:29Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Complete job",
+          "start": "2026-10-29T03:17:29Z",
+          "end": "2026-10-29T03:17:29Z",
+          "result": "success",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "runId": 40810921922,
+      "id": 123240771826,
+      "name": "recheck",
+      "start": "2026-10-29T03:13:35Z",
+      "end": "2026-10-29T03:14:31Z",
+      "result": "success",
+      "steps": [
+        {
+          "name": "Set up job",
+          "start": "2026-10-29T03:13:36Z",
+          "end": "2026-10-29T03:13:37Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "start": "2026-10-29T03:13:37Z",
+          "end": "2026-10-29T03:13:44Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Verify identical native and UI source",
+          "start": "2026-10-29T03:13:44Z",
+          "end": "2026-10-29T03:13:44Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Run actions/setup-python@v5",
+          "start": "2026-10-29T03:13:44Z",
+          "end": "2026-10-29T03:13:45Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Download unchanged CEF distribution from the previous release",
+          "start": "2026-10-29T03:13:45Z",
+          "end": "2026-10-29T03:13:51Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Run actions/download-artifact@v4",
+          "start": "2026-10-29T03:13:51Z",
+          "end": "2026-10-29T03:13:54Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Overlay the exactly matching experimental binary and UI",
+          "start": "2026-10-29T03:13:54Z",
+          "end": "2026-10-29T03:13:55Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Test live page glass, initial inset and opaque off state",
+          "start": "2026-10-29T03:13:55Z",
+          "end": "2026-10-29T03:14:24Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Print native screenshots",
+          "start": "2026-10-29T03:14:24Z",
+          "end": "2026-10-29T03:14:26Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Run actions/upload-artifact@v4",
+          "start": "2026-10-29T03:14:26Z",
+          "end": "2026-10-29T03:14:27Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Post Run actions/setup-python@v5",
+          "start": "2026-10-29T03:14:27Z",
+          "end": "2026-10-29T03:14:27Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "start": "2026-10-29T03:14:27Z",
+          "end": "2026-10-29T03:14:29Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Complete job",
+          "start": "2026-10-29T03:14:29Z",
+          "end": "2026-10-29T03:14:29Z",
+          "result": "success",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "runId": 40771552082,
+      "id": 123109780635,
+      "name": "recheck",
+      "start": "2026-10-28T21:23:37Z",
+      "end": "2026-10-28T21:24:20Z",
+      "result": "success",
+      "steps": [
+        {
+          "name": "Set up job",
+          "start": "2026-10-28T21:23:38Z",
+          "end": "2026-10-28T21:23:39Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "start": "2026-10-28T21:23:39Z",
+          "end": "2026-10-28T21:23:45Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Verify identical native and UI source",
+          "start": "2026-10-28T21:23:45Z",
+          "end": "2026-10-28T21:23:46Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Run actions/setup-python@v5",
+          "start": "2026-10-28T21:23:46Z",
+          "end": "2026-10-28T21:23:46Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Download unchanged CEF distribution from the previous release",
+          "start": "2026-10-28T21:23:46Z",
+          "end": "2026-10-28T21:23:54Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Run actions/download-artifact@v4",
+          "start": "2026-10-28T21:23:54Z",
+          "end": "2026-10-28T21:23:56Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Overlay the exactly matching experimental binary and UI",
+          "start": "2026-10-28T21:23:56Z",
+          "end": "2026-10-28T21:23:57Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Test live page glass, initial inset and opaque off state",
+          "start": "2026-10-28T21:23:57Z",
+          "end": "2026-10-28T21:24:14Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Print native screenshots",
+          "start": "2026-10-28T21:24:14Z",
+          "end": "2026-10-28T21:24:15Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Run actions/upload-artifact@v4",
+          "start": "2026-10-28T21:24:15Z",
+          "end": "2026-10-28T21:24:16Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Post Run actions/setup-python@v5",
+          "start": "2026-10-28T21:24:16Z",
+          "end": "2026-10-28T21:24:16Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "start": "2026-10-28T21:24:16Z",
+          "end": "2026-10-28T21:24:18Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Complete job",
+          "start": "2026-10-28T21:24:18Z",
+          "end": "2026-10-28T21:24:18Z",
+          "result": "success",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "runId": 40771343188,
+      "id": 123109055268,
+      "name": "windows-cef",
+      "start": "2026-10-28T21:22:05Z",
+      "end": "2026-10-28T21:32:24Z",
+      "result": "success",
+      "steps": [
+        {
+          "name": "Set up job",
+          "start": "2026-10-28T21:22:06Z",
+          "end": "2026-10-28T21:22:07Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Checkout Soulu",
+          "start": "2026-10-28T21:22:07Z",
+          "end": "2026-10-28T21:22:13Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Run actions/setup-go@v5",
+          "start": "2026-10-28T21:22:13Z",
+          "end": "2026-10-28T21:22:35Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Verify canonical generated geometry and typography",
+          "start": "2026-10-28T21:22:35Z",
+          "end": "2026-10-28T21:22:37Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Checkout official CEF project",
+          "start": "2026-10-28T21:22:37Z",
+          "end": "2026-10-28T21:22:41Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Pin the approved CEF distribution on a clean path",
+          "start": "2026-10-28T21:22:41Z",
+          "end": "2026-10-28T21:22:44Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Verify canonical typography and bundled fonts",
+          "start": "2026-10-28T21:22:44Z",
+          "end": "2026-10-28T21:22:52Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Build integrity-pinned local translation runtime",
+          "start": "2026-10-28T21:22:52Z",
+          "end": "2026-10-28T21:22:53Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Prepare integrity-pinned local speech model",
+          "start": "2026-10-28T21:22:53Z",
+          "end": "2026-10-28T21:22:56Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Add Soulu target and assets",
+          "start": "2026-10-28T21:22:56Z",
+          "end": "2026-10-28T21:22:57Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Compile page-glass Windows interop before the full CEF build",
+          "start": "2026-10-28T21:22:57Z",
+          "end": "2026-10-28T21:23:23Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Verify live backdrop sampling independently of CEF",
+          "start": "2026-10-28T21:23:23Z",
+          "end": "2026-10-28T21:23:44Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Use CEF-compatible Python",
+          "start": "2026-10-28T21:23:44Z",
+          "end": "2026-10-28T21:23:44Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Install CEF Python compatibility package",
+          "start": "2026-10-28T21:23:44Z",
+          "end": "2026-10-28T21:23:52Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Verify all production branding exports",
+          "start": "2026-10-28T21:23:52Z",
+          "end": "2026-10-28T21:23:53Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Restore compiled Rust dependencies",
+          "start": "2026-10-28T21:23:53Z",
+          "end": "2026-10-28T21:23:57Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Compile and test the pinned AdBlock engine",
+          "start": "2026-10-28T21:23:57Z",
+          "end": "2026-10-28T21:24:35Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Configure CEF",
+          "start": "2026-10-28T21:24:35Z",
+          "end": "2026-10-28T21:25:54Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Verify fresh CEF archive and distribution resources",
+          "start": "2026-10-28T21:25:54Z",
+          "end": "2026-10-28T21:25:56Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Build Soulu",
+          "start": "2026-10-28T21:25:56Z",
+          "end": "2026-10-28T21:31:55Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Save compiled Rust dependencies",
+          "start": "2026-10-28T21:31:55Z",
+          "end": "2026-10-28T21:31:55Z",
+          "result": "skipped",
+          "status": "completed"
+        },
+        {
+          "name": "Verify loaded engine and every CEF runtime component",
+          "start": "2026-10-28T21:31:55Z",
+          "end": "2026-10-28T21:31:58Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Upload candidate native executable before runtime checks",
+          "start": "2026-10-28T21:31:58Z",
+          "end": "2026-10-28T21:32:03Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Test real page under glass and opaque off state",
+          "start": "2026-10-28T21:32:03Z",
+          "end": "2026-10-28T21:32:14Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Print native screenshots for visual review",
+          "start": "2026-10-28T21:32:14Z",
+          "end": "2026-10-28T21:32:14Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Upload page glass prototype evidence",
+          "start": "2026-10-28T21:32:14Z",
+          "end": "2026-10-28T21:32:15Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Post Use CEF-compatible Python",
+          "start": "2026-10-28T21:32:15Z",
+          "end": "2026-10-28T21:32:16Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Post Checkout official CEF project",
+          "start": "2026-10-28T21:32:16Z",
+          "end": "2026-10-28T21:32:18Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Post Run actions/setup-go@v5",
+          "start": "2026-10-28T21:32:18Z",
+          "end": "2026-10-28T21:32:18Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Post Checkout Soulu",
+          "start": "2026-10-28T21:32:18Z",
+          "end": "2026-10-28T21:32:21Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Complete job",
+          "start": "2026-10-28T21:32:21Z",
+          "end": "2026-10-28T21:32:21Z",
+          "result": "success",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "runId": 40769480160,
+      "id": 123102469163,
+      "name": "windows-cef",
+      "start": "2026-10-28T21:08:56Z",
+      "end": "2026-10-28T21:19:16Z",
+      "result": "failure",
+      "steps": [
+        {
+          "name": "Set up job",
+          "start": "2026-10-28T21:08:57Z",
+          "end": "2026-10-28T21:08:59Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Checkout Soulu",
+          "start": "2026-10-28T21:08:59Z",
+          "end": "2026-10-28T21:09:05Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Run actions/setup-go@v5",
+          "start": "2026-10-28T21:09:05Z",
+          "end": "2026-10-28T21:09:28Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Verify canonical generated geometry and typography",
+          "start": "2026-10-28T21:09:28Z",
+          "end": "2026-10-28T21:09:29Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Checkout official CEF project",
+          "start": "2026-10-28T21:09:29Z",
+          "end": "2026-10-28T21:09:32Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Pin the approved CEF distribution on a clean path",
+          "start": "2026-10-28T21:09:32Z",
+          "end": "2026-10-28T21:09:35Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Verify canonical typography and bundled fonts",
+          "start": "2026-10-28T21:09:35Z",
+          "end": "2026-10-28T21:09:43Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Build integrity-pinned local translation runtime",
+          "start": "2026-10-28T21:09:43Z",
+          "end": "2026-10-28T21:09:44Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Prepare integrity-pinned local speech model",
+          "start": "2026-10-28T21:09:44Z",
+          "end": "2026-10-28T21:09:46Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Add Soulu target and assets",
+          "start": "2026-10-28T21:09:46Z",
+          "end": "2026-10-28T21:09:47Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Compile page-glass Windows interop before the full CEF build",
+          "start": "2026-10-28T21:09:47Z",
+          "end": "2026-10-28T21:10:23Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Verify live backdrop sampling independently of CEF",
+          "start": "2026-10-28T21:10:23Z",
+          "end": "2026-10-28T21:10:45Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Use CEF-compatible Python",
+          "start": "2026-10-28T21:10:45Z",
+          "end": "2026-10-28T21:10:45Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Install CEF Python compatibility package",
+          "start": "2026-10-28T21:10:45Z",
+          "end": "2026-10-28T21:10:53Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Verify all production branding exports",
+          "start": "2026-10-28T21:10:53Z",
+          "end": "2026-10-28T21:10:53Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Restore compiled Rust dependencies",
+          "start": "2026-10-28T21:10:53Z",
+          "end": "2026-10-28T21:10:59Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Compile and test the pinned AdBlock engine",
+          "start": "2026-10-28T21:10:59Z",
+          "end": "2026-10-28T21:11:33Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Configure CEF",
+          "start": "2026-10-28T21:11:33Z",
+          "end": "2026-10-28T21:12:48Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Verify fresh CEF archive and distribution resources",
+          "start": "2026-10-28T21:12:48Z",
+          "end": "2026-10-28T21:12:50Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Build Soulu",
+          "start": "2026-10-28T21:12:50Z",
+          "end": "2026-10-28T21:18:51Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Save compiled Rust dependencies",
+          "start": "2026-10-28T21:18:51Z",
+          "end": "2026-10-28T21:18:51Z",
+          "result": "skipped",
+          "status": "completed"
+        },
+        {
+          "name": "Verify loaded engine and every CEF runtime component",
+          "start": "2026-10-28T21:18:51Z",
+          "end": "2026-10-28T21:18:54Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Upload candidate native executable before runtime checks",
+          "start": "2026-10-28T21:18:54Z",
+          "end": "2026-10-28T21:18:59Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Test real page under glass and opaque off state",
+          "start": "2026-10-28T21:18:59Z",
+          "end": "2026-10-28T21:19:07Z",
+          "result": "failure",
+          "status": "completed"
+        },
+        {
+          "name": "Upload page glass prototype evidence",
+          "start": "2026-10-28T21:19:07Z",
+          "end": "2026-10-28T21:19:09Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Post Use CEF-compatible Python",
+          "start": "2026-10-28T21:19:09Z",
+          "end": "2026-10-28T21:19:09Z",
+          "result": "skipped",
+          "status": "completed"
+        },
+        {
+          "name": "Post Checkout official CEF project",
+          "start": "2026-10-28T21:19:09Z",
+          "end": "2026-10-28T21:19:11Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Post Run actions/setup-go@v5",
+          "start": "2026-10-28T21:19:11Z",
+          "end": "2026-10-28T21:19:11Z",
+          "result": "skipped",
+          "status": "completed"
+        },
+        {
+          "name": "Post Checkout Soulu",
+          "start": "2026-10-28T21:19:11Z",
+          "end": "2026-10-28T21:19:13Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Complete job",
+          "start": "2026-10-28T21:19:13Z",
+          "end": "2026-10-28T21:19:13Z",
+          "result": "success",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "runId": 40767561416,
+      "id": 123095691361,
+      "name": "windows-cef",
+      "start": "2026-10-28T20:55:36Z",
+      "end": "2026-10-28T21:04:00Z",
+      "result": "failure",
+      "steps": [
+        {
+          "name": "Set up job",
+          "start": "2026-10-28T20:55:36Z",
+          "end": "2026-10-28T20:55:38Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Checkout Soulu",
+          "start": "2026-10-28T20:55:38Z",
+          "end": "2026-10-28T20:55:46Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Run actions/setup-go@v5",
+          "start": "2026-10-28T20:55:46Z",
+          "end": "2026-10-28T20:56:09Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Verify canonical generated geometry and typography",
+          "start": "2026-10-28T20:56:09Z",
+          "end": "2026-10-28T20:56:11Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Checkout official CEF project",
+          "start": "2026-10-28T20:56:11Z",
+          "end": "2026-10-28T20:56:13Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Pin the approved CEF distribution on a clean path",
+          "start": "2026-10-28T20:56:13Z",
+          "end": "2026-10-28T20:56:16Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Verify canonical typography and bundled fonts",
+          "start": "2026-10-28T20:56:16Z",
+          "end": "2026-10-28T20:56:23Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Build integrity-pinned local translation runtime",
+          "start": "2026-10-28T20:56:23Z",
+          "end": "2026-10-28T20:56:24Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Prepare integrity-pinned local speech model",
+          "start": "2026-10-28T20:56:24Z",
+          "end": "2026-10-28T20:56:25Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Add Soulu target and assets",
+          "start": "2026-10-28T20:56:25Z",
+          "end": "2026-10-28T20:56:26Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Compile page-glass Windows interop before the full CEF build",
+          "start": "2026-10-28T20:56:26Z",
+          "end": "2026-10-28T20:56:52Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Use CEF-compatible Python",
+          "start": "2026-10-28T20:56:52Z",
+          "end": "2026-10-28T20:56:52Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Install CEF Python compatibility package",
+          "start": "2026-10-28T20:56:52Z",
+          "end": "2026-10-28T20:56:59Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Verify all production branding exports",
+          "start": "2026-10-28T20:56:59Z",
+          "end": "2026-10-28T20:57:00Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Restore compiled Rust dependencies",
+          "start": "2026-10-28T20:57:00Z",
+          "end": "2026-10-28T20:57:05Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Compile and test the pinned AdBlock engine",
+          "start": "2026-10-28T20:57:05Z",
+          "end": "2026-10-28T20:57:39Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Configure CEF",
+          "start": "2026-10-28T20:57:39Z",
+          "end": "2026-10-28T20:58:37Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Verify fresh CEF archive and distribution resources",
+          "start": "2026-10-28T20:58:37Z",
+          "end": "2026-10-28T20:58:38Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Build Soulu",
+          "start": "2026-10-28T20:58:38Z",
+          "end": "2026-10-28T21:02:57Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Save compiled Rust dependencies",
+          "start": "2026-10-28T21:02:57Z",
+          "end": "2026-10-28T21:02:57Z",
+          "result": "skipped",
+          "status": "completed"
+        },
+        {
+          "name": "Verify loaded engine and every CEF runtime component",
+          "start": "2026-10-28T21:02:57Z",
+          "end": "2026-10-28T21:02:59Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Upload candidate native executable before runtime checks",
+          "start": "2026-10-28T21:02:59Z",
+          "end": "2026-10-28T21:03:04Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Test real page under glass and opaque off state",
+          "start": "2026-10-28T21:03:04Z",
+          "end": "2026-10-28T21:03:52Z",
+          "result": "failure",
+          "status": "completed"
+        },
+        {
+          "name": "Upload page glass prototype evidence",
+          "start": "2026-10-28T21:03:52Z",
+          "end": "2026-10-28T21:03:53Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Post Use CEF-compatible Python",
+          "start": "2026-10-28T21:03:53Z",
+          "end": "2026-10-28T21:03:53Z",
+          "result": "skipped",
+          "status": "completed"
+        },
+        {
+          "name": "Post Checkout official CEF project",
+          "start": "2026-10-28T21:03:53Z",
+          "end": "2026-10-28T21:03:55Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Post Run actions/setup-go@v5",
+          "start": "2026-10-28T21:03:55Z",
+          "end": "2026-10-28T21:03:55Z",
+          "result": "skipped",
+          "status": "completed"
+        },
+        {
+          "name": "Post Checkout Soulu",
+          "start": "2026-10-28T21:03:55Z",
+          "end": "2026-10-28T21:03:57Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Complete job",
+          "start": "2026-10-28T21:03:57Z",
+          "end": "2026-10-28T21:03:57Z",
+          "result": "success",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "runId": 40765028830,
+      "id": 123086747208,
+      "name": "windows-cef",
+      "start": "2026-10-28T20:38:09Z",
+      "end": "2026-10-28T20:49:20Z",
+      "result": "failure",
+      "steps": [
+        {
+          "name": "Set up job",
+          "start": "2026-10-28T20:38:10Z",
+          "end": "2026-10-28T20:38:12Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Checkout Soulu",
+          "start": "2026-10-28T20:38:12Z",
+          "end": "2026-10-28T20:38:24Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Run actions/setup-go@v5",
+          "start": "2026-10-28T20:38:24Z",
+          "end": "2026-10-28T20:38:45Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Verify canonical generated geometry and typography",
+          "start": "2026-10-28T20:38:45Z",
+          "end": "2026-10-28T20:38:47Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Checkout official CEF project",
+          "start": "2026-10-28T20:38:47Z",
+          "end": "2026-10-28T20:38:56Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Pin the approved CEF distribution on a clean path",
+          "start": "2026-10-28T20:38:56Z",
+          "end": "2026-10-28T20:38:58Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Verify canonical typography and bundled fonts",
+          "start": "2026-10-28T20:38:58Z",
+          "end": "2026-10-28T20:39:06Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Build integrity-pinned local translation runtime",
+          "start": "2026-10-28T20:39:06Z",
+          "end": "2026-10-28T20:39:08Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Prepare integrity-pinned local speech model",
+          "start": "2026-10-28T20:39:08Z",
+          "end": "2026-10-28T20:39:10Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Add Soulu target and assets",
+          "start": "2026-10-28T20:39:10Z",
+          "end": "2026-10-28T20:39:10Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Compile page-glass Windows interop before the full CEF build",
+          "start": "2026-10-28T20:39:10Z",
+          "end": "2026-10-28T20:39:35Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Use CEF-compatible Python",
+          "start": "2026-10-28T20:39:35Z",
+          "end": "2026-10-28T20:39:35Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Install CEF Python compatibility package",
+          "start": "2026-10-28T20:39:35Z",
+          "end": "2026-10-28T20:39:43Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Verify all production branding exports",
+          "start": "2026-10-28T20:39:43Z",
+          "end": "2026-10-28T20:39:43Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Restore compiled Rust dependencies",
+          "start": "2026-10-28T20:39:43Z",
+          "end": "2026-10-28T20:39:48Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Compile and test the pinned AdBlock engine",
+          "start": "2026-10-28T20:39:48Z",
+          "end": "2026-10-28T20:40:28Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Configure CEF",
+          "start": "2026-10-28T20:40:28Z",
+          "end": "2026-10-28T20:42:10Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Verify fresh CEF archive and distribution resources",
+          "start": "2026-10-28T20:42:10Z",
+          "end": "2026-10-28T20:42:12Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Build Soulu",
+          "start": "2026-10-28T20:42:12Z",
+          "end": "2026-10-28T20:48:14Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Save compiled Rust dependencies",
+          "start": "2026-10-28T20:48:14Z",
+          "end": "2026-10-28T20:48:14Z",
+          "result": "skipped",
+          "status": "completed"
+        },
+        {
+          "name": "Verify loaded engine and every CEF runtime component",
+          "start": "2026-10-28T20:48:14Z",
+          "end": "2026-10-28T20:48:16Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Upload candidate native executable before runtime checks",
+          "start": "2026-10-28T20:48:16Z",
+          "end": "2026-10-28T20:48:22Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Test real page under glass and opaque off state",
+          "start": "2026-10-28T20:48:22Z",
+          "end": "2026-10-28T20:49:11Z",
+          "result": "failure",
+          "status": "completed"
+        },
+        {
+          "name": "Upload page glass prototype evidence",
+          "start": "2026-10-28T20:49:11Z",
+          "end": "2026-10-28T20:49:12Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Post Use CEF-compatible Python",
+          "start": "2026-10-28T20:49:12Z",
+          "end": "2026-10-28T20:49:12Z",
+          "result": "skipped",
+          "status": "completed"
+        },
+        {
+          "name": "Post Checkout official CEF project",
+          "start": "2026-10-28T20:49:12Z",
+          "end": "2026-10-28T20:49:15Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Post Run actions/setup-go@v5",
+          "start": "2026-10-28T20:49:15Z",
+          "end": "2026-10-28T20:49:15Z",
+          "result": "skipped",
+          "status": "completed"
+        },
+        {
+          "name": "Post Checkout Soulu",
+          "start": "2026-10-28T20:49:15Z",
+          "end": "2026-10-28T20:49:17Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Complete job",
+          "start": "2026-10-28T20:49:17Z",
+          "end": "2026-10-28T20:49:17Z",
+          "result": "success",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "runId": 40763405891,
+      "id": 123081023552,
+      "name": "windows-cef",
+      "start": "2026-10-28T20:27:12Z",
+      "end": "2026-10-28T20:36:38Z",
+      "result": "failure",
+      "steps": [
+        {
+          "name": "Set up job",
+          "start": "2026-10-28T20:27:13Z",
+          "end": "2026-10-28T20:27:14Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Checkout Soulu",
+          "start": "2026-10-28T20:27:14Z",
+          "end": "2026-10-28T20:27:20Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Run actions/setup-go@v5",
+          "start": "2026-10-28T20:27:20Z",
+          "end": "2026-10-28T20:27:41Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Verify canonical generated geometry and typography",
+          "start": "2026-10-28T20:27:41Z",
+          "end": "2026-10-28T20:27:43Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Checkout official CEF project",
+          "start": "2026-10-28T20:27:43Z",
+          "end": "2026-10-28T20:27:47Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Pin the approved CEF distribution on a clean path",
+          "start": "2026-10-28T20:27:47Z",
+          "end": "2026-10-28T20:27:50Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Verify canonical typography and bundled fonts",
+          "start": "2026-10-28T20:27:50Z",
+          "end": "2026-10-28T20:27:58Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Build integrity-pinned local translation runtime",
+          "start": "2026-10-28T20:27:58Z",
+          "end": "2026-10-28T20:27:59Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Prepare integrity-pinned local speech model",
+          "start": "2026-10-28T20:27:59Z",
+          "end": "2026-10-28T20:28:00Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Add Soulu target and assets",
+          "start": "2026-10-28T20:28:00Z",
+          "end": "2026-10-28T20:28:01Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Compile page-glass Windows interop before the full CEF build",
+          "start": "2026-10-28T20:28:01Z",
+          "end": "2026-10-28T20:28:24Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Use CEF-compatible Python",
+          "start": "2026-10-28T20:28:24Z",
+          "end": "2026-10-28T20:28:24Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Install CEF Python compatibility package",
+          "start": "2026-10-28T20:28:24Z",
+          "end": "2026-10-28T20:28:31Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Verify all production branding exports",
+          "start": "2026-10-28T20:28:31Z",
+          "end": "2026-10-28T20:28:31Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Restore compiled Rust dependencies",
+          "start": "2026-10-28T20:28:31Z",
+          "end": "2026-10-28T20:28:35Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Compile and test the pinned AdBlock engine",
+          "start": "2026-10-28T20:28:35Z",
+          "end": "2026-10-28T20:29:08Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Configure CEF",
+          "start": "2026-10-28T20:29:08Z",
+          "end": "2026-10-28T20:30:33Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Verify fresh CEF archive and distribution resources",
+          "start": "2026-10-28T20:30:33Z",
+          "end": "2026-10-28T20:30:35Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Build Soulu",
+          "start": "2026-10-28T20:30:35Z",
+          "end": "2026-10-28T20:36:31Z",
+          "result": "failure",
+          "status": "completed"
+        },
+        {
+          "name": "Save compiled Rust dependencies",
+          "start": "2026-10-28T20:36:31Z",
+          "end": "2026-10-28T20:36:31Z",
+          "result": "skipped",
+          "status": "completed"
+        },
+        {
+          "name": "Verify loaded engine and every CEF runtime component",
+          "start": "2026-10-28T20:36:31Z",
+          "end": "2026-10-28T20:36:31Z",
+          "result": "skipped",
+          "status": "completed"
+        },
+        {
+          "name": "Upload candidate native executable before runtime checks",
+          "start": "2026-10-28T20:36:31Z",
+          "end": "2026-10-28T20:36:31Z",
+          "result": "skipped",
+          "status": "completed"
+        },
+        {
+          "name": "Test real page under glass and opaque off state",
+          "start": "2026-10-28T20:36:31Z",
+          "end": "2026-10-28T20:36:31Z",
+          "result": "skipped",
+          "status": "completed"
+        },
+        {
+          "name": "Upload page glass prototype evidence",
+          "start": "2026-10-28T20:36:31Z",
+          "end": "2026-10-28T20:36:31Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Post Use CEF-compatible Python",
+          "start": "2026-10-28T20:36:31Z",
+          "end": "2026-10-28T20:36:31Z",
+          "result": "skipped",
+          "status": "completed"
+        },
+        {
+          "name": "Post Checkout official CEF project",
+          "start": "2026-10-28T20:36:31Z",
+          "end": "2026-10-28T20:36:33Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Post Run actions/setup-go@v5",
+          "start": "2026-10-28T20:36:33Z",
+          "end": "2026-10-28T20:36:33Z",
+          "result": "skipped",
+          "status": "completed"
+        },
+        {
+          "name": "Post Checkout Soulu",
+          "start": "2026-10-28T20:36:33Z",
+          "end": "2026-10-28T20:36:35Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Complete job",
+          "start": "2026-10-28T20:36:35Z",
+          "end": "2026-10-28T20:36:35Z",
+          "result": "success",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "runId": 40763077454,
+      "id": 123079876928,
+      "name": "windows-cef",
+      "start": "2026-10-28T20:25:03Z",
+      "end": "2026-10-28T20:26:22Z",
+      "result": "failure",
+      "steps": [
+        {
+          "name": "Set up job",
+          "start": "2026-10-28T20:25:04Z",
+          "end": "2026-10-28T20:25:05Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Checkout Soulu",
+          "start": "2026-10-28T20:25:05Z",
+          "end": "2026-10-28T20:25:15Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Run actions/setup-go@v5",
+          "start": "2026-10-28T20:25:15Z",
+          "end": "2026-10-28T20:25:38Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Verify canonical generated geometry and typography",
+          "start": "2026-10-28T20:25:38Z",
+          "end": "2026-10-28T20:25:39Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Checkout official CEF project",
+          "start": "2026-10-28T20:25:39Z",
+          "end": "2026-10-28T20:25:43Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Pin the approved CEF distribution on a clean path",
+          "start": "2026-10-28T20:25:43Z",
+          "end": "2026-10-28T20:25:45Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Verify canonical typography and bundled fonts",
+          "start": "2026-10-28T20:25:45Z",
+          "end": "2026-10-28T20:25:52Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Build integrity-pinned local translation runtime",
+          "start": "2026-10-28T20:25:52Z",
+          "end": "2026-10-28T20:25:53Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Prepare integrity-pinned local speech model",
+          "start": "2026-10-28T20:25:53Z",
+          "end": "2026-10-28T20:25:54Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Add Soulu target and assets",
+          "start": "2026-10-28T20:25:54Z",
+          "end": "2026-10-28T20:25:55Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Compile page-glass Windows interop before the full CEF build",
+          "start": "2026-10-28T20:25:55Z",
+          "end": "2026-10-28T20:26:16Z",
+          "result": "failure",
+          "status": "completed"
+        },
+        {
+          "name": "Use CEF-compatible Python",
+          "start": "2026-10-28T20:26:16Z",
+          "end": "2026-10-28T20:26:16Z",
+          "result": "skipped",
+          "status": "completed"
+        },
+        {
+          "name": "Install CEF Python compatibility package",
+          "start": "2026-10-28T20:26:16Z",
+          "end": "2026-10-28T20:26:16Z",
+          "result": "skipped",
+          "status": "completed"
+        },
+        {
+          "name": "Verify all production branding exports",
+          "start": "2026-10-28T20:26:16Z",
+          "end": "2026-10-28T20:26:16Z",
+          "result": "skipped",
+          "status": "completed"
+        },
+        {
+          "name": "Restore compiled Rust dependencies",
+          "start": "2026-10-28T20:26:16Z",
+          "end": "2026-10-28T20:26:16Z",
+          "result": "skipped",
+          "status": "completed"
+        },
+        {
+          "name": "Compile and test the pinned AdBlock engine",
+          "start": "2026-10-28T20:26:16Z",
+          "end": "2026-10-28T20:26:16Z",
+          "result": "skipped",
+          "status": "completed"
+        },
+        {
+          "name": "Configure CEF",
+          "start": "2026-10-28T20:26:16Z",
+          "end": "2026-10-28T20:26:16Z",
+          "result": "skipped",
+          "status": "completed"
+        },
+        {
+          "name": "Verify fresh CEF archive and distribution resources",
+          "start": "2026-10-28T20:26:16Z",
+          "end": "2026-10-28T20:26:16Z",
+          "result": "skipped",
+          "status": "completed"
+        },
+        {
+          "name": "Build Soulu",
+          "start": "2026-10-28T20:26:16Z",
+          "end": "2026-10-28T20:26:16Z",
+          "result": "skipped",
+          "status": "completed"
+        },
+        {
+          "name": "Save compiled Rust dependencies",
+          "start": "2026-10-28T20:26:16Z",
+          "end": "2026-10-28T20:26:16Z",
+          "result": "skipped",
+          "status": "completed"
+        },
+        {
+          "name": "Verify loaded engine and every CEF runtime component",
+          "start": "2026-10-28T20:26:16Z",
+          "end": "2026-10-28T20:26:16Z",
+          "result": "skipped",
+          "status": "completed"
+        },
+        {
+          "name": "Upload candidate native executable before runtime checks",
+          "start": "2026-10-28T20:26:16Z",
+          "end": "2026-10-28T20:26:16Z",
+          "result": "skipped",
+          "status": "completed"
+        },
+        {
+          "name": "Test real page under glass and opaque off state",
+          "start": "2026-10-28T20:26:16Z",
+          "end": "2026-10-28T20:26:16Z",
+          "result": "skipped",
+          "status": "completed"
+        },
+        {
+          "name": "Upload page glass prototype evidence",
+          "start": "2026-10-28T20:26:16Z",
+          "end": "2026-10-28T20:26:16Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Post Checkout official CEF project",
+          "start": "2026-10-28T20:26:16Z",
+          "end": "2026-10-28T20:26:18Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Post Run actions/setup-go@v5",
+          "start": "2026-10-28T20:26:18Z",
+          "end": "2026-10-28T20:26:18Z",
+          "result": "skipped",
+          "status": "completed"
+        },
+        {
+          "name": "Post Checkout Soulu",
+          "start": "2026-10-28T20:26:18Z",
+          "end": "2026-10-28T20:26:20Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Complete job",
+          "start": "2026-10-28T20:26:20Z",
+          "end": "2026-10-28T20:26:20Z",
+          "result": "success",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "runId": 40761152159,
+      "id": 123073123055,
+      "name": "windows-cef",
+      "start": "2026-10-28T20:12:20Z",
+      "end": "2026-10-28T20:22:12Z",
+      "result": "failure",
+      "steps": [
+        {
+          "name": "Set up job",
+          "start": "2026-10-28T20:12:21Z",
+          "end": "2026-10-28T20:12:23Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Checkout Soulu",
+          "start": "2026-10-28T20:12:23Z",
+          "end": "2026-10-28T20:12:30Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Run actions/setup-go@v5",
+          "start": "2026-10-28T20:12:30Z",
+          "end": "2026-10-28T20:12:59Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Verify canonical generated geometry and typography",
+          "start": "2026-10-28T20:12:59Z",
+          "end": "2026-10-28T20:13:01Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Checkout official CEF project",
+          "start": "2026-10-28T20:13:01Z",
+          "end": "2026-10-28T20:13:04Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Pin the approved CEF distribution on a clean path",
+          "start": "2026-10-28T20:13:04Z",
+          "end": "2026-10-28T20:13:07Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Verify canonical typography and bundled fonts",
+          "start": "2026-10-28T20:13:07Z",
+          "end": "2026-10-28T20:13:16Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Build integrity-pinned local translation runtime",
+          "start": "2026-10-28T20:13:16Z",
+          "end": "2026-10-28T20:13:17Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Prepare integrity-pinned local speech model",
+          "start": "2026-10-28T20:13:17Z",
+          "end": "2026-10-28T20:13:19Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Add Soulu target and assets",
+          "start": "2026-10-28T20:13:19Z",
+          "end": "2026-10-28T20:13:20Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Use CEF-compatible Python",
+          "start": "2026-10-28T20:13:20Z",
+          "end": "2026-10-28T20:13:20Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Install CEF Python compatibility package",
+          "start": "2026-10-28T20:13:20Z",
+          "end": "2026-10-28T20:13:36Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Verify all production branding exports",
+          "start": "2026-10-28T20:13:36Z",
+          "end": "2026-10-28T20:13:37Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Restore compiled Rust dependencies",
+          "start": "2026-10-28T20:13:37Z",
+          "end": "2026-10-28T20:13:42Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Compile and test the pinned AdBlock engine",
+          "start": "2026-10-28T20:13:42Z",
+          "end": "2026-10-28T20:14:21Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Configure CEF",
+          "start": "2026-10-28T20:14:21Z",
+          "end": "2026-10-28T20:15:54Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Verify fresh CEF archive and distribution resources",
+          "start": "2026-10-28T20:15:54Z",
+          "end": "2026-10-28T20:15:56Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Build Soulu",
+          "start": "2026-10-28T20:15:56Z",
+          "end": "2026-10-28T20:22:04Z",
+          "result": "failure",
+          "status": "completed"
+        },
+        {
+          "name": "Save compiled Rust dependencies",
+          "start": "2026-10-28T20:22:04Z",
+          "end": "2026-10-28T20:22:04Z",
+          "result": "skipped",
+          "status": "completed"
+        },
+        {
+          "name": "Verify loaded engine and every CEF runtime component",
+          "start": "2026-10-28T20:22:04Z",
+          "end": "2026-10-28T20:22:04Z",
+          "result": "skipped",
+          "status": "completed"
+        },
+        {
+          "name": "Upload candidate native executable before runtime checks",
+          "start": "2026-10-28T20:22:04Z",
+          "end": "2026-10-28T20:22:04Z",
+          "result": "skipped",
+          "status": "completed"
+        },
+        {
+          "name": "Test real page under glass and opaque off state",
+          "start": "2026-10-28T20:22:04Z",
+          "end": "2026-10-28T20:22:04Z",
+          "result": "skipped",
+          "status": "completed"
+        },
+        {
+          "name": "Upload page glass prototype evidence",
+          "start": "2026-10-28T20:22:04Z",
+          "end": "2026-10-28T20:22:04Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Post Use CEF-compatible Python",
+          "start": "2026-10-28T20:22:04Z",
+          "end": "2026-10-28T20:22:04Z",
+          "result": "skipped",
+          "status": "completed"
+        },
+        {
+          "name": "Post Checkout official CEF project",
+          "start": "2026-10-28T20:22:04Z",
+          "end": "2026-10-28T20:22:07Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Post Run actions/setup-go@v5",
+          "start": "2026-10-28T20:22:07Z",
+          "end": "2026-10-28T20:22:07Z",
+          "result": "skipped",
+          "status": "completed"
+        },
+        {
+          "name": "Post Checkout Soulu",
+          "start": "2026-10-28T20:22:07Z",
+          "end": "2026-10-28T20:22:09Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Complete job",
+          "start": "2026-10-28T20:22:09Z",
+          "end": "2026-10-28T20:22:09Z",
+          "result": "success",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "runId": 40826822181,
+      "id": 123291658721,
+      "name": "windows-cef",
+      "start": "2026-10-29T06:02:29Z",
+      "end": "2026-10-29T06:38:48Z",
+      "result": "success",
+      "steps": [
+        {
+          "name": "Set up job",
+          "start": "2026-10-29T06:02:30Z",
+          "end": "2026-10-29T06:02:33Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Checkout Soulu",
+          "start": "2026-10-29T06:02:33Z",
+          "end": "2026-10-29T06:02:39Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Run actions/setup-go@v5",
+          "start": "2026-10-29T06:02:39Z",
+          "end": "2026-10-29T06:03:03Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Verify canonical generated geometry and typography",
+          "start": "2026-10-29T06:03:03Z",
+          "end": "2026-10-29T06:03:05Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Checkout official CEF project",
+          "start": "2026-10-29T06:03:05Z",
+          "end": "2026-10-29T06:03:08Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Pin the approved CEF distribution on a clean path",
+          "start": "2026-10-29T06:03:08Z",
+          "end": "2026-10-29T06:03:12Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Verify canonical typography and bundled fonts",
+          "start": "2026-10-29T06:03:12Z",
+          "end": "2026-10-29T06:03:21Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Build integrity-pinned local translation runtime",
+          "start": "2026-10-29T06:03:21Z",
+          "end": "2026-10-29T06:03:22Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Prepare integrity-pinned local speech model",
+          "start": "2026-10-29T06:03:22Z",
+          "end": "2026-10-29T06:03:24Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Add Soulu target and assets",
+          "start": "2026-10-29T06:03:24Z",
+          "end": "2026-10-29T06:03:25Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Use CEF-compatible Python",
+          "start": "2026-10-29T06:03:25Z",
+          "end": "2026-10-29T06:03:25Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Install CEF Python compatibility package",
+          "start": "2026-10-29T06:03:25Z",
+          "end": "2026-10-29T06:03:33Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Verify all production branding exports",
+          "start": "2026-10-29T06:03:33Z",
+          "end": "2026-10-29T06:03:34Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Restore compiled Rust dependencies",
+          "start": "2026-10-29T06:03:34Z",
+          "end": "2026-10-29T06:03:40Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Compile and test the pinned AdBlock engine",
+          "start": "2026-10-29T06:03:40Z",
+          "end": "2026-10-29T06:04:18Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Configure CEF",
+          "start": "2026-10-29T06:04:18Z",
+          "end": "2026-10-29T06:06:05Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Verify fresh CEF archive and distribution resources",
+          "start": "2026-10-29T06:06:05Z",
+          "end": "2026-10-29T06:06:07Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Build Soulu",
+          "start": "2026-10-29T06:06:07Z",
+          "end": "2026-10-29T06:12:43Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Save compiled Rust dependencies",
+          "start": "2026-10-29T06:12:43Z",
+          "end": "2026-10-29T06:12:43Z",
+          "result": "skipped",
+          "status": "completed"
+        },
+        {
+          "name": "Verify loaded engine and every CEF runtime component",
+          "start": "2026-10-29T06:12:43Z",
+          "end": "2026-10-29T06:12:45Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Upload candidate native executable before runtime checks",
+          "start": "2026-10-29T06:12:45Z",
+          "end": "2026-10-29T06:12:51Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Test third Adaptive toolbar animation and live page retention",
+          "start": "2026-10-29T06:12:51Z",
+          "end": "2026-10-29T06:13:09Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Verify live page glass, opaque themes, tabs and resize",
+          "start": "2026-10-29T06:13:09Z",
+          "end": "2026-10-29T06:13:33Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Upload page glass verification",
+          "start": "2026-10-29T06:13:33Z",
+          "end": "2026-10-29T06:13:35Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Test adaptive classic tabs, pinning and session restoration",
+          "start": "2026-10-29T06:13:35Z",
+          "end": "2026-10-29T06:13:49Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Verify Home before broader development regressions",
+          "start": "2026-10-29T06:13:49Z",
+          "end": "2026-10-29T06:15:13Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Upload early Home evidence",
+          "start": "2026-10-29T06:15:13Z",
+          "end": "2026-10-29T06:15:16Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Test work-area input bounds and fullscreen restore in real Win32 CEF",
+          "start": "2026-10-29T06:15:16Z",
+          "end": "2026-10-29T06:15:29Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Test local full-page translation in native CEF",
+          "start": "2026-10-29T06:15:29Z",
+          "end": "2026-10-29T06:15:58Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Test unified native menus across contexts and scales",
+          "start": "2026-10-29T06:15:58Z",
+          "end": "2026-10-29T06:17:52Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Test real AdBlock request cancellation and cosmetics",
+          "start": "2026-10-29T06:17:52Z",
+          "end": "2026-10-29T06:18:14Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Test HTTPS filter update and last-known-good cache",
+          "start": "2026-10-29T06:18:14Z",
+          "end": "2026-10-29T06:18:29Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Test AdBlock across tabs and repeated navigation",
+          "start": "2026-10-29T06:18:29Z",
+          "end": "2026-10-29T06:18:47Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Test Soulu site permissions and reading palette",
+          "start": "2026-10-29T06:18:47Z",
+          "end": "2026-10-29T06:19:21Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Upload site surface evidence",
+          "start": "2026-10-29T06:19:21Z",
+          "end": "2026-10-29T06:19:23Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Test native web platform, GPU, media and downloads",
+          "start": "2026-10-29T06:19:23Z",
+          "end": "2026-10-29T06:19:35Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Upload native platform evidence",
+          "start": "2026-10-29T06:19:35Z",
+          "end": "2026-10-29T06:19:37Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Test bundled typography in real CEF and RU EN DPI theme matrix",
+          "start": "2026-10-29T06:19:37Z",
+          "end": "2026-10-29T06:19:54Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Test native Onest dialog consent and Unicode prompts",
+          "start": "2026-10-29T06:19:54Z",
+          "end": "2026-10-29T06:20:03Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Upload typography evidence",
+          "start": "2026-10-29T06:20:03Z",
+          "end": "2026-10-29T06:20:05Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Test native history, browsing data clearing and visual layouts",
+          "start": "2026-10-29T06:20:05Z",
+          "end": "2026-10-29T06:20:35Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Upload history verification and native visual evidence",
+          "start": "2026-10-29T06:20:35Z",
+          "end": "2026-10-29T06:20:38Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Test native encrypted vault, import and site policy",
+          "start": "2026-10-29T06:20:38Z",
+          "end": "2026-10-29T06:20:39Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Test Browser Import adapters and native bridge on isolated profiles",
+          "start": "2026-10-29T06:20:39Z",
+          "end": "2026-10-29T06:20:59Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Test immediate settings saves, migration and native profile isolation",
+          "start": "2026-10-29T06:20:59Z",
+          "end": "2026-10-29T06:21:10Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Test native Settings overlay lifecycle and background state",
+          "start": "2026-10-29T06:21:10Z",
+          "end": "2026-10-29T06:21:37Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Test motion through the native CEF shell and Settings",
+          "start": "2026-10-29T06:21:37Z",
+          "end": "2026-10-29T06:22:32Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Test toolbar geometry, caption feedback, popup bounds and native drag",
+          "start": "2026-10-29T06:22:32Z",
+          "end": "2026-10-29T06:22:59Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Upload toolbar verification",
+          "start": "2026-10-29T06:22:59Z",
+          "end": "2026-10-29T06:23:01Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Upload motion verification",
+          "start": "2026-10-29T06:23:01Z",
+          "end": "2026-10-29T06:23:03Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Upload settings verification and visual evidence",
+          "start": "2026-10-29T06:23:03Z",
+          "end": "2026-10-29T06:23:05Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Test first-run onboarding in native CEF",
+          "start": "2026-10-29T06:23:05Z",
+          "end": "2026-10-29T06:23:25Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Test default-browser command-line navigation in native CEF",
+          "start": "2026-10-29T06:23:25Z",
+          "end": "2026-10-29T06:23:31Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Validate native runtime before main packaging",
+          "start": "2026-10-29T06:23:31Z",
+          "end": "2026-10-29T06:23:31Z",
+          "result": "skipped",
+          "status": "completed"
+        },
+        {
+          "name": "Upload validation executable and evidence",
+          "start": "2026-10-29T06:23:31Z",
+          "end": "2026-10-29T06:23:31Z",
+          "result": "skipped",
+          "status": "completed"
+        },
+        {
+          "name": "Verify installer source is current main before packaging",
+          "start": "2026-10-29T06:23:31Z",
+          "end": "2026-10-29T06:23:32Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Locate output and package ZIP",
+          "start": "2026-10-29T06:23:32Z",
+          "end": "2026-10-29T06:23:49Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Upload native executable for local runtime verification",
+          "start": "2026-10-29T06:23:49Z",
+          "end": "2026-10-29T06:23:52Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Build shared CONNECT Installer",
+          "start": "2026-10-29T06:23:52Z",
+          "end": "2026-10-29T06:27:02Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Verify ZIP and shared installer payload before upload or release",
+          "start": "2026-10-29T06:27:02Z",
+          "end": "2026-10-29T06:27:08Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Upload verified engine evidence",
+          "start": "2026-10-29T06:27:08Z",
+          "end": "2026-10-29T06:27:10Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Test live CEF settings and toolbar on Windows",
+          "start": "2026-10-29T06:27:10Z",
+          "end": "2026-10-29T06:27:15Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Test bookmarks persistence and native tab overview",
+          "start": "2026-10-29T06:27:15Z",
+          "end": "2026-10-29T06:27:27Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Test Startup New Tab Home in native CEF",
+          "start": "2026-10-29T06:27:27Z",
+          "end": "2026-10-29T06:28:41Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Upload Home verification evidence",
+          "start": "2026-10-29T06:28:41Z",
+          "end": "2026-10-29T06:28:43Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Test current-site popover and local Reader Mode in native CEF",
+          "start": "2026-10-29T06:28:43Z",
+          "end": "2026-10-29T06:29:00Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Test persistent CEF cookies and site storage",
+          "start": "2026-10-29T06:29:00Z",
+          "end": "2026-10-29T06:29:05Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Test real public articles and reported-site navigation",
+          "start": "2026-10-29T06:29:05Z",
+          "end": "2026-10-29T06:29:27Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Upload Reader Mode evidence",
+          "start": "2026-10-29T06:29:27Z",
+          "end": "2026-10-29T06:29:29Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Verify all reported public sites with native CEF",
+          "start": "2026-10-29T06:29:29Z",
+          "end": "2026-10-29T06:30:13Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Upload public-site diagnostics",
+          "start": "2026-10-29T06:30:13Z",
+          "end": "2026-10-29T06:30:15Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Test two profiles, incognito disposal and password restart",
+          "start": "2026-10-29T06:30:15Z",
+          "end": "2026-10-29T06:30:25Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Test native permission overrides and actual content filtering",
+          "start": "2026-10-29T06:30:25Z",
+          "end": "2026-10-29T06:30:31Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Verify internal tabs and native link context menu",
+          "start": "2026-10-29T06:30:31Z",
+          "end": "2026-10-29T06:30:40Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Verify retained layout and native resize",
+          "start": "2026-10-29T06:30:40Z",
+          "end": "2026-10-29T06:31:03Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Record shared installer acceptance scope",
+          "start": "2026-10-29T06:31:03Z",
+          "end": "2026-10-29T06:31:03Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Upload visual checks",
+          "start": "2026-10-29T06:31:03Z",
+          "end": "2026-10-29T06:31:05Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Upload preview artifacts",
+          "start": "2026-10-29T06:31:05Z",
+          "end": "2026-10-29T06:31:25Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Upload native data-security evidence",
+          "start": "2026-10-29T06:31:25Z",
+          "end": "2026-10-29T06:31:27Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Upload installer typography diagnostics",
+          "start": "2026-10-29T06:31:27Z",
+          "end": "2026-10-29T06:31:27Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Upload native menu typography visuals",
+          "start": "2026-10-29T06:31:27Z",
+          "end": "2026-10-29T06:31:30Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Compare real public websites with AdBlock OFF and ON",
+          "start": "2026-10-29T06:31:30Z",
+          "end": "2026-10-29T06:38:19Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Upload AdBlock evidence",
+          "start": "2026-10-29T06:38:19Z",
+          "end": "2026-10-29T06:38:22Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Verify release source is the current main commit",
+          "start": "2026-10-29T06:38:22Z",
+          "end": "2026-10-29T06:38:23Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Verify release acceptance scope and public-site evidence",
+          "start": "2026-10-29T06:38:23Z",
+          "end": "2026-10-29T06:38:23Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Publish Soulu release",
+          "start": "2026-10-29T06:38:23Z",
+          "end": "2026-10-29T06:38:39Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Post Use CEF-compatible Python",
+          "start": "2026-10-29T06:38:39Z",
+          "end": "2026-10-29T06:38:39Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Post Checkout official CEF project",
+          "start": "2026-10-29T06:38:39Z",
+          "end": "2026-10-29T06:38:42Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Post Run actions/setup-go@v5",
+          "start": "2026-10-29T06:38:42Z",
+          "end": "2026-10-29T06:38:42Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Post Checkout Soulu",
+          "start": "2026-10-29T06:38:42Z",
+          "end": "2026-10-29T06:38:44Z",
+          "result": "success",
+          "status": "completed"
+        },
+        {
+          "name": "Complete job",
+          "start": "2026-10-29T06:38:44Z",
+          "end": "2026-10-29T06:38:44Z",
+          "result": "success",
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "commits": [
+    {
+      "sha": "e0c37c3d41ca8f61d467c6fbde06d6c5deaea986",
+      "time": "2026-10-29T06:02:17Z",
+      "title": "Prepare Soulu 1.0.67 matte page glass release and mandatory visual regression gate",
+      "url": "https://github.com/sanderstripa/soulu/commit/e0c37c3d41ca8f61d467c6fbde06d6c5deaea986"
+    },
+    {
+      "sha": "9f0257a14c072634265ba132a6bbce5b19f030ca",
+      "time": "2026-10-29T03:18:52Z",
+      "title": "Document successful Windows regression checks and real-site glass screenshots [skip ci]",
+      "url": "https://github.com/sanderstripa/soulu/commit/9f0257a14c072634265ba132a6bbce5b19f030ca"
+    },
+    {
+      "sha": "2e8487d83081a5fa7afbc75679fc517d30299cae",
+      "time": "2026-10-28T21:26:15Z",
+      "title": "Record native page glass preview and focused Windows verification [skip ci]",
+      "url": "https://github.com/sanderstripa/soulu/commit/2e8487d83081a5fa7afbc75679fc517d30299cae"
+    },
+    {
+      "sha": "1c44e7b1772dd2061593c9761da25d8563663ce3",
+      "time": "2026-10-28T21:21:59Z",
+      "title": "Measure the initial page inset and record native glass screenshots",
+      "url": "https://github.com/sanderstripa/soulu/commit/1c44e7b1772dd2061593c9761da25d8563663ce3"
+    },
+    {
+      "sha": "086fb12a2eac4e3652febb1291c7a91d252a3cda",
+      "time": "2026-10-28T21:08:50Z",
+      "title": "Defer backdrop creation until the browser is visible and probe live sampling",
+      "url": "https://github.com/sanderstripa/soulu/commit/086fb12a2eac4e3652febb1291c7a91d252a3cda"
+    },
+    {
+      "sha": "f26cdb91ffc506d437e212e07d8e829c924ecbde",
+      "time": "2026-10-28T20:55:29Z",
+      "title": "Make glass initialization fail safely and preserve fixed site controls",
+      "url": "https://github.com/sanderstripa/soulu/commit/f26cdb91ffc506d437e212e07d8e829c924ecbde"
+    },
+    {
+      "sha": "90d2a1f202d28d5259b896a94b646fff33bcdd3c",
+      "time": "2026-10-28T20:38:03Z",
+      "title": "Initialize classic COM before WinRT and preserve toolbar hit testing",
+      "url": "https://github.com/sanderstripa/soulu/commit/90d2a1f202d28d5259b896a94b646fff33bcdd3c"
+    },
+    {
+      "sha": "08dd1cec36e322db9ee944f9cc5c47265f9af13d",
+      "time": "2026-10-28T20:27:06Z",
+      "title": "Include WinRT collection definitions and report effect initialization errors",
+      "url": "https://github.com/sanderstripa/soulu/commit/08dd1cec36e322db9ee944f9cc5c47265f9af13d"
+    },
+    {
+      "sha": "ffb3c68f242ea5d15ebe4f1935463a77ba68d0ea",
+      "time": "2026-10-28T20:24:57Z",
+      "title": "Correct Windows effect interop and feather the page-glass edge",
+      "url": "https://github.com/sanderstripa/soulu/commit/ffb3c68f242ea5d15ebe4f1935463a77ba68d0ea"
+    },
+    {
+      "sha": "f84995a573069ced36817c2709f78c59060ee4bc",
+      "time": "2026-10-28T20:12:14Z",
+      "title": "Prototype live page-content glass with an opaque off state",
+      "url": "https://github.com/sanderstripa/soulu/commit/f84995a573069ced36817c2709f78c59060ee4bc"
+    },
+    {
+      "sha": "d12a0e8d52eb72775567db6b3ed8d5eb2251ac35",
+      "time": "2026-10-29T03:15:57Z",
+      "title": "Run existing toolbar, adaptive layout and storage regressions on page glass prototype",
+      "url": "https://github.com/sanderstripa/soulu/commit/d12a0e8d52eb72775567db6b3ed8d5eb2251ac35"
+    },
+    {
+      "sha": "92cc0555bd65a6889aa69fa6ca879d8858638b36",
+      "time": "2026-10-29T03:13:30Z",
+      "title": "Exercise page glass in dark theme, resized windows, tabs and external HTTPS pages",
+      "url": "https://github.com/sanderstripa/soulu/commit/92cc0555bd65a6889aa69fa6ca879d8858638b36"
+    },
+    {
+      "sha": "15b722c1bd8a109dd6595dc3c90fea3c9bae49ad",
+      "time": "2026-10-28T21:23:30Z",
+      "title": "Recheck the unchanged compiled prototype against corrected visual fixtures",
+      "url": "https://github.com/sanderstripa/soulu/commit/15b722c1bd8a109dd6595dc3c90fea3c9bae49ad"
+    },
+    {
+      "sha": "acdb0bcf0cc5910acdd51bbc82e78a5c7dc078f9",
+      "time": "2026-10-29T06:02:23Z",
+      "title": "Release Soulu 1.0.67 with live page glass [release 1.0.67]",
+      "url": "https://github.com/sanderstripa/soulu/commit/acdb0bcf0cc5910acdd51bbc82e78a5c7dc078f9"
+    }
+  ],
+  "coverageEnd": "2026-10-29T06:38:49Z",
+  "releaseSummary": "Soulu 1.0.67 опубликован 29.10.2026 в 11:38:38 UTC+5: https://github.com/sanderstripa/soulu/releases/tag/beta-1.0.67 . Установщик и ZIP имеют статус uploaded. Тег, исходный коммит сборки и main совпадают: acdb0bcf0cc5910acdd51bbc82e78a5c7dc078f9. Финальный запуск 40826822181 завершился success. Это был свежий выпуск из исходников, а не переименование старой сборки."
+}

@@ -1,0 +1,628 @@
+﻿Минута, Екатеринбург UTC+5;Тип подтверждения;Подтверждённые события или отсутствие данных;Источники
+2026-10-29T01:12+05:00;ci, commit;"Коммит f84995a: Prototype live page-content glass with an opaque off state | GitHub Actions: Set up job; результат шага: success | GitHub Actions: Checkout Soulu; результат шага: success | GitHub Actions: Run actions/setup-go@v5; результат шага: success | GitHub Actions: Verify canonical generated geometry and typography; результат шага: success";https://github.com/sanderstripa/soulu/commit/f84995a573069ced36817c2709f78c59060ee4bc | https://github.com/sanderstripa/soulu/actions/runs/40761152159
+2026-10-29T01:13+05:00;ci;"GitHub Actions: Verify canonical generated geometry and typography; результат шага: success | GitHub Actions: Checkout official CEF project; результат шага: success | GitHub Actions: Pin the approved CEF distribution on a clean path; результат шага: success | GitHub Actions: Verify canonical typography and bundled fonts; результат шага: success | GitHub Actions: Build integrity-pinned local translation runtime; результат шага: success | GitHub Actions: Prepare integrity-pinned local speech model; результат шага: success | GitHub Actions: Add Soulu target and assets; результат шага: success | GitHub Actions: Use CEF-compatible Python; результат шага: success | GitHub Actions: Install CEF Python compatibility package; результат шага: success | GitHub Actions: Verify all production branding exports; результат шага: success | GitHub Actions: Restore compiled Rust dependencies; результат шага: success | GitHub Actions: Compile and test the pinned AdBlock engine; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40761152159
+2026-10-29T01:14+05:00;ci;"GitHub Actions: Compile and test the pinned AdBlock engine; результат шага: success | GitHub Actions: Configure CEF; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40761152159
+2026-10-29T01:15+05:00;ci;"GitHub Actions: Configure CEF; результат шага: success | GitHub Actions: Verify fresh CEF archive and distribution resources; результат шага: success | GitHub Actions: Build Soulu; результат шага: failure";https://github.com/sanderstripa/soulu/actions/runs/40761152159
+2026-10-29T01:16+05:00;ci;"GitHub Actions: Build Soulu; результат шага: failure";https://github.com/sanderstripa/soulu/actions/runs/40761152159
+2026-10-29T01:17+05:00;ci;"GitHub Actions: Build Soulu; результат шага: failure";https://github.com/sanderstripa/soulu/actions/runs/40761152159
+2026-10-29T01:18+05:00;ci;"GitHub Actions: Build Soulu; результат шага: failure";https://github.com/sanderstripa/soulu/actions/runs/40761152159
+2026-10-29T01:19+05:00;ci;"GitHub Actions: Build Soulu; результат шага: failure";https://github.com/sanderstripa/soulu/actions/runs/40761152159
+2026-10-29T01:20+05:00;ci;"GitHub Actions: Build Soulu; результат шага: failure";https://github.com/sanderstripa/soulu/actions/runs/40761152159
+2026-10-29T01:21+05:00;ci;"GitHub Actions: Build Soulu; результат шага: failure";https://github.com/sanderstripa/soulu/actions/runs/40761152159
+2026-10-29T01:22+05:00;ci;"GitHub Actions: Build Soulu; результат шага: failure | GitHub Actions: Upload page glass prototype evidence; результат шага: success | GitHub Actions: Post Checkout official CEF project; результат шага: success | GitHub Actions: Post Checkout Soulu; результат шага: success | GitHub Actions: Complete job; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40761152159
+2026-10-29T01:23+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T01:24+05:00;commit;Коммит ffb3c68: Correct Windows effect interop and feather the page-glass edge;https://github.com/sanderstripa/soulu/commit/ffb3c68f242ea5d15ebe4f1935463a77ba68d0ea
+2026-10-29T01:25+05:00;ci;"GitHub Actions: Set up job; результат шага: success | GitHub Actions: Checkout Soulu; результат шага: success | GitHub Actions: Run actions/setup-go@v5; результат шага: success | GitHub Actions: Verify canonical generated geometry and typography; результат шага: success | GitHub Actions: Checkout official CEF project; результат шага: success | GitHub Actions: Pin the approved CEF distribution on a clean path; результат шага: success | GitHub Actions: Verify canonical typography and bundled fonts; результат шага: success | GitHub Actions: Build integrity-pinned local translation runtime; результат шага: success | GitHub Actions: Prepare integrity-pinned local speech model; результат шага: success | GitHub Actions: Add Soulu target and assets; результат шага: success | GitHub Actions: Compile page-glass Windows interop before the full CEF build; результат шага: failure";https://github.com/sanderstripa/soulu/actions/runs/40763077454
+2026-10-29T01:26+05:00;ci;"GitHub Actions: Compile page-glass Windows interop before the full CEF build; результат шага: failure | GitHub Actions: Upload page glass prototype evidence; результат шага: success | GitHub Actions: Post Checkout official CEF project; результат шага: success | GitHub Actions: Post Checkout Soulu; результат шага: success | GitHub Actions: Complete job; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40763077454
+2026-10-29T01:27+05:00;ci, commit;"Коммит 08dd1ce: Include WinRT collection definitions and report effect initialization errors | GitHub Actions: Set up job; результат шага: success | GitHub Actions: Checkout Soulu; результат шага: success | GitHub Actions: Run actions/setup-go@v5; результат шага: success | GitHub Actions: Verify canonical generated geometry and typography; результат шага: success | GitHub Actions: Checkout official CEF project; результат шага: success | GitHub Actions: Pin the approved CEF distribution on a clean path; результат шага: success | GitHub Actions: Verify canonical typography and bundled fonts; результат шага: success | GitHub Actions: Build integrity-pinned local translation runtime; результат шага: success | GitHub Actions: Prepare integrity-pinned local speech model; результат шага: success";https://github.com/sanderstripa/soulu/commit/08dd1cec36e322db9ee944f9cc5c47265f9af13d | https://github.com/sanderstripa/soulu/actions/runs/40763405891
+2026-10-29T01:28+05:00;ci;"GitHub Actions: Prepare integrity-pinned local speech model; результат шага: success | GitHub Actions: Add Soulu target and assets; результат шага: success | GitHub Actions: Compile page-glass Windows interop before the full CEF build; результат шага: success | GitHub Actions: Use CEF-compatible Python; результат шага: success | GitHub Actions: Install CEF Python compatibility package; результат шага: success | GitHub Actions: Verify all production branding exports; результат шага: success | GitHub Actions: Restore compiled Rust dependencies; результат шага: success | GitHub Actions: Compile and test the pinned AdBlock engine; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40763405891
+2026-10-29T01:29+05:00;ci;"GitHub Actions: Compile and test the pinned AdBlock engine; результат шага: success | GitHub Actions: Configure CEF; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40763405891
+2026-10-29T01:30+05:00;ci;"GitHub Actions: Configure CEF; результат шага: success | GitHub Actions: Verify fresh CEF archive and distribution resources; результат шага: success | GitHub Actions: Build Soulu; результат шага: failure";https://github.com/sanderstripa/soulu/actions/runs/40763405891
+2026-10-29T01:31+05:00;ci;"GitHub Actions: Build Soulu; результат шага: failure";https://github.com/sanderstripa/soulu/actions/runs/40763405891
+2026-10-29T01:32+05:00;ci;"GitHub Actions: Build Soulu; результат шага: failure";https://github.com/sanderstripa/soulu/actions/runs/40763405891
+2026-10-29T01:33+05:00;ci;"GitHub Actions: Build Soulu; результат шага: failure";https://github.com/sanderstripa/soulu/actions/runs/40763405891
+2026-10-29T01:34+05:00;ci;"GitHub Actions: Build Soulu; результат шага: failure";https://github.com/sanderstripa/soulu/actions/runs/40763405891
+2026-10-29T01:35+05:00;ci;"GitHub Actions: Build Soulu; результат шага: failure";https://github.com/sanderstripa/soulu/actions/runs/40763405891
+2026-10-29T01:36+05:00;ci;"GitHub Actions: Build Soulu; результат шага: failure | GitHub Actions: Upload page glass prototype evidence; результат шага: success | GitHub Actions: Post Checkout official CEF project; результат шага: success | GitHub Actions: Post Checkout Soulu; результат шага: success | GitHub Actions: Complete job; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40763405891
+2026-10-29T01:37+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T01:38+05:00;ci, commit;"Коммит 90d2a1f: Initialize classic COM before WinRT and preserve toolbar hit testing | GitHub Actions: Set up job; результат шага: success | GitHub Actions: Checkout Soulu; результат шага: success | GitHub Actions: Run actions/setup-go@v5; результат шага: success | GitHub Actions: Verify canonical generated geometry and typography; результат шага: success | GitHub Actions: Checkout official CEF project; результат шага: success | GitHub Actions: Pin the approved CEF distribution on a clean path; результат шага: success | GitHub Actions: Verify canonical typography and bundled fonts; результат шага: success";https://github.com/sanderstripa/soulu/commit/90d2a1f202d28d5259b896a94b646fff33bcdd3c | https://github.com/sanderstripa/soulu/actions/runs/40765028830
+2026-10-29T01:39+05:00;ci;"GitHub Actions: Verify canonical typography and bundled fonts; результат шага: success | GitHub Actions: Build integrity-pinned local translation runtime; результат шага: success | GitHub Actions: Prepare integrity-pinned local speech model; результат шага: success | GitHub Actions: Add Soulu target and assets; результат шага: success | GitHub Actions: Compile page-glass Windows interop before the full CEF build; результат шага: success | GitHub Actions: Use CEF-compatible Python; результат шага: success | GitHub Actions: Install CEF Python compatibility package; результат шага: success | GitHub Actions: Verify all production branding exports; результат шага: success | GitHub Actions: Restore compiled Rust dependencies; результат шага: success | GitHub Actions: Compile and test the pinned AdBlock engine; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40765028830
+2026-10-29T01:40+05:00;ci;"GitHub Actions: Compile and test the pinned AdBlock engine; результат шага: success | GitHub Actions: Configure CEF; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40765028830
+2026-10-29T01:41+05:00;ci;"GitHub Actions: Configure CEF; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40765028830
+2026-10-29T01:42+05:00;ci;"GitHub Actions: Configure CEF; результат шага: success | GitHub Actions: Verify fresh CEF archive and distribution resources; результат шага: success | GitHub Actions: Build Soulu; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40765028830
+2026-10-29T01:43+05:00;ci;"GitHub Actions: Build Soulu; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40765028830
+2026-10-29T01:44+05:00;ci;"GitHub Actions: Build Soulu; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40765028830
+2026-10-29T01:45+05:00;ci;"GitHub Actions: Build Soulu; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40765028830
+2026-10-29T01:46+05:00;ci;"GitHub Actions: Build Soulu; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40765028830
+2026-10-29T01:47+05:00;ci;"GitHub Actions: Build Soulu; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40765028830
+2026-10-29T01:48+05:00;ci;"GitHub Actions: Build Soulu; результат шага: success | GitHub Actions: Verify loaded engine and every CEF runtime component; результат шага: success | GitHub Actions: Upload candidate native executable before runtime checks; результат шага: success | GitHub Actions: Test real page under glass and opaque off state; результат шага: failure";https://github.com/sanderstripa/soulu/actions/runs/40765028830
+2026-10-29T01:49+05:00;ci;"GitHub Actions: Test real page under glass and opaque off state; результат шага: failure | GitHub Actions: Upload page glass prototype evidence; результат шага: success | GitHub Actions: Post Checkout official CEF project; результат шага: success | GitHub Actions: Post Checkout Soulu; результат шага: success | GitHub Actions: Complete job; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40765028830
+2026-10-29T01:50+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T01:51+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T01:52+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T01:53+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T01:54+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T01:55+05:00;ci, commit;"Коммит f26cdb9: Make glass initialization fail safely and preserve fixed site controls | GitHub Actions: Set up job; результат шага: success | GitHub Actions: Checkout Soulu; результат шага: success | GitHub Actions: Run actions/setup-go@v5; результат шага: success";https://github.com/sanderstripa/soulu/commit/f26cdb91ffc506d437e212e07d8e829c924ecbde | https://github.com/sanderstripa/soulu/actions/runs/40767561416
+2026-10-29T01:56+05:00;ci;"GitHub Actions: Run actions/setup-go@v5; результат шага: success | GitHub Actions: Verify canonical generated geometry and typography; результат шага: success | GitHub Actions: Checkout official CEF project; результат шага: success | GitHub Actions: Pin the approved CEF distribution on a clean path; результат шага: success | GitHub Actions: Verify canonical typography and bundled fonts; результат шага: success | GitHub Actions: Build integrity-pinned local translation runtime; результат шага: success | GitHub Actions: Prepare integrity-pinned local speech model; результат шага: success | GitHub Actions: Add Soulu target and assets; результат шага: success | GitHub Actions: Compile page-glass Windows interop before the full CEF build; результат шага: success | GitHub Actions: Use CEF-compatible Python; результат шага: success | GitHub Actions: Install CEF Python compatibility package; результат шага: success | GitHub Actions: Verify all production branding exports; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40767561416
+2026-10-29T01:57+05:00;ci;"GitHub Actions: Verify all production branding exports; результат шага: success | GitHub Actions: Restore compiled Rust dependencies; результат шага: success | GitHub Actions: Compile and test the pinned AdBlock engine; результат шага: success | GitHub Actions: Configure CEF; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40767561416
+2026-10-29T01:58+05:00;ci;"GitHub Actions: Configure CEF; результат шага: success | GitHub Actions: Verify fresh CEF archive and distribution resources; результат шага: success | GitHub Actions: Build Soulu; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40767561416
+2026-10-29T01:59+05:00;ci;"GitHub Actions: Build Soulu; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40767561416
+2026-10-29T02:00+05:00;ci;"GitHub Actions: Build Soulu; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40767561416
+2026-10-29T02:01+05:00;ci;"GitHub Actions: Build Soulu; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40767561416
+2026-10-29T02:02+05:00;ci;"GitHub Actions: Build Soulu; результат шага: success | GitHub Actions: Verify loaded engine and every CEF runtime component; результат шага: success | GitHub Actions: Upload candidate native executable before runtime checks; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40767561416
+2026-10-29T02:03+05:00;ci;"GitHub Actions: Upload candidate native executable before runtime checks; результат шага: success | GitHub Actions: Test real page under glass and opaque off state; результат шага: failure | GitHub Actions: Upload page glass prototype evidence; результат шага: success | GitHub Actions: Post Checkout official CEF project; результат шага: success | GitHub Actions: Post Checkout Soulu; результат шага: success | GitHub Actions: Complete job; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40767561416
+2026-10-29T02:04+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T02:05+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T02:06+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T02:07+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T02:08+05:00;ci, commit;"Коммит 086fb12: Defer backdrop creation until the browser is visible and probe live sampling | GitHub Actions: Set up job; результат шага: success | GitHub Actions: Checkout Soulu; результат шага: success";https://github.com/sanderstripa/soulu/commit/086fb12a2eac4e3652febb1291c7a91d252a3cda | https://github.com/sanderstripa/soulu/actions/runs/40769480160
+2026-10-29T02:09+05:00;ci;"GitHub Actions: Checkout Soulu; результат шага: success | GitHub Actions: Run actions/setup-go@v5; результат шага: success | GitHub Actions: Verify canonical generated geometry and typography; результат шага: success | GitHub Actions: Checkout official CEF project; результат шага: success | GitHub Actions: Pin the approved CEF distribution on a clean path; результат шага: success | GitHub Actions: Verify canonical typography and bundled fonts; результат шага: success | GitHub Actions: Build integrity-pinned local translation runtime; результат шага: success | GitHub Actions: Prepare integrity-pinned local speech model; результат шага: success | GitHub Actions: Add Soulu target and assets; результат шага: success | GitHub Actions: Compile page-glass Windows interop before the full CEF build; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40769480160
+2026-10-29T02:10+05:00;ci;"GitHub Actions: Compile page-glass Windows interop before the full CEF build; результат шага: success | GitHub Actions: Verify live backdrop sampling independently of CEF; результат шага: success | GitHub Actions: Use CEF-compatible Python; результат шага: success | GitHub Actions: Install CEF Python compatibility package; результат шага: success | GitHub Actions: Verify all production branding exports; результат шага: success | GitHub Actions: Restore compiled Rust dependencies; результат шага: success | GitHub Actions: Compile and test the pinned AdBlock engine; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40769480160
+2026-10-29T02:11+05:00;ci;"GitHub Actions: Compile and test the pinned AdBlock engine; результат шага: success | GitHub Actions: Configure CEF; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40769480160
+2026-10-29T02:12+05:00;ci;"GitHub Actions: Configure CEF; результат шага: success | GitHub Actions: Verify fresh CEF archive and distribution resources; результат шага: success | GitHub Actions: Build Soulu; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40769480160
+2026-10-29T02:13+05:00;ci;"GitHub Actions: Build Soulu; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40769480160
+2026-10-29T02:14+05:00;ci;"GitHub Actions: Build Soulu; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40769480160
+2026-10-29T02:15+05:00;ci;"GitHub Actions: Build Soulu; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40769480160
+2026-10-29T02:16+05:00;ci;"GitHub Actions: Build Soulu; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40769480160
+2026-10-29T02:17+05:00;ci;"GitHub Actions: Build Soulu; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40769480160
+2026-10-29T02:18+05:00;ci;"GitHub Actions: Build Soulu; результат шага: success | GitHub Actions: Verify loaded engine and every CEF runtime component; результат шага: success | GitHub Actions: Upload candidate native executable before runtime checks; результат шага: success | GitHub Actions: Test real page under glass and opaque off state; результат шага: failure";https://github.com/sanderstripa/soulu/actions/runs/40769480160
+2026-10-29T02:19+05:00;ci;"GitHub Actions: Test real page under glass and opaque off state; результат шага: failure | GitHub Actions: Upload page glass prototype evidence; результат шага: success | GitHub Actions: Post Checkout official CEF project; результат шага: success | GitHub Actions: Post Checkout Soulu; результат шага: success | GitHub Actions: Complete job; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40769480160
+2026-10-29T02:20+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T02:21+05:00;commit;Коммит 1c44e7b: Measure the initial page inset and record native glass screenshots;https://github.com/sanderstripa/soulu/commit/1c44e7b1772dd2061593c9761da25d8563663ce3
+2026-10-29T02:22+05:00;ci;"GitHub Actions: Set up job; результат шага: success | GitHub Actions: Checkout Soulu; результат шага: success | GitHub Actions: Run actions/setup-go@v5; результат шага: success | GitHub Actions: Verify canonical generated geometry and typography; результат шага: success | GitHub Actions: Checkout official CEF project; результат шага: success | GitHub Actions: Pin the approved CEF distribution on a clean path; результат шага: success | GitHub Actions: Verify canonical typography and bundled fonts; результат шага: success | GitHub Actions: Build integrity-pinned local translation runtime; результат шага: success | GitHub Actions: Prepare integrity-pinned local speech model; результат шага: success | GitHub Actions: Add Soulu target and assets; результат шага: success | GitHub Actions: Compile page-glass Windows interop before the full CEF build; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40771343188
+2026-10-29T02:23+05:00;ci, commit;"Коммит 15b722c: Recheck the unchanged compiled prototype against corrected visual fixtures | GitHub Actions: Set up job; результат шага: success | GitHub Actions: Run actions/checkout@v4; результат шага: success | GitHub Actions: Verify identical native and UI source; результат шага: success | GitHub Actions: Run actions/setup-python@v5; результат шага: success | GitHub Actions: Download unchanged CEF distribution from the previous release; результат шага: success | GitHub Actions: Run actions/download-artifact@v4; результат шага: success | GitHub Actions: Overlay the exactly matching experimental binary and UI; результат шага: success | GitHub Actions: Test live page glass, initial inset and opaque off state; результат шага: success | GitHub Actions: Compile page-glass Windows interop before the full CEF build; результат шага: success | GitHub Actions: Verify live backdrop sampling independently of CEF; результат шага: success | GitHub Actions: Use CEF-compatible Python; результат шага: success | GitHub Actions: Install CEF Python compatibility package; результат шага: success | GitHub Actions: Verify all production branding exports; результат шага: success | GitHub Actions: Restore compiled Rust dependencies; результат шага: success | GitHub Actions: Compile and test the pinned AdBlock engine; результат шага: success";https://github.com/sanderstripa/soulu/commit/15b722c1bd8a109dd6595dc3c90fea3c9bae49ad | https://github.com/sanderstripa/soulu/actions/runs/40771552082 | https://github.com/sanderstripa/soulu/actions/runs/40771343188
+2026-10-29T02:24+05:00;ci;"GitHub Actions: Test live page glass, initial inset and opaque off state; результат шага: success | GitHub Actions: Print native screenshots; результат шага: success | GitHub Actions: Run actions/upload-artifact@v4; результат шага: success | GitHub Actions: Post Run actions/setup-python@v5; результат шага: success | GitHub Actions: Post Run actions/checkout@v4; результат шага: success | GitHub Actions: Complete job; результат шага: success | GitHub Actions: Compile and test the pinned AdBlock engine; результат шага: success | GitHub Actions: Configure CEF; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40771552082 | https://github.com/sanderstripa/soulu/actions/runs/40771343188
+2026-10-29T02:25+05:00;ci;"GitHub Actions: Configure CEF; результат шага: success | GitHub Actions: Verify fresh CEF archive and distribution resources; результат шага: success | GitHub Actions: Build Soulu; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40771343188
+2026-10-29T02:26+05:00;ci, commit;"Коммит 2e8487d: Record native page glass preview and focused Windows verification [skip ci] | GitHub Actions: Build Soulu; результат шага: success";https://github.com/sanderstripa/soulu/commit/2e8487d83081a5fa7afbc75679fc517d30299cae | https://github.com/sanderstripa/soulu/actions/runs/40771343188
+2026-10-29T02:27+05:00;ci;"GitHub Actions: Build Soulu; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40771343188
+2026-10-29T02:28+05:00;ci;"GitHub Actions: Build Soulu; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40771343188
+2026-10-29T02:29+05:00;ci;"GitHub Actions: Build Soulu; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40771343188
+2026-10-29T02:30+05:00;ci;"GitHub Actions: Build Soulu; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40771343188
+2026-10-29T02:31+05:00;ci;"GitHub Actions: Build Soulu; результат шага: success | GitHub Actions: Verify loaded engine and every CEF runtime component; результат шага: success | GitHub Actions: Upload candidate native executable before runtime checks; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40771343188
+2026-10-29T02:32+05:00;ci;"GitHub Actions: Upload candidate native executable before runtime checks; результат шага: success | GitHub Actions: Test real page under glass and opaque off state; результат шага: success | GitHub Actions: Print native screenshots for visual review; результат шага: success | GitHub Actions: Upload page glass prototype evidence; результат шага: success | GitHub Actions: Post Use CEF-compatible Python; результат шага: success | GitHub Actions: Post Checkout official CEF project; результат шага: success | GitHub Actions: Post Run actions/setup-go@v5; результат шага: success | GitHub Actions: Post Checkout Soulu; результат шага: success | GitHub Actions: Complete job; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40771343188
+2026-10-29T02:33+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T02:34+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T02:35+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T02:36+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T02:37+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T02:38+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T02:39+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T02:40+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T02:41+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T02:42+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T02:43+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T02:44+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T02:45+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T02:46+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T02:47+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T02:48+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T02:49+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T02:50+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T02:51+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T02:52+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T02:53+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T02:54+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T02:55+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T02:56+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T02:57+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T02:58+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T02:59+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:00+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:01+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:02+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:03+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:04+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:05+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:06+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:07+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:08+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:09+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:10+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:11+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:12+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:13+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:14+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:15+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:16+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:17+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:18+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:19+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:20+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:21+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:22+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:23+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:24+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:25+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:26+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:27+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:28+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:29+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:30+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:31+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:32+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:33+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:34+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:35+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:36+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:37+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:38+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:39+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:40+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:41+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:42+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:43+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:44+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:45+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:46+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:47+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:48+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:49+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:50+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:51+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:52+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:53+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:54+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:55+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:56+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:57+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:58+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T03:59+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:00+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:01+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:02+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:03+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:04+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:05+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:06+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:07+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:08+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:09+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:10+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:11+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:12+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:13+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:14+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:15+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:16+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:17+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:18+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:19+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:20+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:21+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:22+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:23+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:24+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:25+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:26+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:27+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:28+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:29+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:30+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:31+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:32+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:33+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:34+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:35+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:36+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:37+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:38+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:39+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:40+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:41+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:42+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:43+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:44+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:45+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:46+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:47+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:48+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:49+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:50+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:51+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:52+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:53+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:54+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:55+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:56+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:57+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:58+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T04:59+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:00+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:01+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:02+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:03+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:04+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:05+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:06+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:07+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:08+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:09+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:10+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:11+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:12+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:13+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:14+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:15+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:16+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:17+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:18+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:19+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:20+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:21+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:22+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:23+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:24+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:25+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:26+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:27+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:28+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:29+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:30+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:31+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:32+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:33+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:34+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:35+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:36+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:37+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:38+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:39+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:40+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:41+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:42+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:43+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:44+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:45+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:46+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:47+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:48+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:49+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:50+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:51+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:52+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:53+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:54+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:55+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:56+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:57+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:58+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T05:59+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:00+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:01+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:02+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:03+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:04+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:05+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:06+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:07+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:08+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:09+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:10+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:11+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:12+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:13+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:14+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:15+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:16+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:17+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:18+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:19+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:20+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:21+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:22+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:23+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:24+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:25+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:26+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:27+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:28+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:29+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:30+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:31+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:32+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:33+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:34+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:35+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:36+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:37+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:38+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:39+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:40+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:41+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:42+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:43+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:44+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:45+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:46+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:47+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:48+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:49+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:50+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:51+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:52+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:53+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:54+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:55+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:56+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:57+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:58+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T06:59+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:00+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:01+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:02+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:03+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:04+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:05+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:06+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:07+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:08+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:09+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:10+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:11+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:12+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:13+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:14+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:15+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:16+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:17+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:18+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:19+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:20+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:21+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:22+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:23+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:24+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:25+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:26+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:27+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:28+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:29+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:30+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:31+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:32+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:33+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:34+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:35+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:36+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:37+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:38+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:39+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:40+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:41+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:42+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:43+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:44+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:45+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:46+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:47+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:48+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:49+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:50+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:51+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:52+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:53+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:54+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:55+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:56+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:57+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:58+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T07:59+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:00+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:01+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:02+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:03+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:04+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:05+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:06+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:07+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:08+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:09+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:10+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:11+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:12+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:13+05:00;ci, commit;"Коммит 92cc055: Exercise page glass in dark theme, resized windows, tabs and external HTTPS pages | GitHub Actions: Set up job; результат шага: success | GitHub Actions: Run actions/checkout@v4; результат шага: success | GitHub Actions: Verify identical native and UI source; результат шага: success | GitHub Actions: Run actions/setup-python@v5; результат шага: success | GitHub Actions: Download unchanged CEF distribution from the previous release; результат шага: success | GitHub Actions: Run actions/download-artifact@v4; результат шага: success | GitHub Actions: Overlay the exactly matching experimental binary and UI; результат шага: success | GitHub Actions: Test live page glass, initial inset and opaque off state; результат шага: success";https://github.com/sanderstripa/soulu/commit/92cc0555bd65a6889aa69fa6ca879d8858638b36 | https://github.com/sanderstripa/soulu/actions/runs/40810921922
+2026-10-29T08:14+05:00;ci;"GitHub Actions: Test live page glass, initial inset and opaque off state; результат шага: success | GitHub Actions: Print native screenshots; результат шага: success | GitHub Actions: Run actions/upload-artifact@v4; результат шага: success | GitHub Actions: Post Run actions/setup-python@v5; результат шага: success | GitHub Actions: Post Run actions/checkout@v4; результат шага: success | GitHub Actions: Complete job; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40810921922
+2026-10-29T08:15+05:00;commit;Коммит d12a0e8: Run existing toolbar, adaptive layout and storage regressions on page glass prototype;https://github.com/sanderstripa/soulu/commit/d12a0e8d52eb72775567db6b3ed8d5eb2251ac35
+2026-10-29T08:16+05:00;ci;"GitHub Actions: Set up job; результат шага: success | GitHub Actions: Run actions/checkout@v4; результат шага: success | GitHub Actions: Verify identical native and UI source; результат шага: success | GitHub Actions: Run actions/setup-python@v5; результат шага: success | GitHub Actions: Download unchanged CEF distribution from the previous release; результат шага: success | GitHub Actions: Run actions/download-artifact@v4; результат шага: success | GitHub Actions: Overlay the exactly matching experimental binary and UI; результат шага: success | GitHub Actions: Test live page glass, initial inset and opaque off state; результат шага: success | GitHub Actions: Check existing toolbar, adaptive animation and storage regressions; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40811164252
+2026-10-29T08:17+05:00;ci;"GitHub Actions: Check existing toolbar, adaptive animation and storage regressions; результат шага: success | GitHub Actions: Print native screenshots; результат шага: success | GitHub Actions: Run actions/upload-artifact@v4; результат шага: success | GitHub Actions: Post Run actions/setup-python@v5; результат шага: success | GitHub Actions: Post Run actions/checkout@v4; результат шага: success | GitHub Actions: Complete job; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40811164252
+2026-10-29T08:18+05:00;commit;Коммит 9f0257a: Document successful Windows regression checks and real-site glass screenshots [skip ci];https://github.com/sanderstripa/soulu/commit/9f0257a14c072634265ba132a6bbce5b19f030ca
+2026-10-29T08:19+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:20+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:21+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:22+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:23+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:24+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:25+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:26+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:27+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:28+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:29+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:30+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:31+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:32+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:33+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:34+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:35+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:36+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:37+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:38+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:39+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:40+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:41+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:42+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:43+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:44+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:45+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:46+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:47+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:48+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:49+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:50+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:51+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:52+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:53+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:54+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:55+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:56+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:57+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:58+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T08:59+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:00+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:01+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:02+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:03+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:04+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:05+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:06+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:07+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:08+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:09+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:10+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:11+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:12+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:13+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:14+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:15+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:16+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:17+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:18+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:19+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:20+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:21+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:22+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:23+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:24+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:25+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:26+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:27+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:28+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:29+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:30+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:31+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:32+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:33+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:34+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:35+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:36+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:37+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:38+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:39+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:40+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:41+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:42+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:43+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:44+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:45+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:46+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:47+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:48+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:49+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:50+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:51+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:52+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:53+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:54+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:55+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:56+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:57+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:58+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T09:59+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:00+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:01+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:02+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:03+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:04+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:05+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:06+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:07+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:08+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:09+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:10+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:11+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:12+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:13+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:14+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:15+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:16+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:17+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:18+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:19+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:20+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:21+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:22+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:23+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:24+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:25+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:26+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:27+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:28+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:29+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:30+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:31+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:32+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:33+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:34+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:35+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:36+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:37+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:38+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:39+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:40+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:41+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:42+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:43+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:44+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:45+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:46+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:47+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:48+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:49+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:50+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:51+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:52+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:53+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:54+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:55+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:56+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:57+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:58+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T10:59+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T11:00+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T11:01+05:00;no_record;В доступном журнале GitHub нет событий за эту минуту. Чем именно был занят ассистент, подтвердить нельзя.;
+2026-10-29T11:02+05:00;ci, commit;"Коммит e0c37c3: Prepare Soulu 1.0.67 matte page glass release and mandatory visual regression gate | Коммит acdb0bc: Release Soulu 1.0.67 with live page glass [release 1.0.67] | GitHub Actions: Set up job; результат шага: success | GitHub Actions: Checkout Soulu; результат шага: success | GitHub Actions: Run actions/setup-go@v5; результат шага: success";https://github.com/sanderstripa/soulu/commit/e0c37c3d41ca8f61d467c6fbde06d6c5deaea986 | https://github.com/sanderstripa/soulu/commit/acdb0bcf0cc5910acdd51bbc82e78a5c7dc078f9 | https://github.com/sanderstripa/soulu/actions/runs/40826822181
+2026-10-29T11:03+05:00;ci;"GitHub Actions: Run actions/setup-go@v5; результат шага: success | GitHub Actions: Verify canonical generated geometry and typography; результат шага: success | GitHub Actions: Checkout official CEF project; результат шага: success | GitHub Actions: Pin the approved CEF distribution on a clean path; результат шага: success | GitHub Actions: Verify canonical typography and bundled fonts; результат шага: success | GitHub Actions: Build integrity-pinned local translation runtime; результат шага: success | GitHub Actions: Prepare integrity-pinned local speech model; результат шага: success | GitHub Actions: Add Soulu target and assets; результат шага: success | GitHub Actions: Use CEF-compatible Python; результат шага: success | GitHub Actions: Install CEF Python compatibility package; результат шага: success | GitHub Actions: Verify all production branding exports; результат шага: success | GitHub Actions: Restore compiled Rust dependencies; результат шага: success | GitHub Actions: Compile and test the pinned AdBlock engine; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40826822181
+2026-10-29T11:04+05:00;ci;"GitHub Actions: Compile and test the pinned AdBlock engine; результат шага: success | GitHub Actions: Configure CEF; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40826822181
+2026-10-29T11:05+05:00;ci;"GitHub Actions: Configure CEF; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40826822181
+2026-10-29T11:06+05:00;ci;"GitHub Actions: Configure CEF; результат шага: success | GitHub Actions: Verify fresh CEF archive and distribution resources; результат шага: success | GitHub Actions: Build Soulu; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40826822181
+2026-10-29T11:07+05:00;ci;"GitHub Actions: Build Soulu; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40826822181
+2026-10-29T11:08+05:00;ci;"GitHub Actions: Build Soulu; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40826822181
+2026-10-29T11:09+05:00;ci;"GitHub Actions: Build Soulu; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40826822181
+2026-10-29T11:10+05:00;ci;"GitHub Actions: Build Soulu; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40826822181
+2026-10-29T11:11+05:00;ci;"GitHub Actions: Build Soulu; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40826822181
+2026-10-29T11:12+05:00;ci;"GitHub Actions: Build Soulu; результат шага: success | GitHub Actions: Verify loaded engine and every CEF runtime component; результат шага: success | GitHub Actions: Upload candidate native executable before runtime checks; результат шага: success | GitHub Actions: Test third Adaptive toolbar animation and live page retention; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40826822181
+2026-10-29T11:13+05:00;ci;"GitHub Actions: Test third Adaptive toolbar animation and live page retention; результат шага: success | GitHub Actions: Verify live page glass, opaque themes, tabs and resize; результат шага: success | GitHub Actions: Upload page glass verification; результат шага: success | GitHub Actions: Test adaptive classic tabs, pinning and session restoration; результат шага: success | GitHub Actions: Verify Home before broader development regressions; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40826822181
+2026-10-29T11:14+05:00;ci;"GitHub Actions: Verify Home before broader development regressions; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40826822181
+2026-10-29T11:15+05:00;ci;"GitHub Actions: Verify Home before broader development regressions; результат шага: success | GitHub Actions: Upload early Home evidence; результат шага: success | GitHub Actions: Test work-area input bounds and fullscreen restore in real Win32 CEF; результат шага: success | GitHub Actions: Test local full-page translation in native CEF; результат шага: success | GitHub Actions: Test unified native menus across contexts and scales; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40826822181
+2026-10-29T11:16+05:00;ci;"GitHub Actions: Test unified native menus across contexts and scales; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40826822181
+2026-10-29T11:17+05:00;ci;"GitHub Actions: Test unified native menus across contexts and scales; результат шага: success | GitHub Actions: Test real AdBlock request cancellation and cosmetics; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40826822181
+2026-10-29T11:18+05:00;ci;"GitHub Actions: Test real AdBlock request cancellation and cosmetics; результат шага: success | GitHub Actions: Test HTTPS filter update and last-known-good cache; результат шага: success | GitHub Actions: Test AdBlock across tabs and repeated navigation; результат шага: success | GitHub Actions: Test Soulu site permissions and reading palette; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40826822181
+2026-10-29T11:19+05:00;ci;"GitHub Actions: Test Soulu site permissions and reading palette; результат шага: success | GitHub Actions: Upload site surface evidence; результат шага: success | GitHub Actions: Test native web platform, GPU, media and downloads; результат шага: success | GitHub Actions: Upload native platform evidence; результат шага: success | GitHub Actions: Test bundled typography in real CEF and RU EN DPI theme matrix; результат шага: success | GitHub Actions: Test native Onest dialog consent and Unicode prompts; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40826822181
+2026-10-29T11:20+05:00;ci;"GitHub Actions: Test native Onest dialog consent and Unicode prompts; результат шага: success | GitHub Actions: Upload typography evidence; результат шага: success | GitHub Actions: Test native history, browsing data clearing and visual layouts; результат шага: success | GitHub Actions: Upload history verification and native visual evidence; результат шага: success | GitHub Actions: Test native encrypted vault, import and site policy; результат шага: success | GitHub Actions: Test Browser Import adapters and native bridge on isolated profiles; результат шага: success | GitHub Actions: Test immediate settings saves, migration and native profile isolation; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40826822181
+2026-10-29T11:21+05:00;ci;"GitHub Actions: Test immediate settings saves, migration and native profile isolation; результат шага: success | GitHub Actions: Test native Settings overlay lifecycle and background state; результат шага: success | GitHub Actions: Test motion through the native CEF shell and Settings; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40826822181
+2026-10-29T11:22+05:00;ci;"GitHub Actions: Test motion through the native CEF shell and Settings; результат шага: success | GitHub Actions: Test toolbar geometry, caption feedback, popup bounds and native drag; результат шага: success | GitHub Actions: Upload toolbar verification; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40826822181
+2026-10-29T11:23+05:00;ci;"GitHub Actions: Upload toolbar verification; результат шага: success | GitHub Actions: Upload motion verification; результат шага: success | GitHub Actions: Upload settings verification and visual evidence; результат шага: success | GitHub Actions: Test first-run onboarding in native CEF; результат шага: success | GitHub Actions: Test default-browser command-line navigation in native CEF; результат шага: success | GitHub Actions: Verify installer source is current main before packaging; результат шага: success | GitHub Actions: Locate output and package ZIP; результат шага: success | GitHub Actions: Upload native executable for local runtime verification; результат шага: success | GitHub Actions: Build shared CONNECT Installer; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40826822181
+2026-10-29T11:24+05:00;ci;"GitHub Actions: Build shared CONNECT Installer; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40826822181
+2026-10-29T11:25+05:00;ci;"GitHub Actions: Build shared CONNECT Installer; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40826822181
+2026-10-29T11:26+05:00;ci;"GitHub Actions: Build shared CONNECT Installer; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40826822181
+2026-10-29T11:27+05:00;ci;"GitHub Actions: Build shared CONNECT Installer; результат шага: success | GitHub Actions: Verify ZIP and shared installer payload before upload or release; результат шага: success | GitHub Actions: Upload verified engine evidence; результат шага: success | GitHub Actions: Test live CEF settings and toolbar on Windows; результат шага: success | GitHub Actions: Test bookmarks persistence and native tab overview; результат шага: success | GitHub Actions: Test Startup New Tab Home in native CEF; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40826822181
+2026-10-29T11:28+05:00;ci;"GitHub Actions: Test Startup New Tab Home in native CEF; результат шага: success | GitHub Actions: Upload Home verification evidence; результат шага: success | GitHub Actions: Test current-site popover and local Reader Mode in native CEF; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40826822181
+2026-10-29T11:29+05:00;ci;"GitHub Actions: Test current-site popover and local Reader Mode in native CEF; результат шага: success | GitHub Actions: Test persistent CEF cookies and site storage; результат шага: success | GitHub Actions: Test real public articles and reported-site navigation; результат шага: success | GitHub Actions: Upload Reader Mode evidence; результат шага: success | GitHub Actions: Verify all reported public sites with native CEF; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40826822181
+2026-10-29T11:30+05:00;ci;"GitHub Actions: Verify all reported public sites with native CEF; результат шага: success | GitHub Actions: Upload public-site diagnostics; результат шага: success | GitHub Actions: Test two profiles, incognito disposal and password restart; результат шага: success | GitHub Actions: Test native permission overrides and actual content filtering; результат шага: success | GitHub Actions: Verify internal tabs and native link context menu; результат шага: success | GitHub Actions: Verify retained layout and native resize; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40826822181
+2026-10-29T11:31+05:00;ci;"GitHub Actions: Verify retained layout and native resize; результат шага: success | GitHub Actions: Record shared installer acceptance scope; результат шага: success | GitHub Actions: Upload visual checks; результат шага: success | GitHub Actions: Upload preview artifacts; результат шага: success | GitHub Actions: Upload native data-security evidence; результат шага: success | GitHub Actions: Upload installer typography diagnostics; результат шага: success | GitHub Actions: Upload native menu typography visuals; результат шага: success | GitHub Actions: Compare real public websites with AdBlock OFF and ON; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40826822181
+2026-10-29T11:32+05:00;ci;"GitHub Actions: Compare real public websites with AdBlock OFF and ON; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40826822181
+2026-10-29T11:33+05:00;ci;"GitHub Actions: Compare real public websites with AdBlock OFF and ON; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40826822181
+2026-10-29T11:34+05:00;ci;"GitHub Actions: Compare real public websites with AdBlock OFF and ON; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40826822181
+2026-10-29T11:35+05:00;ci;"GitHub Actions: Compare real public websites with AdBlock OFF and ON; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40826822181
+2026-10-29T11:36+05:00;ci;"GitHub Actions: Compare real public websites with AdBlock OFF and ON; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40826822181
+2026-10-29T11:37+05:00;ci;"GitHub Actions: Compare real public websites with AdBlock OFF and ON; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40826822181
+2026-10-29T11:38+05:00;ci;"GitHub Actions: Compare real public websites with AdBlock OFF and ON; результат шага: success | GitHub Actions: Upload AdBlock evidence; результат шага: success | GitHub Actions: Verify release source is the current main commit; результат шага: success | GitHub Actions: Verify release acceptance scope and public-site evidence; результат шага: success | GitHub Actions: Publish Soulu release; результат шага: success | GitHub Actions: Post Use CEF-compatible Python; результат шага: success | GitHub Actions: Post Checkout official CEF project; результат шага: success | GitHub Actions: Post Run actions/setup-go@v5; результат шага: success | GitHub Actions: Post Checkout Soulu; результат шага: success | GitHub Actions: Complete job; результат шага: success";https://github.com/sanderstripa/soulu/actions/runs/40826822181
