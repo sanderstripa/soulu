@@ -62,7 +62,7 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as root:
     report['page']=s.evaluate(page,"({url:location.href,title:document.title,text:document.body?.innerText?.slice(0,8000),player:window.ytInitialPlayerResponse?.playabilityStatus,hosts:document.querySelectorAll('vot-shadow-host').length})")
     shot=s.command(page,'Page.captureScreenshot',{'format':'png','captureBeyondViewport':False});(out/'youtube-diagnostic.png').write_bytes(base64.b64decode(shot['data']))
    except Exception as e:report['diagnosticError']=str(e)
-  print('VIDEO_DIAGNOSTIC',json.dumps(report,ensure_ascii=False),flush=True)
+  print('VIDEO_DIAGNOSTIC',json.dumps(report,ensure_ascii=True),flush=True)
   for ws in (page,shell):
    if ws:
     try:ws.close()
