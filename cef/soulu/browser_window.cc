@@ -1,3 +1,4 @@
+#include "examples/soulu/video_bridge.h"
 #include "examples/soulu/soulu_menu.h"
 #include "examples/soulu/isolated_page_job.h"
 #include "examples/soulu/typography_native.h"
@@ -425,6 +426,7 @@ BrowserWindow::BrowserWindow()
   settings_->SetString("homeProvider", "google");
   settings_->SetString("homeWeatherMode", "automatic");
   settings_->SetString("homeWeatherUnits", "celsius");
+  settings_->SetBool("videoTranslationEnabled",true);
   settings_->SetList("homeFavoriteIds", CefListValue::Create());
   settings_->SetList("homeShortcuts", CefListValue::Create());
   settings_->SetString("startPageMode", "blank");
@@ -828,7 +830,7 @@ void BrowserWindow::SyncSitePolicy(int id,const std::string& url) {
 }
 void BrowserWindow::ReleaseIncognito() {
   if(std::any_of(tabs_.begin(),tabs_.end(),[](const Tab& t){return t.incognito;}))return;
-  private_page_settings_=nullptr;private_home_profile_.clear();ForgetPrivateHomeWeather();
+  private_page_settings_=nullptr;private_home_profile_.clear();ForgetPrivateHomeWeather();ForgetPrivateVideoPreferences();
   incognito_context_=nullptr;policies_.erase("__incognito__");reader_preferences_.erase("__incognito__");
   auto retained=CefListValue::Create();
   for(size_t i=0;i<bookmarks_->GetSize();++i){auto row=bookmarks_->GetDictionary(i);
@@ -2166,6 +2168,7 @@ void BrowserWindow::HandleBridge(const std::string& request,
   if(any_import&&(bookmark_write||password_write||action=="browser.profile.delete"||action=="browser.profile.switch"||action=="browser.profile.create"||action=="browser.import.createProfile"||action=="browser.import.run"||action=="browser.import.passwords")){
     callback->Failure(409,"Wait for the current import to finish");return;
   }
+  if(action=="browser.video.settings"){HandleVideoSettings(payload&&payload->GetType()==VTYPE_DICTIONARY?payload->GetDictionary():nullptr,callback);return;}
   if(action=="browser.menu.show"){
     if(settings_source||!payload||payload->GetType()!=VTYPE_DICTIONARY){callback->Failure(403,"Menu host unavailable");return;}
     auto data=payload->GetDictionary();auto items=data->GetList("items");

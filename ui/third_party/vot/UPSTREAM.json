@@ -1,0 +1,8 @@
+{
+  "repository": "ilyhalight/voice-over-translation",
+  "tag": "1.12.3",
+  "commit": "f32ee1670f6b7b26e5cdeffc0010a03842c960b2",
+  "asset": "dist/vot-min.user.js",
+  "license": "MIT",
+  "scope": "HTTPS YouTube main frames; GM APIs are captured in a private native-backed closure. No arbitrary remote JavaScript updates."
+}

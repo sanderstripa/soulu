@@ -19,6 +19,10 @@ set(SOULU_SRCS
   page_glass.h
   page_glass_script.h
   page_glass.cc
+  protected_store.cc
+  video_renderer.cc
+  video_network.cc
+  video_bridge.cc
   settings_session.cc
   settings_overlay.h
   motion.h

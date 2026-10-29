@@ -1,0 +1,27 @@
+function(run){
+ 'use strict';
+ const native=window.__souluVideoNative;delete window.__souluVideoNative;
+ const call=value=>new Promise((resolve,reject)=>native(JSON.stringify(value),raw=>{try{const data=JSON.parse(raw);data.ok===false?reject(Error(data.error||'Video translation request failed')):resolve(data)}catch(e){reject(e)}}));
+ const encode=async value=>{if(value===undefined||value===null)return '';if(typeof value==='string')return value;if(value instanceof Blob)value=await value.arrayBuffer();if(value instanceof ArrayBuffer)value=new Uint8Array(value);if(ArrayBuffer.isView(value)){let text='';const bytes=new Uint8Array(value.buffer,value.byteOffset,value.byteLength);for(let i=0;i<bytes.length;i+=16384)text+=String.fromCharCode(...bytes.subarray(i,i+16384));return btoa(text)}throw Error('Unsupported video request body')};
+ const decode=text=>{const raw=atob(text||''),bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);return bytes};
+ call({op:'init'}).then(init=>{
+  if(!init.enabled)return;
+  const storage=init.values||{},listeners=new Map();let listenerId=0,xhrId=0;
+  const get=(key,fallback)=>Object.hasOwn(storage,key)?structuredClone(storage[key]):fallback;
+  const set=async(key,value)=>{if(typeof key!=='string'||key.length>160)throw Error('Invalid video preference');const previous=storage[key];storage[key]=structuredClone(value);const response=await call({op:'set',key,value});for(const l of listeners.values())if(l.key===key)l.fn(key,previous,value,false);return response};
+  const remove=async key=>{delete storage[key];await call({op:'delete',key})};
+  const values=keys=>{const out={};for(const key of Array.isArray(keys)?keys:Object.keys(keys||storage))out[key]=get(key,Array.isArray(keys)?undefined:keys?.[key]);return out};
+  const style=css=>{const sheet=new CSSStyleSheet();sheet.replaceSync(String(css));document.adoptedStyleSheets=[...document.adoptedStyleSheets,sheet];return sheet};
+  const notice=details=>{if(typeof details==='string')details={text:details};const host=document.createElement('div');host.style.cssText='position:fixed;right:20px;bottom:20px;z-index:2147483647;max-width:340px';const root=host.attachShadow({mode:'closed'}),box=document.createElement('div');box.textContent=[details.title,details.text].filter(Boolean).join(' — ');box.style.cssText='font:14px system-ui;padding:14px 18px;border:1px solid #8884;border-radius:12px;color:CanvasText;background:Canvas;box-shadow:0 8px 28px #0003';root.append(box);(document.body||document.documentElement).append(host);setTimeout(()=>{host.remove();details.ondone?.()},Math.min(30000,details.timeout||6000));return {remove:()=>host.remove()}};
+  const xhr=details=>{
+   const id=String(++xhrId);let aborted=false,settled=false;
+   const finish=(name,value)=>{if(settled)return;settled=true;details[name]?.(value);details.onloadend?.(value)};
+   const promise=(async()=>{const data=await encode(details.data);const binary=details.data!==undefined&&typeof details.data!=='string';const result=await call({op:'xhr',id,url:String(details.url),method:details.method||'GET',headers:details.headers||{},data,binary,anonymous:!!details.anonymous,timeout:details.timeout||60000});if(aborted)return;const bytes=decode(result.body),type=details.responseType||'text';const text=type==='arraybuffer'||type==='blob'?'':new TextDecoder().decode(bytes);const response={readyState:4,status:result.status,statusText:result.statusText||'',responseHeaders:result.headers||'',finalUrl:result.url,context:details.context,responseText:text};response.response=type==='arraybuffer'?bytes.buffer:type==='blob'?new Blob([bytes],{type:result.contentType||'application/octet-stream'}):type==='json'?JSON.parse(text):text;details.onreadystatechange?.(response);finish('onload',response);return response})().catch(error=>{if(!aborted){finish(/timeout/i.test(error.message)?'ontimeout':'onerror',{error,status:0,statusText:error.message,context:details.context});}throw error});
+   promise.catch(()=>{});
+   return {promise,abort(){if(settled)return;aborted=true;finish('onabort',{status:0,context:details.context});call({op:'abort',id}).catch(()=>{})}};
+  };
+  const info={scriptHandler:'Soulu',version:'1.0.68',platform:{os:'win',arch:'x86-64',browserName:'Soulu'},script:{name:'VOT — Soulu Video Translate',version:init.version||'1.12.3',namespace:'vot',description:'Integrated voice-over translation'},scriptMetaStr:'',isIncognito:!!init.incognito};
+  const GM={info,getValue:async(k,d)=>get(k,d),setValue:set,deleteValue:remove,listValues:async()=>Object.keys(storage),getValues:async keys=>values(keys),setValues:async rows=>{for(const[k,v]of Object.entries(rows))await set(k,v)},deleteValues:async keys=>{for(const k of keys)await remove(k)},addStyle:style,notification:notice,xmlHttpRequest:details=>{const controller=xhr(details);const p=controller.promise;p.abort=controller.abort;return p},addValueChangeListener:(key,fn)=>{const id=++listenerId;listeners.set(id,{key,fn});return id},removeValueChangeListener:id=>listeners.delete(id)};
+  run(GM,get,(k,v)=>{set(k,v).catch(console.error)},k=>{remove(k).catch(console.error)},()=>Object.keys(storage),style,info,xhr,notice);
+ }).catch(error=>console.error('Soulu Video Translate:',error));
+}

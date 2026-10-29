@@ -446,6 +446,9 @@ bool BrowserClient::OnProcessMessageReceived(CefRefPtr<CefBrowser> browser,
                                              CefProcessId source_process,
                                              CefRefPtr<CefProcessMessage> message) {
   CEF_REQUIRE_UI_THREAD();
+  if(role_==BrowserRole::kContent&&source_process==PID_RENDERER&&frame&&frame->IsMain()&&message->GetName()=="soulu.video.request"){
+    auto args=message->GetArgumentList();if(args->GetSize()==2&&args->GetType(0)==VTYPE_INT&&args->GetType(1)==VTYPE_STRING&&args->GetString(1).length()<=4*1024*1024)owner_->HandleVideoRequest(tab_id_,frame,args->GetInt(0),args->GetString(1));return true;
+  }
   if(role_==BrowserRole::kContent&&source_process==PID_RENDERER&&frame&&frame->IsMain()&&message->GetName()=="soulu.page.scroll"){
     auto args=message->GetArgumentList();if(args->GetSize()==1&&args->GetType(0)==VTYPE_DOUBLE)owner_->PageScroll(tab_id_,args->GetDouble(0));return true;
   }

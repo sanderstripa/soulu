@@ -79,6 +79,8 @@ class BrowserWindow final : public CefBaseRefCounted {
   CefRefPtr<ShellSurface> surface() const { return surface_; }
   void ApplyContentTheme();
   void PageScroll(int tab_id,double y);
+  void HandleVideoRequest(int,CefRefPtr<CefFrame>,int,const std::string&);
+  void HandleVideoSettings(CefRefPtr<CefDictionaryValue>,CefRefPtr<CefMessageRouterBrowserSide::Callback>);
   void OpenIncognitoLink(int source_id, CefRefPtr<CefBrowser> source,
                          const std::string& url);
   int PreparePopup(int source_id, const std::string& url, bool background,

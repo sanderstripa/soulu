@@ -1,3 +1,4 @@
+#include "examples/soulu/video_renderer.h"
 #include "examples/soulu/app_factory.h"
 #include "examples/soulu/page_glass_script.h"
 #include "include/wrapper/cef_message_router.h"
@@ -58,6 +59,7 @@ class RendererApp final : public CefApp, public CefRenderProcessHandler {
   void OnContextCreated(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame,
                         CefRefPtr<CefV8Context> context) override {
     router_->OnContextCreated(browser, frame, context);
+    InstallVideoRuntime(browser,frame,context);
     CefURLParts parts;
     if(!CefParseURL(frame->GetURL(),parts)||(CefString(&parts.scheme)!="https"&&CefString(&parts.scheme)!="http"))return;
     context->GetGlobal()->SetValue("__souluCosmeticSend",CefV8Value::CreateFunction("send",new CosmeticSubmit()),V8_PROPERTY_ATTRIBUTE_NONE);
@@ -99,10 +101,12 @@ class RendererApp final : public CefApp, public CefRenderProcessHandler {
   }
   void OnContextReleased(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame,
                          CefRefPtr<CefV8Context> context) override {
+    ForgetVideoContext(context);
     router_->OnContextReleased(browser, frame, context);
   }
   bool OnProcessMessageReceived(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame,
                                 CefProcessId source, CefRefPtr<CefProcessMessage> message) override {
+    if(HandleVideoResponse(frame,source,message))return true;
     if(source==PID_BROWSER&&frame&&(message->GetName()=="soulu.adblock.selectors"||message->GetName()=="soulu.adblock.refresh")){
       auto context=frame->GetV8Context();if(!context)return true;
       std::string script;
