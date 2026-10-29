@@ -30,8 +30,8 @@ window.souluTypographyReady = Promise.all([400,500,600].map(weight =>
     if(!node||node===owner||node.closest('.reader-article'))return;
     hide();owner=node;previousDescription=node.getAttribute('aria-describedby');
     timer=setTimeout(()=>{
-      if(!node.isConnected||!node.title)return hide();
-      tip.textContent=node.title;tip.hidden=false;
+      const label=node.dataset.tooltip||node.title;if(!node.isConnected||!label)return hide();
+      tip.textContent=label;tip.hidden=false;
       const r=node.getBoundingClientRect(),size=tip.getBoundingClientRect();
       tip.style.left=Math.max(8,Math.min(r.left,innerWidth-size.width-8))+'px';
       const below=r.bottom+8;
@@ -41,9 +41,9 @@ window.souluTypographyReady = Promise.all([400,500,600].map(weight =>
       node.setAttribute('aria-describedby',[previousDescription,tip.id].filter(Boolean).join(' '));
     },420);
   };
-  document.addEventListener('pointerover',event=>show(event.target.closest('[title]')));
+  document.addEventListener('pointerover',event=>show(event.target.closest('[title],[data-tooltip]')));
   document.addEventListener('pointerout',event=>{if(owner&&!owner.contains(event.relatedTarget))hide();});
-  document.addEventListener('focusin',event=>show(event.target.closest('[title]')));
+  document.addEventListener('focusin',event=>show(event.target.closest('[title],[data-tooltip]')));
   document.addEventListener('focusout',hide);
   document.addEventListener('pointerdown',hide);
   document.addEventListener('keydown',hide);
@@ -51,3 +51,5 @@ window.souluTypographyReady = Promise.all([400,500,600].map(weight =>
   window.addEventListener('resize',()=>{if(!expanded)hide();});
   window.addEventListener('blur',hide);
 })();
+
+import('./select-control.js').catch(error=>console.error('Soulu controls:',error));

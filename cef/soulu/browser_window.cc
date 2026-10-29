@@ -9,6 +9,7 @@
 #include "examples/soulu/app_version.h"
 #include "examples/soulu/motion.h"
 #include "examples/soulu/page_glass.h"
+#include "examples/soulu/vpn_routing.h"
 #include "include/cef_app.h"
 #include "include/cef_command_line.h"
 #include "include/cef_devtools_message_observer.h"
@@ -438,6 +439,7 @@ BrowserWindow::BrowserWindow()
   vpn_settings_->SetString("address", "");
   vpn_settings_->SetString("region", "");
   vpn_settings_->SetString("lastProfileId", "");
+  vpn_settings_->SetString("directDomains", "");
   settings_->SetString("bookmarksBarMode", "newTab");
   settings_->SetString("bookmarksBarPosition", "above");
   settings_->SetBool("bookmarksIconsOnly", false);
@@ -710,7 +712,7 @@ void BrowserWindow::ApplyProxy(CefRefPtr<CefRequestContext> context) {
   proxy->SetString("mode", vpn_enabled_ ? "fixed_servers" : "system");
   if (vpn_enabled_) {
     proxy->SetString("server", "socks5://127.0.0.1:17890");
-    proxy->SetString("bypass_list", "<-loopback>");
+    proxy->SetString("bypass_list", VpnBypassList(vpn_settings_));
   }
   auto value = CefValue::Create();
   value->SetDictionary(proxy);
@@ -2553,7 +2555,7 @@ void BrowserWindow::HandleBridge(const std::string& request,
   }
   else if (action == "browser.popover") { popover_visible_ = payload->GetBool(); Layout(); }
   else if (action == "browser.setRightPanel") { right_panel_width_ = payload->GetInt(); Layout(); }
-  else if (action == "browser.setSuggestionsHeight") { suggestions_height_ = payload->GetInt(); Layout(); }
+  else if (action == "browser.setSuggestionsHeight") { suggestions_height_ = std::clamp(static_cast<int>(std::ceil(payload->GetType()==VTYPE_DOUBLE?payload->GetDouble():payload->GetInt())),0,4096); Layout(); }
   else if (action == "browser.find") {
     if (auto* t = ActiveTab(); t && t->browser) {
       auto browser=t->reader_active?shell_:t->browser;

@@ -1,4 +1,5 @@
 #include "examples/soulu/browser_window.h"
+#include "examples/soulu/vpn_routing.h"
 #include "examples/soulu/reader_preferences.h"
 #include "examples/soulu/frosted_backdrop.h"
 #include "include/cef_parser.h"
@@ -147,13 +148,14 @@ bool BrowserWindow::SaveSettingsSnapshot(CefRefPtr<CefDictionaryValue> requested
       error="Режим чтения: настройки не сохранены.";return false;}
     reader_preferences_[settings_profile_]=reader->Copy(false);
   }
+  if(!NormalizeVpnRouting(vpn,error))return false;
   if(!Same(vpn,settings_loaded_->GetDictionary("vpn"))){
     if(!Same(vpn_settings_,settings_loaded_->GetDictionary("vpn"))&&!Same(vpn_settings_,vpn)){
       error="VPN: конфигурация изменена в другом окне.";return false;}
     const std::string protocol=vpn->GetString("protocol"),link=vpn->GetString("link");
     if((protocol!="vless"&&protocol!="sudoku")||(!link.empty()&&link.rfind(protocol+"://",0)!=0)){
       error="VPN: проверьте ключ подключения.";return false;}
-    if(link.empty()){auto old=vpn_settings_;vpn_settings_=vpn->Copy(false);if(!SaveSettings()){vpn_settings_=old;error="VPN: конфигурация не сохранена.";return false;}return true;}
+    if(link.empty()){auto old=vpn_settings_;vpn_settings_=vpn->Copy(false);if(!SaveSettings()){vpn_settings_=old;error="VPN: конфигурация не сохранена.";return false;}for(auto& profile:profiles_)ApplyProxy(profile.context);ApplyProxy(incognito_context_);return true;}
     auto command=CefDictionaryValue::Create();command->SetString("action","save_profile");
     command->SetString("id",vpn_settings_->GetString("lastProfileId"));
     command->SetString("name",vpn->GetString("region").empty()?"Soulu VPN":vpn->GetString("region"));
@@ -165,6 +167,7 @@ bool BrowserWindow::SaveSettingsSnapshot(CefRefPtr<CefDictionaryValue> requested
     if(!id.empty())vpn_settings_->SetString("lastProfileId",id);
     if(!SaveSettings()){vpn_settings_=old;error="VPN-helper сохранил профиль, но конфигурация Soulu не записана. Повторите сохранение.";return false;}
   }
+  for(auto& profile:profiles_)ApplyProxy(profile.context);ApplyProxy(incognito_context_);
   return true;
 }
 

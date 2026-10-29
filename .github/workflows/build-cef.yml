@@ -932,16 +932,3 @@ jobs:
           files: |
             browser/artifacts/Soulu-Beta-1.0.${{ env.BETA_NUMBER }}-x64.exe
             browser/artifacts/Soulu-Beta-1.0.${{ env.BETA_NUMBER }}-x64.zip
-            browser/artifacts/engine-version.json
-            browser/artifacts/data-security.json
-            browser/artifacts/browser-import-native.json
-            browser/artifacts/browser-import-integration.json
-            browser/artifacts/browser-import-files.json
-            browser/artifacts/onboarding-evidence.json
-            browser/artifacts/default-links-evidence.json
-            browser/artifacts/settings-evidence.json
-            browser/artifacts/settings-overlay-evidence.json
-            browser/artifacts/classic-responsive-evidence.json
-            browser/artifacts/adaptive-toolbar-evidence.json
-            browser/artifacts/adaptive-*.png
-            browser/artifacts/settings-overlay-visuals/
