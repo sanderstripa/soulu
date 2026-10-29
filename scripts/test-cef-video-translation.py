@@ -74,6 +74,7 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as root:
   wait(lambda:s.evaluate(page,"document.querySelector('video')?.readyState>=2"),30)
   check(True,'Synthetic player decodes and plays real WebM frames')
   wait(lambda:deep('.vot-translate-button'),60);check(True,'Full pinned VOT creates controls through the native integration on the synthetic player')
+  rect=s.evaluate(page,"(()=>{const r=document.querySelector('video').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+30}})()");s.command(page,'Input.dispatchMouseEvent',dict(type='mouseMoved',**rect));time.sleep(.4)
   photo('vot-native-player-fixture');report['passed']=True
  finally:
   if page:
