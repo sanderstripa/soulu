@@ -10,6 +10,8 @@
 #include <bcrypt.h>
 #include <chrono>
 #include <map>
+#include <fstream>
+#include <iterator>
 namespace soulu {
 namespace {
 CefRefPtr<CefDictionaryValue> private_values;
@@ -65,6 +67,26 @@ void Broadcast(const std::string& profile,CefRefPtr<CefDictionaryValue> value){
  }
 }
 }
+
+CefRefPtr<CefDictionaryValue> BundledVideoLocaleResponse(CefRefPtr<CefDictionaryValue> args){
+ if(!args||args->GetString("method")!="GET")return nullptr;
+ CefURLParts parts;if(!CefParseURL(args->GetString("url"),parts)||CefString(&parts.scheme)!="https"||CefString(&parts.host)!="raw.githubusercontent.com")return nullptr;
+ const std::string path=CefString(&parts.path);
+ const std::string prefix="/ilyhalight/voice-over-translation/";
+ if(path.rfind(prefix,0)!=0)return nullptr;
+ const auto start=path.find("/src/localization/",prefix.size());if(start==std::string::npos)return nullptr;
+ const std::string branch=path.substr(prefix.size(),start-prefix.size());
+ if(branch!="master"&&branch!="1.12.3"&&branch!="f32ee1670f6b7b26e5cdeffc0010a03842c960b2")return nullptr;
+ const std::string relative=path.substr(start+18);
+ if(relative!="hashes.json"&&relative!="locales/en.json"&&relative!="locales/ru.json")return nullptr;
+ wchar_t executable[32768]={};GetModuleFileNameW(nullptr,executable,32768);
+ const auto file=std::filesystem::path(executable).parent_path()/L"ui"/L"third_party"/L"vot"/relative;
+ std::error_code error;const auto size=std::filesystem::file_size(file,error);if(error||size>1024*1024)return nullptr;
+ std::ifstream stream(file,std::ios::binary);const std::string body(std::istreambuf_iterator<char>(stream),{});
+ auto parsed=CefParseJSON(body,JSON_PARSER_RFC);if(!parsed||parsed->GetType()!=VTYPE_DICTIONARY)return nullptr;
+ auto result=CefDictionaryValue::Create();result->SetBool("ok",true);result->SetInt("status",200);result->SetString("statusText","OK");result->SetString("url",args->GetString("url"));result->SetString("body",CefBase64Encode(body.data(),body.size()));result->SetString("contentType","application/json");result->SetString("headers","Content-Type: application/json; charset=utf-8\r\n");return result;
+}
+
 CefRefPtr<CefDictionaryValue> VideoPreferences(const std::string& profile){
  auto result=profile=="__incognito__"?(private_values?private_values->Copy(false):CefDictionaryValue::Create()):ReadProtectedStore(profile,"video");
  if(!result)return nullptr;
@@ -102,7 +124,7 @@ void BrowserWindow::HandleVideoRequest(int tab_id,CefRefPtr<CefFrame> frame,int 
   if(watches.size()>=256){failure("Too many video preference listeners");return;}
   watches.push_back({tab->profile_id,frame,id});auto values=VideoPreferences(tab->profile_id);if(values)result->SetDictionary("values",values);respond(result);return;
  }
- if(op=="xhr"){VideoFetch(owner,tab->browser->GetHost()->GetRequestContext(),args,respond);return;}
+ if(op=="xhr"){if(auto local=BundledVideoLocaleResponse(args)){respond(local);return;}VideoFetch(owner,tab->browser->GetHost()->GetRequestContext(),args,respond);return;}
  if(op!="set"&&op!="delete"){failure("Unknown video operation");return;}
  const std::string key=args->GetString("key");if(key.empty()||key.size()>160||raw.size()>2*1024*1024){failure("Invalid video preference");return;}
  auto values=VideoPreferences(tab->profile_id);if(!values){failure("Video preferences could not be decrypted");return;}

@@ -9,6 +9,9 @@ namespace soulu {
 int RunComponentTests(const std::filesystem::path& output){
  auto report=CefDictionaryValue::Create();auto checks=CefListValue::Create();bool passed=true;
  auto check=[&](bool ok,const std::string& label){auto row=CefDictionaryValue::Create();row->SetBool("passed",ok);row->SetString("check",label);checks->SetDictionary(checks->GetSize(),row);passed=passed&&ok;};
+ auto locale_request=CefDictionaryValue::Create();locale_request->SetString("method","GET");locale_request->SetString("url","https://raw.githubusercontent.com/ilyhalight/voice-over-translation/master/src/localization/locales/ru.json?timestamp=1");
+ auto locale=BundledVideoLocaleResponse(locale_request);check(locale&&locale->GetInt("status")==200&&!locale->GetString("body").empty(),"VOT Russian locale is available without a network request");
+ locale_request->SetString("url","https://raw.githubusercontent.com/evil/repository/master/src/localization/locales/ru.json");check(!BundledVideoLocaleResponse(locale_request),"Packaged locale cache is restricted to the pinned upstream repository");
  auto vpn=CefDictionaryValue::Create();vpn->SetString("directDomains"," https://Example.COM/path\n*.bank.example\nexample.com\n");std::string error;
  check(NormalizeVpnRouting(vpn,error)&&vpn->GetString("directDomains")=="example.com\nbank.example","VPN canonical domain deduplication");
  check(VpnBypassList(vpn)=="<-loopback>;example.com;*.example.com;bank.example;*.bank.example","VPN exact and subdomain bypass");

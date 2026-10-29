@@ -5,5 +5,22 @@
   "asset": "dist/vot-min.user.js",
   "license": "MIT",
   "scope": "HTTPS YouTube main frames; GM APIs are captured in a private native-backed closure. No arbitrary remote JavaScript updates.",
-  "upstreamGitBlob": "5c96a15d6b51a9a70320d04152342156a12c9593"
+  "upstreamGitBlob": "5c96a15d6b51a9a70320d04152342156a12c9593",
+  "bundledLocales": [
+    {
+      "file": "hashes.json",
+      "upstream": "src/localization/hashes.json",
+      "gitBlob": "35a6249a24625430989c186ea9745cf8fca6b683"
+    },
+    {
+      "file": "locales/en.json",
+      "upstream": "src/localization/locales/en.json",
+      "gitBlob": "af662a2c025f4cc611874e70c505e582d7772966"
+    },
+    {
+      "file": "locales/ru.json",
+      "upstream": "src/localization/locales/ru.json",
+      "gitBlob": "0de2f871f5a43340b84b279f171f414ed53bbd1a"
+    }
+  ]
 }

@@ -1,1 +1,3 @@
 ui/third_party/vot/vot.user.js -text
+ui/third_party/vot/hashes.json -text
+ui/third_party/vot/locales/* -text
