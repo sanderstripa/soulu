@@ -2,7 +2,7 @@ name: Validate UI against verified native candidate
 on:
   push:
     branches: [codex/browser-components]
-    paths: ['ui/**', 'scripts/test-cef-next-ui.py', 'scripts/test-cef-video-translation.py', '.github/workflows/check-ui-runtime.yml']
+    paths: ['ui/**', 'scripts/fixtures/**', 'scripts/test-cef-next-ui.py', 'scripts/test-cef-video-translation.py', '.github/workflows/check-ui-runtime.yml']
   workflow_dispatch: {}
 permissions:
   contents: read
