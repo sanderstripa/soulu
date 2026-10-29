@@ -33,7 +33,7 @@ CefRefPtr<CefDictionaryValue> JsonResponse(CefRefPtr<CefDictionaryValue> respons
 void CompleteAuth(const std::string& profile,CefRefPtr<CefRequestContext> context,CefRefPtr<CefDictionaryValue> args,VideoResult done){
  auto fail=[done](const std::string& error){auto r=CefDictionaryValue::Create();r->SetBool("ok",false);r->SetString("error",error);done(r);};
  auto it=auth_pending.find(profile);const std::string code=args->GetString("code");
- if(it==auth_pending.end()||it->second.state!=args->GetString("state")||it->second.expires<std::chrono::steady_clock::now()||code.empty()||code.size()>4096){fail("OAuth state is invalid or expired");return;}
+ if(it==auth_pending.end()||it->second.state!=args->GetString("state").ToString()||it->second.expires<std::chrono::steady_clock::now()||code.empty()||code.size()>4096){fail("OAuth state is invalid or expired");return;}
  const auto pending=it->second;auth_pending.erase(it);
  auto request=CefDictionaryValue::Create();request->SetString("id","token");request->SetString("url","https://oauth.yandex.ru/token");request->SetString("method","POST");request->SetBool("anonymous",true);request->SetInt("timeout",60000);auto headers=CefDictionaryValue::Create();headers->SetString("Content-Type","application/x-www-form-urlencoded");request->SetDictionary("headers",headers);
  request->SetString("data","grant_type=authorization_code&client_id=1666fbe22f3749c581002a4f97b2592d&redirect_uri=https%3A%2F%2Foauth.yandex.ru%2Fverification_code&code="+CefURIEncode(code,true).ToString()+"&code_verifier="+pending.verifier);
