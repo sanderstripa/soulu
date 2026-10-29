@@ -108,52 +108,24 @@ with tempfile.TemporaryDirectory(prefix='soulu-reader-', ignore_cleanup_errors=T
         def popup_state():
             return s.evaluate(shell,"new Promise((resolve,reject)=>cefQuery({request:JSON.stringify({action:'browser.surfaceDiagnostics'}),onSuccess:s=>resolve(JSON.parse(s)),onFailure:reject}))")
         def exercise_select(selector, name):
-            # Native state/Reader probe notifications can replace menu controls
-            # after opening. Let the current rendered control settle first.
+            # The styled Soulu listbox replaces the OS select popup.
             time.sleep(.3)
-            before = popup_state()['popupPaintCount']
-            s.evaluate(shell,"document.querySelector("+json.dumps(selector)+").focus()")
-            user32 = ctypes.windll.user32
-            handles = []
-            callback_type = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p)
-            user32.EnumWindows.argtypes = [callback_type, ctypes.c_void_p]
-            user32.EnumChildWindows.argtypes = [ctypes.c_void_p, callback_type, ctypes.c_void_p]
-            @callback_type
-            def visit(hwnd, unused):
-                pid = ctypes.c_ulong(); user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
-                if pid.value == process.pid:
-                    user32.EnumChildWindows(hwnd, child, 0)
-                return True
-            @callback_type
-            def child(hwnd, unused):
-                class_name = ctypes.create_unicode_buffer(128)
-                user32.GetClassNameW(hwnd, class_name, 128)
-                if class_name.value == 'SouluAlphaToolbar': handles.append(hwnd)
-                return True
-            user32.EnumWindows(visit, 0)
-            assert handles, 'Native toolbar HWND found'
-            hwnd = handles[0]
-            user32.GetDpiForWindow.argtypes = [ctypes.c_void_p]
-            user32.PostMessageW.argtypes = [ctypes.c_void_p, ctypes.c_uint, ctypes.c_size_t, ctypes.c_ssize_t]
-            # Dispatch a trusted click to the CEF surface. Posting WM_SETFOCUS
-            # does not transfer Windows focus when another window is foreground.
-            rect = s.evaluate(shell,"(()=>{const r=document.querySelector("+json.dumps(selector)+").getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()")
+            trigger = "document.querySelector("+json.dumps(selector)+").parentElement.querySelector('.soulu-select-button')"
+            wait(lambda:s.evaluate(shell, "!!("+trigger+")"))
+            s.evaluate(shell, trigger+".focus()")
+            rect = s.evaluate(shell,"(()=>{const r=("+trigger+").getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()")
             s.command(shell,'Input.dispatchMouseEvent',dict(rect,type='mousePressed',button='left',clickCount=1))
             s.command(shell,'Input.dispatchMouseEvent',dict(rect,type='mouseReleased',button='left',clickCount=1))
-            try:
-                state = wait(lambda: (p if (p:=popup_state())['popupVisible'] and p['popupPaintCount']>before else None))
-            except AssertionError:
-                print(json.dumps({'name':name,'state':popup_state(),'dom':s.evaluate(shell,'({active:document.activeElement?.tagName,menuHidden:document.querySelector(".site-popover").hidden,permissionsOpen:document.querySelector(".site-permissions")?.open,readerSettingsHidden:document.querySelector(".reader-settings").hidden})')}),flush=True)
-                raise
-            viewport = s.evaluate(shell,'({width:innerWidth,height:innerHeight})')
-            assert_check(state['popupWidth']>0 and state['popupHeight']>0 and state['popupX']>=0 and state['popupY']>=0 and state['popupX']+state['popupWidth']<=viewport['width'] and state['popupY']+state['popupHeight']<=viewport['height'],name+' native select painted inside client')
+            wait(lambda:s.evaluate(shell,"!!document.querySelector('.soulu-select-menu:popover-open')"))
+            bounds=s.evaluate(shell,"(()=>{const n=document.querySelector('.soulu-select-menu:popover-open'),r=n.getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height,width:innerWidth,height:innerHeight,rows:n.querySelectorAll('[role=option]').length}})()")
+            assert_check(bounds['w']>0 and bounds['h']>0 and bounds['x']>=0 and bounds['y']>=0 and bounds['x']+bounds['w']<=bounds['width'] and bounds['y']+bounds['h']<=bounds['height'] and bounds['rows']>=3,name+' Soulu listbox painted inside client')
             s.evaluate(shell,'browserShell.getSettings().then(settings=>browserShell.setSettings({theme:settings.theme}))')
             time.sleep(.2)
-            assert_check(popup_state()['popupVisible'],name+' unchanged state preserves native select')
+            assert_check(s.evaluate(shell,"!!document.querySelector('.soulu-select-menu:popover-open')"),name+' unchanged state preserves listbox')
             s.command(shell,'Input.dispatchKeyEvent',{'type':'keyDown','key':'Escape','windowsVirtualKeyCode':27})
             s.command(shell,'Input.dispatchKeyEvent',{'type':'keyUp','key':'Escape','windowsVirtualKeyCode':27})
-            wait(lambda:not popup_state()['popupVisible'])
-            assert_check(True,name+' native select dismiss restores surface')
+            wait(lambda:not s.evaluate(shell,"!!document.querySelector('.soulu-select-menu:popover-open')"))
+            assert_check(visible_surface('.reader-settings') and s.evaluate(shell,"document.activeElement===("+trigger+")"),name+' listbox dismiss preserves palette and focus')
         for layout in ('compact','classic'):
             s.evaluate(shell,'browserShell.setSettings('+json.dumps({'layout':layout})+')')
             wait(lambda:s.evaluate(shell,'document.body.dataset.layout')==layout)

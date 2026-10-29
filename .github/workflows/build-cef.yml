@@ -696,8 +696,6 @@ jobs:
 
       - name: Test live CEF settings and toolbar on Windows
         if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.68')) }}
-        # Cloud visual probes are diagnostic and must not block packaging.
-        continue-on-error: true
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client pillow dxcam comtypes
