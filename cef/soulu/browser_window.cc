@@ -2724,24 +2724,23 @@ void BrowserWindow::HandleBridge(const std::string& request,
     return Reply(callback, vpn_settings_->Copy(false));
   }
   else if (action == "vpn.settings.set") {
-    if (payload && payload->GetType() == VTYPE_DICTIONARY) {
-      auto patch = payload->GetDictionary(); CefDictionaryValue::KeyList keys; patch->GetKeys(keys);
-      for (const auto& key : keys) vpn_settings_->SetValue(key, patch->GetValue(key)->Copy());
-      auto native = CefDictionaryValue::Create();
-      native->SetString("action", "save_profile");
-      native->SetString("id", vpn_settings_->GetString("lastProfileId"));
-      native->SetString("name", vpn_settings_->GetString("region").empty()
-          ? "Soulu VPN" : vpn_settings_->GetString("region"));
-      native->SetString("country", vpn_settings_->GetString("region"));
-      native->SetString("url", vpn_settings_->GetString("link"));
-      auto saved = SendVpnHelper(native);
-      if (!saved->GetBool("ok")) return Reply(callback, saved);
-      std::string id = saved->GetString("id");
-      if (id.empty()) id = saved->GetString("profileId");
-      if (!id.empty()) vpn_settings_->SetString("lastProfileId", id);
-      SaveSettings();
+    if(payload&&payload->GetType()==VTYPE_DICTIONARY){
+      auto next=vpn_settings_->Copy(false),patch=payload->GetDictionary();CefDictionaryValue::KeyList keys;patch->GetKeys(keys);
+      for(const auto& key:keys)next->SetValue(key,patch->GetValue(key)->Copy());
+      std::string error;if(!NormalizeVpnRouting(next,error)){callback->Failure(400,error);return;}
+      const std::string protocol=next->GetString("protocol"),link=next->GetString("link");
+      if((protocol!="vless"&&protocol!="sudoku")||(!link.empty()&&link.rfind(protocol+"://",0)!=0)){callback->Failure(400,"Invalid VPN connection key");return;}
+      if(!link.empty()){
+        auto native=CefDictionaryValue::Create();native->SetString("action","save_profile");
+        native->SetString("id",next->GetString("lastProfileId"));native->SetString("name",next->GetString("region"));native->SetString("url",link);
+        auto saved=SendVpnHelper(native);if(!saved->GetBool("ok"))return Reply(callback,saved);
+        const std::string id=saved->GetString("id");if(!id.empty())next->SetString("lastProfileId",id);
+      }
+      auto previous=vpn_settings_;vpn_settings_=next;
+      if(!SaveSettings()){vpn_settings_=previous;callback->Failure(500,"VPN settings could not be saved");return;}
+      for(auto& profile:profiles_)ApplyProxy(profile.context);ApplyProxy(incognito_context_);
     }
-    return Reply(callback, vpn_settings_->Copy(false));
+    return Reply(callback,vpn_settings_->Copy(false));
   }
   else if (action == "vpn.send") {
     std::string command;

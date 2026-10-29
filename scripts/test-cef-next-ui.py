@@ -35,7 +35,7 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as root:
   for kind in ('mouseMoved','mousePressed','mouseReleased'):
    s.command(page,'Input.dispatchMouseEvent',dict(type=kind,x=point['x'],y=point['y'],button='left' if kind!='mouseMoved' else 'none',clickCount=1 if kind!='mouseMoved' else 0))
   time.sleep(.6);check(s.evaluate(page,"document.activeElement!==document.querySelector('#favoritesGrid a')"),'Pointer app-grid opening does not focus YouTube')
-  s.evaluate(shell,"browserShell.openSettings()")
+  s.evaluate(shell,"browserShell.openSettingsWindow()")
   settings=connect(wait(lambda:next((t for t in s.targets() if '/ui/settings.html' in t.get('url','')),None)))
   wait(lambda:s.evaluate(settings,"document.body.classList.contains('ready')"))
   for section in ('general','interface','startup','search','privacy','reading'):

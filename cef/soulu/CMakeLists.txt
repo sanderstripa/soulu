@@ -24,6 +24,7 @@ set(SOULU_SRCS
   video_renderer.cc
   video_network.cc
   video_bridge.cc
+  component_tests.cc
   settings_session.cc
   settings_overlay.h
   motion.h

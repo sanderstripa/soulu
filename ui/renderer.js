@@ -194,7 +194,7 @@ document.addEventListener("mousedown",(event)=>{
 document.addEventListener("contextmenu",(event)=>{if(!event.target.closest(".browser-toolbar")||event.target.closest("button,input,.classic-tab,.compact-tab,.compact-active-tab,.classic-address-pill"))return;event.preventDefault();window.browserShell.toolbarMenu();},true);
 
 
-window.addEventListener("message",async(e)=>{if(e.source!==vpnFrame.contentWindow||e.data?.type!=="vpn-request")return;const{id,action,payload}=e.data;let result;try{result=action==="__settingsGet"?await window.vpn.settingsGet():action==="__settingsSet"?await window.vpn.settingsSet(payload):await window.vpn.send(action,payload||{});}catch(error){result={ok:false,state:"error",error:error.message};}vpnPost({type:"vpn-response",id,result});});
+window.addEventListener("message",async(e)=>{if(e.source!==vpnFrame.contentWindow||e.data?.type!=="vpn-request")return;const{id,action,payload}=e.data;let result;try{if(action==="__openVpnSettings"){closePanel();await window.browserShell.openSettingsWindow();result={ok:true};}else result=action==="__settingsGet"?await window.vpn.settingsGet():action==="__settingsSet"?await window.vpn.settingsSet(payload):await window.vpn.send(action,payload||{});}catch(error){result={ok:false,state:"error",error:error.message};}vpnPost({type:"vpn-response",id,result});});
 window.vpn.onState(updateVpnState);
 window.browserShell.onState(renderState);
 window.browserShell.onSettings?.((settings)=>{state.settings={...state.settings,...settings};renderTabs();appearance();});

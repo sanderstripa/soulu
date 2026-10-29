@@ -254,6 +254,28 @@ jobs:
             ${{ env.build_dir }}/licenses/
           if-no-files-found: error
 
+      - name: Verify video bridge and protected component fixtures
+        shell: pwsh
+        run: |
+          node browser/scripts/test-video-runtime.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $testRoot = Join-Path $env:RUNNER_TEMP 'soulu-component-fixtures'
+          New-Item -ItemType Directory -Force $testRoot | Out-Null
+          $oldLocal = $env:LOCALAPPDATA
+          $env:LOCALAPPDATA = $testRoot
+          $env:SOULU_DATA_SECURITY_TEST_ROOT = $testRoot
+          $env:SOULU_UI_TEST_PORT = '19378'
+          $report = Join-Path $testRoot 'component-evidence.json'
+          try {
+            $process = Start-Process -FilePath "$env:build_dir/Soulu.exe" -ArgumentList "--component-test-report=$report" -Wait -PassThru
+            if ($process.ExitCode -ne 0) { Get-Content $report; throw 'Native component fixtures failed' }
+            Copy-Item $report browser/artifacts/component-evidence.json
+          } finally {
+            $env:LOCALAPPDATA = $oldLocal
+            Remove-Item Env:SOULU_DATA_SECURITY_TEST_ROOT -ErrorAction SilentlyContinue
+            Remove-Item Env:SOULU_UI_TEST_PORT -ErrorAction SilentlyContinue
+          }
+
       - name: Test third Adaptive toolbar animation and live page retention
         shell: pwsh
         run: |
@@ -926,6 +948,17 @@ jobs:
           if ($deferredOzon) {
             'Anonymous Ozon access from the GitHub Windows runner returned a secure HTTP 403/429 server rejection. Usable Ozon content and authenticated sessions are not verified. The other six required sites opened successfully; no Ozon TLS or uncancelled network failure was present.' | Add-Content browser/artifacts/release-notes.md -Encoding utf8
           }
+
+      - name: Preserve all verification reports in Actions
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Soulu-verification-${{ github.sha }}
+          path: |
+            browser/artifacts/**
+            !browser/artifacts/*.exe
+            !browser/artifacts/*.zip
+          if-no-files-found: warn
 
       - name: Publish Soulu release
         if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.67')) && (success() && (github.ref == 'refs/tags/beta-1.0.67' || (github.ref == 'refs/heads/main' && (inputs.publish || env.AUTOMATED_RELEASE == 'true'))) && steps.verified.outputs.passed == 'true') }}

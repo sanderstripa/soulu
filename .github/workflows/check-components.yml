@@ -7,8 +7,23 @@ permissions:
   contents: read
 concurrency:
   group: soulu-browser-components
-  cancel-in-progress: true
+  cancel-in-progress: false
 jobs:
+  logic:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.0'
+          cache: false
+      - name: Verify VOT runtime and JavaScript syntax
+        run: node scripts/test-video-runtime.cjs
+      - name: Verify pinned VOT bytes
+        run: python scripts/verify-vot.py
+      - name: Test VPN configuration and component lifecycle
+        working-directory: vpn/helper
+        run: go test ./...
   windows-cef:
     runs-on: windows-2025
     timeout-minutes: 90
@@ -213,6 +228,28 @@ jobs:
           if-no-files-found: error
 
 
+      - name: Verify video bridge and protected component fixtures
+        shell: pwsh
+        run: |
+          node browser/scripts/test-video-runtime.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $testRoot = Join-Path $env:RUNNER_TEMP 'soulu-component-fixtures'
+          New-Item -ItemType Directory -Force $testRoot | Out-Null
+          $oldLocal = $env:LOCALAPPDATA
+          $env:LOCALAPPDATA = $testRoot
+          $env:SOULU_DATA_SECURITY_TEST_ROOT = $testRoot
+          $env:SOULU_UI_TEST_PORT = '19378'
+          $report = Join-Path $testRoot 'component-evidence.json'
+          try {
+            $process = Start-Process -FilePath "$env:build_dir/Soulu.exe" -ArgumentList "--component-test-report=$report" -Wait -PassThru
+            if ($process.ExitCode -ne 0) { Get-Content $report; throw 'Native component fixtures failed' }
+            Copy-Item $report browser/artifacts/component-evidence.json
+          } finally {
+            $env:LOCALAPPDATA = $oldLocal
+            Remove-Item Env:SOULU_DATA_SECURITY_TEST_ROOT -ErrorAction SilentlyContinue
+            Remove-Item Env:SOULU_UI_TEST_PORT -ErrorAction SilentlyContinue
+          }
+
       - name: Verify native internal controls
         shell: pwsh
         run: |
@@ -224,5 +261,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Soulu-component-update-${{ github.sha }}
-          path: browser/artifacts/next-ui/
+          path: |
+            browser/artifacts/next-ui/
+            browser/artifacts/component-evidence.json
           if-no-files-found: warn

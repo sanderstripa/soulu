@@ -11,7 +11,7 @@
 #include "examples/soulu/profile_data.h"
 #include "examples/soulu/home_system.h"
 #include "include/cef_command_line.h"
-namespace soulu { int RunDataSecurityTests(const std::filesystem::path&); int RunBrowserImportTests(const std::filesystem::path&); }
+namespace soulu { int RunComponentTests(const std::filesystem::path&); int RunDataSecurityTests(const std::filesystem::path&); int RunBrowserImportTests(const std::filesystem::path&); }
 
 namespace {
 std::filesystem::path SouluDataRoot() {
@@ -30,6 +30,11 @@ int APIENTRY wWinMain(HINSTANCE instance, HINSTANCE, wchar_t*, int) {
   CefMainArgs main_args(instance);
   auto command_line = CefCommandLine::CreateCommandLine();
   command_line->InitFromString(GetCommandLineW());
+  if(command_line->HasSwitch("component-test-report")){
+    wchar_t enabled[12]={},root[32768]={},local[32768]={};
+    if(!GetEnvironmentVariableW(L"SOULU_UI_TEST_PORT",enabled,12)||!GetEnvironmentVariableW(L"SOULU_DATA_SECURITY_TEST_ROOT",root,32768)||!GetEnvironmentVariableW(L"LOCALAPPDATA",local,32768)||std::wstring(root)!=local)return 2;
+    return soulu::RunComponentTests(std::filesystem::path(command_line->GetSwitchValue("component-test-report").ToWString()));
+  }
   if(command_line->HasSwitch("home-speech-test-file")){
     wchar_t enabled[12]={};if(!GetEnvironmentVariableW(L"SOULU_UI_TEST_PORT",enabled,12))return 2;
     const std::filesystem::path input(command_line->GetSwitchValue("home-speech-test-file").ToWString());

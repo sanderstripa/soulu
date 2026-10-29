@@ -39,7 +39,7 @@ class Fetch final:public CefURLRequestClient {
  void Cancel(){if(request_)request_->Cancel();Fail("Video request aborted");}
  void Timeout(){if(done_){if(request_)request_->Cancel();Fail("Video request timeout");}}
  void OnRequestComplete(CefRefPtr<CefURLRequest> request) override{
-  if(!done_)return;auto response=request->GetResponse();if(!response||request->GetRequestStatus()!=UR_SUCCESS){Fail("Video network request failed");return;}
+  if(!done_)return;auto response=request->GetResponse();if(!response){Fail("Video network request failed");return;}
   const int status=response->GetStatus();const std::string location=response->GetHeaderByName("Location");
   if(status>=300&&status<400&&!location.empty()){
    if(++redirects_>5){Fail("Too many video redirects");return;}CefString target;if(!CefResolveURL(args_->GetString("url"),location,target)||!Allowed(target)){Fail("Video redirect host is not allowed");return;}
@@ -48,6 +48,7 @@ class Fetch final:public CefURLRequestClient {
    next->SetString("url",target);if(status==303||((status==301||status==302)&&next->GetString("method")=="POST")){next->SetString("method","GET");next->SetString("data","");}
    args_=next;body_.clear();Start();return;
   }
+  if(request->GetRequestStatus()!=UR_SUCCESS){Fail("Video network request failed");return;}
   auto result=CefDictionaryValue::Create();result->SetBool("ok",true);result->SetInt("status",status);result->SetString("statusText",response->GetStatusText());result->SetString("url",request->GetRequest()->GetURL());result->SetString("body",CefBase64Encode(body_.data(),body_.size()));result->SetString("contentType",response->GetMimeType());
   CefResponse::HeaderMap headers;response->GetHeaderMap(headers);std::string text;for(const auto& [name,value]:headers)text+=name.ToString()+": "+value.ToString()+"\r\n";result->SetString("headers",text);Finish(result);
  }

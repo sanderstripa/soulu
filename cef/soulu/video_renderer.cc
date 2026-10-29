@@ -11,7 +11,7 @@ namespace {
 struct Pending {CefRefPtr<CefV8Context> context;CefRefPtr<CefV8Value> callback;bool persistent=false;};
 std::map<int,Pending> pending;int next_id=0;
 bool Supported(const CefString& raw){CefURLParts parts;if(!CefParseURL(raw,parts)||CefString(&parts.scheme)!="https")return false;
- const std::string host=CefString(&parts.host);return host=="youtube.com"||host=="www.youtube.com"||host=="m.youtube.com"||host=="music.youtube.com"||host=="www.youtube-nocookie.com";}
+ const std::string host=CefString(&parts.host);return (host=="oauth.yandex.ru"&&CefString(&parts.path)=="/verification_code")||host=="youtube.com"||host=="www.youtube.com"||host=="m.youtube.com"||host=="music.youtube.com"||host=="www.youtube-nocookie.com";}
 class Submit final:public CefV8Handler {
  public:bool Execute(const CefString&,CefRefPtr<CefV8Value>,const CefV8ValueList& args,CefRefPtr<CefV8Value>& result,CefString& exception) override {
   const auto context=CefV8Context::GetCurrentContext();if(!context||!context->GetFrame()->IsMain()||!Supported(context->GetFrame()->GetURL())||args.size()!=2||!args[0]->IsString()||!args[1]->IsFunction()||args[0]->GetStringValue().length()>4*1024*1024||pending.size()>=128){exception="Video bridge unavailable";return true;}
@@ -27,7 +27,17 @@ std::string ReadScript(const wchar_t* name){
 }
 }
 void InstallVideoRuntime(CefRefPtr<CefBrowser>,CefRefPtr<CefFrame> frame,CefRefPtr<CefV8Context> context){
- if(!frame->IsMain()||!Supported(frame->GetURL()))return;
+ if(!frame->IsMain())return;
+ CefURLParts auth;
+ if(CefParseURL(frame->GetURL(),auth)&&CefString(&auth.scheme)=="https"&&CefString(&auth.host)=="oauth.yandex.ru"&&CefString(&auth.path)=="/verification_code"){
+  CefRefPtr<CefV8Value> result;CefRefPtr<CefV8Exception> error;
+  context->GetGlobal()->SetValue("__souluVideoNative",CefV8Value::CreateFunction("request",new Submit()),V8_PROPERTY_ATTRIBUTE_NONE);
+  context->Eval(R"JS((()=>{const native=window.__souluVideoNative;delete window.__souluVideoNative;const p=new URLSearchParams(location.search),state=p.get('state'),code=p.get('code');if(!state||!code)return;
+  if(opener){for(const origin of ['https://www.youtube.com','https://youtube.com','https://m.youtube.com','https://music.youtube.com'])opener.postMessage({source:'vot-auth',type:'auth-data',data:{state,code}},origin);close();return;}
+  native(JSON.stringify({op:'auth',state,code}),raw=>{const result=JSON.parse(raw);if(!result.ok){const show=()=>{const p=document.createElement('p');p.textContent='Soulu Video Translate: '+result.error;document.body.prepend(p)};if(document.body)show();else addEventListener('DOMContentLoaded',show,{once:true})}});
+  })())JS",frame->GetURL(),0,result,error);return;
+ }
+ if(!Supported(frame->GetURL()))return;
  static const auto bootstrap=ReadScript(L"video-runtime.js"),bundle=ReadScript(L"third_party/vot/vot.user.js");
  if(bootstrap.empty()||bundle.empty())return;
  context->GetGlobal()->SetValue("__souluVideoNative",CefV8Value::CreateFunction("request",new Submit()),V8_PROPERTY_ATTRIBUTE_NONE);
