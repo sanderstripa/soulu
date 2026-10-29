@@ -6,6 +6,7 @@
 namespace soulu {
 inline bool NormalizeVpnRouting(CefRefPtr<CefDictionaryValue> vpn,std::string& error){
  if(!vpn)return false;
+ if(vpn->HasKey("directDomains")&&vpn->GetType("directDomains")!=VTYPE_STRING){error="VPN: неверный список сайтов.";return false;}
  const std::string raw=vpn->GetString("directDomains");
  if(raw.size()>65536){error="VPN: слишком длинный список маршрутизации.";return false;}
  std::istringstream input(raw);std::string line,normalized;std::set<std::string> seen;
