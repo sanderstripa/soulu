@@ -16,6 +16,9 @@ set(SOULU_SRCS
   browser_client.cc
   browser_window.h
   browser_window.cc
+  page_glass.h
+  page_glass_script.h
+  page_glass.cc
   settings_session.cc
   settings_overlay.h
   motion.h
@@ -109,7 +112,7 @@ if(MSVC)
   target_compile_options(soulu_sqlite PRIVATE ${CEF_RUNTIME_LIBRARY_FLAG})
 endif()
 target_compile_definitions(soulu_sqlite PRIVATE SQLITE_OMIT_LOAD_EXTENSION SQLITE_DQS=0 SQLITE_SECURE_DELETE=1)
-target_link_libraries(${EXAMPLE_TARGET} shared soulu_sqlite soulu_adblock userenv ntdll secur32 crypt32 bcrypt dwmapi ws2_32 advapi32 shell32 ole32 oleaut32 oleacc shcore uuid windowsapp CoreMessaging)
+target_link_libraries(${EXAMPLE_TARGET} shared soulu_sqlite soulu_adblock d2d1 dxguid userenv ntdll secur32 crypt32 bcrypt dwmapi ws2_32 advapi32 shell32 ole32 oleaut32 oleacc shcore uuid windowsapp CoreMessaging)
 target_compile_definitions(${EXAMPLE_TARGET} PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
 if(MSVC)
   target_compile_options(${EXAMPLE_TARGET} PRIVATE /utf-8 /EHsc /Zc:__cplusplus)

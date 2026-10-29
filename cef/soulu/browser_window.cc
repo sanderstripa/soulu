@@ -8,6 +8,7 @@
 #include "examples/soulu/reader_preferences.h"
 #include "examples/soulu/app_version.h"
 #include "examples/soulu/motion.h"
+#include "examples/soulu/page_glass.h"
 #include "include/cef_app.h"
 #include "include/cef_command_line.h"
 #include "include/cef_devtools_message_observer.h"
@@ -903,20 +904,20 @@ void BrowserWindow::ApplyWindowAppearance() {
   DwmSetWindowAttribute(hwnd_,33,&corner,sizeof(corner));
   DwmSetWindowAttribute(hwnd_,34,&noBorder,sizeof(noBorder));
   DwmSetWindowAttribute(hwnd_,38,&noBackdrop,sizeof(noBackdrop));
-  const bool matte=EffectiveSettings()->GetBool("mattePanel");
   const auto compose=reinterpret_cast<SetComposition>(GetProcAddress(GetModuleHandleW(L"user32.dll"),"SetWindowCompositionAttribute"));
   AccentPolicy policy={0,0,0,0};
   CompositionData data={19,&policy,sizeof(policy)};
   if(compose)compose(hwnd_,&data);
-  native_blur_=ConfigureFrostedBackdrop(hwnd_,matte);
-  const MARGINS glass=matte?MARGINS{-1,-1,-1,-1}:MARGINS{0,0,0,0};
+  native_blur_=false;
+  ConfigureFrostedBackdrop(hwnd_,false);
+  const MARGINS glass={0,0,0,0};
   DwmExtendFrameIntoClientArea(hwnd_,&glass);
   // Keep the native redirection surface for layered child chrome, but expose
   // its transparent pixels to the desktop composition backdrop.
   HRGN region=CreateRectRgn(0,0,-1,-1);
   DWM_BLURBEHIND blur={};
   blur.dwFlags=DWM_BB_ENABLE|DWM_BB_BLURREGION;
-  blur.fEnable=matte;
+  blur.fEnable=FALSE;
   blur.hRgnBlur=region;
   DwmEnableBlurBehindWindow(hwnd_,&blur);
   DeleteObject(region);
@@ -1747,8 +1748,11 @@ BrowserWindow::Geometry BrowserWindow::CurrentGeometry() const {
   const auto* active=const_cast<BrowserWindow*>(this)->ActiveTab();
   g.shell_height = (active&&active->reader_active) || !permission_requests_.empty() || popover_visible_ || overview_visible_ || sidebar_visible_ || sidebar_motion_ || g.panel > 0 ? g.height :
       std::min(g.height, std::max(g.toolbar, px(suggestions_height_)));
-  g.content = CefRect(g.sidebar, g.toolbar,
-      std::max(1, g.width - g.sidebar - g.panel), std::max(1, g.height - g.toolbar));
+  const auto* page=const_cast<BrowserWindow*>(this)->ActiveTab();
+  const int inset=EffectiveSettings()->GetBool("mattePanel") && page && !Fullscreen() ?
+      g.toolbar-static_cast<int>(std::round(std::clamp(page->scroll_y*scale,0.0,double(g.toolbar)))) : g.toolbar;
+  g.content = CefRect(g.sidebar, inset,
+      std::max(1, g.width - g.sidebar - g.panel), std::max(1, g.height - inset));
   return g;
 }
 
@@ -1771,6 +1775,11 @@ void BrowserWindow::Layout() {
     positions.push_back({child, HWND_BOTTOM, g.content.x, g.content.y, g.content.width, g.content.height,
         flags | (visible ? SWP_SHOWWINDOW : SWP_HIDEWINDOW)});
   }
+  const auto theme=EffectiveSettings()->GetString("theme").ToString();
+  const bool dark=theme=="dark"||(theme=="system"&&IsWindowsDarkMode());
+  HWND page_glass=UpdatePageGlass(hwnd_,g.width,g.toolbar+static_cast<int>(12*g.scale),g.scale,EffectiveSettings()->GetBool("mattePanel")&&!Fullscreen()&&shell_&&surface_&&ActiveTab()&&ActiveTab()->browser&&IsWindowVisible(hwnd_),dark);
+  native_blur_=page_glass!=nullptr;
+  if(page_glass) positions.push_back({page_glass,HWND_TOP,0,0,g.width,g.toolbar+static_cast<int>(12*g.scale),flags|SWP_SHOWWINDOW});
   if (surface_) {
     surface_->PrepareResize(g.width, g.shell_height, g.scale);
     const auto* active = ActiveTab();
@@ -1811,9 +1820,24 @@ void BrowserWindow::Layout() {
         SetWindowPos(p.hwnd, p.after, p.x, p.y, p.width, p.height, p.flags);
     }
   }
+  if(page_glass&&surface_)SetWindowPos(page_glass,surface_->hwnd(),0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE);
+  if(auto* page=ActiveTab();page&&page->browser){
+    const double cover=Fullscreen()||!EffectiveSettings()->GetBool("mattePanel")?0:(g.toolbar-g.content.y)/g.scale;
+    if(page->glass_inset!=cover){page->glass_inset=cover;
+      auto frame=page->browser->GetMainFrame();
+      if(frame)frame->ExecuteJavaScript("window.__souluApplyGlassInset&&window.__souluApplyGlassInset("+std::to_string(cover)+")",frame->GetURL(),0);
+    }
+  }
   ResizeFrostedBackdrop(hwnd_, g.width, std::min(g.height, g.toolbar));
   if (surface_) surface_->CommitResize();
   if (settings_overlay_) { settings_overlay_->Layout(); BlockSettingsBackground(true); }
+}
+
+void BrowserWindow::PageScroll(int tab_id,double y) {
+  if(!std::isfinite(y))return;
+  auto* tab=FindTab(tab_id);if(!tab)return;
+  tab->scroll_y=std::clamp(y,0.0,10000000.0);
+  if(tab_id==active_tab_id_&&EffectiveSettings()->GetBool("mattePanel"))Layout();
 }
 
 void BrowserWindow::ApplyContentTheme() {
@@ -1841,6 +1865,8 @@ CefRefPtr<CefDictionaryValue> BrowserWindow::State() const {
     }
   }
   const auto client = CurrentGeometry();
+  state->SetBool("pageGlassReady",native_blur_);
+  state->SetInt("pageGlassError",PageGlassError(hwnd_));
   state->SetDictionary("adaptiveToolbar", AdaptiveToolbarState());
   state->SetInt("clientHeight", static_cast<int>(std::ceil(client.height / client.scale)));
   state->SetBool("settingsOverlayOpen", settings_overlay_ != nullptr);
@@ -1958,6 +1984,7 @@ void BrowserWindow::RequestFind() { if (settings_overlay_) { FocusSettings(); re
 void BrowserWindow::ReaderDocumentNavigation(int id) {
   DismissSouluMenus(hwnd_);
   CancelSitePermissions(id);
+  if(auto* tab=FindTab(id)){tab->scroll_y=0;tab->glass_inset=-1;}
   if(auto* tab=FindTab(id)){HomeCancelVoice(tab->browser?tab->browser->GetIdentifier():0);++tab->home_voice_generation;++tab->document_generation;++tab->translation_generation;tab->translation_active=false;tab->translation_resetting=false;tab->main_loading=true;tab->reader_active=false;tab->reader_article=nullptr;}
   Layout();EmitState();
 }
@@ -3043,7 +3070,7 @@ LRESULT CALLBACK BrowserWindow::WindowProc(HWND hwnd, UINT message, WPARAM wpara
       GetClientRect(hwnd, &client);
       HBRUSH background = CreateSolidBrush(dark ? RGB(8, 9, 11) : RGB(255, 255, 255));
       FillRect(reinterpret_cast<HDC>(wparam), &client,
-          self->EffectiveSettings()->GetBool("mattePanel") ? static_cast<HBRUSH>(GetStockObject(BLACK_BRUSH)) : background);
+          background);
       DeleteObject(background);
       return 1;
     }
@@ -3117,7 +3144,7 @@ LRESULT CALLBACK BrowserWindow::WindowProc(HWND hwnd, UINT message, WPARAM wpara
     case WM_SETTINGCHANGE: self->ApplyWindowAppearance(); self->ApplyContentTheme(); break;
     case WM_CLOSE: TypographyCancelOwnedDialogs(hwnd);self->CloseAll();return 0;
     case WM_DESTROY:
-      ReleaseFrostedBackdrop(hwnd);windows_.erase(std::remove(windows_.begin(),windows_.end(),self),windows_.end());
+      ReleasePageGlass(hwnd);ReleaseFrostedBackdrop(hwnd);windows_.erase(std::remove(windows_.begin(),windows_.end(),self),windows_.end());
       if(current_==self)current_=windows_.empty()?nullptr:windows_.back();
       if(windows_.empty())CefQuitMessageLoop();return 0;
     case WM_NCDESTROY:
