@@ -75,6 +75,8 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as root:
   check(True,'Synthetic player decodes and plays real WebM frames')
   wait(lambda:deep('.vot-translate-button'),60);check(True,'Full pinned VOT creates controls through the native integration on the synthetic player')
   rect=s.evaluate(page,"(()=>{const r=document.querySelector('video').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+30}})()");s.command(page,'Input.dispatchMouseEvent',dict(type='mouseMoved',**rect));time.sleep(.4)
+  count=s.evaluate(page,"(()=>{let count=0;const roots=[document];while(roots.length){const r=roots.shift();count+=r.querySelectorAll('.vot-translate-button').length;for(const n of r.querySelectorAll('*'))if(n.shadowRoot)roots.push(n.shadowRoot)}return count})()")
+  check(count==1,'One translation control per player, without duplicate VOT runtimes')
   photo('vot-native-player-fixture');report['passed']=True
  finally:
   if page:

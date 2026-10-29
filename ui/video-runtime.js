@@ -1,6 +1,7 @@
 function(run){
  'use strict';
  const native=window.__souluVideoNative;delete window.__souluVideoNative;
+ const claim=new Event('soulu-video-runtime-claim',{cancelable:true});if(!document.dispatchEvent(claim))return;document.addEventListener('soulu-video-runtime-claim',event=>event.preventDefault());
  const call=value=>new Promise((resolve,reject)=>native(JSON.stringify(value),raw=>{try{const data=JSON.parse(raw);data.ok===false?reject(Error(data.error||'Video translation request failed')):resolve(data)}catch(e){reject(e)}}));
  const encode=async value=>{if(value===undefined||value===null)return '';if(typeof value==='string')return value;if(value instanceof Blob)value=await value.arrayBuffer();if(value instanceof ArrayBuffer)value=new Uint8Array(value);if(ArrayBuffer.isView(value)){let text='';const bytes=new Uint8Array(value.buffer,value.byteOffset,value.byteLength);for(let i=0;i<bytes.length;i+=16384)text+=String.fromCharCode(...bytes.subarray(i,i+16384));return btoa(text)}throw Error('Unsupported video request body')};
  const decode=text=>{const raw=atob(text||''),bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);return bytes};
