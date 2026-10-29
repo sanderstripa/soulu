@@ -129,19 +129,26 @@ try:
           return true;
         }})()""")
         wait_for(lambda selector=selector: evaluate(shell, f"getComputedStyle(document.querySelector('{selector}')).display !== 'none'"), f"{key} restored")
-    # Verify light and dark are distinct on the toolbar, not only in Settings.
+    # Matte mode is painted by the native page-glass compositor; its CSS shell
+    # deliberately has the same tiny alpha in both themes. Verify opaque CSS
+    # colors here; test-cef-page-glass.py checks rendered matte theme pixels.
+    evaluate(settings, "if(document.querySelector('#mattePanel').checked)document.querySelector('#mattePanel').click()")
+    wait_for(lambda: evaluate(shell, "document.body.dataset.matte === 'false'"), "opaque toolbar")
+    dark_opaque = evaluate(shell, "getComputedStyle(document.querySelector('.compact-toolbar')).backgroundColor")
     evaluate(settings, """(() => {
       document.querySelector('[name="settings-theme"][value="light"]').click();
       return true;
     })()""")
     wait_for(lambda: evaluate(shell, "document.body.dataset.theme === 'light'"), "light shell theme")
     light = evaluate(shell, "getComputedStyle(document.querySelector('.compact-toolbar')).backgroundColor")
-    assert light != styles["background"], "Toolbar gradient did not change with theme"
+    assert light != dark_opaque, "Opaque toolbar did not change with theme"
     evaluate(settings, """(() => {
       document.querySelector('[name="settings-theme"][value="dark"]').click();
       return true;
     })()""")
     wait_for(lambda: evaluate(shell, "document.body.dataset.theme === 'dark'"), "dark restored")
+    evaluate(settings, "if(!document.querySelector('#mattePanel').checked)document.querySelector('#mattePanel').click()")
+    wait_for(lambda: evaluate(shell, "document.body.dataset.matte === 'true'"), "matte restored")
     evaluate(settings, "window.souluSettings.flush()")
     persisted = evaluate(shell, """(async () => await window.browserShell.getSettings())()""")
     assert persisted["theme"] == "dark" and persisted["mattePanel"] is True

@@ -2,7 +2,7 @@ name: Validate UI against verified native candidate
 on:
   push:
     branches: [codex/browser-components]
-    paths: ['ui/**', 'scripts/fixtures/**', 'scripts/test-cef-next-ui.py', 'scripts/test-cef-video-translation.py', '.github/workflows/check-ui-runtime.yml']
+    paths: ['ui/**', 'scripts/fixtures/**', 'scripts/test-cef-next-ui.py', 'scripts/test-cef-site-reader.py', 'scripts/test-cef-ui.py', 'scripts/test-cef-video-translation.py', '.github/workflows/check-ui-runtime.yml']
   workflow_dispatch: {}
 permissions:
   contents: read
@@ -68,6 +68,23 @@ jobs:
       - name: Check internal controls
         shell: pwsh
         run: python scripts/test-cef-next-ui.py "$env:GITHUB_WORKSPACE/runtime/Soulu.exe" artifacts/next-ui
+      - name: Check Reader Mode and styled font listbox
+        if: ${{ !cancelled() }}
+        shell: pwsh
+        run: python scripts/test-cef-site-reader.py "$env:GITHUB_WORKSPACE/runtime/Soulu.exe"
+      - name: Check settings theme and toolbar state
+        if: ${{ !cancelled() }}
+        shell: pwsh
+        run: |
+          $env:SOULU_UI_TEST_PORT='9223'
+          $env:SOULU_REGRESSION_SKIP_FIRST_RUN='1'
+          $env:LOCALAPPDATA=Join-Path $env:RUNNER_TEMP 'soulu-ui-theme'
+          New-Item -ItemType Directory -Force $env:LOCALAPPDATA | Out-Null
+          $app=Start-Process "$env:GITHUB_WORKSPACE/runtime/Soulu.exe" -PassThru
+          try {
+            python scripts/test-cef-ui.py
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          } finally { Get-Process Soulu -ErrorAction SilentlyContinue | Stop-Process -Force }
       - name: Check real YouTube integration
         if: ${{ !cancelled() }}
         shell: pwsh
