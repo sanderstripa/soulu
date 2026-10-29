@@ -1,4 +1,5 @@
-const stylesheet=document.createElement('link');stylesheet.rel='stylesheet';stylesheet.href=new URL('select-control.css',import.meta.url).href;document.head.append(stylesheet);await new Promise(resolve=>{stylesheet.onload=resolve;stylesheet.onerror=resolve});
+window.souluSelectControlsReady=(async()=>{
+const stylesheet=document.createElement('link');stylesheet.rel='stylesheet';stylesheet.href=new URL('select-control.css',document.currentScript.src).href;document.head.append(stylesheet);await new Promise(resolve=>{stylesheet.onload=resolve;stylesheet.onerror=resolve});
 const controls=new WeakMap();
 let sequence=0;
 function enhance(select){
@@ -26,3 +27,5 @@ window.addEventListener('resize',()=>{for(const menu of document.querySelectorAl
 document.addEventListener('scroll',e=>{for(const menu of document.querySelectorAll('.soulu-select-menu:popover-open'))if(!menu.contains(e.target))menu.hidePopover()},true);
 
 document.addEventListener('focusin',e=>{for(const menu of document.querySelectorAll('.soulu-select-menu:popover-open')){const button=document.querySelector('[aria-controls="'+menu.id+'"]');if(e.target!==button&&!menu.contains(e.target))menu.hidePopover()}});
+
+})();
