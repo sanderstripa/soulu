@@ -129,7 +129,7 @@ def main():
             rulesFile.rmdir();backup.rename(rulesFile)
             change('#permissions-microphone','2');evaluate('souluSettings.flush()')
             check(json.loads(rulesFile.read_text())['defaults']['microphone']==2,'Recovery permits subsequent immediate save')
-            section('vpn');beforeVpn=json.loads((data/'settings.json').read_text())['vpn'];change('#vpn-link','unsupported://invalid');evaluate('souluSettings.flush()')
+            section('vpn');beforeVpn=json.loads((data/'settings.json').read_text())['vpn'];change('#vpn-profile-key','unsupported://invalid');click('#vpn-profile-save');time.sleep(.2);evaluate('souluSettings.flush()')
             check(json.loads((data/'settings.json').read_text())['vpn']==beforeVpn,'Invalid VPN key does not overwrite global configuration')
             if os.environ.get('GITHUB_ACTIONS')=='true':
                 def proxy_snapshot():
@@ -141,7 +141,7 @@ def main():
                     return result
                 proxy_before=proxy_snapshot()
                 valid='vless://11111111-1111-4111-8111-111111111111@vpn-fixture.invalid:443?encryption=none&security=tls&type=xhttp&path=%2Ffixture&host=vpn-fixture.invalid&sni=vpn-fixture.invalid#Settings%20fixture'
-                change('#vpn-link',valid);evaluate('souluSettings.flush()')
+                change('#vpn-profile-key',valid);click('#vpn-profile-save');wait(lambda:evaluate('souluSettings.persisted.vpn.link')==valid);evaluate('souluSettings.flush()')
                 vpn_saved=json.loads((data/'settings.json').read_text())['vpn']
                 check(vpn_saved['link']==valid and vpn_saved['lastProfileId'],'Valid VPN key saves immediately through the canonical helper')
                 check(proxy_snapshot()==proxy_before and not evaluate("window.vpn.send('status')").get('connected',False),'Saving VPN does not connect or alter Windows proxy')

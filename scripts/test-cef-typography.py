@@ -84,14 +84,10 @@ def main():
             s.evaluate(settings,'souluSettings.flush()')
             s.evaluate(shell,"browserShell.openHistory()")
             history=connect('/ui/history.html');audit(history,'History');actual_face(history,'h1','History title');capture(history,'history')
-            # File-origin iframes are isolated by CEF; inspect their own execution
-            # context through CDP rather than weakening file-origin security.
-            tree=s.command(shell,'Page.getFrameTree')['frameTree']
-            frame=next(f['frame'] for f in tree.get('childFrames',[]) if '/vpn/popup.html' in f['frame']['url'])
-            context=s.command(shell,'Page.createIsolatedWorld',{'frameId':frame['id'],'worldName':'soulu-typography-test'})['executionContextId']
-            result=s.command(shell,'Runtime.evaluate',{'contextId':context,'expression':'document.documentElement.classList.contains("typography-ready") && document.fonts.check("500 14px Onest")','returnByValue':True})
-            check(result['result'].get('value'),'VPN iframe bundled face')
-            s.evaluate(shell,'document.querySelector("#compactVpnButton").click()');time.sleep(.4);capture(shell,'vpn-panel')
+            # VPN is now part of Settings; there is no separate panel/iframe.
+            s.evaluate(settings,"souluSettings.openSection('vpn')")
+            audit(settings,'VPN connections');actual_face(settings,'.vpn-default-summary strong','VPN default connection');capture(settings,'vpn-connections')
+            check(s.evaluate(shell,"!document.querySelector('#vpnFrame,#vpnPanel')"),'Legacy VPN iframe and side panel removed')
             report['passed']=True
         finally:
             for ws in sockets:

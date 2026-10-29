@@ -166,9 +166,10 @@ void BrowserWindow::HandleOnboardingBridge(int id,const std::string& request,
     auto saved=SendVpnHelper(native);
     if(!saved->GetBool("ok")){Reply(callback,saved);return;}
     std::string vpnId=saved->GetString("id");if(vpnId.empty())vpnId=saved->GetString("profileId");
-    vpn_settings_->SetString("lastProfileId",vpnId);
-    for(const auto* key:{"link","protocol","address","region"})vpn_settings_->SetString(key,payload->GetString(key));
-    SaveSettings();flow->SetBool("vpnAdded",true);flow->SetString("vpnId",vpnId);
+    auto next=vpn_settings_->Copy(false);
+    for(const auto* key:{"link","protocol","address","region"})next->SetString(key,payload->GetString(key));
+    std::string error;if(!CommitVpnSettings(next,error)){callback->Failure(400,error);return;}
+    vpnId=vpn_settings_->GetString("lastProfileId");flow->SetBool("vpnAdded",true);flow->SetString("vpnId",vpnId);
     if(save())Reply(callback,saved);return;
   }
   if(action=="onboarding.default") {

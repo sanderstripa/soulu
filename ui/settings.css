@@ -16,3 +16,14 @@ body[data-host=overlay]{padding:0;background:transparent}body[data-host=overlay]
 .soulu-select{--soulu-select-font:var(--type-settingsInput);--soulu-select-selected-font:var(--type-settingsNavActive)}
 
 .import-select{padding-right:16px}
+
+.vpn-profile-manager{display:grid;gap:14px;width:100%;min-width:0}
+.vpn-default-summary{display:grid;gap:5px;padding:14px 16px;border:1px solid var(--line);border-radius:14px;background:var(--soft)}
+.vpn-profile-tools input,.vpn-profile-editor input,.vpn-profile-editor textarea{box-sizing:border-box;width:100%;max-width:none;padding:10px 12px;color:inherit;background:var(--field);border:1px solid var(--line);border-radius:10px;font:var(--type-body)}
+.vpn-profile-list{display:grid;max-height:380px;overflow:auto;overscroll-behavior:contain}
+.vpn-profile-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 2px;border-bottom:1px solid var(--line)}
+.vpn-profile-choice{display:flex;align-items:center;gap:12px;min-width:0;flex:1;cursor:pointer}.vpn-profile-choice>span{display:grid;gap:5px;min-width:0}.vpn-profile-choice strong,.vpn-profile-choice small{overflow-wrap:anywhere}.vpn-profile-choice small{color:var(--muted)}
+.vpn-profile-choice input{flex:none;width:16px;height:16px;accent-color:var(--blue)}
+.vpn-profile-row-actions,.vpn-profile-actions{display:flex;gap:8px;flex-wrap:wrap}.vpn-profile-row-actions{flex:none}.vpn-profile-row-actions button{font:var(--type-caption)}
+.vpn-profile-editor{display:grid;gap:10px;margin-top:8px}.vpn-profile-editor h4{margin:0;font:var(--type-control)}
+@media(max-width:650px){.vpn-profile-row{align-items:flex-start;flex-wrap:wrap}.vpn-profile-row-actions{margin-left:28px}}
