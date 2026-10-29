@@ -293,6 +293,27 @@ jobs:
           python browser/scripts/test-cef-video-translation.py "$env:build_dir/Soulu.exe" browser/artifacts/video-translation
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      - name: Test live CEF settings and toolbar on Windows
+        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.68')) }}
+        shell: pwsh
+        run: |
+          python -m pip install --disable-pip-version-check websocket-client pillow dxcam comtypes
+          $personalize='HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize'
+          New-Item $personalize -Force | Out-Null
+          Set-ItemProperty $personalize EnableTransparency 1 -Type DWord
+          $env:SOULU_UI_TEST_PORT = "9223"
+          $installedExe = Join-Path "$env:build_dir" "Soulu.exe"
+          Get-Process Soulu -ErrorAction SilentlyContinue | Stop-Process -Force
+          $app = Start-Process $installedExe -PassThru
+          $env:SOULU_TEST_PROCESS_ID=[string]$app.Id
+          try {
+            python browser/scripts/test-cef-ui.py
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+          finally {
+            Get-Process Soulu -ErrorAction SilentlyContinue | Stop-Process -Force
+          }
+
       - name: Test third Adaptive toolbar animation and live page retention
         shell: pwsh
         run: |
@@ -693,25 +714,6 @@ jobs:
           name: Soulu-engine-verification-${{ github.run_id }}
           path: browser/artifacts/engine-version.json
           if-no-files-found: error
-
-      - name: Test live CEF settings and toolbar on Windows
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.68')) }}
-        shell: pwsh
-        run: |
-          python -m pip install --disable-pip-version-check websocket-client pillow dxcam comtypes
-          $personalize='HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize'
-          New-Item $personalize -Force | Out-Null
-          Set-ItemProperty $personalize EnableTransparency 1 -Type DWord
-          $env:SOULU_UI_TEST_PORT = "9223"
-          $installedExe = Join-Path "${{ steps.package.outputs.build_dir }}" "Soulu.exe"
-          $app = Start-Process $installedExe -PassThru
-          try {
-            python browser/scripts/test-cef-ui.py
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          }
-          finally {
-            Get-Process Soulu -ErrorAction SilentlyContinue | Stop-Process -Force
-          }
 
       - name: Test bookmarks persistence and native tab overview
         if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.68')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
