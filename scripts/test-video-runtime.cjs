@@ -22,7 +22,7 @@ async function test(enabled){
  await api.GM.deleteValue('autoTranslate');assert.equal(await api.GM.getValue('autoTranslate',false),false);
 }
 (async()=>{
- for(const name of ['settings-video.js','settings-weather.js','settings-components.js','home.js','settings.js','renderer.js','vpn/popup.js'])new vm.Script(fs.readFileSync(path.join(root,'ui',name),'utf8'),{filename:name});
+ for(const name of ['settings-video.js','settings-components.js','home.js','settings.js','renderer.js','vpn/popup.js'])new vm.Script(fs.readFileSync(path.join(root,'ui',name),'utf8'),{filename:name});
  const syntax=require('node:child_process').spawnSync(process.execPath,['--input-type=module','--check'],{input:fs.readFileSync(path.join(root,'ui/select-control.js'),'utf8'),encoding:'utf8'});assert.equal(syntax.status,0,syntax.stderr);
  new vm.Script('(function(GM,GM_getValue,GM_setValue,GM_deleteValue,GM_listValues,GM_addStyle,GM_info,GM_xmlhttpRequest,GM_notification){'+fs.readFileSync(path.join(root,'ui/third_party/vot/vot.user.js'),'utf8')+'})');
  await test(false);await test(true);console.log('PASS: pinned VOT parses; runtime enable gate, private GM storage, remote changes and binary network payload');

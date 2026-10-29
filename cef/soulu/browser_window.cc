@@ -427,7 +427,6 @@ BrowserWindow::BrowserWindow()
   settings_->SetString("homeProvider", "google");
   settings_->SetString("homeWeatherMode", "automatic");
   settings_->SetString("homeWeatherUnits", "celsius");
-  settings_->SetString("homeWeatherProvider","open-meteo");
   settings_->SetBool("videoTranslationEnabled",true);
   settings_->SetList("homeFavoriteIds", CefListValue::Create());
   settings_->SetList("homeShortcuts", CefListValue::Create());

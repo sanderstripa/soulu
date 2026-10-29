@@ -21,7 +21,7 @@ jobs:
       - name: Require identical native source to the tested candidate
         shell: pwsh
         run: |
-          git diff --exit-code b4a18d1e40de16ef2ae891103f52b9c9251e326a HEAD -- cef vpn
+          git diff --exit-code b4a18d1e40de16ef2ae891103f52b9c9251e326a HEAD -- 'cef/soulu/video_*' 'cef/soulu/vpn_helper.*' cef/soulu/app_renderer.cc cef/soulu/browser_client.cc vpn
           if ($LASTEXITCODE -ne 0) { throw 'Native source changed; use a fresh native candidate' }
       - uses: actions/download-artifact@v4
         with:

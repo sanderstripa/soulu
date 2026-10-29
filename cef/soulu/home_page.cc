@@ -1,4 +1,3 @@
-#include "examples/soulu/protected_store.h"
 #include "examples/soulu/browser_window.h"
 #include "examples/soulu/home_weather.h"
 #include "examples/soulu/home_system.h"
@@ -87,7 +86,7 @@ CefRefPtr<CefDictionaryValue> BrowserWindow::PageSettings(const Tab& tab) const 
 }
 CefRefPtr<CefDictionaryValue> BrowserWindow::HomeState(const Tab& tab) const {
   auto config=PageSettings(tab), data=CefDictionaryValue::Create();
-  for(const char* key:{"theme","language","homeProvider","homeWeatherMode","homeWeatherCity","homeWeatherUnits","homeWeatherProvider"})
+  for(const char* key:{"theme","language","homeProvider","homeWeatherMode","homeWeatherCity","homeWeatherUnits"})
     if(config->HasKey(key))data->SetValue(key,config->GetValue(key)->Copy());
   if(!data->HasKey("homeProvider"))data->SetString("homeProvider","google");
   auto favorites=CefListValue::Create();auto ids=config->GetList("homeFavoriteIds");
@@ -98,7 +97,6 @@ CefRefPtr<CefDictionaryValue> BrowserWindow::HomeState(const Tab& tab) const {
       favorites->SetDictionary(favorites->GetSize(),row->Copy(false));
   }
   data->SetList("favorites",favorites);
-  auto weather_secret=ReadProtectedStore(tab.incognito?private_home_profile_:tab.profile_id,"weather");if(weather_secret)data->SetString("homeWeatherKeyVersion",weather_secret->GetString("revision"));
   const auto policy=policies_.find(tab.incognito?"__incognito__":tab.profile_id);
   data->SetBool("homeLocationAllowed",policy!=policies_.end()&&policy->second&&policy->second->Rule("soulu://home","geolocation")==0);
   const std::string theme=config->GetString("theme");
@@ -176,7 +174,6 @@ void BrowserWindow::HandleHomeBridge(int id,const std::string& request,
   }
   if(action=="home.weather"){
     auto config=PageSettings(*tab)->Copy(false);const auto profile=tab->profile_id;
-    auto secret=ReadProtectedStore(tab->incognito?private_home_profile_:profile,"weather");if(secret){config->SetString("__yandexKey",secret->GetString("key"));config->SetString("__yandexRevision",secret->GetString("revision"));}
     const auto file=tab->incognito?std::filesystem::path():ProfileRoot(profile)/L"soulu-weather.json";
     auto context=tab->browser->GetHost()->GetRequestContext();
     auto done=[callback](CefRefPtr<CefDictionaryValue> data){callback->Success(CefWriteJSON(AsValue(data),JSON_WRITER_DEFAULT));};
@@ -212,13 +209,12 @@ bool BrowserWindow::ValidateHomePatch(CefRefPtr<CefDictionaryValue> patch,
   CefDictionaryValue::KeyList keys;patch->GetKeys(keys);
   for(const auto& key:keys){
     const std::string name=key;auto value=patch->GetValue(key);
-    if(name=="homeProvider"||name=="homeWeatherMode"||name=="homeWeatherUnits"||name=="homeWeatherProvider"){
+    if(name=="homeProvider"||name=="homeWeatherMode"||name=="homeWeatherUnits"){
       if(value->GetType()!=VTYPE_STRING){error="String required";return false;}
       const std::string text=value->GetString();
       if((name=="homeProvider"&&text!="google"&&text!="perplexity")||
          (name=="homeWeatherMode"&&text!="automatic"&&text!="configured")||
-         (name=="homeWeatherUnits"&&text!="celsius"&&text!="fahrenheit")||
-         (name=="homeWeatherProvider"&&text!="open-meteo"&&text!="yandex"&&text!="auto")){error="Invalid Home choice";return false;}
+         (name=="homeWeatherUnits"&&text!="celsius"&&text!="fahrenheit")){error="Invalid Home choice";return false;}
       config->SetValue(key,value->Copy());
     }else if(name=="homeFavoriteIds"){
       if(value->GetType()!=VTYPE_LIST||value->GetList()->GetSize()>100){error="Invalid favorites";return false;}
