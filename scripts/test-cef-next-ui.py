@@ -55,6 +55,10 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as root:
   s.evaluate(settings,"(()=>{const n=document.querySelector('#vpn-directDomains');n.value='https://Example.COM/path\\n*.bank.example\\nexample.com';n.dispatchEvent(new Event('change',{bubbles:true}))})()")
   wait(lambda:s.evaluate(settings,"souluSettings.persisted.vpn.directDomains==='example.com\\nbank.example'"))
   check(True,'Routing domains normalize, deduplicate and persist through the native settings store')
+  for protocol,key in [('sudoku','sudoku://'+base64.urlsafe_b64encode(json.dumps({'h':'127.0.0.1','p':443,'k':'ab'*32}).encode()).decode().rstrip('=')),('vless','vless://12345678-1234-1234-1234-123456789abc@127.0.0.1:443?security=none&type=tcp')]:
+   s.evaluate(settings,"(()=>{const n=document.querySelector('#vpn-link');n.value="+json.dumps('  '+key+'  ')+";n.dispatchEvent(new Event('change',{bubbles:true}))})()")
+   wait(lambda:s.evaluate(settings,"souluSettings.persisted.vpn.protocol==="+json.dumps(protocol)+"&&souluSettings.persisted.vpn.link==="+json.dumps(key)))
+   check(s.evaluate(settings,"document.querySelector('input[name=vpn-protocol]:checked').value==="+json.dumps(protocol)),'VPN recognizes and trims '+protocol+' keys without connecting')
   s.evaluate(settings,"souluSettings.openSection('reading')");time.sleep(.2)
   check(s.evaluate(settings,"document.querySelector('#videoTranslationEnabled').checked"),'Video Translate is enabled by default')
   s.evaluate(settings,"souluVideoSettings.open()")
