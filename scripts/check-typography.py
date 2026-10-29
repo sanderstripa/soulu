@@ -48,7 +48,7 @@ for css in (ROOT/'ui').rglob('*.css'):
             for token in re.findall(r'--type-([\w]+)',value):assert token in tokens
         assert not re.search(r'Segoe|Inter|Arial|Montserrat|Roboto|Tahoma|Manrope',body),css
 for p in (ROOT/'ui').rglob('*.js'):
-    if p.parent.name=='third_party':continue
+    if 'third_party' in p.relative_to(ROOT/'ui').parts:continue
     assert not re.search(r'font-family=|fontSize\s*=|fontFamily\s*=',p.read_text(encoding='utf-8')),p
 build=(ROOT/'installer/build.ps1').read_text(encoding='utf-8')
 assert 'build-connect-installer.ps1' in build and '-TestUI:$TestUI' in build

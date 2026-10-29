@@ -41,8 +41,7 @@ void BrowserWindow::HandleVideoRequest(int tab_id,CefRefPtr<CefFrame> frame,int 
  auto respond=[frame,id](CefRefPtr<CefDictionaryValue> data){if(!frame||!frame->IsValid())return;auto message=CefProcessMessage::Create("soulu.video.response");message->GetArgumentList()->SetInt(0,id);message->GetArgumentList()->SetString(1,CefWriteJSON(WrapVideo(data),JSON_WRITER_DEFAULT));frame->SendProcessMessage(PID_RENDERER,message);};
  auto failure=[respond](const std::string& text){auto result=CefDictionaryValue::Create();result->SetBool("ok",false);result->SetString("error",text);respond(result);};
  auto* tab=FindTab(tab_id);if(!tab||!tab->browser||!frame||!frame->IsMain()||!IsVideoPage(frame->GetURL())||frame->GetBrowser()->GetIdentifier()!=tab->browser->GetIdentifier()){failure("Video runtime unavailable");return;}
- auto config=tab->incognito&&private_page_settings_?private_page_settings_:settings_;
- if(!tab->incognito&&tab->profile_id!=active_profile_id_){auto value=ReadJson(ProfileRoot(tab->profile_id)/L"soulu-settings.json");if(value&&value->GetType()==VTYPE_DICTIONARY)config=value->GetDictionary();}
+ auto config=PageSettings(*tab);
  auto parsed=CefParseJSON(raw,JSON_PARSER_RFC);if(!parsed||parsed->GetType()!=VTYPE_DICTIONARY){failure("Invalid video message");return;}
  auto args=parsed->GetDictionary();const std::string op=args->GetString("op");const bool enabled=!config->HasKey("videoTranslationEnabled")||config->GetBool("videoTranslationEnabled");
  const std::string owner=std::to_string(tab->browser->GetIdentifier())+"|"+std::to_string(tab->document_generation);

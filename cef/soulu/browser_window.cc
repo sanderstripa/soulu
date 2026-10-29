@@ -427,6 +427,7 @@ BrowserWindow::BrowserWindow()
   settings_->SetString("homeProvider", "google");
   settings_->SetString("homeWeatherMode", "automatic");
   settings_->SetString("homeWeatherUnits", "celsius");
+  settings_->SetString("homeWeatherProvider","open-meteo");
   settings_->SetBool("videoTranslationEnabled",true);
   settings_->SetList("homeFavoriteIds", CefListValue::Create());
   settings_->SetList("homeShortcuts", CefListValue::Create());
@@ -2758,17 +2759,20 @@ void BrowserWindow::HandleBridge(const std::string& request,
       arguments->SetString("profileId", id);
       arguments->SetString("url",vpn_settings_->GetString("link"));
     }
-    auto helper_result = SendVpnHelper(arguments);
-    if (!helper_result->GetBool("ok")) return Reply(callback, helper_result);
-    vpn_enabled_ = command == "connect" ||
-        (command == "status" && helper_result->GetBool("connected"));
-    if (command == "disconnect") vpn_enabled_ = false;
-    for (auto& profile : profiles_) ApplyProxy(profile.context);
-    ApplyProxy(incognito_context_);
-    helper_result->SetString("state", vpn_enabled_ ? "connected" : "disconnected");
-    helper_result->SetString("scope", "soulu-only");
-    Emit("vpnState", Wrap(helper_result->Copy(false)));
-    return Reply(callback, helper_result);
+    CefRefPtr<BrowserWindow> self=this;
+    CefPostTask(TID_FILE_USER_BLOCKING,new FunctionTask([self,arguments,command,callback]{
+      auto result=VpnHelperRequest(arguments);
+      CefPostTask(TID_UI,new FunctionTask([self,result,command,callback]{
+        if(self->closing_){callback->Failure(499,"Browser is closing");return;}
+        if(!result->GetBool("ok")){self->Reply(callback,result);return;}
+        self->vpn_enabled_=command=="connect"||(command=="status"&&result->GetBool("connected"));
+        if(command=="disconnect")self->vpn_enabled_=false;
+        for(auto& profile:self->profiles_)self->ApplyProxy(profile.context);self->ApplyProxy(self->incognito_context_);
+        result->SetString("state",self->vpn_enabled_?"connected":"disconnected");result->SetString("scope","soulu-only");
+        self->Emit("vpnState",Wrap(result->Copy(false)));self->Reply(callback,result);
+      }));
+    }));
+    return;
   }
   else if (action == "window.minimize") ShowWindow(hwnd_, SW_MINIMIZE);
   else if (action == "window.captionBounds") {

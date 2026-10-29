@@ -1,3 +1,4 @@
+#include "examples/soulu/home_weather_yandex.h"
 #include "examples/soulu/home_weather.h"
 #include "examples/soulu/profile_data.h"
 #include "include/cef_urlrequest.h"
@@ -11,7 +12,7 @@ namespace soulu {
 bool ValidHomeWeather(CefRefPtr<CefDictionaryValue> data){
  if(!data)return false;auto current=data->GetDictionary("current"),daily=data->GetDictionary("daily");
  if(!current||!daily||(current->GetType("temperature_2m")!=VTYPE_DOUBLE&&current->GetType("temperature_2m")!=VTYPE_INT)||current->GetType("weather_code")!=VTYPE_INT)return false;
- auto days=daily->GetList("time");if(!days||days->GetSize()<4||days->GetSize()>7)return false;
+ auto days=daily->GetList("time");if(!days||days->GetSize()<(data->GetString("provider")=="yandex"?1:4)||days->GetSize()>7)return false;
  for(const char* key:{"weather_code","temperature_2m_max","temperature_2m_min","precipitation_probability_max"}){
   auto values=daily->GetList(key);if(!values||values->GetSize()!=days->GetSize())return false;
   for(size_t i=0;i<values->GetSize();++i)if(values->GetType(i)!=VTYPE_INT&&values->GetType(i)!=VTYPE_DOUBLE)return false;
@@ -39,7 +40,7 @@ class Request final:public CefURLRequestClient {
  bool GetAuthCredentials(bool,const CefString&,int,const CefString&,const CefString&,CefRefPtr<CefAuthCallback>) override{return false;}
  private:void Finish(Json value){if(!done_)return;auto done=std::move(done_);done_=nullptr;body_.clear();done(value);}std::string body_;std::function<void(Json)> done_;IMPLEMENT_REFCOUNTING(Request);
 };
-void Fetch(const std::string& url,CefRefPtr<CefRequestContext> context,std::function<void(Json)> done){auto r=CefRequest::Create();r->SetURL(url);r->SetMethod("GET");r->SetFlags(UR_FLAG_SKIP_CACHE|UR_FLAG_STOP_ON_REDIRECT);CefRefPtr<Request> client=new Request(std::move(done));auto pending=CefURLRequest::Create(r,client,context);if(!pending){client->Timeout(nullptr);return;}CefPostDelayedTask(TID_UI,new Task([client,pending]{client->Timeout(pending);}),15000);}
+void Fetch(const std::string& url,CefRefPtr<CefRequestContext> context,std::function<void(Json)> done,const std::string& api_key="",const std::string& body=""){auto r=CefRequest::Create();r->SetURL(url);r->SetMethod(body.empty()?"GET":"POST");if(!api_key.empty())r->SetHeaderByName("X-Yandex-Weather-Key",api_key,true);if(!body.empty()){r->SetHeaderByName("Content-Type","application/json",true);auto post=CefPostData::Create();auto item=CefPostDataElement::Create();item->SetToBytes(body.size(),body.data());post->AddElement(item);r->SetPostData(post);}r->SetFlags(UR_FLAG_SKIP_CACHE|UR_FLAG_STOP_ON_REDIRECT);CefRefPtr<Request> client=new Request(std::move(done));auto pending=CefURLRequest::Create(r,client,context);if(!pending){client->Timeout(nullptr);return;}CefPostDelayedTask(TID_UI,new Task([client,pending]{client->Timeout(pending);}),15000);}
 struct Cache{Json data;double time=0,retry=0;bool pending=false;std::vector<HomeResult> waiting;};
 std::map<std::string,Cache> cache;
 void Complete(const std::string& key,const std::filesystem::path& file,Json data){
@@ -53,7 +54,10 @@ void Complete(const std::string& key,const std::filesystem::path& file,Json data
 void ForgetPrivateHomeWeather(){for(auto it=cache.begin();it!=cache.end();)if(it->first.rfind("__incognito__",0)==0)it=cache.erase(it);else ++it;}
 void HomeWeather(const std::string& profile,const std::filesystem::path& file,CefRefPtr<CefRequestContext> context,Json config,Json location,HomeResult done){
  const std::string city=config->GetString("homeWeatherCity"),mode=config->GetString("homeWeatherMode"),units=config->GetString("homeWeatherUnits"),language=config->GetString("language");
- const std::string key=profile+"|"+mode+"|"+city+"|"+units+"|"+language;
+ const std::string provider=config->GetString("homeWeatherProvider").empty()?"open-meteo":config->GetString("homeWeatherProvider").ToString();
+ const std::string api_key=config->GetString("__yandexKey");
+ const std::string key=profile+"|"+mode+"|"+city+"|"+units+"|"+language+"|"+provider+"|"+config->GetString("__yandexRevision").ToString();
+ if(provider=="yandex"&&api_key.empty()){auto result=CefDictionaryValue::Create();result->SetString("status","unavailable");result->SetString("reason","key_required");done(result);return;}
  // Bound inactive configuration snapshots; open tabs do not own observers.
  if(cache.size()>=64&&!cache.count(key))for(auto it=cache.begin();it!=cache.end();)if(!it->second.pending)it=cache.erase(it);else ++it;
  auto& c=cache[key];if(!c.data&&!file.empty()){auto v=ReadJson(file);if(v&&v->GetType()==VTYPE_DICTIONARY){auto d=v->GetDictionary();if(d->GetString("cacheKey")==key&&ValidHomeWeather(d)){c.data=d;c.time=d->GetDouble("fetchedAt");}}}
@@ -61,7 +65,14 @@ void HomeWeather(const std::string& profile,const std::filesystem::path& file,Ce
  if(c.retry>Now()){done(HomeWeatherSnapshot(c.data,Now(),true));return;}
  c.waiting.push_back(std::move(done));if(c.pending)return;c.pending=true;
 
- auto forecast=[key,file,context,units](double lat,double lon,const std::string& name){if(!std::isfinite(lat)||!std::isfinite(lon)||std::abs(lat)>90||std::abs(lon)>180){Complete(key,file,nullptr);return;}std::string url="https://api.open-meteo.com/v1/forecast?latitude="+std::to_string(lat)+"&longitude="+std::to_string(lon)+"&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,precipitation,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&forecast_days=6&timezone=auto&temperature_unit="+(units=="fahrenheit"?std::string("fahrenheit"):std::string("celsius"));Fetch(url,context,[key,file,name](Json data){if(!ValidHomeWeather(data)){Complete(key,file,nullptr);return;}data->SetString("city",name);Complete(key,file,data);});};
+ auto open_forecast=[key,file,context,units](double lat,double lon,const std::string& name){if(!std::isfinite(lat)||!std::isfinite(lon)||std::abs(lat)>90||std::abs(lon)>180){Complete(key,file,nullptr);return;}std::string url="https://api.open-meteo.com/v1/forecast?latitude="+std::to_string(lat)+"&longitude="+std::to_string(lon)+"&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,precipitation,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&forecast_days=6&timezone=auto&temperature_unit="+(units=="fahrenheit"?std::string("fahrenheit"):std::string("celsius"));Fetch(url,context,[key,file,name](Json data){if(!ValidHomeWeather(data)){Complete(key,file,nullptr);return;}data->SetString("city",name);data->SetString("provider","open-meteo");data->SetString("source","Open-Meteo");data->SetString("sourceUrl","https://open-meteo.com/");Complete(key,file,data);});};
+ auto forecast=[key,file,context,units,provider,api_key,open_forecast](double lat,double lon,const std::string& name){
+  if(!std::isfinite(lat)||!std::isfinite(lon)||std::abs(lat)>90||std::abs(lon)>180){Complete(key,file,nullptr);return;}
+  if(provider=="open-meteo"||(provider=="auto"&&api_key.empty())){open_forecast(lat,lon,name);return;}
+  Fetch("https://api.weather.yandex.ru/graphql/query",context,[key,file,units,name,provider,open_forecast,lat,lon](Json raw){
+   auto normalized=NormalizeYandexWeather(raw,units,name);if(!normalized||!ValidHomeWeather(normalized)){if(provider=="auto"){open_forecast(lat,lon,name);return;}Complete(key,file,nullptr);return;}Complete(key,file,normalized);
+  },api_key,YandexWeatherQuery(lat,lon));
+ };
  if(mode=="configured"&&!city.empty()){Fetch("https://geocoding-api.open-meteo.com/v1/search?count=1&format=json&language="+language+"&name="+CefURIEncode(city,true).ToString(),context,[key,file,forecast](Json data){auto rows=data?data->GetList("results"):nullptr;auto row=rows&&rows->GetSize()?rows->GetDictionary(0):nullptr;if(!row){Complete(key,file,nullptr);return;}forecast(row->GetDouble("latitude"),row->GetDouble("longitude"),row->GetString("name"));});}
  else if(location&&location->GetString("status")=="ready")forecast(location->GetDouble("latitude"),location->GetDouble("longitude"),config->GetString("language")=="en"?"Current location":"Текущее местоположение");
  else Complete(key,file,nullptr);

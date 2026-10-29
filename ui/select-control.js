@@ -24,3 +24,5 @@ function scan(){for(const select of document.querySelectorAll('select'))enhance(
 new MutationObserver(scan).observe(document.documentElement,{childList:true,subtree:true});scan();
 window.addEventListener('resize',()=>{for(const menu of document.querySelectorAll('.soulu-select-menu:popover-open'))menu.hidePopover()});
 document.addEventListener('scroll',e=>{for(const menu of document.querySelectorAll('.soulu-select-menu:popover-open'))if(!menu.contains(e.target))menu.hidePopover()},true);
+
+document.addEventListener('focusin',e=>{for(const menu of document.querySelectorAll('.soulu-select-menu:popover-open')){const button=document.querySelector('[aria-controls="'+menu.id+'"]');if(e.target!==button&&!menu.contains(e.target))menu.hidePopover()}});

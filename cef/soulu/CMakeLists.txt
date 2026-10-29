@@ -33,6 +33,7 @@ set(SOULU_SRCS
   home_system.h
   home_system.cc
   home_weather.cc
+  home_weather_yandex.cc
   home_weather.h
   profile_data.h
   history_store.h

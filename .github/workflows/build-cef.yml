@@ -138,6 +138,8 @@ jobs:
           New-Item -ItemType Directory -Force browser/artifacts | Out-Null
           python browser/scripts/check-typography.py browser/artifacts/typography-static.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python browser/scripts/verify-vot.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Build integrity-pinned local translation runtime
         shell: pwsh
