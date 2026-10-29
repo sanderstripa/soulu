@@ -8,3 +8,10 @@ assert git==pin['upstreamGitBlob'],'Pinned VOT distribution differs from its ups
 assert pin['tag']=='1.12.3' and pin['commit']=='f32ee1670f6b7b26e5cdeffc0010a03842c960b2'
 assert 'MIT License' in (root/'LICENSE').read_text(encoding='utf-8')
 print('PASS: pinned VOT',pin['tag'],pin['commit'],git)
+
+for entry in pin['bundledLocales']:
+ data=(root/entry['file']).read_bytes()
+ actual=hashlib.sha1(b'blob '+str(len(data)).encode()+b'\0'+data).hexdigest()
+ assert actual==entry['gitBlob'],entry['file']
+ assert isinstance(json.loads(data),dict)
+print('PASS: pinned packaged VOT localization data')
