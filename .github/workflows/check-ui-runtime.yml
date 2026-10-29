@@ -23,12 +23,26 @@ jobs:
       - name: Require identical native source to the tested candidate
         shell: pwsh
         run: |
-          git diff --exit-code b4a18d1e40de16ef2ae891103f52b9c9251e326a HEAD -- 'cef/soulu/video_*' 'cef/soulu/vpn_helper.*' cef/soulu/app_renderer.cc cef/soulu/browser_client.cc vpn
+          git diff --exit-code 25fe3eceebd4e462300f2b86a9ccc205d558ddc8 HEAD -- 'cef/soulu/video_*' 'cef/soulu/vpn_helper.*' cef/soulu/app_renderer.cc cef/soulu/browser_client.cc vpn
           if ($LASTEXITCODE -ne 0) { throw 'Native source changed; use a fresh native candidate' }
+      - name: Wait for the matching compiled native candidate
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $deadline=(Get-Date).AddMinutes(15)
+          $ready=$false
+          while ((Get-Date) -lt $deadline) {
+            $list=gh api repos/sanderstripa/soulu/actions/runs/40854673179/artifacts | ConvertFrom-Json
+            if ($LASTEXITCODE -ne 0) { throw 'Cannot read candidate artifacts' }
+            if (@($list.artifacts | Where-Object name -eq 'Soulu-cef-candidate-25fe3eceebd4e462300f2b86a9ccc205d558ddc8').Count -gt 0) { $ready=$true; break }
+            Start-Sleep -Seconds 10
+          }
+          if (!$ready) { throw 'Matching native candidate was not produced' }
       - uses: actions/download-artifact@v4
         with:
-          name: Soulu-cef-candidate-b4a18d1e40de16ef2ae891103f52b9c9251e326a
-          run-id: 40847275835
+          name: Soulu-cef-candidate-25fe3eceebd4e462300f2b86a9ccc205d558ddc8
+          run-id: 40854673179
           github-token: ${{ github.token }}
           path: runtime
       - uses: actions/setup-go@v5
