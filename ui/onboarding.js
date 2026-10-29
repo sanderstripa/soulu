@@ -14,7 +14,7 @@
   async function run(fn){if(busy)return;busy=true;document.querySelector('main').setAttribute('aria-busy','true');disable();try{await fn();}catch(e){report(e);}finally{busy=false;document.querySelector('main').setAttribute('aria-busy','false');disable();}}
   function disable(){document.querySelectorAll('button,input').forEach(n=>{n.disabled=busy||n.dataset.unavailable==='true';});}
   const persist=async patch=>{flow=await invoke('progress',{...patch,step:patch.step||flow.step||1});};
-  const parseVpn=()=>{const parsed=window.souluParseVpnKey(vpnDraft);if(parsed.protocol!=='vless')throw Error('В этой версии поддерживаются ключи Xray (VLESS). Sudoku пока недоступен.');return parsed;};
+  const parseVpn=()=>window.souluParseVpnKey(vpnDraft);
   const go=async step=>{await persist({step});render();$('title').focus();};
   function button(text,fn,kind=''){const n=el('button',text,kind);n.type='button';n.onclick=()=>run(fn);return n;}
   function note(text){$('controls').append(el('p',text,'note'));}

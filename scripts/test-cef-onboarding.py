@@ -146,9 +146,9 @@ def main():
             click(page,'Добавить');check(flow()['step']==5 and s.evaluate(page,"document.querySelector('#message').textContent.length>0"),'Empty VPN is rejected')
             s.evaluate(page,"document.querySelector('#vpnKey').value='unsupported://host';document.querySelector('#vpnKey').dispatchEvent(new Event('input'))")
             click(page,'Добавить');check(flow()['step']==5,'Unsupported VPN is rejected')
-            sudoku='sudoku://'+base64.urlsafe_b64encode(json.dumps({'h':'127.0.0.1','p':443,'k':'fixture'}).encode()).decode().rstrip('=')
+            sudoku='sudoku://'+base64.urlsafe_b64encode(json.dumps({'h':'127.0.0.1','p':443,'k':'ab'*32}).encode()).decode().rstrip('=')
             s.evaluate(page,"document.querySelector('#vpnKey').value="+json.dumps(sudoku)+";document.querySelector('#vpnKey').dispatchEvent(new Event('input'))")
-            click(page,'Проверить ключ');check(s.evaluate(page,"document.querySelector('#message').textContent.includes('Sudoku пока недоступен')"),'Onboarding does not advertise unsupported native Sudoku')
+            click(page,'Проверить ключ');check(s.evaluate(page,"document.querySelector('#message').textContent.toLowerCase().includes('sudoku')"),'Onboarding recognizes the now-supported native Sudoku protocol')
             click(page,'Пропустить');check(flow()['step']==6,'VPN skip reaches completion')
             check(s.evaluate(page,"document.querySelector('.summary').textContent.includes('Импортировано паролей: 1') && document.querySelector('.summary').textContent.includes('частично') && document.querySelector('.summary').textContent.includes('Приватность настроена') && document.querySelector('.summary').textContent.includes('VPN можно добавить позже')"),'Summary reports actual partial/applied/skipped outcomes')
             for width,height,scale in [(1280,800,1),(800,500,1),(480,360,1),(900,600,1.5),(900,600,2)]:
