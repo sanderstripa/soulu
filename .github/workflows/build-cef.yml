@@ -704,7 +704,9 @@ jobs:
           Set-ItemProperty $personalize EnableTransparency 1 -Type DWord
           $env:SOULU_UI_TEST_PORT = "9223"
           $installedExe = Join-Path "${{ steps.package.outputs.build_dir }}" "Soulu.exe"
+          Get-Process Soulu -ErrorAction SilentlyContinue | Stop-Process -Force
           $app = Start-Process $installedExe -PassThru
+          $env:SOULU_TEST_PROCESS_ID=[string]$app.Id
           try {
             python browser/scripts/test-cef-ui.py
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

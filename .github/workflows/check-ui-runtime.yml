@@ -80,7 +80,9 @@ jobs:
           $env:SOULU_REGRESSION_SKIP_FIRST_RUN='1'
           $env:LOCALAPPDATA=Join-Path $env:RUNNER_TEMP 'soulu-ui-theme'
           New-Item -ItemType Directory -Force $env:LOCALAPPDATA | Out-Null
+          Get-Process Soulu -ErrorAction SilentlyContinue | Stop-Process -Force
           $app=Start-Process "$env:GITHUB_WORKSPACE/runtime/Soulu.exe" -PassThru
+          $env:SOULU_TEST_PROCESS_ID=[string]$app.Id
           try {
             python scripts/test-cef-ui.py
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
