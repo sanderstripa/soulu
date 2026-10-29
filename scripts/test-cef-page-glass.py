@@ -75,6 +75,53 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as root:
   assert evidence['offStyle']=='rgb(255, 255, 255)',evidence
   assert s.evaluate(page,'identity')==identity
   s.evaluate(page,'scrollTo(0,0)');capture('off-top');call('setSettings',{'mattePanel':True});capture('back-top')
+  # Regressions: dark chrome, both layouts, tab lifetime and native resizing.
+  call('setSettings',{'theme':'dark','mattePanel':False})
+  wait(lambda:s.evaluate(ws,"document.body.dataset.theme==='dark'"))
+  evidence['darkOffStyle']=s.evaluate(ws,"getComputedStyle(document.querySelector('.classic-toolbar')).backgroundColor")
+  assert evidence['darkOffStyle']=='rgb(8, 9, 11)',evidence
+  capture('dark-off');call('setSettings',{'mattePanel':True});s.evaluate(page,'scrollTo(0,260)');capture('dark-glass')
+  assert state()['pageGlassReady'] and s.evaluate(page,'identity')==identity
+  first=state()['activeTabId'];call('newTab',None)
+  wait(lambda:len(state()['tabs'])==2);second=state()['activeTabId']
+  call('navigate',f'http://127.0.0.1:{server.server_port}/glass?second')
+  t=wait(lambda:next((x for x in s.targets() if '?second' in x.get('url','')),None))
+  other=s.websocket.create_connection(t['webSocketDebuggerUrl'],timeout=30,origin=s.BASE)
+  wait(lambda:s.evaluate(other,'typeof identity==="number"'));other_identity=s.evaluate(other,'identity')
+  s.evaluate(other,'scrollTo(0,300)');capture('two-tabs-dark')
+  evidence['twoTabFixedTop']=s.evaluate(other,"document.querySelector('nav').getBoundingClientRect().top")
+  assert abs(evidence['twoTabFixedTop']-88)<1,evidence
+  call('switchTab',first);time.sleep(.4)
+  assert s.evaluate(page,'identity')==identity and s.evaluate(page,'scrollY')==260
+  call('switchTab',second);time.sleep(.4)
+  assert s.evaluate(other,'identity')==other_identity and s.evaluate(other,'scrollY')==300
+  for width in (640,980):
+   u.SetWindowPos(hwnd,None,60,60,width,650,0x0040);time.sleep(.4)
+   assert state()['pageGlassReady']
+   assert abs(s.evaluate(other,"document.querySelector('nav').getBoundingClientRect().top")-88)<1
+   capture('resize-'+str(width))
+  other.close();call('closeTab',second);wait(lambda:len(state()['tabs'])==1);time.sleep(.4)
+  assert s.evaluate(page,'identity')==identity
+  assert abs(s.evaluate(page,"document.querySelector('nav').getBoundingClientRect().top")-68)<1
+  call('setSettings',{'layout':'compact'});time.sleep(.5);capture('compact-glass')
+  assert abs(s.evaluate(page,"document.querySelector('nav').getBoundingClientRect().top")-58)<1
+  call('setSettings',{'layout':'adaptive','theme':'light'});time.sleep(.4)
+  # Real external HTTPS pages: verify scroll, fixed controls and no reload on toggles.
+  evidence['externalSites']=[]
+  page.close();page=None
+  for url in ('https://example.com','https://www.wikipedia.org','https://developer.mozilla.org/en-US/docs/Web/CSS'):
+   call('navigate',url)
+   target=wait(lambda:next((x for x in s.targets() if x.get('url','').startswith(url)),None))
+   remote=s.websocket.create_connection(target['webSocketDebuggerUrl'],timeout=30,origin=s.BASE)
+   wait(lambda:s.evaluate(remote,"document.readyState==='complete'"),60)
+   info=s.evaluate(remote,"({url:location.href,title:document.title,height:document.documentElement.scrollHeight,viewport:innerHeight})")
+   assert info['title'] and not info['url'].startswith('chrome-error:'),info
+   s.evaluate(remote,'window.__glassTestIdentity=Math.random();scrollTo(0,300)');time.sleep(.7)
+   token=s.evaluate(remote,'__glassTestIdentity');call('setSettings',{'mattePanel':False});time.sleep(.3);call('setSettings',{'mattePanel':True});time.sleep(.4)
+   assert s.evaluate(remote,'__glassTestIdentity')==token
+   info['scrollY']=s.evaluate(remote,'scrollY');evidence['externalSites'].append(info)
+   capture('site-'+str(len(evidence['externalSites'])))
+   remote.close()
   evidence['passed']=True
  finally:
   evidence['exitCodeBeforeClose']=p.poll() if p else None
