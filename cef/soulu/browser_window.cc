@@ -2096,7 +2096,7 @@ void BrowserWindow::HandleBridge(const std::string& request,
   if(any_import&&(bookmark_write||password_write||action=="browser.profile.delete"||action=="browser.profile.switch"||action=="browser.profile.create"||action=="browser.import.createProfile"||action=="browser.import.run"||action=="browser.import.passwords")){
     callback->Failure(409,"Wait for the current import to finish");return;
   }
-  if(action=="browser.components.manage"){auto request=payload&&payload->GetType()==VTYPE_DICTIONARY?payload->GetDictionary()->Copy(false):nullptr;if(request)request->SetBool("proxy",vpn_enabled_);VpnComponentRequest(request,callback);return;}
+  if(action=="browser.components.manage"){auto component_request=payload&&payload->GetType()==VTYPE_DICTIONARY?payload->GetDictionary()->Copy(false):nullptr;if(component_request)component_request->SetBool("proxy",vpn_enabled_);VpnComponentRequest(component_request,callback);return;}
   if(action=="browser.video.settings"){HandleVideoSettings(payload&&payload->GetType()==VTYPE_DICTIONARY?payload->GetDictionary():nullptr,callback);return;}
   if(action=="browser.menu.show"){
     if(settings_source||!payload||payload->GetType()!=VTYPE_DICTIONARY){callback->Failure(403,"Menu host unavailable");return;}
