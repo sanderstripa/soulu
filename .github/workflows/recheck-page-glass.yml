@@ -13,7 +13,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           path: browser
-          fetch-depth: 4
+          fetch-depth: 0
       - name: Verify identical native and UI source
         shell: pwsh
         run: |
@@ -49,6 +49,18 @@ jobs:
         run: |
           python -m pip install --disable-pip-version-check websocket-client pillow
           python browser/scripts/test-cef-page-glass.py "$env:test_exe" artifacts/page-glass
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Check existing toolbar, adaptive animation and storage regressions
+        shell: pwsh
+        env:
+          SOULU_REGRESSION_SKIP_FIRST_RUN: '1'
+          PYTHONUTF8: '1'
+        run: |
+          python browser/scripts/test-cef-toolbar.py "$env:test_exe" artifacts/page-glass/toolbar-regression.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python browser/scripts/test-cef-adaptive-toolbar.py "$env:test_exe" artifacts/page-glass/adaptive-regression.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python browser/scripts/test-cef-storage.py "$env:test_exe"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Print native screenshots
         if: always()
