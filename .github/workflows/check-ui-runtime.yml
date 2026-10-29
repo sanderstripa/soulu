@@ -1,0 +1,64 @@
+name: Validate UI against verified native candidate
+on:
+  push:
+    branches: [codex/browser-components]
+    paths: ['ui/**', 'scripts/test-cef-next-ui.py', 'scripts/test-cef-video-translation.py', '.github/workflows/check-ui-runtime.yml']
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: soulu-ui-candidate
+  cancel-in-progress: true
+jobs:
+  ui:
+    runs-on: windows-2025
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Require identical native source to the tested candidate
+        shell: pwsh
+        run: |
+          git diff --exit-code b4a18d1e40de16ef2ae891103f52b9c9251e326a HEAD -- cef vpn
+          if ($LASTEXITCODE -ne 0) { throw 'Native source changed; use a fresh native candidate' }
+      - uses: actions/download-artifact@v4
+        with:
+          name: Soulu-cef-candidate-b4a18d1e40de16ef2ae891103f52b9c9251e326a
+          run-id: 40847275835
+          github-token: ${{ github.token }}
+          path: runtime
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.0'
+          cache: false
+      - name: Assemble verified CEF runtime and current interface
+        shell: pwsh
+        run: |
+          $url='https://cef-builds.spotifycdn.com/cef_binary_156.0.14%2Bg4fa4ab5%2Bchromium-156.0.8078.48_windows64.tar.bz2'
+          Invoke-WebRequest $url -OutFile cef.tar.bz2
+          if ((Get-FileHash cef.tar.bz2 -Algorithm SHA1).Hash.ToLowerInvariant() -cne '7a1049f0facf3b6ce9efc4d683cf1bac72691ba6') { throw 'CEF distribution digest mismatch' }
+          New-Item -ItemType Directory -Force cef-runtime | Out-Null
+          tar -xjf cef.tar.bz2 -C cef-runtime
+          if ($LASTEXITCODE -ne 0) { throw 'CEF extraction failed' }
+          $distribution=Get-ChildItem cef-runtime -Directory | Select-Object -First 1
+          Copy-Item "$($distribution.FullName)/Release/*" runtime -Force
+          Copy-Item "$($distribution.FullName)/Resources/*" runtime -Recurse -Force
+          Copy-Item ui/* runtime/ui/ -Recurse -Force
+          Copy-Item vpn runtime/ -Recurse -Force
+          ./scripts/prepare-vpn-components.ps1 -Destination "$env:GITHUB_WORKSPACE/runtime/vpn/native-host"
+          python -m pip install --disable-pip-version-check websocket-client pillow
+      - name: Check internal controls
+        shell: pwsh
+        run: python scripts/test-cef-next-ui.py "$env:GITHUB_WORKSPACE/runtime/Soulu.exe" artifacts/next-ui
+      - name: Check real YouTube integration
+        if: ${{ !cancelled() }}
+        shell: pwsh
+        run: python scripts/test-cef-video-translation.py "$env:GITHUB_WORKSPACE/runtime/Soulu.exe" artifacts/video
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Soulu-ui-candidate-${{ github.sha }}
+          path: artifacts/
+          if-no-files-found: warn
