@@ -1,8 +1,9 @@
 (()=>{
  'use strict';
  const call=payload=>new Promise((resolve,reject)=>window.cefQuery({request:JSON.stringify({action:'browser.video.settings',payload}),persistent:false,onSuccess:s=>resolve(JSON.parse(s)),onFailure:(_,s)=>reject(Error(s))}));
+ const subtitleLanguages=["af","ak","sq","am","ar","hy","as","ay","az","bn","eu","be","bho","bs","bg","my","ca","ceb","zh","zh-Hans","zh-Hant","co","hr","cs","da","dv","nl","en","eo","et","ee","fil","fi","fr","gl","lg","ka","de","el","gn","gu","ht","ha","haw","iw","hi","hmn","hu","is","ig","id","ga","it","ja","jv","kn","kk","km","rw","ko","kri","ku","ky","lo","la","lv","ln","lt","lb","mk","mg","ms","ml","mt","mi","mr","mn","ne","nso","no","ny","or","om","ps","fa","pl","pt","pa","qu","ro","ru","sm","sa","gd","sr","sn","sd","si","sk","sl","so","st","es","su","sw","sv","tg","ta","tt","te","th","ti","ts","tr","tk","uk","ur","ug","uz","vi","cy","fy","xh","yi","yo","zu"];
  const options=[
- ['responseLanguage','Язык озвучки','Voice-over language','select','ru',['ru','en','kk','uk','uz']],
+ ['responseLanguage','Язык озвучки','Voice-over language','select','ru',['ru','en','kk']],
  ['useLivelyVoice','Живые голоса','Lively voices','bool',false],
  ['autoTranslate','Переводить автоматически','Translate automatically','bool',false],
  ['autoPauseOnTranslate','Приостановить видео на время перевода','Pause while translating','bool',false],
@@ -21,23 +22,23 @@
  ['downloadWithName','Имя видео при скачивании','Use video name for downloads','bool',true],
  ['useAudioDownload','Скачивать аудиодорожку','Download audio track','bool',true],
  ['sendNotifyOnComplete','Уведомление о готовом переводе','Notify when translation is ready','bool',false],
- ['translationService','Сервис перевода','Translation service','select','yandexbrowser',['yandexbrowser','msedge']],
+ ['translationService','Перевод текста (не озвучка)','Text translation (not voice-over)','select','yandexbrowser',['yandexbrowser','msedge']],
  ['detectService','Определение языка','Language detection','select','yandexbrowser',['yandexbrowser','msedge','rust-server']],
  ['translateAPIErrors','Переводить сообщения об ошибках','Translate API errors','bool',true],
  ['sendErrorReports','Отправлять отчёты разработчикам VOT','Send error reports to VOT developers','bool',false],
  ['autoSubtitles','Автоматические субтитры','Automatic subtitles','bool',false],
- ['responseLanguageSubtitles','Язык субтитров','Subtitle language','select','auto',['auto','original','ru','en','kk','uk','uz']],
- ['subtitlesTranslationLanguage','Язык перевода субтитров','Subtitle translation language','select','auto',['auto','ru','en','kk','uk','uz']],
+ ['responseLanguageSubtitles','Язык субтитров','Subtitle language','select','auto',['auto','original',...subtitleLanguages]],
+ ['subtitlesTranslationLanguage','Язык перевода субтитров','Subtitle translation language','select','auto',['auto',...subtitleLanguages]],
  ['highlightWords','Подсвечивать слова','Highlight words','bool',false],
  ['subtitlesSmartLayout','Умная компоновка субтитров','Smart subtitle layout','bool',true],
- ['subtitlesDownloadFormat','Формат субтитров','Subtitle download format','select','srt',['srt','vtt','json']],
+ ['subtitlesDownloadFormat','Формат субтитров','Subtitle download format','select','srt',['srt','vtt','json','ass']],
  ['subtitlesFontFamily','Шрифт субтитров','Subtitle font family','text','default-sans'],
- ['subtitlesMaxLength','Длина субтитров','Subtitle maximum length','number',300,[30,2000]],
- ['subtitlesFontSize','Размер субтитров','Subtitle font size','number',20,[10,60]],
+ ['subtitlesMaxLength','Длина субтитров','Subtitle maximum length','number',300,[50,300]],
+ ['subtitlesFontSize','Размер субтитров','Subtitle font size','number',20,[8,50]],
  ['subtitlesOpacity','Непрозрачность фона субтитров','Subtitle background opacity','number',20,[0,100]],
  ['showPiPButton','Кнопка «картинка в картинке» на видео','Picture-in-picture button on video','bool',false],
  ['autoHideButtonDelay','Задержка скрытия кнопки, мс','Button hide delay, ms','number',1000,[100,3000]],
- ['buttonPos','Положение кнопки на видео','Video button position','select','default',['default','left','right','leftCenter','rightCenter']],
+ ['buttonPos','Положение кнопки на видео','Video button position','select','default',['default','left','right','top','leftCenter','rightCenter']],
  ['translationHotkey','Горячая клавиша перевода','Translation hotkey','hotkey',null],
  ['subtitlesHotkey','Горячая клавиша субтитров','Subtitle hotkey','hotkey',null],
  ['pipHotkey','Горячая клавиша PiP','PiP hotkey','hotkey',null],
@@ -53,14 +54,14 @@
   dialog('Video Translate · VOT 1.12.3',box=>{
    box.append(el('p',t('Перевод выполняет сервис VOT/Яндекс: ему передаются адрес видео и необходимые данные для перевода. Дорожка появляется поверх видео; отдельной кнопки на панели браузера нет. Изменения сохраняются в текущем профиле.','VOT/Yandex receives the video URL and data required for translation. Controls appear on the video. Changes are saved in the current profile.'),'note'));
    const message=el('p','','note');message.setAttribute('role','status');box.append(message);
-   const save=(key,value)=>{queue=queue.then(()=>call({values:{[key]:value}})).then(next=>{values=next;message.textContent=t('Сохранено','Saved')}).catch(e=>{message.textContent=e.message});return queue;};
+   const save=(key,value)=>{const patch={[key]:value};if(key==='syncVolume'&&value)patch.enabledSmartDucking=false;if(key==='enabledSmartDucking'&&value)patch.syncVolume=false;if(['subtitlesMaxLength','subtitlesFontSize'].includes(key))patch.subtitlesSmartLayout=false;queue=queue.then(()=>call({values:patch})).then(next=>{values=next;message.textContent=t('Сохранено','Saved')}).catch(e=>{message.textContent=e.message});return queue;};
    for(const [key,ru,en,type,fallback,choices] of options){
     const row=el('label',undefined,'row'),label=el('span',t(ru,en));let control;
     const value=values[key]??fallback;
-    if(type==='select'){control=el('select');for(const v of choices)control.append(new Option(String(v),String(v)));control.value=String(value);control.onchange=()=>save(key,typeof fallback==='number'?Number(control.value):control.value);}
+    if(type==='select'){control=el('select');for(const v of choices){let name=String(v);if(key.toLowerCase().includes('language')&&v!=='auto'&&v!=='original'){try{name=new Intl.DisplayNames([t('ru','en')],{type:'language'}).of(String(v))}catch{}}control.append(new Option(name,String(v)));}control.value=String(value);control.onchange=()=>save(key,typeof fallback==='number'?Number(control.value):control.value);}
     else if(type==='hotkey'){control=button(value||t('Не задана — нажмите','Unset — click'),()=>{control.textContent=t('Нажмите сочетание; Esc — очистить','Press a shortcut; Esc to clear');control.onkeydown=e=>{e.preventDefault();e.stopPropagation();const v=e.key==='Escape'?null:[e.ctrlKey?'Control':null,e.altKey?'Alt':null,e.shiftKey?'Shift':null,e.metaKey?'Meta':null,e.code.replace('Key','').replace('Digit','')].filter(Boolean).join('+');if(['Control','Alt','Shift','Meta'].includes(e.key))return;save(key,v);control.textContent=v||t('Не задана','Unset');control.onkeydown=null;};});}
     else{control=el('input');control.type=type==='bool'?'checkbox':type==='number'?'number':'text';if(type==='bool'){control.checked=value;control.setAttribute('role','switch');}else control.value=type==='list'?value.join(', '):value;if(type==='number'){control.min=choices[0];control.max=choices[1];}control.onchange=()=>{if(!control.reportValidity())return;save(key,type==='bool'?control.checked:type==='number'?Number(control.value):type==='list'?control.value.split(',').map(v=>v.trim()).filter(Boolean):control.value.trim());};}
-    control.setAttribute('aria-label',t(ru,en));row.append(label,control);box.append(row);
+    if(key==='subtitlesFontFamily'){control.placeholder='default-sans / arial / google:Roboto';control.pattern='(?:default-sans|arial|helvetica|roboto|verdana|open-sans|poppins|lato|montserrat|barlow|google:.+)';control.title=t('Встроенный шрифт или google:Название шрифта','Built-in font or google:Font name');}control.setAttribute('aria-label',t(ru,en));row.append(label,control);box.append(row);
    }
    const account=el('p',values.account?.username?t('Аккаунт Яндекс: ','Yandex account: ')+values.account.username:t('Аккаунт Яндекс не подключён. Обычный перевод работает без входа; вход доступен ниже.','Yandex account is not connected. Regular translation works without signing in; sign-in is available below.'),'note');
    box.append(account,button(t('Войти в Яндекс для VOT','Sign in to Yandex for VOT'),async()=>{await window.souluSettings.flush();const response=await call({operation:'authStart'});await window.browserShell.openTab(response.url);window.souluSettingsRequestClose();}),button(t('Выйти из аккаунта VOT','Sign out of VOT'),async()=>{await save('account',null);account.textContent=t('Аккаунт отключён','Account disconnected')}));
