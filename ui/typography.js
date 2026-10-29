@@ -52,4 +52,8 @@ window.souluTypographyReady = Promise.all([400,500,600].map(weight =>
   window.addEventListener('blur',hide);
 })();
 
-import('./select-control.js').catch(error=>console.error('Soulu controls:',error));
+(()=>{
+ const script=document.createElement('script');script.src=new URL('select-control.js',document.currentScript.src).href;script.async=false;
+ window.souluSelectReady=new Promise((resolve,reject)=>{script.onload=()=>Promise.resolve(window.souluSelectControlsReady).then(resolve,reject);script.onerror=()=>reject(Error('Soulu controls could not be loaded'));});
+ window.souluSelectReady.catch(error=>console.error('Soulu controls:',error));document.head.append(script);
+})();

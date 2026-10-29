@@ -38,6 +38,7 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as root:
   s.evaluate(shell,"browserShell.openSettingsWindow()")
   settings=connect(wait(lambda:next((t for t in s.targets() if '/ui/settings.html' in t.get('url','')),None)))
   wait(lambda:s.evaluate(settings,"document.body.classList.contains('ready')"))
+  s.evaluate(settings,"Promise.resolve(window.souluSelectReady)")
   for section in ('general','interface','startup','search','privacy','reading'):
    s.evaluate(settings,'souluSettings.openSection('+json.dumps(section)+')');time.sleep(.2)
    check(s.evaluate(settings,"[...document.querySelectorAll('#sectionContent select')].filter(x=>!x.disabled).every(x=>x.classList.contains('soulu-select-source')&&x.parentElement.querySelector('.soulu-select-button'))"),section+': Soulu dropdowns')

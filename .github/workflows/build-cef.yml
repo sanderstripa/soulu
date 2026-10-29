@@ -286,7 +286,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Verify integrated VOT on real YouTube
-        if: success()
+        if: ${{ !cancelled() && steps.native_build.outcome == 'success' }}
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client pillow
