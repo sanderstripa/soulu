@@ -41,6 +41,7 @@
   old.sites.id='privacy';old.sites.ru='Конфиденциальность и защита';old.sites.en='Privacy and security';
   old.sites.hint='Разрешения, реклама и сохранённые данные.';old.sites.enHint='Permissions, ads and stored data.';
   const reading={id:'reading',ru:'Чтение и перевод',en:'Reading and translation',hint:'Режим чтения и локальный перевод.',enHint:'Reader mode and local translation.',groups:old.sites.groups.filter(g=>['Reader mode','Soulu Translate'].includes(g.en))};
+  reading.groups.push(group('Video Translate','Video Translate',[row('videoTranslationEnabled','Перевод видео','Video translation','toggle',[],'Встроенный VOT: русская озвучка на YouTube. Перевод запускается кнопкой на самом видео.','Built-in VOT: Russian voice-over on YouTube. Start translation using the button on the video.'),action('videoOptions','Настройки Video Translate','Video Translate settings')]));
   old.sites.groups=old.sites.groups.filter(g=>!['Reader mode','Soulu Translate'].includes(g.en));
   old.sites.groups.splice(3,0,old.profiles.groups[0]);
   old.sites.groups.push(old.profiles.groups[2]);
@@ -123,6 +124,7 @@
     if(key==='vpnStatus'){const result=await window.vpn.send('status');dialog(t('Состояние VPN','VPN status'),box=>{box.append(el('p',result?.error||t(result?.connected?'Подключён':'Отключён',result?.connected?'Connected':'Disconnected')));});return;}
     if(key==='siteData')return window.souluSettingsData.siteData();
     if(key==='homeFavorites')return editHomeFavorites();
+    if(key==='videoOptions')return window.souluVideoSettings.open();
     if(key==='weatherYandexKey')return window.souluWeatherKey.open();
     if(key==='weatherPermission')return editWeatherPermission();
     if(key==='weatherCredits')return dialog(t('Источники погоды','Weather sources'),box=>{const link=el('a','Weather data by Open-Meteo.com');link.href='https://open-meteo.com/';link.onclick=e=>{e.preventDefault();window.browserShell.openTab(link.href);};const license=el('a','CC BY 4.0');license.href='https://creativecommons.org/licenses/by/4.0/';license.onclick=e=>{e.preventDefault();window.browserShell.openTab(license.href);};box.append(link,el('p',t('Температура округляется, условия представлены значками.','Temperatures are rounded and conditions are represented by icons.'),'note'),license);});
