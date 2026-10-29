@@ -56,7 +56,7 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as root:
   s.evaluate(settings,"(()=>{const n=document.querySelector('#vpn-directDomains');n.value='https://Example.COM/path\\n*.bank.example\\nexample.com';n.dispatchEvent(new Event('change',{bubbles:true}))})()")
   wait(lambda:s.evaluate(settings,"souluSettings.persisted.vpn.directDomains==='example.com\\nbank.example'"))
   check(True,'Routing domains normalize, deduplicate and persist through the native settings store')
-  for protocol,key in [('sudoku','sudoku://'+base64.urlsafe_b64encode(json.dumps({'h':'127.0.0.1','p':443,'k':'ab'*32}).encode()).decode().rstrip('=')),('vless','vless://12345678-1234-1234-1234-123456789abc@127.0.0.1:443?security=none&type=tcp')]:
+  for protocol,key in [('sudoku','sudoku://'+base64.urlsafe_b64encode(json.dumps({'h':'127.0.0.1','p':443,'k':'ab'*32,'hd':True}).encode()).decode().rstrip('=')),('vless','vless://12345678-1234-1234-1234-123456789abc@127.0.0.1:443?security=none&type=tcp')]:
    s.evaluate(settings,"document.querySelector('#vpn-profile-key').value="+json.dumps('  '+key+'  ')+";document.querySelector('#vpn-profile-save').click()")
    wait(lambda:s.evaluate(settings,"souluSettings.persisted.vpn.profiles.some(p=>p.link==="+json.dumps(key)+")"))
    s.evaluate(settings,"(()=>{const p=souluSettings.persisted.vpn.profiles.find(p=>p.link==="+json.dumps(key)+");document.querySelector('input[name=vpn-default-profile][value=\"'+p.id+'\"]').click()})()")

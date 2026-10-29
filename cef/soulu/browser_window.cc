@@ -941,7 +941,8 @@ bool BrowserWindow::CommitVpnSettings(CefRefPtr<CefDictionaryValue> next,std::st
   MergeLegacyVpnSelection(next,vpn_settings_);
   if(!NormalizeVpnRouting(next,error)||!NormalizeVpnProfiles(next,error))return false;
   auto rows=next->GetList("profiles");
-  for(size_t i=0;i<rows->GetSize();++i){auto row=rows->GetDictionary(i),old=VpnProfileById(vpn_settings_,row->GetString("id"));if(old&&old->GetString("link")==row->GetString("link"))continue;auto command=CefDictionaryValue::Create();command->SetString("action","save_profile");command->SetString("id",row->GetString("id"));command->SetString("url",row->GetString("link"));auto result=SendVpnHelper(command);if(!result->GetBool("ok")){error="VPN: "+result->GetString("error").ToString();return false;}}
+  std::map<std::string,CefRefPtr<CefDictionaryValue>> old_by_id;auto previous_rows=vpn_settings_->GetList("profiles");if(previous_rows)for(size_t i=0;i<previous_rows->GetSize();++i){auto row=previous_rows->GetDictionary(i);old_by_id.emplace(row->GetString("id").ToString(),row);}
+  for(size_t i=0;i<rows->GetSize();++i){auto row=rows->GetDictionary(i);auto found=old_by_id.find(row->GetString("id").ToString());CefRefPtr<CefDictionaryValue> old=found==old_by_id.end()?nullptr:found->second;if(old&&old->GetString("link")==row->GetString("link"))continue;auto command=CefDictionaryValue::Create();command->SetString("action","save_profile");command->SetString("id",row->GetString("id"));command->SetString("url",row->GetString("link"));auto result=SendVpnHelper(command);if(!result->GetBool("ok")){error="VPN: "+result->GetString("error").ToString();return false;}}
   auto previous=vpn_settings_;vpn_settings_=next;
   if(!SaveSettings()){vpn_settings_=previous;error="VPN: не удалось сохранить подключения.";return false;}
   bool removed_active=vpn_enabled_&&!vpn_active_profile_id_.empty()&&!VpnProfileById(next,vpn_active_profile_id_);
