@@ -1,3 +1,4 @@
+#include "examples/soulu/vpn_helper.h"
 #include "examples/soulu/video_bridge.h"
 #include "examples/soulu/soulu_menu.h"
 #include "examples/soulu/isolated_page_job.h"
@@ -930,82 +931,8 @@ void BrowserWindow::ApplyWindowAppearance() {
 
 }
 
-CefRefPtr<CefDictionaryValue> BrowserWindow::SendVpnHelper(
-    CefRefPtr<CefDictionaryValue> request) const {
-  auto result = CefDictionaryValue::Create();
-  const auto helper = std::filesystem::u8path(ExecutableDirectory()) /
-                      "vpn" / "native-host" / "VlessXhttpNativeHost.exe";
-  if (!std::filesystem::exists(helper)) {
-    result->SetBool("ok", false);
-    result->SetString("error", "VPN helper is missing from the installation.");
-    return result;
-  }
-
-  SECURITY_ATTRIBUTES security = {sizeof(SECURITY_ATTRIBUTES), nullptr, TRUE};
-  HANDLE input_read = nullptr, input_write = nullptr;
-  HANDLE output_read = nullptr, output_write = nullptr;
-  if (!CreatePipe(&input_read, &input_write, &security, 0) ||
-      !CreatePipe(&output_read, &output_write, &security, 0)) {
-    result->SetBool("ok", false);
-    result->SetString("error", "Cannot create VPN helper pipes.");
-    return result;
-  }
-  SetHandleInformation(input_write, HANDLE_FLAG_INHERIT, 0);
-  SetHandleInformation(output_read, HANDLE_FLAG_INHERIT, 0);
-
-  STARTUPINFOW startup = {sizeof(STARTUPINFOW)};
-  startup.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
-  startup.wShowWindow = SW_HIDE;
-  startup.hStdInput = input_read;
-  startup.hStdOutput = output_write;
-  startup.hStdError = output_write;
-  PROCESS_INFORMATION process = {};
-  std::wstring command = L"\"" + helper.wstring() + L"\"";
-  const BOOL started = CreateProcessW(
-      nullptr, command.data(), nullptr, nullptr, TRUE, CREATE_NO_WINDOW,
-      nullptr, helper.parent_path().c_str(), &startup, &process);
-  CloseHandle(input_read);
-  CloseHandle(output_write);
-  if (!started) {
-    CloseHandle(input_write);
-    CloseHandle(output_read);
-    result->SetBool("ok", false);
-    result->SetString("error", "VPN helper could not be started.");
-    return result;
-  }
-
-  const std::string json = Json(request);
-  const uint32_t length = static_cast<uint32_t>(json.size());
-  DWORD written = 0;
-  const bool sent = WriteFile(input_write, &length, sizeof(length), &written, nullptr) &&
-                    written == sizeof(length) &&
-                    WriteFile(input_write, json.data(), length, &written, nullptr) &&
-                    written == length;
-  CloseHandle(input_write);
-
-  uint32_t response_length = 0;
-  DWORD read = 0;
-  bool received = sent && ReadFile(output_read, &response_length,
-                                   sizeof(response_length), &read, nullptr) &&
-                  read == sizeof(response_length) && response_length < 4 * 1024 * 1024;
-  std::string response(received ? response_length : 0, '\0');
-  if (received && response_length) {
-    received = ReadFile(output_read, response.data(), response_length,
-                        &read, nullptr) && read == response_length;
-  }
-  CloseHandle(output_read);
-  WaitForSingleObject(process.hProcess, 15000);
-  CloseHandle(process.hThread);
-  CloseHandle(process.hProcess);
-
-  if (received) {
-    auto parsed = CefParseJSON(response, JSON_PARSER_RFC);
-    if (parsed && parsed->GetType() == VTYPE_DICTIONARY)
-      return parsed->GetDictionary()->Copy(false);
-  }
-  result->SetBool("ok", false);
-  result->SetString("error", "VPN helper returned an invalid response.");
-  return result;
+CefRefPtr<CefDictionaryValue> BrowserWindow::SendVpnHelper(CefRefPtr<CefDictionaryValue> request) const {
+  return VpnHelperRequest(request);
 }
 
 void BrowserWindow::SwitchProfile(const std::string& id) {
@@ -2168,6 +2095,7 @@ void BrowserWindow::HandleBridge(const std::string& request,
   if(any_import&&(bookmark_write||password_write||action=="browser.profile.delete"||action=="browser.profile.switch"||action=="browser.profile.create"||action=="browser.import.createProfile"||action=="browser.import.run"||action=="browser.import.passwords")){
     callback->Failure(409,"Wait for the current import to finish");return;
   }
+  if(action=="browser.components.manage"){VpnComponentRequest(payload&&payload->GetType()==VTYPE_DICTIONARY?payload->GetDictionary():nullptr,callback);return;}
   if(action=="browser.video.settings"){HandleVideoSettings(payload&&payload->GetType()==VTYPE_DICTIONARY?payload->GetDictionary():nullptr,callback);return;}
   if(action=="browser.menu.show"){
     if(settings_source||!payload||payload->GetType()!=VTYPE_DICTIONARY){callback->Failure(403,"Menu host unavailable");return;}
@@ -2828,6 +2756,7 @@ void BrowserWindow::HandleBridge(const std::string& request,
           id = options->GetString("profileId");
       }
       arguments->SetString("profileId", id);
+      arguments->SetString("url",vpn_settings_->GetString("link"));
     }
     auto helper_result = SendVpnHelper(arguments);
     if (!helper_result->GetBool("ok")) return Reply(callback, helper_result);

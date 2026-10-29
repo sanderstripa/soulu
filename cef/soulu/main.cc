@@ -1,3 +1,4 @@
+#include "examples/soulu/vpn_helper.h"
 #include <windows.h>
 
 #include <filesystem>
@@ -109,6 +110,7 @@ int APIENTRY wWinMain(HINSTANCE instance, HINSTANCE, wchar_t*, int) {
   soulu::InitializeAdBlock(std::string(cache_utf8.begin(),cache_utf8.end()),CefString(fixture).ToString(),updates);
   if (!CefInitialize(main_args, settings, app, nullptr)) return 1;
   CefRunMessageLoop();
+  soulu::ShutdownVpnHelper();
   const auto deletions=soulu::PendingProfileDeletions();
   CefShutdown();
   soulu::CleanupDeletedProfiles(deletions);

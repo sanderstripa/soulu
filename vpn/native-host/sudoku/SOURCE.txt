@@ -1,0 +1,4 @@
+Unmodified Sudoku core v0.5.2.0, distributed as an external process.
+Upstream and corresponding source: https://github.com/SUDOKU-ASCII/sudoku/tree/v0.5.2.0
+Source archive: https://github.com/SUDOKU-ASCII/sudoku/archive/refs/tags/v0.5.2.0.tar.gz
+Binary archive SHA-256: 1be772b0141d8d894032dcfb222ba7c14881a5c3f56393ecb7577b80b4c4866a

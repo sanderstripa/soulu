@@ -161,6 +161,11 @@ jobs:
           Copy-Item -Recurse -Force browser/vpn/* cef-project/examples/soulu/assets/vpn/
           Add-Content cef-project/examples/CMakeLists.txt "`nadd_subdirectory(soulu)`n"
 
+      - name: Build verified Xray and Sudoku components and VPN helper
+        shell: pwsh
+        run: |
+          ./browser/scripts/prepare-vpn-components.ps1 -Destination "$env:GITHUB_WORKSPACE/cef-project/examples/soulu/assets/vpn/native-host"
+
       - name: Use CEF-compatible Python
         uses: actions/setup-python@v5
         with:

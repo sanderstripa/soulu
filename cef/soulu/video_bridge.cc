@@ -5,11 +5,23 @@
 #include "examples/soulu/profile_data.h"
 #include "include/cef_parser.h"
 #include "include/cef_process_message.h"
+#include <vector>
 namespace soulu {
 namespace {
 CefRefPtr<CefDictionaryValue> private_values;
+struct Watch {std::string profile;CefRefPtr<CefFrame> frame;int id;};
+std::vector<Watch> watches;
 bool IsVideoPage(const CefString& raw){CefURLParts p;if(!CefParseURL(raw,p)||CefString(&p.scheme)!="https")return false;const std::string host=CefString(&p.host);return host=="youtube.com"||host=="www.youtube.com"||host=="m.youtube.com"||host=="music.youtube.com"||host=="www.youtube-nocookie.com";}
 CefRefPtr<CefValue> WrapVideo(CefRefPtr<CefDictionaryValue> value){auto wrapper=CefValue::Create();wrapper->SetDictionary(value);return wrapper;}
+
+void Broadcast(const std::string& profile,CefRefPtr<CefDictionaryValue> value){
+ auto result=CefDictionaryValue::Create();result->SetBool("ok",true);result->SetDictionary("values",value);
+ const auto json=CefWriteJSON(WrapVideo(result),JSON_WRITER_DEFAULT);
+ for(auto it=watches.begin();it!=watches.end();){
+  if(!it->frame->IsValid()||!IsVideoPage(it->frame->GetURL())){it=watches.erase(it);continue;}
+  if(it->profile==profile){auto message=CefProcessMessage::Create("soulu.video.response");message->GetArgumentList()->SetInt(0,it->id);message->GetArgumentList()->SetString(1,json);it->frame->SendProcessMessage(PID_RENDERER,message);}++it;
+ }
+}
 }
 CefRefPtr<CefDictionaryValue> VideoPreferences(const std::string& profile){
  auto result=profile=="__incognito__"?(private_values?private_values->Copy(false):CefDictionaryValue::Create()):ReadProtectedStore(profile,"video");
@@ -21,8 +33,8 @@ CefRefPtr<CefDictionaryValue> VideoPreferences(const std::string& profile){
 }
 bool SaveVideoPreferences(const std::string& profile,CefRefPtr<CefDictionaryValue> value){
  if(!value||CefWriteJSON(WrapVideo(value),JSON_WRITER_DEFAULT).length()>4*1024*1024)return false;
- if(profile=="__incognito__"){private_values=value->Copy(false);return true;}
- return WriteProtectedStore(profile,"video",value);
+ if(profile=="__incognito__"){private_values=value->Copy(false);Broadcast(profile,value);return true;}
+ if(!WriteProtectedStore(profile,"video",value))return false;Broadcast(profile,value);return true;
 }
 void ForgetPrivateVideoPreferences(){private_values=nullptr;}
 void BrowserWindow::HandleVideoRequest(int tab_id,CefRefPtr<CefFrame> frame,int id,const std::string& raw){
@@ -38,6 +50,11 @@ void BrowserWindow::HandleVideoRequest(int tab_id,CefRefPtr<CefFrame> frame,int 
  if(op=="abort"){VideoAbort(owner,args->GetString("id"));respond(result);return;}
  if(op=="init"){result->SetBool("enabled",enabled);result->SetBool("incognito",tab->incognito);result->SetString("version","1.12.3");if(enabled){auto values=VideoPreferences(tab->profile_id);if(!values){failure("Video preferences could not be decrypted");return;}result->SetDictionary("values",values);}respond(result);return;}
  if(!enabled){failure("Video translation is disabled");return;}
+ if(op=="watch"){
+  for(auto it=watches.begin();it!=watches.end();)if(!it->frame->IsValid()||it->frame->GetIdentifier()==frame->GetIdentifier())it=watches.erase(it);else ++it;
+  if(watches.size()>=256){failure("Too many video preference listeners");return;}
+  watches.push_back({tab->profile_id,frame,id});auto values=VideoPreferences(tab->profile_id);if(values)result->SetDictionary("values",values);respond(result);return;
+ }
  if(op=="xhr"){VideoFetch(owner,tab->browser->GetHost()->GetRequestContext(),args,respond);return;}
  if(op!="set"&&op!="delete"){failure("Unknown video operation");return;}
  const std::string key=args->GetString("key");if(key.empty()||key.size()>160||raw.size()>2*1024*1024){failure("Invalid video preference");return;}

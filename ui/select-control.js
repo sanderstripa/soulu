@@ -1,3 +1,4 @@
+const stylesheet=document.createElement('link');stylesheet.rel='stylesheet';stylesheet.href=new URL('select-control.css',import.meta.url).href;document.head.append(stylesheet);await new Promise(resolve=>{stylesheet.onload=resolve;stylesheet.onerror=resolve});
 const controls=new WeakMap();
 let sequence=0;
 function enhance(select){
