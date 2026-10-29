@@ -1,0 +1,23 @@
+name: Validate bundled VPN tunnels
+on:
+  push:
+    branches: [codex/browser-components]
+    paths: ['vpn/**', 'scripts/prepare-vpn-components.ps1', 'scripts/test-video-runtime.cjs', '.github/workflows/check-vpn.yml']
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  vpn:
+    runs-on: windows-2025
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.0'
+          cache: false
+      - name: Test verified Xray and Sudoku with real local tunnel traffic
+        shell: pwsh
+        run: ./scripts/prepare-vpn-components.ps1 -Destination "$env:RUNNER_TEMP/soulu-test-cores"
+      - name: Verify video runtime
+        run: node scripts/test-video-runtime.cjs

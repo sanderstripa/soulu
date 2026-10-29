@@ -59,7 +59,7 @@ void VpnComponentRequest(CefRefPtr<CefDictionaryValue> request,CefRefPtr<CefMess
  if(!request){callback->Failure(400,"Missing component request");return;}
  const std::string component=request->GetString("component"),operation=request->GetString("operation"),version=request->GetString("version");
  if((component!="xray"&&component!="sudoku")||(operation!="status"&&operation!="list"&&operation!="install"&&operation!="rollback")||version.size()>80){callback->Failure(400,"Invalid component operation");return;}
- auto args=CefDictionaryValue::Create();args->SetString("action","components");args->SetString("component",component);args->SetString("name",operation);args->SetString("version",version);args->SetBool("check",request->GetBool("check"));
+ auto args=CefDictionaryValue::Create();args->SetString("action","components");args->SetString("component",component);args->SetString("name",operation);args->SetString("version",version);args->SetBool("check",request->GetBool("check"));args->SetBool("proxy",request->GetBool("proxy"));
  CefPostTask(TID_FILE_USER_BLOCKING,new Task([args,callback]{Process process;auto result=process.Start(true)?process.Exchange(args,true):Failure("Component helper is unavailable");const auto json=Json(result);CefPostTask(TID_UI,new Task([callback,json]{callback->Success(json);}));}));
 }
 }

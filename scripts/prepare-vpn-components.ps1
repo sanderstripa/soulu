@@ -24,9 +24,10 @@ foreach($id in @('xray','sudoku')){
 $stamps|ConvertTo-Json -Depth 5|Set-Content (Join-Path $Destination 'components.json') -Encoding utf8NoBOM
 Push-Location (Join-Path $source 'helper')
 try{
- go test ./...
+ $env:SOULU_VPN_FIXTURE_BIN = (Resolve-Path $Destination).Path
+ go test -v ./...
  if($LASTEXITCODE -ne 0){throw 'VPN helper tests failed'}
  $targetExe=Join-Path (Resolve-Path $Destination).Path 'SouluVpnHost.exe'
  go build -trimpath -ldflags '-s -w' -o $targetExe .
  if($LASTEXITCODE -ne 0){throw 'VPN helper build failed'}
-}finally{Pop-Location}
+}finally{Remove-Item Env:SOULU_VPN_FIXTURE_BIN -ErrorAction SilentlyContinue;Pop-Location}
