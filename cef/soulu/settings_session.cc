@@ -1,4 +1,3 @@
-#include "examples/soulu/protected_store.h"
 #include "examples/soulu/browser_window.h"
 #include "examples/soulu/vpn_routing.h"
 #include "examples/soulu/reader_preferences.h"
@@ -111,7 +110,7 @@ bool BrowserWindow::SaveSettingsSnapshot(CefRefPtr<CefDictionaryValue> requested
   }
   if(!ValidatePagePatch(pagePatch)){error="Проверьте HTTP/HTTPS-адреса страниц.";return false;}
   auto homePatch=CefDictionaryValue::Create();
-  for(const char* key:{"homeProvider","homeWeatherMode","homeWeatherUnits","homeWeatherProvider","homeFavoriteIds","homeShortcuts","homeWeatherCity","homeShowLogo","homeShowSearch",
+  for(const char* key:{"homeProvider","homeWeatherMode","homeWeatherUnits","homeFavoriteIds","homeShortcuts","homeWeatherCity","homeShowLogo","homeShowSearch",
       "homeShowWeather","homeShowShortcuts","homeShowBackground"}){
     auto changed=config->GetValue(key),before=base->GetValue(key);
     if(changed&&(!before||!before->IsEqual(changed)))homePatch->SetValue(key,changed->Copy());
@@ -185,19 +184,6 @@ bool BrowserWindow::HandleSettingsBridge(int id,const std::string& request,
   }
   if (settings_overlay_->closing()) {
     callback->Failure(409,"Настройки закрываются.");return true;
-  }
-  if(action=="settings.weather.key"){
-    auto secret=ReadProtectedStore(active_profile_id_,"weather");
-    if(payload&&payload->HasKey("key")){
-      if(payload->GetType("key")!=VTYPE_STRING||payload->GetString("key").length()>200){callback->Failure(400,"Invalid weather API key");return true;}
-      const std::string key=payload->GetString("key");
-      if(std::any_of(key.begin(),key.end(),[](unsigned char c){return c<33||c>126;})){callback->Failure(400,"Invalid weather API key");return true;}
-      secret=CefDictionaryValue::Create();secret->SetString("key",key);secret->SetString("revision",RandomId());
-      if(!WriteProtectedStore(active_profile_id_,"weather",secret)){callback->Failure(500,"Weather API key could not be saved");return true;}
-      RefreshHomePages();
-    }
-    if(!secret){callback->Failure(500,"Weather API key could not be decrypted");return true;}
-    auto value=CefDictionaryValue::Create();value->SetBool("configured",!secret->GetString("key").empty());Reply(callback,Value(value));return true;
   }
   if(action=="settings.capabilities"){
     auto result=CefDictionaryValue::Create();bool is_default=true;
