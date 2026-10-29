@@ -127,7 +127,10 @@ bool BrowserClient::OnPreKeyEvent(CefRefPtr<CefBrowser> browser,const CefKeyEven
     if(event.modifiers&EVENTFLAG_ALT_DOWN){if(event.windows_key_code==VK_LEFT){browser->GoBack();return true;}if(event.windows_key_code==VK_RIGHT){browser->GoForward();return true;}}
   }
   if (owner_->SettingsOverlayActive()) { owner_->FocusSettings(); return true; }
-  if (owner_->BufferHomeInput(event)) return true;
+  // Home's pending navigation buffer belongs to the content browser. A Home
+  // load completed behind Settings may still have pending focus; shell typing
+  // must never be consumed by that content-page buffer.
+  if (role_ == BrowserRole::kContent && owner_->BufferHomeInput(event)) return true;
   if(event.type==KEYEVENT_RAWKEYDOWN&&(event.modifiers&EVENTFLAG_CONTROL_DOWN)&&!(event.modifiers&EVENTFLAG_ALT_DOWN)) {
     if(event.windows_key_code=='H'){owner_->OpenHistory();return true;}
     if(event.windows_key_code==VK_DELETE&&(event.modifiers&EVENTFLAG_SHIFT_DOWN)){owner_->OpenHistory(true);return true;}
