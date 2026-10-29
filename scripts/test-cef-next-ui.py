@@ -1,5 +1,5 @@
 """Native shell regression for tooltips, selects and pointer focus."""
-import json,os,sys,tempfile,subprocess,time,importlib.util
+import base64,json,os,sys,tempfile,subprocess,time,importlib.util
 from pathlib import Path
 spec=importlib.util.spec_from_file_location('storage',Path(__file__).with_name('test-cef-storage.py'));s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
 os.environ['SOULU_REGRESSION_SKIP_FIRST_RUN']='1';os.environ['NO_PROXY']='localhost,127.0.0.1,::1'
@@ -45,9 +45,30 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as root:
   s.evaluate(settings,"document.querySelector('#addressPosition').parentElement.querySelector('button').click()")
   wait(lambda:s.evaluate(settings,"!!document.querySelector('.soulu-select-menu:popover-open')"))
   check(s.evaluate(settings,"(()=>{const r=document.querySelector('.soulu-select-menu:popover-open').getBoundingClientRect();return r.left>=0&&r.top>=0&&r.bottom<=innerHeight&&r.right<=innerWidth})()"),'Dropdown stays inside settings viewport')
+  shot=s.command(settings,'Page.captureScreenshot',{'format':'png','captureBeyondViewport':False});(out/'dropdown-light.png').write_bytes(base64.b64decode(shot['data']))
   s.evaluate(settings,"document.querySelector('.soulu-select-menu:popover-open .soulu-select-option').click()")
   wait(lambda:s.evaluate(settings,"souluSettings.persisted.settings.addressPosition==='left'"));check(True,'Custom selection persists')
   s.evaluate(settings,"souluSettings.openSection('vpn')");time.sleep(.2);check(s.evaluate(settings,"!!document.querySelector('#vpn-directDomains')"),'Direct VPN routing UI')
+  s.evaluate(settings,"(()=>{const n=document.querySelector('#vpn-directDomains');n.value='https://Example.COM/path\\n*.bank.example\\nexample.com';n.dispatchEvent(new Event('change',{bubbles:true}))})()")
+  wait(lambda:s.evaluate(settings,"souluSettings.persisted.vpn.directDomains==='example.com\\nbank.example'"))
+  check(True,'Routing domains normalize, deduplicate and persist through the native settings store')
+  s.evaluate(settings,"souluSettings.openSection('reading')");time.sleep(.2)
+  check(s.evaluate(settings,"document.querySelector('#videoTranslationEnabled').checked"),'Video Translate is enabled by default')
+  s.evaluate(settings,"souluVideoSettings.open()")
+  wait(lambda:s.evaluate(settings,"document.querySelector('#actionDialog').open&&document.querySelectorAll('#actionContent .row').length>=40"))
+  check(True,'Video Translate options are available inside Reading and translation')
+  s.evaluate(settings,"document.querySelector('#closeAction').click();souluSettings.openSection('about')")
+  wait(lambda:s.evaluate(settings,"[...document.querySelectorAll('.component-card')].every(n=>n.textContent.includes('Установлена: v'))"))
+  check(s.evaluate(settings,"document.querySelectorAll('.component-card').length===2"),'About shows installed Xray and Sudoku')
+  s.evaluate(settings,"souluSettings.openSection('startup');souluWeatherKey.open()")
+  wait(lambda:s.evaluate(settings,"document.querySelector('#actionDialog').open&&!!document.querySelector('#actionContent input[type=password]')"))
+  check(s.evaluate(settings,"document.querySelector('#actionContent input').value===''"),'Weather API key is never returned to the password field')
+  s.evaluate(settings,"document.querySelector('#closeAction').click();souluSettings.openSection('interface');document.querySelector('input[name=settings-theme][value=dark]').click()")
+  wait(lambda:s.evaluate(settings,"souluSettings.persisted.settings.theme==='dark'"))
+  s.evaluate(settings,"document.querySelector('#addressPosition').parentElement.querySelector('button').click()")
+  wait(lambda:s.evaluate(settings,"!!document.querySelector('.soulu-select-menu:popover-open')"))
+  check(s.evaluate(settings,"getComputedStyle(document.querySelector('.soulu-select-menu:popover-open')).backgroundColor!=='rgb(252, 252, 253)'"),'Dropdown follows the dark theme')
+  shot=s.command(settings,'Page.captureScreenshot',{'format':'png','captureBeyondViewport':False});(out/'dropdown-dark.png').write_bytes(base64.b64decode(shot['data']))
   report['passed']=True
  finally:
   for ws in (settings,page,shell):

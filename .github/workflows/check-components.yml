@@ -17,6 +17,8 @@ jobs:
         with:
           go-version: '1.27.0'
           cache: false
+      - name: Verify Python regressions parse
+        run: python -m py_compile scripts/test-cef-next-ui.py scripts/test-cef-video-translation.py
       - name: Verify VOT runtime and JavaScript syntax
         run: node scripts/test-video-runtime.cjs
       - name: Verify pinned VOT bytes
@@ -51,6 +53,8 @@ jobs:
       - name: Verify canonical generated geometry and typography
         shell: pwsh
         run: |
+          python -m py_compile browser/scripts/test-cef-next-ui.py browser/scripts/test-cef-video-translation.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python browser/scripts/generate-geometry.py --check
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python browser/scripts/generate-typography.py --check

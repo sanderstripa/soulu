@@ -78,6 +78,8 @@ jobs:
       - name: Verify canonical generated geometry and typography
         shell: pwsh
         run: |
+          python -m py_compile browser/scripts/test-cef-next-ui.py browser/scripts/test-cef-video-translation.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python browser/scripts/generate-geometry.py --check
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python browser/scripts/generate-typography.py --check
