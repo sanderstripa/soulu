@@ -26,7 +26,8 @@ with tempfile.TemporaryDirectory(prefix='soulu-installer-version-') as temporary
     if ws:break
    except Exception as error:last_error=repr(error)
    time.sleep(.2)
-  if ws is None:from PIL import ImageGrab
+  if ws is None:
+   from PIL import ImageGrab
    ImageGrab.grab().save(output.with_suffix('.failure.png'))
    diagnostic=subprocess.run(['powershell','-NoProfile','-Command',"Get-CimInstance Win32_Process | Where-Object { $_.Name -match 'WebView|Soulu|Setup' } | Select-Object ProcessId,ParentProcessId,Name,CommandLine | ConvertTo-Json -Depth 3"],capture_output=True,text=True)
    print('INSTALLER_PROCESSES',diagnostic.stdout,flush=True)
