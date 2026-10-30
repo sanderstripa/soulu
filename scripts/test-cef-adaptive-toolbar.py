@@ -143,6 +143,13 @@ def main():
             check(state()['settings']['layout']=='adaptive','Adaptive selection persists after normal restart')
             stop();evidence['passed']=True
         finally:
+            if not evidence.get('passed') and shell:
+                try:
+                    evidence['failureState']=state()
+                    evidence['failureDOM']=s.evaluate(shell,"({layout:document.body.dataset.layout,height:document.querySelector('.classic-toolbar').offsetHeight,css:document.body.style.cssText})")
+                    evidence['profileSettings']={str(p.relative_to(root)):json.loads(p.read_text(encoding='utf-8')) for p in Path(root).rglob('soulu-settings.json')}
+                    print('ADAPTIVE_FAILURE',json.dumps(evidence,ensure_ascii=True),flush=True)
+                except Exception as diagnostic:print('Diagnostic error',repr(diagnostic),flush=True)
             if page:
                 try:page.close()
                 except Exception:pass

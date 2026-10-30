@@ -48,8 +48,6 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: 2128905cc09a7c5132365048e8d9bd97017470f4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -80,6 +78,8 @@ jobs:
         run: |
           $exe=Get-ChildItem runtime -Recurse -Filter Soulu.exe | Select-Object -First 1
           Copy-Item candidate/* $exe.Directory.FullName -Recurse -Force
+          python scripts/test-cef-adaptive-toolbar.py $exe.FullName artifacts/adaptive.json
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
           python scripts/test-cef-home-focus.py $exe.FullName artifacts/home-focus.json
           if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
           $env:LOCALAPPDATA=Join-Path $env:RUNNER_TEMP 'isolated-settings-fixture'
