@@ -24,6 +24,8 @@ u.GetClassNameW.argtypes=[W.HWND,W.LPWSTR,C.c_int]
 u.IsWindowVisible.argtypes=[W.HWND]
 u.BringWindowToTop.argtypes=[W.HWND]
 u.GetDpiForWindow.argtypes=[W.HWND]
+u.GetClientRect.argtypes=[W.HWND,C.POINTER(W.RECT)]
+u.MoveWindow.argtypes=[W.HWND,C.c_int,C.c_int,C.c_int,C.c_int,W.BOOL]
 class Keyboard(C.Structure):
  _fields_=[('vk',W.WORD),('scan',W.WORD),('flags',W.DWORD),('time',W.DWORD),('extra',C.c_size_t)]
 class Mouse(C.Structure):
@@ -96,6 +98,15 @@ def main():
   try:
    shell=link(wait(lambda:next((target for target in s.targets() if '/ui/index.html' in target.get('url','')),None)))
    wait(lambda:s.evaluate(shell,"typeof window.browserShell?.getState==='function'"));hwnd=wait(lambda:native_window(process.pid));foreground(hwnd)
+   # Hosted desktop can be narrower than the restored 1200px window.
+   # Keep the real pointer target inside the work area; Windows otherwise
+   # clamps SetCursorPos and clicks an unrelated point off the button.
+   work=W.RECT();assert u.SystemParametersInfoW(48,0,C.byref(work),0)
+   assert u.MoveWindow(hwnd,work.left,work.top,min(960,work.right-work.left),min(680,work.bottom-work.top),True)
+   def layout_ready():
+    client=W.RECT();u.GetClientRect(hwnd,C.byref(client))
+    return abs(s.evaluate(shell,'innerWidth*devicePixelRatio')-(client.right-client.left))<2
+   wait(layout_ready)
    s.evaluate(shell,"browserShell.setSettings({layout:'compact',newTabMode:'soulu',homeMode:'soulu'})")
    wait(lambda:s.evaluate(shell,"document.querySelector('#compactNewTabButton').getBoundingClientRect().width>0"))
    # Finish the initial onboarding transition before starting the input test.
@@ -110,7 +121,7 @@ def main():
     if action=='plus':
      point=s.evaluate(shell,"(()=>{const r=document.querySelector('#compactNewTabButton').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()")
      scale=s.evaluate(shell,'devicePixelRatio')
-     screen=W.POINT(round(point['x']*scale),round(point['y']*scale));u.ClientToScreen(hwnd,C.byref(screen));u.SetCursorPos(screen.x,screen.y);time.sleep(.15);u.mouse_event(2,0,0,0,0);time.sleep(.05);u.mouse_event(4,0,0,0,0)
+     screen=W.POINT(round(point['x']*scale),round(point['y']*scale));u.ClientToScreen(hwnd,C.byref(screen));assert work.left<=screen.x<work.right and work.top<=screen.y<work.bottom,('Pointer target outside desktop',screen.x,screen.y);assert u.SetCursorPos(screen.x,screen.y);actual=W.POINT();u.GetCursorPos(C.byref(actual));assert (actual.x,actual.y)==(screen.x,screen.y),'Windows clamped the pointer';time.sleep(.15);u.mouse_event(2,0,0,0,0);time.sleep(.05);u.mouse_event(4,0,0,0,0)
     # No DOM wait, click, focus call or navigation bridge between creation and input.
     print('INPUT',action,'tabs before',before,'DPI',u.GetDpiForWindow(hwnd),'scale',scale if action=='plus' else None,flush=True);text('openai.com',((17,0),(ord('T'),0),(ord('T'),2),(17,2)) if action=='Ctrl+T' else ())
     wait(lambda:len(s.evaluate(shell,'browserShell.getState()')['tabs'])==before+1);page=wait(home)
@@ -124,6 +135,9 @@ def main():
    report.parent.mkdir(parents=True,exist_ok=True);report.write_text(json.dumps({'passed':True,'checks':checks,'input':'Real Windows pointer and Unicode keyboard input; no programmatic Home focus.'},ensure_ascii=False,indent=2),encoding='utf-8')
   except Exception:
    print('PROCESS EXIT',process.poll(),flush=True)
+   from PIL import ImageGrab
+   report.parent.mkdir(parents=True,exist_ok=True)
+   ImageGrab.grab().save(report.with_suffix('.failure.png'))
    report.parent.mkdir(parents=True,exist_ok=True)
    log=Path(root)/'Soulu/User Data/Profiles/chrome_debug.log'
    if log.is_file():shutil.copyfile(log,report.with_suffix('.debug.log'))
