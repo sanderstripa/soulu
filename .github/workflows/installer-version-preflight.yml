@@ -78,17 +78,19 @@ jobs:
         run: |
           $exe=Get-ChildItem runtime -Recurse -Filter Soulu.exe | Select-Object -First 1
           Copy-Item candidate/* $exe.Directory.FullName -Recurse -Force
-          python scripts/test-cef-adaptive-toolbar.py $exe.FullName artifacts/adaptive.json
-          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          foreach($iteration in 1..4){
+            $env:LOCALAPPDATA=Join-Path $env:RUNNER_TEMP "isolated-settings-$iteration"
+            $app=Start-Process $exe.FullName -PassThru
+            $env:SOULU_TEST_PROCESS_ID=[string]$app.Id
+            try {
+              python scripts/test-cef-ui.py
+              if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+            } finally { Get-Process Soulu -ErrorAction SilentlyContinue | Stop-Process -Force }
+            python scripts/test-cef-adaptive-toolbar.py $exe.FullName "artifacts/adaptive-$iteration.json"
+            if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          }
           python scripts/test-cef-home-focus.py $exe.FullName artifacts/home-focus.json
           if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
-          $env:LOCALAPPDATA=Join-Path $env:RUNNER_TEMP 'isolated-settings-fixture'
-          $app=Start-Process $exe.FullName -PassThru
-          $env:SOULU_TEST_PROCESS_ID=[string]$app.Id
-          try {
-            python scripts/test-cef-ui.py
-            if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
-          } finally { Get-Process Soulu -ErrorAction SilentlyContinue | Stop-Process -Force }
       - uses: actions/upload-artifact@v4
         if: always()
         with:
