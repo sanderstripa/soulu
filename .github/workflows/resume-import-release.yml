@@ -1,0 +1,169 @@
+name: Complete verified Soulu 1.0.70 release
+on:
+  push:
+    branches: [codex/import-release-resume]
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: soulu-import-release-resume
+  cancel-in-progress: false
+jobs:
+  complete:
+    runs-on: windows-2025
+    timeout-minutes: 35
+    env:
+      SOURCE_SHA: 51458f6ff8fa63f94ac5b59b82f37badb06a4f8b
+      SOURCE_RUN: '41023302626'
+      SOURCE_JOB: '123955454216'
+      GH_TOKEN: ${{ github.token }}
+      SOULU_REGRESSION_SKIP_FIRST_RUN: '1'
+      PYTHONUTF8: '1'
+      PYTHONDONTWRITEBYTECODE: '1'
+      AUTOMATED_RELEASE: 'true'
+    steps:
+      - name: Checkout the exact production source
+        uses: actions/checkout@v4
+        with:
+          ref: 51458f6ff8fa63f94ac5b59b82f37badb06a4f8b
+          path: browser
+      - name: Verify prior results and immutable package provenance
+        shell: pwsh
+        run: |
+          $run=gh api "repos/sanderstripa/soulu/actions/runs/$env:SOURCE_RUN" | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot read original build' }
+          if ($run.status -ne 'completed' -or $run.conclusion -ne 'failure' -or $run.head_sha -cne $env:SOURCE_SHA -or $run.head_branch -ne 'main' -or $run.path -ne '.github/workflows/build-cef.yml') { throw 'Unexpected original build identity' }
+          $list=gh api "repos/sanderstripa/soulu/actions/runs/$env:SOURCE_RUN/jobs" | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0 -or @($list.jobs).Count -ne 1 -or $list.jobs[0].id -ne [long]$env:SOURCE_JOB) { throw 'Unexpected original jobs' }
+          $allowed=@{
+            'Save compiled Rust dependencies'='skipped'
+            'Validate native runtime before main packaging'='skipped'
+            'Upload validation executable and evidence'='skipped'
+            'Test Startup New Tab Home in native CEF'='failure'
+            'Compare real public websites with AdBlock OFF and ON'='skipped'
+            'Verify release source is the current main commit'='skipped'
+            'Verify release acceptance scope and public-site evidence'='skipped'
+            'Publish Soulu release'='skipped'
+            'Post Use CEF-compatible Python'='skipped'
+            'Post Run actions/setup-go@v5'='skipped'
+          }
+          $steps=@($list.jobs[0].steps)
+          if ($steps.Count -ne 96) { throw 'Original workflow steps changed' }
+          foreach ($step in $steps) {
+            $expected=if($allowed.ContainsKey($step.name)){$allowed[$step.name]}else{'success'}
+            if ($step.conclusion -ne $expected) { throw "Uncovered original result: $($step.name): $($step.conclusion)" }
+          }
+          foreach ($name in $allowed.Keys) { if (@($steps | Where-Object name -eq $name).Count -ne 1) { throw "Missing original step: $name" } }
+          $artifacts=gh api "repos/sanderstripa/soulu/actions/runs/$env:SOURCE_RUN/artifacts?per_page=100" | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot read original artifacts' }
+          foreach ($entry in @(@{id=12963708548;name='Soulu-Beta-1.0.70-x64';digest='sha256:a4a8893123061796f546cc1ad42a37ef529e547afea16f44afe2c8dc6067280d'},@{id=12963887902;name='Soulu-verification-51458f6ff8fa63f94ac5b59b82f37badb06a4f8b';digest='sha256:7de15d8bc08156cc1cd3008decb6422547c2ca1e142c0d4e0c7e0d50a04e23a2'})) {
+            $artifact=@($artifacts.artifacts | Where-Object id -eq $entry.id)
+            if ($artifact.Count -ne 1 -or $artifact[0].name -cne $entry.name -or $artifact[0].digest -cne $entry.digest -or $artifact[0].expired -or $artifact[0].workflow_run.head_sha -cne $env:SOURCE_SHA) { throw 'Artifact identity/digest mismatch' }
+          }
+          $list | ConvertTo-Json -Depth 25 | Set-Content original-results.json -Encoding utf8
+      - uses: actions/download-artifact@v4
+        with:
+          name: Soulu-Beta-1.0.70-x64
+          run-id: 41023302626
+          github-token: ${{ github.token }}
+          path: packages
+      - uses: actions/download-artifact@v4
+        with:
+          name: Soulu-verification-51458f6ff8fa63f94ac5b59b82f37badb06a4f8b
+          run-id: 41023302626
+          github-token: ${{ github.token }}
+          path: browser/artifacts
+      - name: Verify exact installer and ZIP then extract the unchanged runtime
+        shell: pwsh
+        run: |
+          $manifest=Get-Content browser/artifacts/Soulu-Beta-1.0.70-x64.exe.build.json -Raw | ConvertFrom-Json
+          $exe=(Get-FileHash packages/Soulu-Beta-1.0.70-x64.exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          $zip=(Get-FileHash packages/Soulu-Beta-1.0.70-x64.zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($manifest.productCommit -cne $env:SOURCE_SHA -or $manifest.sha256 -cne $exe -or $manifest.payloadSHA256 -cne $zip -or $exe -cne '20907420fe2c9b61a5e9808c2561cdd751c260b39875be6ebe3592342b581d02' -or $zip -cne '934ba29aa6e5a8fd44085f6f199a4774cf428d7fb0c6861e8117c093fa43909b') { throw 'Original package verification failed' }
+          Expand-Archive packages/Soulu-Beta-1.0.70-x64.zip runtime
+          ./browser/scripts/verify-cef-engine.ps1 -BuildDir "$env:GITHUB_WORKSPACE/runtime" -ReportPath browser/artifacts/resumed-engine.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -m pip install --disable-pip-version-check websocket-client pillow numpy soundfile
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Recheck the complete Home group on the identical packaged binary
+        shell: pwsh
+        run: |
+          $env:SOULU_UI_TEST_PORT='9223'
+          foreach ($suite in @('pages','speech','design','focus','migration')) {
+            $destination=if($suite -eq 'design'){'browser/artifacts/resumed-home/design'}else{"browser/artifacts/resumed-home/$suite.json"}
+            python "browser/scripts/test-cef-home-$suite.py" "$env:GITHUB_WORKSPACE/runtime/Soulu.exe" $destination
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+      - name: Complete the pending public-site AdBlock comparison
+        shell: pwsh
+        run: |
+          python browser/scripts/test-cef-adblock-public.py "$env:GITHUB_WORKSPACE/runtime/Soulu.exe" browser/artifacts/adblock-public
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify source still equals main and release does not exist
+        shell: pwsh
+        working-directory: browser
+        run: |
+          git fetch origin main
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ((git rev-parse HEAD) -cne $env:SOURCE_SHA -or (git rev-parse origin/main) -cne $env:SOURCE_SHA) { throw 'Production source changed; release blocked' }
+          gh api repos/sanderstripa/soulu/releases/tags/beta-1.0.70 2>$null
+          if ($LASTEXITCODE -eq 0) { throw 'Release already exists; automatic replacement forbidden' }
+          $global:LASTEXITCODE=0
+      - name: Complete the original public-site and acceptance gate
+        shell: pwsh
+        run: |
+          if ($env:AUTOMATED_RELEASE -eq 'true') {
+            # The current owner request authorizes this automated release. Do not
+            # turn unavailable physical/authenticated scenarios into passed checks.
+            'Acceptance scope: automated Windows build, browser regressions, runtime integrity, shared installer lifecycle and UI tests. Real Google/Ozon authenticated-session restarts, physical microphone, audible YouTube playback/seek/fullscreen, physical GPU/DPI, clipboard/drag-drop and configured VPN connectivity were not manually verified for this release.' | Add-Content browser/artifacts/release-notes.md -Encoding utf8
+          } elseif ($env:MANUAL_CHECKS_SHA -cne $env:GITHUB_SHA) {
+            throw 'Publication blocked: manual acceptance or explicit owner deferrals must cover this exact SHA'
+          }
+          if ($env:DEFER_AUTH_CHECKS -eq 'true') {
+            'Google/Ozon authenticated-session restart checks were explicitly deferred to the owner; they were not performed for this release.' | Add-Content browser/artifacts/release-notes.md -Encoding utf8
+          }
+          if ($env:DEFER_DESKTOP_CHECKS -eq 'true') {
+            'The owner will complete the remaining physical desktop acceptance checks. Automated Windows/CEF checks remain required; unfinished manual checks are not claimed as passed.' | Add-Content browser/artifacts/release-notes.md -Encoding utf8
+          }
+          $sites = Get-Content browser/artifacts/sites-evidence.json -Raw | ConvertFrom-Json
+          $unopened = @($sites | Where-Object { !$_.opened })
+          # Distinguish one known hosted-runner service rejection from browser
+          # or TLS failures. Keep every other site mandatory and disclose the
+          # missing usable-content evidence rather than claiming it passed.
+          $deferredOzon = ($env:DEFER_AUTH_CHECKS -eq 'true' -or $env:AUTOMATED_RELEASE -eq 'true') -and $unopened.Count -eq 1 -and
+            $unopened[0].host -eq 'ozon.ru' -and $unopened[0].externalServiceRejection -and
+            @($unopened[0].events | Where-Object {
+              $_.event -eq 'Network.responseReceived' -and $_.response.status -in @(403,429) -and
+              $_.response.url -match '^https://(?:www\.)?ozon\.ru/' -and $_.response.securityState -eq 'secure'
+            }).Count -gt 0 -and
+            @($unopened[0].events | Where-Object { $_.event -eq 'Network.loadingFailed' -and !$_.canceled }).Count -eq 0
+          if (@($sites).Count -ne 7 -or ($unopened.Count -gt 0 -and !$deferredOzon)) {
+            throw 'Publication blocked: one or more required sites did not serve usable content'
+          }
+          if ($deferredOzon) {
+            'Anonymous Ozon access from the GitHub Windows runner returned a secure HTTP 403/429 server rejection. Usable Ozon content and authenticated sessions are not verified. The other six required sites opened successfully; no Ozon TLS or uncancelled network failure was present.' | Add-Content browser/artifacts/release-notes.md -Encoding utf8
+          }
+          'The unchanged installer/ZIP from build 41023302626 were verified by exact SHA256 and source SHA. All other original mandatory checks passed. The Home group was rechecked and the pending public-site AdBlock comparison completed in this continuation run.' | Add-Content browser/artifacts/release-notes.md -Encoding utf8
+      - name: Preserve continuation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Soulu-import-release-continuation-${{ github.run_id }}
+          path: |
+            original-results.json
+            browser/artifacts/resumed-home/**
+            browser/artifacts/resumed-engine.json
+            browser/artifacts/adblock-public/**
+            browser/artifacts/release-notes.md
+          if-no-files-found: warn
+      - name: Publish verified Soulu 1.0.70
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: beta-1.0.70
+          name: Soulu Beta 1.0.70
+          target_commitish: 51458f6ff8fa63f94ac5b59b82f37badb06a4f8b
+          prerelease: false
+          body_path: browser/artifacts/release-notes.md
+          files: |
+            packages/Soulu-Beta-1.0.70-x64.exe
+            packages/Soulu-Beta-1.0.70-x64.zip
