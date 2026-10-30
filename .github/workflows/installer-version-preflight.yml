@@ -61,13 +61,17 @@ jobs:
           if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
           if((Get-FileHash old/Soulu-Beta-1.0.70-x64.zip -Algorithm SHA256).Hash.ToLowerInvariant() -cne '934ba29aa6e5a8fd44085f6f199a4774cf428d7fb0c6861e8117c093fa43909b'){throw 'Wrong CEF runtime archive'}
           Expand-Archive old/Soulu-Beta-1.0.70-x64.zip runtime
-      - uses: actions/download-artifact@v4
-        with:
-          github-token: ${{ github.token }}
-          run-id: 41059771979
-          artifact-ids: 12980975809
-          path: candidate
-          merge-multiple: true
+      - name: Download the exact earlier compiled artifact by its immutable ID
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $metadata=gh api repos/sanderstripa/soulu/actions/artifacts/12980975809 | ConvertFrom-Json
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          if($metadata.workflow_run.id -ne 41059771979 -or $metadata.workflow_run.head_sha -cne '2128905cc09a7c5132365048e8d9bd97017470f4'){throw 'Wrong native artifact source'}
+          gh api repos/sanderstripa/soulu/actions/artifacts/12980975809/zip > candidate.zip
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          Expand-Archive candidate.zip candidate
       - name: Exercise the new exact native binary and physical input bounds
         shell: pwsh
         env:
