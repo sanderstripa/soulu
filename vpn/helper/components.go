@@ -62,7 +62,7 @@ func fetchURL(raw string, max int64) ([]byte, error) {
 	if e != nil {
 		return nil, e
 	}
-	request.Header.Set("User-Agent", "Soulu-Components/1.0.69")
+	request.Header.Set("User-Agent", "Soulu-Components/1.0.71")
 	response, e := httpClient.Do(request)
 	if e != nil {
 		return nil, e

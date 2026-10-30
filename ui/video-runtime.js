@@ -25,7 +25,7 @@ function(run){
    promise.catch(()=>{});
    return {promise,abort(){if(settled)return;aborted=true;finish('onabort',{status:0,context:details.context});call({op:'abort',id}).catch(()=>{})}};
   };
-  const info={scriptHandler:'Soulu',version:'1.0.70',platform:{os:'win',arch:'x86-64',browserName:'Soulu'},script:{name:'VOT — Soulu Video Translate',version:init.version||'1.12.3',namespace:'vot',description:'Integrated voice-over translation'},scriptMetaStr:'',isIncognito:!!init.incognito};
+  const info={scriptHandler:'Soulu',version:'1.0.71',platform:{os:'win',arch:'x86-64',browserName:'Soulu'},script:{name:'VOT — Soulu Video Translate',version:init.version||'1.12.3',namespace:'vot',description:'Integrated voice-over translation'},scriptMetaStr:'',isIncognito:!!init.incognito};
   const GM={info,getValue:async(k,d)=>get(k,d),setValue:set,deleteValue:remove,listValues:async()=>Object.keys(storage),getValues:async keys=>values(keys),setValues:async rows=>{for(const[k,v]of Object.entries(rows))await set(k,v)},deleteValues:async keys=>{for(const k of keys)await remove(k)},addStyle:style,notification:notice,xmlHttpRequest:details=>{const controller=xhr(details);const p=controller.promise;p.abort=controller.abort;return p},addValueChangeListener:(key,fn)=>{const id=++listenerId;listeners.set(id,{key,fn});return id},removeValueChangeListener:id=>listeners.delete(id)};
   run(GM,get,(k,v)=>{set(k,v).catch(console.error)},k=>{remove(k).catch(console.error)},()=>Object.keys(storage),style,info,xhr,notice);
  }).catch(error=>console.error('Soulu Video Translate:',error));

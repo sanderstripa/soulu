@@ -111,6 +111,25 @@ int RunBrowserImportTests(const std::filesystem::path& output){
     auto folders=BrowserImportFolderSources(chrome.parent_path());check(folders.size()==3,"manual-user-data-root-finds-all-normal-profiles");
     check(BrowserImportFolderSources(firefox).size()==1,"manual-profile-folder-still-supported");
 
+
+    auto accountRoot=fixture/L"Google/Chrome/User Data/AccountOnly";
+    const std::string accountData=R"({"checksum":"fixture","roots":{"bookmark_bar":{"type":"folder","name":"Bookmarks bar","children":[{"type":"url","name":"Account link","url":"https://example.test/account"},{"type":"folder","name":"Work","children":[{"type":"url","name":"Nested account link","url":"https://example.test/nested-account"}]}]},"other":{"type":"folder","name":"Other bookmarks","children":[]},"synced":{"type":"folder","name":"Mobile bookmarks","children":[]}}})";
+    write(accountRoot/L"AccountBookmarks",accountData);
+    auto account=PortableImportSource(accountRoot);
+    auto accountSources=BrowserImportSources();check(std::any_of(accountSources.begin(),accountSources.end(),[](const auto& row){return row.id=="Chrome:AccountOnly";}),"automatic-account-only-profile-discovery");
+    check(account.family=="chromium"&&BrowserImportCapabilities(account)->GetDictionary("bookmarks")->GetString("status")=="available","account-only-chromium-profile-is-discoverable-and-importable");
+    auto accountNodes=ReadImportBookmarks(account,control);auto accountReport=CefDictionaryValue::Create();
+    auto accountMerged=MergeImportBookmarks(CefListValue::Create(),accountNodes,"account-import",accountReport,control);
+    check(accountNodes->GetSize()==1&&accountMerged->GetSize()==4&&accountReport->GetInt("bookmarksImported")==2&&accountReport->GetInt("foldersImported")==2,"account-bookmark-links-and-nested-folders-imported-empty-roots-excluded");
+    write(accountRoot/L"Bookmarks",R"({"roots":{"bookmark_bar":{"type":"folder","name":"Bookmarks bar","children":[]},"other":{"type":"folder","name":"Other bookmarks","children":[]},"synced":{"type":"folder","name":"Mobile bookmarks","children":[]}}})");
+    auto emptyLocalReport=CefDictionaryValue::Create();
+    check(MergeImportBookmarks(CefListValue::Create(),ReadImportBookmarks(account,control),"account-import",emptyLocalReport,control)->GetSize()==4&&emptyLocalReport->GetInt("bookmarksImported")==2,"reproduce-three-empty-local-roots-plus-real-account-bookmarks");
+    write(accountRoot/L"Bookmarks",R"({"roots":{"bookmark_bar":{"type":"folder","name":"Bookmarks bar","children":[{"type":"url","name":"Account link","url":"https://example.test/account"}]}}})");
+    auto unionReport=CefDictionaryValue::Create();
+    check(MergeImportBookmarks(CefListValue::Create(),ReadImportBookmarks(account,control),"account-import",unionReport,control)->GetSize()==4&&unionReport->GetInt("bookmarksImported")==2&&unionReport->GetInt("bookmarksSkipped")==1,"local-and-account-union-deduplicates-identical-links-in-same-folder");
+    auto emptyRoot=fixture/L"empty-bookmarks";write(emptyRoot/L"Bookmarks",R"({"roots":{"bookmark_bar":{"type":"folder","name":"Bookmarks bar","children":[]},"other":{"type":"folder","name":"Other bookmarks","children":[]},"synced":{"type":"folder","name":"Mobile bookmarks","children":[]}}})");
+    check(ReadImportBookmarks(PortableImportSource(emptyRoot),control)->GetSize()==0,"three-empty-permanent-roots-never-report-three-imported-bookmarks");
+
     // Reproduce an open source browser, not merely an unlocked closed fixture.
     // Keep its live read/write SQLite connection and uncheckpointed WAL open.
     sqlite3* live=nullptr;
@@ -118,6 +137,10 @@ int RunBrowserImportTests(const std::filesystem::path& output){
     struct LiveClose{sqlite3* db;~LiveClose(){sqlite3_close(db);}} liveClose{live};
     check(sqlite3_exec(live,"PRAGMA journal_mode=WAL; PRAGMA wal_autocheckpoint=0; INSERT INTO visits VALUES(1,13344473600124000)",nullptr,nullptr,nullptr)==SQLITE_OK,"live-source-wal-write");
     check(BrowserImportCapabilities(source)->GetDictionary("history")->GetString("status")=="available","open-browser-readable-capability");
+    check(sqlite3_exec(live,"BEGIN IMMEDIATE",nullptr,nullptr,nullptr)==SQLITE_OK,"fixture-active-source-writer");
+    auto busyCaps=BrowserImportCapabilities(source);
+    check(busyCaps->GetDictionary("history")->GetString("status")=="blocked"&&busyCaps->GetDictionary("bookmarks")->GetString("status")=="available","busy-database-is-disabled-before-import-while-bookmarks-stay-available");
+    check(sqlite3_exec(live,"ROLLBACK",nullptr,nullptr,nullptr)==SQLITE_OK,"fixture-source-writer-release");
     auto liveHistory=ImportBrowserHistory(source,"import-live",control);
     check(liveHistory->GetString("status")=="ok"&&liveHistory->GetInt("imported")==2,"open-browser-import-includes-uncheckpointed-wal");
     {ImportWalGuard guard(chrome/L"History");
