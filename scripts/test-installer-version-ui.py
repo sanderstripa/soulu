@@ -10,21 +10,23 @@ expected=re.findall(r'kSouluVersion\s*=\s*"([^"]+)"',header);assert len(expected
 with socket.socket() as listener:listener.bind(('127.0.0.1',0));port=listener.getsockname()[1]
 with tempfile.TemporaryDirectory(prefix='soulu-installer-version-') as temporary:
  env=dict(os.environ,WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=f'--remote-debugging-port={port} --remote-allow-origins=*',WEBVIEW2_USER_DATA_FOLDER=temporary)
- process=subprocess.Popen([str(exe)],env=env);ws=None
+ process=subprocess.Popen([str(exe)],env=env);ws=None;last_error="";last_targets=[]
  try:
   end=time.monotonic()+60
   while time.monotonic()<end:
    try:
     with urllib.request.urlopen(f'http://127.0.0.1:{port}/json',timeout=2) as response:targets=json.load(response)
+    last_targets=[{k:t.get(k) for k in ('type','title','url')} for t in targets]
     for target in targets:
      if target.get('type')!='page' or not target.get('webSocketDebuggerUrl'):continue
-     candidate=s.websocket.create_connection(target['webSocketDebuggerUrl'],timeout=15,origin=f'http://127.0.0.1:{port}')
+     candidate=s.websocket.create_connection(target['webSocketDebuggerUrl'],timeout=15,suppress_origin=True)
      result=s.evaluate(candidate,"document.getElementById('version')?.textContent||''")
      if result:ws=candidate;break
      candidate.close()
     if ws:break
-   except Exception:pass
+   except Exception as error:last_error=repr(error)
    time.sleep(.2)
+  if ws is None:print('INSTALLER_DIAGNOSTICS',json.dumps({'exit':process.poll(),'targets':last_targets,'error':last_error}),flush=True)
   assert ws is not None,'Actual installer WebView footer not found'
   footer=s.evaluate(ws,"document.getElementById('version').textContent")
   assert expected in footer,{'expected':expected,'actualFooter':footer}

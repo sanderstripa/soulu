@@ -10,8 +10,6 @@ jobs:
     timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: a377a9a0e0e54c9957efcfe5a348cb1896ca8683
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -25,6 +23,11 @@ jobs:
           gh release download beta-1.0.70 --repo sanderstripa/soulu --pattern Soulu-Beta-1.0.70-x64.exe --dir old
           if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
           if((Get-FileHash old/Soulu-Beta-1.0.70-x64.exe -Algorithm SHA256).Hash.ToLowerInvariant() -cne '20907420fe2c9b61a5e9808c2561cdd751c260b39875be6ebe3592342b581d02'){throw 'Wrong old installer'}
+      - name: Inspect WebView2 runtime availability
+        shell: pwsh
+        run: |
+          Get-ChildItem "${env:ProgramFiles(x86)}/Microsoft/EdgeWebView/Application" -Directory -ErrorAction SilentlyContinue | Select-Object Name
+          Get-ChildItem "$env:LOCALAPPDATA/Microsoft/EdgeWebView/Application" -Directory -ErrorAction SilentlyContinue | Select-Object Name
       - name: Require the new actual-window checker to reject its real version 67
         shell: pwsh
         run: |
