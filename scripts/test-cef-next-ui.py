@@ -74,7 +74,11 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as root:
   check(s.evaluate(shell,"!document.querySelector('#vpnPanel,#vpnFrame')"),'No legacy VPN side panel or iframe')
   shot=s.command(shell,'Page.captureScreenshot',{'format':'png','captureBeyondViewport':False});(out/'vpn-toolbar-off.png').write_bytes(base64.b64decode(shot['data']))
   click_toolbar('#vpnButton');wait(lambda:s.evaluate(shell,"document.querySelector('#vpnButton').classList.contains('connected')"))
-  check(s.evaluate(shell,"getComputedStyle(document.querySelector('#vpnButton')).color!==getComputedStyle(document.querySelector('#newTabButton')).color"),'One click starts the saved VLESS core and turns the mark green')
+  wait(lambda:s.evaluate(shell,"vpn.send('status').then(s=>s.connected)"))
+  # The shared toolbar animates color. Class changes precede the first painted
+  # frame, so checking equality immediately can observe the previous off color.
+  wait(lambda:s.evaluate(shell,"getComputedStyle(document.querySelector('#vpnButton')).color==='rgb(8, 127, 91)'"))
+  check(True,'One click starts the saved VLESS core and turns the mark green')
   check(not s.evaluate(shell,'browserShell.getState().then(s=>s.settingsOverlayOpen)'),'Configured toolbar connection opens no settings or extra interface')
   shot=s.command(shell,'Page.captureScreenshot',{'format':'png','captureBeyondViewport':False});(out/'vpn-toolbar-on.png').write_bytes(base64.b64decode(shot['data']))
   click_toolbar('#vpnButton');wait(lambda:not s.evaluate(shell,"document.querySelector('#vpnButton').classList.contains('connected')"))
