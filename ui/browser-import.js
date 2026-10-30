@@ -162,17 +162,29 @@
       let result;try{result=await call('run',payload);}catch(e){result={status:'error',message:e.message};}finally{clearInterval(timer);box.removeAttribute('aria-busy');}
       if(!closed)finish(result);
     }
+    function importMessage(message){
+      if(/close .*retry|source .*busy|store is locked/i.test(message))return label('Закройте исходный браузер полностью, включая фоновые процессы, затем обновите список и повторите импорт. Закладки можно перенести отдельно.','Fully close the source browser, including background processes, then refresh and retry. Bookmarks can be imported separately.');
+      if(/Protected or unsupported records/i.test(message))return label('Защищённые пароли не перенесены. Используйте штатный CSV-экспорт паролей исходного браузера.','Protected passwords were not imported. Use the source browser’s built-in password CSV export.');
+      return message;
+    }
     function finish(result) {
       phase='result';box.dataset.importState=phase;cancelRequested=false;lock();
       form.querySelector('.import-categories-section').hidden=true;consentBox.hidden=true;createField.hidden=true;execution.hidden=true;
       const title=result.status==='ok'?label('Импорт завершён','Import complete'):result.status==='cancelled'?label('Импорт отменён','Import cancelled'):result.status==='partial'?label('Импорт завершён частично','Import partially completed'):label('Импорт завершён с ошибками','Import completed with errors');
       summary.replaceChildren(el('p',title,'import-result-title'));summary.hidden=false;
       const totals={imported:0,skipped:0,failed:0},reports=Object.entries(result.categories||{});
-      for(const [,r] of reports){totals.imported+=r.imported||0;totals.skipped+=r.skipped||0;totals.failed+=r.failed||0;if(r.status==='error'&&!r.failed)++totals.failed;}
+      for(const [key,r] of reports){totals.imported+=(key==='bookmarks'?r.bookmarksImported??r.imported:r.imported)||0;totals.skipped+=(key==='bookmarks'?r.bookmarksSkipped??r.skipped:r.skipped)||0;totals.failed+=r.failed||0;if(r.status==='error'&&!r.failed)++totals.failed;}
       if(result.status==='error'&&!reports.length)++totals.failed;
       const counts=el('dl',undefined,'import-totals');for(const [key,ru,en] of [['imported','Импортировано','Imported'],['skipped','Пропущено','Skipped'],['failed','Ошибки','Errors']]){const item=el('div');item.append(el('dt',label(ru,en)),el('dd',totals[key].toLocaleString()));counts.append(item);}summary.append(counts);
-      for(const [key,r] of reports){const text=el('p',label(...(categoryNames[key]||[key,key]))+' · '+label(`${r.imported||0} добавлено, ${r.skipped||0} пропущено`,`${r.imported||0} added, ${r.skipped||0} skipped`),'import-result-line');summary.append(text);if(r.message&&r.status!=='ok')summary.append(el('p',r.message,'note'));}
-      if(result.message)error(result.message);
+      for(const [key,r] of reports){
+        const count=key==='bookmarks'&&Number.isInteger(r.bookmarksImported)
+          ?label(`${r.bookmarksImported} закладок, ${r.foldersImported||0} папок добавлено; ${r.bookmarksSkipped||0} закладок уже есть`,`${r.bookmarksImported} bookmarks, ${r.foldersImported||0} folders added; ${r.bookmarksSkipped||0} bookmarks already present`)
+          :label(`${r.imported||0} добавлено, ${r.skipped||0} пропущено`,`${r.imported||0} added, ${r.skipped||0} skipped`);
+        summary.append(el('p',label(...(categoryNames[key]||[key,key]))+' · '+count,'import-result-line'));
+        if(key==='bookmarks'&&r.status==='ok'&&r.bookmarksImported===0&&r.bookmarksSkipped===0)summary.append(el('p',label('В выбранном профиле не найдено закладок-ссылок. Пустые служебные папки не считаются закладками.','No bookmark links found in the selected profile. Empty permanent folders do not count as bookmarks.'),'note'));
+        if(r.message&&r.status!=='ok')summary.append(el('p',importMessage(r.message),'note'));
+      }
+      if(result.message)error(importMessage(result.message));
       if(result.status==='cancelled')summary.append(el('p',label('Уже перенесённые данные сохранены.','Entries already imported remain saved.'),'note'));
       cancel.hidden=true;run.hidden=true;done.hidden=false;done.focus();
     }

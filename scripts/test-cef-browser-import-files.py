@@ -7,7 +7,7 @@ spec=importlib.util.spec_from_file_location('platform',repo/'scripts/test-cef-pl
 from pywinauto.controls.win32_controls import EditWrapper,ButtonWrapper
 exe=Path(sys.argv[1]).resolve();output=Path(sys.argv[2]).resolve();s.DEBUG_PORT=s.free_port();s.BASE=f'http://127.0.0.1:{s.DEBUG_PORT}';checks=[]
 with tempfile.TemporaryDirectory(prefix='soulu-import-pickers-',ignore_cleanup_errors=True) as tmp:
- root=Path(tmp);local=root/'local';roaming=root/'roaming';local.mkdir();roaming.mkdir();portable=root/'portable';portable.mkdir();(portable/'Preferences').write_text('{}');(portable/'Bookmarks').write_text('{"roots":{"bookmark_bar":{"type":"folder","name":"Fixture","children":[]}}}')
+ root=Path(tmp);local=root/'local';roaming=root/'roaming';local.mkdir();roaming.mkdir();portable=root/'portable';portable.mkdir();(portable/'Preferences').write_text('{}');(portable/'Bookmarks').write_text('{"roots":{"bookmark_bar":{"type":"folder","name":"Fixture","children":[{"type":"url","name":"Portable link","url":"https://example.test/portable"}]}}}')
  html=root/'bookmarks.html';html.write_text('<!DOCTYPE NETSCAPE-Bookmark-file-1><DL><DT><A HREF="https://example.test/picker">Synthetic bookmark</A></DL>');csv=root/'passwords.csv';csv.write_text('url,username,password\nhttps://example.test/,fixture,synthetic-picker-only\n')
  env=dict(os.environ,LOCALAPPDATA=str(local),APPDATA=str(roaming),SOULU_UI_TEST_PORT=str(s.DEBUG_PORT),SOULU_REGRESSION_SKIP_FIRST_RUN='1');process=subprocess.Popen([str(exe),'--no-proxy-server'],env=env);sockets=[]
  def socket(fragment):
@@ -39,7 +39,7 @@ with tempfile.TemporaryDirectory(prefix='soulu-import-pickers-',ignore_cleanup_e
   assert rejected;checks.append('native-CSV-requires-explicit-password-consent')
   assert run({'source':c['id'],'target':'personal','passwords':True,'consent':True})['categories']['passwords']['imported']==1;checks.append('native-CSV-password-import')
   assert run({'source':h['id'],'target':'personal','tabs':True,'nodes':nodes})['categories']['tabs']['imported']==1;checks.append('native-HTML-open-tab-import')
-  assert run({'source':f['id'],'target':'personal','bookmarks':True})['categories']['bookmarks']['imported']==1;checks.append('native-portable-profile-import')
+  assert run({'source':f['id'],'target':'personal','bookmarks':True})['categories']['bookmarks']['imported']==2;checks.append('native-portable-profile-import')
   user_data=root/'multi-profile';user_data.mkdir()
   for folder in ('Default','Person 2'):
    profile=user_data/folder;profile.mkdir();(profile/'Preferences').write_text('{}');(profile/'Bookmarks').write_text(json.dumps({'roots':{'bookmark_bar':{'type':'folder','name':folder,'children':[{'type':'url','name':folder,'url':'https://example.test/'+folder.replace(' ','-')}]}}}))

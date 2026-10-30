@@ -1,0 +1,41 @@
+"""Read the actual packaged installer's WebView footer; no mocked product config."""
+import base64,importlib.util,json,os,re,socket,subprocess,sys,tempfile,time,urllib.request
+from pathlib import Path
+spec=importlib.util.spec_from_file_location('storage',Path(__file__).with_name('test-cef-storage.py'))
+s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
+os.environ['NO_PROXY']='localhost,127.0.0.1,::1'
+exe=Path(sys.argv[1]).resolve();output=Path(sys.argv[2]).resolve();output.parent.mkdir(parents=True,exist_ok=True)
+header=(Path(__file__).resolve().parents[1]/'cef/soulu/app_version.h').read_text()
+expected=re.findall(r'kSouluVersion\s*=\s*"([^"]+)"',header);assert len(expected)==1;expected=expected[0]
+with socket.socket() as listener:listener.bind(('127.0.0.1',0));port=listener.getsockname()[1]
+with tempfile.TemporaryDirectory(prefix='soulu-installer-version-') as temporary:
+ env=dict(os.environ,WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=f'--remote-debugging-port={port} --remote-allow-origins=*',WEBVIEW2_USER_DATA_FOLDER=temporary)
+ process=subprocess.Popen([str(exe)],env=env);ws=None
+ try:
+  end=time.monotonic()+60
+  while time.monotonic()<end:
+   try:
+    with urllib.request.urlopen(f'http://127.0.0.1:{port}/json',timeout=2) as response:targets=json.load(response)
+    for target in targets:
+     if target.get('type')!='page' or not target.get('webSocketDebuggerUrl'):continue
+     candidate=s.websocket.create_connection(target['webSocketDebuggerUrl'],timeout=15,origin=f'http://127.0.0.1:{port}')
+     result=s.evaluate(candidate,"document.getElementById('version')?.textContent||''")
+     if result:ws=candidate;break
+     candidate.close()
+    if ws:break
+   except Exception:pass
+   time.sleep(.2)
+  assert ws is not None,'Actual installer WebView footer not found'
+  footer=s.evaluate(ws,"document.getElementById('version').textContent")
+  assert expected in footer,{'expected':expected,'actualFooter':footer}
+  shot=s.command(ws,'Page.captureScreenshot',{'format':'png','captureBeyondViewport':False})
+  output.with_suffix('.png').write_bytes(base64.b64decode(shot['data']))
+  output.write_text(json.dumps({'passed':True,'expected':expected,'actualFooter':footer,'binary':exe.name,'scope':'Actual packaged installer welcome window; does not simulate installation.'},ensure_ascii=False,indent=2))
+  print('PASS: actual installer footer',repr(footer),'matches browser',expected,flush=True)
+ finally:
+  if ws:
+   try:s.command(ws,'Page.close')
+   except Exception:pass
+   ws.close()
+  try:process.wait(timeout=10)
+  except subprocess.TimeoutExpired:process.terminate();process.wait(timeout=10)

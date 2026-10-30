@@ -1,12 +1,15 @@
 param(
  [Parameter(Mandatory=$true)][string]$PayloadPath,
- [Parameter(Mandatory=$true)][string]$Version,
+ [string]$Version,
  [Parameter(Mandatory=$true)][string]$OutFile,
  [string]$ExtensionPath,[string]$ExpectedExecutable,[string]$CoreRoot,[string]$Go='go',
  [switch]$TestUI
 )
 $ErrorActionPreference='Stop'
 $repo=(Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+$canonicalVersion=& (Join-Path $repo 'scripts/get-soulu-version.ps1')
+if($Version -and $Version -cne $canonicalVersion){throw 'Installer version must match the canonical Soulu version'}
+$Version=$canonicalVersion
 if(!$CoreRoot){
  $localCore=Join-Path $repo 'installer-core'
  if(Test-Path (Join-Path $localCore 'build.ps1')){$CoreRoot=$localCore}
@@ -54,6 +57,7 @@ try{
  if($LASTEXITCODE){throw 'Shared installer build failed'}
  $manifestPath="$OutFile.build.json"
  $manifest=Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+ if($manifest.version -cne $canonicalVersion -or $manifest.productCommit -cne $sourceCommit){throw 'Built installer version/source does not match Soulu'}
  $manifest | Add-Member -NotePropertyName cefDistribution -NotePropertyValue $distribution
  $manifest | Add-Member -NotePropertyName souluAdapterSHA256 -NotePropertyValue (Get-FileHash -LiteralPath $adapterPath -Algorithm SHA256).Hash.ToLowerInvariant()
  $manifest | ConvertTo-Json | Set-Content -LiteralPath $manifestPath -Encoding utf8

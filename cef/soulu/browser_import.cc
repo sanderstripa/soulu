@@ -63,7 +63,7 @@ bool Profile(const std::filesystem::path& p,const std::string& family){
   // Presence only: no credential, bookmark or history content during discovery.
   if(!Directory(p))return false;
   return family=="firefox"?(File(p/L"prefs.js")||File(p/L"places.sqlite")||File(p/L"logins.json")):
-    (File(p/L"Preferences")||File(p/L"Bookmarks")||File(p/L"History")||File(p/L"Login Data")||File(p/L"Web Data"));
+    (File(p/L"Preferences")||File(p/L"Bookmarks")||File(p/L"AccountBookmarks")||File(p/L"History")||File(p/L"Login Data")||File(p/L"Web Data"));
 }
 bool Installed(const BrowserSpec& s){
   for(auto env:{L"LOCALAPPDATA",L"ProgramW6432",L"PROGRAMFILES",L"PROGRAMFILES(X86)"}){
@@ -413,10 +413,16 @@ CefRefPtr<CefDictionaryValue> BrowserImportCapabilities(const ImportSource& sour
     if(!File(path)){std::error_code error;bool exists=std::filesystem::exists(path,error);add(key,!error&&!exists?"not_found":"blocked",!error&&!exists?"Source data not found":"Source path inaccessible");return;}
     try{auto header=ImportHeader(path,16);if(header.empty()){add(key,"not_found","Source store is empty");return;}
       if(sqlite&&header!=std::string("SQLite format 3\0",16))throw std::runtime_error("Unsupported database format");
+      if(sqlite){ImportWalGuard guard(path);auto handle=OpenImportSourceFile(path,true);CloseHandle(handle);}
       add(key,"available","Supported source container; entries are validated when Import starts");
     }catch(const std::exception& e){add(key,"blocked",e.what());}
   };
-  probe("bookmarks",source.root/(source.family=="firefox"?L"places.sqlite":L"Bookmarks"),source.family=="firefox");
+  if(source.family=="firefox")probe("bookmarks",source.root/L"places.sqlite",true);
+  else{
+    probe("bookmarks",source.root/L"Bookmarks",false);auto local=caps->GetDictionary("bookmarks")->Copy(false);
+    if(File(source.root/L"AccountBookmarks")){probe("bookmarks",source.root/L"AccountBookmarks",false);
+      if(local->GetString("status")=="available")caps->SetDictionary("bookmarks",local);}
+  }
   probe("history",source.root/(source.family=="firefox"?L"places.sqlite":L"History"),true);
   probe("passwords",source.root/(source.family=="firefox"?L"logins.json":L"Login Data"),source.family!="firefox");
   if(source.family=="firefox"&&File(source.root/L"autofill-profiles.json"))probe("autofill",source.root/L"autofill-profiles.json",false);
@@ -433,9 +439,6 @@ CefRefPtr<CefDictionaryValue> BrowserImportCapabilities(const ImportSource& sour
 CefRefPtr<CefListValue> ReadImportBookmarks(const ImportSource& source,const std::shared_ptr<ImportControl>& control){
   auto nodes=CefListValue::Create();size_t total=0;
   if(source.family=="chromium"){
-    auto json=CefParseJSON(ReadText(source.root/L"Bookmarks",20*1024*1024),JSON_PARSER_RFC);
-    auto roots=json&&json->GetType()==VTYPE_DICTIONARY?json->GetDictionary()->GetDictionary("roots"):nullptr;
-    if(!roots)throw std::runtime_error("Invalid Chromium bookmarks file");
     std::function<CefRefPtr<CefDictionaryValue>(CefRefPtr<CefDictionaryValue>,int)> parse=[&](CefRefPtr<CefDictionaryValue> n,int depth)->CefRefPtr<CefDictionaryValue>{
       if(control->cancelled)return nullptr;if(!n||depth>64||++total>20000)throw std::runtime_error("Invalid or oversized bookmark hierarchy");
       std::string type=n->GetString("type"),name=n->GetString("name");if(name.size()>8192)throw std::runtime_error("Bookmark title too long");
@@ -444,8 +447,20 @@ CefRefPtr<CefListValue> ReadImportBookmarks(const ImportSource& source,const std
       auto result=Node(type,name);auto list=n->GetList("children"),children=result->GetList("children");
       for(size_t i=0;i<list->GetSize();++i){auto child=parse(list->GetDictionary(i),depth+1);if(child)children->SetDictionary(children->GetSize(),child);}return result;
     };
-    CefDictionaryValue::KeyList keys;roots->GetKeys(keys);
-    for(const auto& key:keys){auto root=parse(roots->GetDictionary(key),0);if(root)nodes->SetDictionary(nodes->GetSize(),root);}
+    bool found=false;
+    // Signed-in Chromium profiles use AccountBookmarks in addition to, or
+    // instead of, Bookmarks. Read both; the destination merge deduplicates.
+    for(auto filename:{L"Bookmarks",L"AccountBookmarks"}){auto path=source.root/filename;if(!File(path))continue;found=true;
+      auto json=CefParseJSON(ReadText(path,20*1024*1024),JSON_PARSER_RFC);
+      auto roots=json&&json->GetType()==VTYPE_DICTIONARY?json->GetDictionary()->GetDictionary("roots"):nullptr;
+      if(!roots)throw std::runtime_error("Invalid Chromium bookmarks file");
+      CefDictionaryValue::KeyList keys;roots->GetKeys(keys);
+      for(const auto& key:keys){auto value=roots->GetDictionary(key);if(!value||!value->HasKey("type"))continue;auto root=parse(value,0);
+        // Empty permanent roots are containers, not imported bookmark links.
+        if(root&&root->GetString("type")=="folder"&&root->GetList("children")->GetSize()==0)continue;
+        if(root)nodes->SetDictionary(nodes->GetSize(),root);}
+    }
+    if(!found)throw std::runtime_error("Bookmark stores not found in the selected profile");
   }else if(source.family=="firefox"){
     DatabaseSnapshot db(source.root/L"places.sqlite");
     Query q(db.db(),"SELECT b.id,b.parent,b.type,b.title,p.url,b.guid FROM moz_bookmarks b LEFT JOIN moz_places p ON b.fk=p.id ORDER BY b.parent,b.position");
@@ -464,6 +479,7 @@ CefRefPtr<CefListValue> ReadImportBookmarks(const ImportSource& source,const std
 }
 CefRefPtr<CefListValue> MergeImportBookmarks(CefRefPtr<CefListValue> existing,CefRefPtr<CefListValue> nodes,const std::string& target,CefRefPtr<CefDictionaryValue> report,const std::shared_ptr<ImportControl>& control){
   if(!ValidProfileId(target)||!nodes)throw std::runtime_error("Invalid target or bookmarks");
+  for(auto key:{"bookmarksImported","foldersImported","bookmarksSkipped","foldersSkipped"})report->SetInt(key,0);
   auto merged=existing->Copy();int id=1;size_t target_count=0,seen=0;
   using Key=std::tuple<int,std::string,std::string,std::string>;
   std::map<Key,CefRefPtr<CefDictionaryValue>> index;std::map<int,int> orders;
@@ -477,11 +493,11 @@ CefRefPtr<CefListValue> MergeImportBookmarks(CefRefPtr<CefListValue> existing,Ce
       if(type=="url"&&WebOrigin(url).empty()){Increment(report,"skipped");continue;}
       Key key={parent,type,title,type=="folder"?"":url};CefRefPtr<CefDictionaryValue> match;
       auto found=index.find(key);if(found!=index.end())match=found->second;int order=orders[parent];
-      if(match)Increment(report,"skipped");else{
+      if(match){Increment(report,"skipped");Increment(report,type=="url"?"bookmarksSkipped":"foldersSkipped");}else{
         if(++target_count>20000||id>=2147483647)throw std::runtime_error("Target bookmark capacity reached");
         match=CefDictionaryValue::Create();match->SetInt("id",id++);match->SetString("type",type);match->SetString("title",title);match->SetString("url",url);match->SetInt("parentId",parent);match->SetInt("order",order);match->SetString("profileId",target);match->SetDouble("createdAt",HistoryNow());
         std::string icon=n->GetString("favicon");if(icon.size()<=65536&&(icon.rfind("data:image/png;base64,",0)==0||icon.rfind("data:image/x-icon;base64,",0)==0))match->SetString("favicon",icon);
-        merged->SetDictionary(merged->GetSize(),match->Copy(false));index[key]=match;orders[parent]=order+1;Increment(report,"imported");
+        merged->SetDictionary(merged->GetSize(),match->Copy(false));index[key]=match;orders[parent]=order+1;Increment(report,"imported");Increment(report,type=="url"?"bookmarksImported":"foldersImported");
       }if(type=="folder")walk(n->GetList("children"),match->GetInt("id"),depth+1);
     }
   };walk(nodes,0,0);return merged;
