@@ -1,9 +1,11 @@
 #include "examples/soulu/browser_import.h"
 #include "examples/soulu/history_store.h"
+#include "examples/soulu/import_source_file.h"
 #include "examples/soulu/third_party/sqlite3.h"
 #include <windows.h>
 #include <wincrypt.h>
 #include <fstream>
+#include <algorithm>
 #include <stdexcept>
 
 namespace soulu {
@@ -84,6 +86,48 @@ int RunBrowserImportTests(const std::filesystem::path& output){
     check(ImportBrowserPasswords(source,"import-one",cancelled)->GetString("status")=="cancelled"&&PasswordVault("import-one").List()->GetSize()==1,"direct-password-cancellation-isolation");
     std::ifstream original(chrome/L"Bookmarks",std::ios::binary);std::string after((std::istreambuf_iterator<char>(original)),{});check(after==bookmarks,"source-bookmarks-unchanged");
     check(!std::filesystem::exists(chrome/L"History-shm")&&!std::filesystem::exists(firefox/L"places.sqlite-shm"),"no-source-sqlite-sidecars-created");
+
+    // These layouts are present in real installations but were excluded by the
+    // old Default/Profile N-only scanner and mandatory Firefox profiles.ini.
+    write(fixture/L"Google/Chrome Beta/User Data/Person 2/Preferences","{}");
+    write(fixture/L"Google/Chrome Beta/User Data/Local State",R"({"profile":{"info_cache":{"Person 2":{"name":"Beta user"},"../escape":{"name":"Ignore traversal"}}}})");
+    write(fixture/L"Microsoft/Edge Dev/User Data/Default/Preferences","{}");
+    write(fixture/L"Opera Software/Opera Air Stable/Default/Preferences","{}");
+    write(fixture/L"Opera Software/Opera Stable/Default/Preferences","{}");
+    write(fixture/L"Google/Chrome/User Data/Only Passwords/Login Data","fixture marker");
+    write(fixture/L"Google/Chrome/User Data/System Profile/Preferences","{}");
+    write(fixture/L"Google/Chrome/User Data/Guest Profile/Preferences","{}");
+    write(fixture/L"Mozilla/Firefox/Profiles/unregistered/prefs.js","");
+    write(fixture/L"librewolf/Profiles/isolated/prefs.js","");
+    write(fixture/L"Mozilla/Firefox/Profiles/dev-edition-default/prefs.js","");
+    write(fixture/L"Mozilla/Firefox/profiles.ini","\xef\xbb\xbf[Profile0]\r\n Name = Firefox fixture \r\n IsRelative = 1 \r\n Path = Profiles/fixture \r\n[Profile1]\nName=dev-edition-default\nIsRelative=1\nPath=Profiles/dev-edition-default\n");
+    sources=BrowserImportSources();
+    auto has=[&](const char* id){return std::any_of(sources.begin(),sources.end(),[&](const auto& item){return item.id==id;});};
+    check(has("Chrome Beta:Person 2")&&has("Edge Dev:Default"),"nonstable-channels-and-custom-profile-directory");
+    check(has("Opera:Default")&&has("Opera Air:Default"),"modern-opera-default-and-air-layouts");
+    check(has("Chrome:Only Passwords"),"profile-with-only-a-supported-data-store");
+    check(!has("Chrome:System Profile")&&!has("Chrome:Guest Profile"),"exclude-system-and-guest-profiles");
+    check(has("Firefox:Profile0")&&has("Firefox:folder:unregistered")&&has("Firefox Developer Edition:Profile1")&&has("LibreWolf:folder:isolated"),"mozilla-bom-ini-unregistered-and-fork-discovery");
+    auto folders=BrowserImportFolderSources(chrome.parent_path());check(folders.size()==3,"manual-user-data-root-finds-all-normal-profiles");
+    check(BrowserImportFolderSources(firefox).size()==1,"manual-profile-folder-still-supported");
+
+    // Reproduce an open source browser, not merely an unlocked closed fixture.
+    // Keep its live read/write SQLite connection and uncheckpointed WAL open.
+    sqlite3* live=nullptr;
+    check(sqlite3_open(CefString((chrome/L"History").wstring()).ToString().c_str(),&live)==SQLITE_OK,"live-source-open");
+    struct LiveClose{sqlite3* db;~LiveClose(){sqlite3_close(db);}} liveClose{live};
+    check(sqlite3_exec(live,"PRAGMA journal_mode=WAL; PRAGMA wal_autocheckpoint=0; INSERT INTO visits VALUES(1,13344473600124000)",nullptr,nullptr,nullptr)==SQLITE_OK,"live-source-wal-write");
+    check(BrowserImportCapabilities(source)->GetDictionary("history")->GetString("status")=="available","open-browser-readable-capability");
+    auto liveHistory=ImportBrowserHistory(source,"import-live",control);
+    check(liveHistory->GetString("status")=="ok"&&liveHistory->GetInt("imported")==2,"open-browser-import-includes-uncheckpointed-wal");
+    check(sqlite3_exec(live,"INSERT INTO visits VALUES(1,13344473600125000)",nullptr,nullptr,nullptr)==SQLITE_OK,"source-writer-resumes-after-snapshot");
+    check(!std::filesystem::exists(chrome/L"History-journal"),"import-does-not-create-source-rollback-journal");
+    auto held=OpenImportSourceFile(chrome/L"Bookmarks",true);
+    auto writer=CreateFileW((chrome/L"Bookmarks").c_str(),GENERIC_WRITE,FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,nullptr,OPEN_EXISTING,0,nullptr);
+    check(writer!=INVALID_HANDLE_VALUE,"source-reader-shares-existing-write-handles");DWORD written=0;char byte='{';
+    bool prevented=!WriteFile(writer,&byte,1,&written,nullptr);CloseHandle(writer);CloseHandle(held);
+    check(prevented,"shared-snapshot-lock-prevents-concurrent-source-writes");
+
     std::ofstream out(output);out<<"{\"ok\":true,\"checks\":"<<checks<<"}";return out?0:2;
   }catch(const std::exception& e){std::ofstream out(output);out<<"{\"ok\":false,\"checks\":"<<checks<<",\"failedCheck\":\""<<e.what()<<"\"}";return 2;}
 }

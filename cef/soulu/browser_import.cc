@@ -1,5 +1,7 @@
 #include "examples/soulu/browser_import.h"
 #include "examples/soulu/history_store.h"
+#include "examples/soulu/import_source_file.h"
+#include <shlobj.h>
 #include "examples/soulu/third_party/sqlite3.h"
 #include "include/cef_parser.h"
 #include <windows.h>
@@ -11,6 +13,7 @@
 #include <functional>
 #include <map>
 #include <set>
+#include <sstream>
 #include <stdexcept>
 #include <tuple>
 
@@ -22,27 +25,51 @@ const BrowserSpec specs[]={
   {"Edge","msedge.exe","chromium",L"Microsoft/Edge/User Data",L"Microsoft/Edge/Application/msedge.exe",false,false},
   {"Brave","brave.exe","chromium",L"BraveSoftware/Brave-Browser/User Data",L"BraveSoftware/Brave-Browser/Application/brave.exe",false,false},
   {"Opera","opera.exe","chromium",L"Opera Software/Opera Stable",L"Programs/Opera/opera.exe",true,true},
+  {"Opera Air","opera.exe","chromium",L"Opera Software/Opera Air Stable",L"Programs/Opera Air/opera.exe",true,true},
   {"Opera GX","opera.exe","chromium",L"Opera Software/Opera GX Stable",L"Programs/Opera GX/opera.exe",true,true},
   {"Vivaldi","vivaldi.exe","chromium",L"Vivaldi/User Data",L"Vivaldi/Application/vivaldi.exe",false,false},
   {"Yandex","browser.exe","chromium",L"Yandex/YandexBrowser/User Data",L"Yandex/YandexBrowser/Application/browser.exe",false,false},
   {"Chromium","chrome.exe","chromium",L"Chromium/User Data",L"Chromium/Application/chrome.exe",false,false},
-  {"Firefox","firefox.exe","firefox",L"Mozilla/Firefox",L"Mozilla Firefox/firefox.exe",true,false}
+  {"Chrome Beta","chrome.exe","chromium",L"Google/Chrome Beta/User Data",L"Google/Chrome Beta/Application/chrome.exe",false,false},
+  {"Chrome Dev","chrome.exe","chromium",L"Google/Chrome Dev/User Data",L"Google/Chrome Dev/Application/chrome.exe",false,false},
+  {"Chrome Canary","chrome.exe","chromium",L"Google/Chrome SxS/User Data",L"Google/Chrome SxS/Application/chrome.exe",false,false},
+  {"Edge Beta","msedge.exe","chromium",L"Microsoft/Edge Beta/User Data",L"Microsoft/Edge Beta/Application/msedge.exe",false,false},
+  {"Edge Dev","msedge.exe","chromium",L"Microsoft/Edge Dev/User Data",L"Microsoft/Edge Dev/Application/msedge.exe",false,false},
+  {"Edge Canary","msedge.exe","chromium",L"Microsoft/Edge SxS/User Data",L"Microsoft/Edge SxS/Application/msedge.exe",false,false},
+  {"Brave Beta","brave.exe","chromium",L"BraveSoftware/Brave-Browser-Beta/User Data",L"BraveSoftware/Brave-Browser-Beta/Application/brave.exe",false,false},
+  {"Brave Nightly","brave.exe","chromium",L"BraveSoftware/Brave-Browser-Nightly/User Data",L"BraveSoftware/Brave-Browser-Nightly/Application/brave.exe",false,false},
+  {"Opera Beta","opera.exe","chromium",L"Opera Software/Opera Next",L"Programs/Opera beta/opera.exe",true,true},
+  {"Opera Developer","opera.exe","chromium",L"Opera Software/Opera Developer",L"Programs/Opera developer/opera.exe",true,true},
+  {"Vivaldi Snapshot","vivaldi.exe","chromium",L"Vivaldi Snapshot/User Data",L"Vivaldi Snapshot/Application/vivaldi.exe",false,false},
+  {"Yandex Beta","browser.exe","chromium",L"Yandex/YandexBrowser Beta/User Data",L"Yandex/YandexBrowser Beta/Application/browser.exe",false,false},
+  {"Firefox","firefox.exe","firefox",L"Mozilla/Firefox",L"Mozilla Firefox/firefox.exe",true,false},
+  {"Firefox Developer Edition","firefox.exe","firefox",L"Mozilla/Firefox",L"Firefox Developer Edition/firefox.exe",true,false},
+  {"Waterfox","waterfox.exe","firefox",L"Waterfox",L"Waterfox/waterfox.exe",true,false},
+  {"LibreWolf","librewolf.exe","firefox",L"librewolf",L"LibreWolf/librewolf.exe",true,false},
+  {"Floorp","floorp.exe","firefox",L"Floorp",L"Floorp/floorp.exe",true,false},
+  {"Zen","zen.exe","firefox",L"zen",L"Zen Browser/zen.exe",true,false}
 };
-std::filesystem::path Env(const wchar_t* key){wchar_t b[32768]={};auto n=GetEnvironmentVariableW(key,b,32768);return n&&n<32768?std::filesystem::path(b):std::filesystem::path();}
+std::filesystem::path Env(const wchar_t* key){
+  wchar_t b[32768]={};auto n=GetEnvironmentVariableW(key,b,32768);
+  if(n&&n<32768)return std::filesystem::path(b);
+  const KNOWNFOLDERID* known=!wcscmp(key,L"LOCALAPPDATA")?&FOLDERID_LocalAppData:!wcscmp(key,L"APPDATA")?&FOLDERID_RoamingAppData:nullptr;
+  PWSTR path=nullptr;if(known&&SUCCEEDED(SHGetKnownFolderPath(*known,KF_FLAG_DONT_VERIFY,nullptr,&path))){std::filesystem::path result(path);CoTaskMemFree(path);return result;}
+  return {};
+}
 bool File(const std::filesystem::path& p){std::error_code e;return LocalImportPath(p)&&std::filesystem::is_regular_file(p,e);}
 bool Directory(const std::filesystem::path& p){std::error_code e;return LocalImportPath(p)&&std::filesystem::is_directory(p,e);}
 bool Profile(const std::filesystem::path& p,const std::string& family){
   // Presence only: no credential, bookmark or history content during discovery.
   if(!Directory(p))return false;
-  return family=="firefox"?(File(p/L"prefs.js")||File(p/L"places.sqlite")):
-    (File(p/L"Preferences")||File(p/L"Bookmarks")||File(p/L"History"));
+  return family=="firefox"?(File(p/L"prefs.js")||File(p/L"places.sqlite")||File(p/L"logins.json")):
+    (File(p/L"Preferences")||File(p/L"Bookmarks")||File(p/L"History")||File(p/L"Login Data")||File(p/L"Web Data"));
 }
 bool Installed(const BrowserSpec& s){
   for(auto env:{L"LOCALAPPDATA",L"ProgramW6432",L"PROGRAMFILES",L"PROGRAMFILES(X86)"}){
     auto root=Env(env);if(!root.empty()&&File(root/s.application))return true;
   }
   // Shared executable names (Opera/Chromium) cannot identify an installation.
-  if(std::string(s.id)=="Chromium"||std::string(s.id)=="Opera"||std::string(s.id)=="Opera GX")return false;
+  if(std::string(s.id).find(" ")!=std::string::npos||std::string(s.id)=="Chromium"||std::string(s.id)=="Opera"||std::string(s.id)=="Opera GX")return false;
   auto key=L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\"+CefString(s.exe).ToWString();
   for(auto hive:{HKEY_CURRENT_USER,HKEY_LOCAL_MACHINE}){wchar_t b[32768]={};DWORD bytes=sizeof(b);
     if(RegGetValueW(hive,key.c_str(),nullptr,RRF_RT_REG_SZ,nullptr,b,&bytes)==ERROR_SUCCESS&&File(b)){
@@ -54,6 +81,23 @@ bool Installed(const BrowserSpec& s){
   }return false;
 }
 std::filesystem::path Root(const BrowserSpec& s){auto base=Env(s.roaming?L"APPDATA":L"LOCALAPPDATA");return base.empty()?base:base/s.directory;}
+std::vector<std::filesystem::path> ImportRoots(const BrowserSpec& s){
+  std::vector<std::filesystem::path> roots;auto standard=Root(s);if(!standard.empty())roots.push_back(standard);
+  // Enterprise UserDataDir policies can legitimately move every profile away
+  // from AppData. Never consult real policies in the isolated native fixture.
+  if(!Env(L"SOULU_DATA_SECURITY_TEST_ROOT").empty())return roots;
+  std::wstring policy=std::string(s.id)=="Chrome"?L"Software\\Policies\\Google\\Chrome":std::string(s.id)=="Edge"?L"Software\\Policies\\Microsoft\\Edge":L"";
+  if(policy.empty())return roots;
+  for(auto hive:{HKEY_CURRENT_USER,HKEY_LOCAL_MACHINE})for(auto view:{RRF_SUBKEY_WOW6464KEY,RRF_SUBKEY_WOW6432KEY}){
+    wchar_t buffer[32768]={};DWORD bytes=sizeof(buffer);
+    if(RegGetValueW(hive,policy.c_str(),L"UserDataDir",RRF_RT_REG_SZ|RRF_RT_REG_EXPAND_SZ|view,nullptr,buffer,&bytes)!=ERROR_SUCCESS)continue;
+    std::wstring value(buffer);
+    for(const auto& variable:std::vector<std::pair<std::wstring,std::wstring>>{{L"${local_app_data}",Env(L"LOCALAPPDATA").wstring()},{L"${roaming_app_data}",Env(L"APPDATA").wstring()},{L"${profile}",Env(L"USERPROFILE").wstring()},{L"${user_name}",Env(L"USERNAME").wstring()}}){
+      size_t at;while((at=value.find(variable.first))!=std::wstring::npos)value.replace(at,variable.first.size(),variable.second);}
+    std::filesystem::path path(value);if(Directory(path)&&path!=standard&&std::find(roots.begin(),roots.end(),path)==roots.end())roots.push_back(path);
+  }
+  return roots;
+}
 std::string ReadText(const std::filesystem::path& p,size_t limit){
   if(!File(p))throw std::runtime_error("Source is missing or inaccessible");
   std::ifstream f(p,std::ios::binary|std::ios::ate);auto size=f.tellg();
@@ -73,19 +117,14 @@ class DatabaseSnapshot {
     root_=temp/std::filesystem::u8path("soulu-import-"+RandomId());
     try{
       std::filesystem::create_directory(root_);
-      for(auto suffix:{L"",L"-wal"}){
+      for(auto suffix:{L"",L"-wal",L"-journal"}){
         auto path=std::filesystem::path(source.wstring()+suffix);
         std::error_code error;bool exists=std::filesystem::exists(path,error);
         if(error)throw std::runtime_error("Source is inaccessible");
         if(!exists){if(!*suffix)throw std::runtime_error("Source database missing");continue;}
         if(!File(path))throw std::runtime_error("Unsupported source path");
-        auto h=CreateFileW(path.c_str(),GENERIC_READ,FILE_SHARE_READ,nullptr,OPEN_EXISTING,FILE_FLAG_OPEN_REPARSE_POINT,nullptr);
-        if(h==INVALID_HANDLE_VALUE)throw std::runtime_error("Close the source browser and retry: database is locked or inaccessible");
+        auto h=OpenImportSourceFile(path,true);
         handles_.push_back(h);names_.push_back(path.filename());
-        wchar_t final[32768]={};auto n=GetFinalPathNameByHandleW(h,final,32768,FILE_NAME_NORMALIZED|VOLUME_NAME_DOS);
-        std::wstring resolved(final);if(!n||n>=32768||resolved.rfind(L"\\\\?\\UNC\\",0)==0)throw std::runtime_error("Unsupported source path");
-        if(resolved.rfind(L"\\\\?\\",0)==0)resolved.erase(0,4);
-        if(!LocalImportPath(resolved))throw std::runtime_error("Unsupported source path");
       }
       for(size_t i=0;i<handles_.size();++i){LARGE_INTEGER size={};
         if(!GetFileSizeEx(handles_[i],&size)||size.QuadPart>256LL*1024*1024)throw std::runtime_error("Database exceeds 256 MB");
@@ -93,6 +132,13 @@ class DatabaseSnapshot {
         while(true){if(!ReadFile(handles_[i],b,sizeof(b),&n,nullptr))throw std::runtime_error("Source read failed");if(!n)break;out.write(b,n);}
         out.flush();if(!out||out.tellp()!=size.QuadPart)throw std::runtime_error("Snapshot write failed");
       }
+      // A previously absent WAL/journal may appear while acquiring the set.
+      for(auto suffix:{L"-wal",L"-journal"}){auto path=std::filesystem::path(source.wstring()+suffix);
+        if(File(path)&&std::find(names_.begin(),names_.end(),path.filename())==names_.end())
+          throw std::runtime_error("Close the source browser and retry: database changed during snapshot");}
+      // Release source locks immediately after the consistent copy, before
+      // parsing or writing potentially large amounts of destination history.
+      for(auto h:handles_)CloseHandle(h);handles_.clear();
       auto filename=CefString((root_/source.filename()).wstring()).ToString();
       // Only the private snapshot may create WAL/SHM or recover an existing WAL.
       if(sqlite3_open_v2(filename.c_str(),&db_,SQLITE_OPEN_READWRITE,nullptr)!=SQLITE_OK)throw std::runtime_error("Corrupt or unsupported source database");
@@ -124,31 +170,61 @@ CefRefPtr<CefDictionaryValue> Node(const std::string& type,const std::string& ti
 }
 }
 
+namespace {
+std::string TrimImport(std::string v){auto a=v.find_first_not_of(" \t\r\n"),b=v.find_last_not_of(" \t\r\n");return a==std::string::npos?"":v.substr(a,b-a+1);}
+std::string ImportPathKey(const std::filesystem::path& path){auto value=path.lexically_normal().wstring();std::transform(value.begin(),value.end(),value.begin(),[](wchar_t c){return c==L'/'?L'\\':std::towlower(c);});return CefString(value).ToString();}
+}
 std::vector<ImportSource> BrowserImportSources(){
-  std::vector<ImportSource> out;
-  for(const auto& s:specs){auto root=Root(s);if(root.empty()||!Directory(root))continue;
+  std::vector<ImportSource> out;std::set<std::string> paths;
+  auto append=[&](const BrowserSpec& s,const std::filesystem::path& p,const std::string& id,const std::string& name){
+    if(!Profile(p,s.family)||!paths.insert(ImportPathKey(p)).second)return;
+    std::string identity=std::string(s.id)+":"+id;
+    if(std::string(s.family)=="chromium"&&p.parent_path()!=Root(s)&&!s.single){uint64_t hash=14695981039346656037ULL;for(unsigned char c:ImportPathKey(p)){hash^=c;hash*=1099511628211ULL;}identity+="@"+std::to_string(hash);}
+    out.push_back({identity,s.id,name.empty()?id:name,s.family,p});
+  };
+  for(const auto& s:specs)for(const auto& root:ImportRoots(s)){if(root.empty()||!Directory(root))continue;
+    // Firefox Developer Edition shares profiles.ini with Firefox. Attribute its
+    // explicitly named profiles to that channel; never show duplicate folders.
+    if(std::string(s.id)=="Firefox Developer Edition")continue;
     if(std::string(s.family)=="firefox"){
-      if(!File(root/L"profiles.ini"))continue;
-      std::ifstream f(root/L"profiles.ini");std::string line,section;std::map<std::string,std::string> values;
-      auto append=[&](){if(section.rfind("Profile",0)!=0||!values.count("Path"))return;
-        auto path=std::filesystem::u8path(values["Path"]);if(values["IsRelative"]!="0")path=root/path;
-        if(Profile(path,"firefox"))out.push_back({std::string(s.id)+":"+section,s.id,values.count("Name")?values["Name"]:section,"firefox",path});};
-      while(std::getline(f,line)){if(!line.empty()&&line.back()=='\r')line.pop_back();if(line.size()>1&&line.front()=='['&&line.back()==']'){append();values.clear();section=line.substr(1,line.size()-2);}else{auto eq=line.find('=');if(eq!=std::string::npos)values[line.substr(0,eq)]=line.substr(eq+1);}}append();continue;
+      std::string section;std::map<std::string,std::string> values;
+      auto registered=[&](){if(section.rfind("Profile",0)!=0||!values.count("Path"))return;
+        auto raw=TrimImport(values["Path"]);if(raw.empty())return;
+        auto path=std::filesystem::u8path(raw);if(values["IsRelative"]!="0"&&!path.is_absolute())path=root/path;
+        std::string name=values.count("Name")?values["Name"]:section;
+        auto spec=s;if(std::string(s.id)=="Firefox"&&(name.find("dev-edition")!=std::string::npos||raw.find("dev-edition")!=std::string::npos))
+          for(const auto& candidate:specs)if(std::string(candidate.id)=="Firefox Developer Edition")spec=candidate;
+        append(spec,path,section,name);
+      };
+      if(File(root/L"profiles.ini")){try{auto text=ReadText(root/L"profiles.ini",1024*1024);std::istringstream f(text);std::string line;
+        while(std::getline(f,line)){line=TrimImport(line);if(line.empty()||line[0]==';'||line[0]=='#')continue;
+          if(line.size()>1&&line.front()=='['&&line.back()==']'){registered();values.clear();section=line.substr(1,line.size()-2);}
+          else{auto eq=line.find('=');if(eq!=std::string::npos)values[TrimImport(line.substr(0,eq))]=TrimImport(line.substr(eq+1));}}
+        registered();}catch(...) {}}
+      // Missing/stale INI metadata must not hide ordinary on-disk profiles.
+      auto directory=root/L"Profiles";std::error_code error;size_t count=0;
+      if(Directory(directory))for(std::filesystem::directory_iterator it(directory,error),end;!error&&it!=end&&count++<4096;it.increment(error)){
+        auto name=CefString(it->path().filename().wstring()).ToString();append(s,it->path(),"folder:"+name,name);}
+      continue;
     }
-    if(s.single&&Profile(root,"chromium"))out.push_back({std::string(s.id)+":Root",s.id,"Default","chromium",root});
-    // Local State profile names are discovery metadata, not imported data.
+    if(s.single)append(s,root,"Root","Default");
     CefRefPtr<CefDictionaryValue> cache;
-    if(File(root/L"Local State")){try{auto state=CefParseJSON(ReadText(root/L"Local State",8*1024*1024),JSON_PARSER_RFC);
+    if(File(root/L"Local State")){try{auto state=CefParseJSON(ReadText(root/L"Local State",32*1024*1024),JSON_PARSER_RFC);
       if(state&&state->GetType()==VTYPE_DICTIONARY){auto p=state->GetDictionary()->GetDictionary("profile");if(p){auto names=p->GetDictionary("info_cache");if(names)cache=names->Copy(false);}}}catch(...) {}}
-    std::error_code e;size_t count=0;
-    for(std::filesystem::directory_iterator it(root,e),end;!e&&it!=end&&count++<512;it.increment(e)){
-      auto filename=CefString(it->path().filename().wstring()).ToString();
-      if(filename!="Default"&&filename.rfind("Profile ",0)!=0)continue;
-      if(!Profile(it->path(),"chromium"))continue;std::string name=filename;
-      if(cache){auto p=cache->GetDictionary(filename);if(p&&!p->GetString("name").empty())name=p->GetString("name");}
-      out.push_back({std::string(s.id)+":"+filename,s.id,name,"chromium",it->path()});
+    // Local State is authoritative metadata, including custom profile names.
+    if(cache){CefDictionaryValue::KeyList keys;cache->GetKeys(keys);for(const auto& key:keys){std::string folder=key;
+      auto relative=std::filesystem::u8path(folder);if(relative.is_absolute()||relative.has_parent_path()||folder=="."||folder==".."||folder=="System Profile"||folder=="Guest Profile")continue;
+      auto p=cache->GetDictionary(key);append(s,root/relative,folder,p?p->GetString("name").ToString():folder);}}
+    // Current Opera and Chromium forks need not use Default/Profile N names.
+    std::error_code error;size_t count=0;
+    for(std::filesystem::directory_iterator it(root,error),end;!error&&it!=end&&count++<4096;it.increment(error)){
+      auto folder=CefString(it->path().filename().wstring()).ToString();if(folder=="System Profile"||folder=="Guest Profile")continue;
+      std::string name=folder;if(cache){auto p=cache->GetDictionary(folder);if(p&&!p->GetString("name").empty())name=p->GetString("name");}
+      append(s,it->path(),folder,name);
     }
-  }return out;
+  }
+  std::sort(out.begin(),out.end(),[](const auto& a,const auto& b){return std::tie(a.browser,a.name,a.id)<std::tie(b.browser,b.name,b.id);});
+  return out;
 }
 std::string ReadImportFile(const std::filesystem::path& path){return ReadText(path,20*1024*1024);}
 CefRefPtr<CefListValue> BrowserImportCatalog(){auto sources=BrowserImportSources();auto rows=CefListValue::Create();
@@ -158,16 +234,28 @@ CefRefPtr<CefListValue> BrowserImportCatalog(){auto sources=BrowserImportSources
   }return rows;
 }
 ImportSource PortableImportSource(const std::filesystem::path& root){
-  std::string family=File(root/L"places.sqlite")?"firefox":File(root/L"Bookmarks")||File(root/L"Preferences")||File(root/L"History")?"chromium":"";
+  std::string family=Profile(root,"firefox")?"firefox":Profile(root,"chromium")?"chromium":"";
   if(family.empty()||!Profile(root,family))throw std::runtime_error("Select a Chromium or Firefox profile directory");
   return {"portable:"+RandomId(),"Portable",CefString(root.filename().wstring()).ToString(),family,root};
+}
+
+std::vector<ImportSource> BrowserImportFolderSources(const std::filesystem::path& root){
+  std::vector<ImportSource> out;std::set<std::string> paths;
+  auto add=[&](const std::filesystem::path& path){if(!Profile(path,"chromium")&&!Profile(path,"firefox"))return;
+    if(paths.insert(ImportPathKey(path)).second)out.push_back(PortableImportSource(path));};
+  add(root);if(!out.empty())return out;
+  // Accept the enclosing User Data/Firefox/Profiles folder too. The native
+  // picker authorizes this root; renderer code never supplies filesystem paths.
+  for(const auto& directory:{root,root/L"Profiles",root/L"User Data"}){if(!Directory(directory))continue;
+    std::error_code error;size_t count=0;for(std::filesystem::directory_iterator it(directory,error),end;!error&&it!=end&&count++<4096;it.increment(error)){
+      auto name=it->path().filename().wstring();if(name==L"System Profile"||name==L"Guest Profile")continue;add(it->path());}}
+  if(out.empty())throw std::runtime_error("No Chromium or Firefox profiles in the selected folder");return out;
 }
 
 namespace {
 std::string ReadBinary(const std::filesystem::path& path) {
   if(!File(path))throw std::runtime_error("Session data not found");
-  HANDLE h=CreateFileW(path.c_str(),GENERIC_READ,FILE_SHARE_READ,nullptr,OPEN_EXISTING,FILE_FLAG_OPEN_REPARSE_POINT,nullptr);
-  if(h==INVALID_HANDLE_VALUE)throw std::runtime_error("Close the source browser and retry: session file is locked");
+  HANDLE h=OpenImportSourceFile(path,true);
   struct Close{HANDLE h;~Close(){CloseHandle(h);}} close{h};
   wchar_t final[32768]={};auto n=GetFinalPathNameByHandleW(h,final,32768,FILE_NAME_NORMALIZED|VOLUME_NAME_DOS);std::wstring resolved(final);
   if(!n||n>=32768||resolved.rfind(L"\\\\?\\UNC\\",0)==0)throw std::runtime_error("Unsupported session path");
@@ -282,8 +370,7 @@ CefRefPtr<CefDictionaryValue> ImportBrowserAutofill(const ImportSource& source,c
 namespace {
 std::string ImportHeader(const std::filesystem::path& path,size_t count){
   if(!File(path))throw std::runtime_error("Source data not found");
-  HANDLE h=CreateFileW(path.c_str(),GENERIC_READ,FILE_SHARE_READ,nullptr,OPEN_EXISTING,FILE_FLAG_OPEN_REPARSE_POINT,nullptr);
-  if(h==INVALID_HANDLE_VALUE)throw std::runtime_error("Close the source browser and retry: source file is locked or inaccessible");
+  HANDLE h=OpenImportSourceFile(path,false);
   struct Close{HANDLE h;~Close(){CloseHandle(h);}} close{h};
   wchar_t final[32768]={};auto n=GetFinalPathNameByHandleW(h,final,32768,FILE_NAME_NORMALIZED|VOLUME_NAME_DOS);std::wstring resolved(final);
   if(!n||n>=32768||resolved.rfind(L"\\\\?\\UNC\\",0)==0)throw std::runtime_error("Unsupported source path");

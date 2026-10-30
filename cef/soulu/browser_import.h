@@ -14,6 +14,7 @@ struct ImportControl {
 };
 std::vector<ImportSource> BrowserImportSources();
 CefRefPtr<CefListValue> BrowserImportCatalog();
+std::vector<ImportSource> BrowserImportFolderSources(const std::filesystem::path&);
 ImportSource PortableImportSource(const std::filesystem::path&);
 std::string ReadImportFile(const std::filesystem::path&);
 CefRefPtr<CefDictionaryValue> BrowserImportCapabilities(const ImportSource&);

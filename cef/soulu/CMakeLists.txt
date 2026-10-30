@@ -45,6 +45,7 @@ set(SOULU_SRCS
   adblock_bridge.h
   adblock_bridge.cc
   password_import.cc
+  import_source_file.h
   browser_import.h
   browser_import.cc
   browser_import_tests.cc

@@ -2341,8 +2341,9 @@ void BrowserWindow::HandleBridge(const std::string& request,
     if(!LocalImportPath(path)){callback->Failure(400,"Choose a local file or profile without symbolic links");return;}
     CefRefPtr<BrowserWindow> self=this;
     CefPostTask(TID_FILE_BACKGROUND,new FunctionTask([self,callback,path,folder,requested_kind](){
-      try{auto result=CefDictionaryValue::Create();std::string id="file:"+RandomId();ImportSource portable;
-        if(folder){portable=PortableImportSource(path);id=portable.id;result->SetString("name",portable.name);result->SetString("family",portable.family);}
+      try{auto result=CefDictionaryValue::Create();std::string id="file:"+RandomId();std::vector<ImportSource> portable;
+        if(folder){portable=BrowserImportFolderSources(path);id=portable.front().id;result->SetString("name",portable.front().name);result->SetString("family",portable.front().family);
+          auto list=CefListValue::Create();for(const auto& source:portable){auto row=CefDictionaryValue::Create();row->SetString("id",source.id);row->SetString("name",source.name);row->SetString("family",source.family);list->SetDictionary(list->GetSize(),row);}result->SetList("profiles",list);}
         else{auto ext=path.extension().wstring();std::transform(ext.begin(),ext.end(),ext.begin(),[](wchar_t c){return std::towlower(c);});
           if(ext!=L".csv"&&ext!=L".html"&&ext!=L".htm")throw std::runtime_error("Choose an HTML bookmarks export or UTF-8 password CSV");
           if(((requested_kind=="bookmarks"||requested_kind=="tabs")&&ext==L".csv")||(requested_kind=="passwords"&&ext!=L".csv"))throw std::runtime_error("File does not match the selected import category");
@@ -2350,7 +2351,7 @@ void BrowserWindow::HandleBridge(const std::string& request,
           // CSV plaintext never crosses the renderer bridge or becomes a preview.
           if(ext!=L".csv")result->SetString("text",ReadImportFile(path));
         }result->SetString("id",id);
-        CefPostTask(TID_UI,new FunctionTask([self,callback,path,folder,portable,id,result](){if(folder)self->import_portable_[id]=portable;else self->import_files_[id]=path;self->Reply(callback,result);}));
+        CefPostTask(TID_UI,new FunctionTask([self,callback,path,folder,portable,id,result](){if(folder){for(const auto& source:portable)self->import_portable_[source.id]=source;}else self->import_files_[id]=path;self->Reply(callback,result);}));
       }catch(const std::exception& e){std::string message=e.what();CefPostTask(TID_UI,new FunctionTask([callback,message](){callback->Failure(400,message);}));}
     }));return;
   }

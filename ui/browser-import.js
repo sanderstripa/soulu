@@ -85,7 +85,7 @@
     function shortReason(key,status) {
       if(status==='not_found')return label('В профиле не найдено','Not found in this profile');
       if(status==='blocked'&&key==='tabs'&&caps?.[key]?.reason?.includes('Encrypted'))return label('Защищённая сессия — выберите HTML-файл с вкладками','Protected session — choose Open tabs HTML');
-      if(status==='blocked')return caps?.[key]?.reason?.startsWith('Close')?label('Закройте браузер и выберите профиль заново','Close the browser and select the profile again'):label('Источник недоступен','Source unavailable');
+      if(status==='blocked')return caps?.[key]?.reason?.startsWith('Close')?label('Закройте исходный браузер и обновите список','Close the source browser and refresh the list'):label('Нет доступа к файлу профиля','Cannot access the profile file');
       if(key==='passwords')return label('Через CSV-экспорт из браузера','Use a browser CSV export');
       if(key==='autofill')return label('Сохранённые значения форм не найдены','Saved form values not found');
       if(key==='tabs')return label('Формат сессии недоступен — используйте HTML-экспорт','Session unavailable — use an HTML export');
@@ -123,7 +123,7 @@
         const selected=await call(portable?'portable':'file',portable?undefined:{kind});
         if(closed||token!==serial)return;
         pending=false;if(!selected?.id){lock();if(source&&!caps)await inspect(source);return;}
-        if(portable){const chosen={...selected,text:label('Папка профиля · ','Profile folder · ')+selected.name};extraSources.push(chosen);sourceChoices();return inspect(chosen);}
+        if(portable){const profiles=(selected.profiles?.length?selected.profiles:[selected]).map(p=>({...p,text:label('Папка профиля · ','Profile folder · ')+p.name}));extraSources.push(...profiles);sourceChoices();return inspect(profiles[0]);}
         if(selected.kind!==kind)throw Error(label('Формат файла не соответствует выбранному источнику.','The file does not match the selected source format.'));
         const chosen={id:selected.id,kind,name:selected.name,text:label(kind!=='passwords'?'HTML · ':'CSV · ',kind!=='passwords'?'HTML · ':'CSV · ')+selected.name};
         if(kind!=='passwords')chosen.nodes=parseHtml(selected.text);

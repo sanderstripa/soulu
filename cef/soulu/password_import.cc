@@ -1,4 +1,5 @@
 #include "examples/soulu/browser_import.h"
+#include "examples/soulu/import_source_file.h"
 #include <windows.h>
 #include <wincrypt.h>
 #include <bcrypt.h>
@@ -107,17 +108,8 @@ class Snapshot {
       auto attributes=GetFileAttributesW(path.c_str());
       if(attributes!=INVALID_FILE_ATTRIBUTES&&(attributes&FILE_ATTRIBUTE_REPARSE_POINT))return false;
       if(!std::filesystem::exists(path,e))continue;
-      auto h=CreateFileW(path.c_str(),GENERIC_READ,FILE_SHARE_READ,nullptr,OPEN_EXISTING,
-                         FILE_ATTRIBUTE_NORMAL|FILE_FLAG_OPEN_REPARSE_POINT,nullptr);
-      if(h==INVALID_HANDLE_VALUE)return false;
+      HANDLE h;try{h=OpenImportSourceFile(path,true);}catch(...){return false;}
       handles_.push_back(h);
-      wchar_t final_path[32768]={};
-      auto length=GetFinalPathNameByHandleW(h,final_path,32768,FILE_NAME_NORMALIZED|VOLUME_NAME_DOS);
-      if(!length||length>=32768)return false;
-      std::wstring resolved(final_path);
-      if(resolved.rfind(L"\\\\?\\UNC\\",0)==0)return false;
-      if(resolved.rfind(L"\\\\?\\",0)==0)resolved.erase(0,4);
-      if(!LocalImportPath(std::filesystem::path(resolved)))return false;
       opened.push_back({name,h});
     }
     for(const auto& item:opened){
@@ -126,7 +118,10 @@ class Snapshot {
       while(ReadFile(item.second,buffer,sizeof(buffer),&count,nullptr)&&count){file.write(buffer,count);if(!file)return false;}
       if(!file||file.tellp()!=size.QuadPart)return false;
     }
-    // Keep handles until import completes so browser writes cannot invalidate it.
+    for(const auto& name:files){auto path=source/name;
+      if(std::filesystem::exists(path)&&std::none_of(opened.begin(),opened.end(),[&](const auto& item){return item.first==name;}))return false;}
+    // Parsing uses only the copy; release source locks before decrypting/storing.
+    for(auto handle:handles_)CloseHandle(handle);handles_.clear();
     return true;
   }
   const std::filesystem::path& root() const{return root_;}
@@ -273,7 +268,7 @@ CefRefPtr<CefDictionaryValue> ImportBrowserPasswords(const ImportSource& input,c
       Wipe(secret);
     };
     if(source->browser=="Firefox") {
-      if(!snapshot.Copy(source->root,{L"logins.json",L"key4.db",L"key4.db-wal",L"cert9.db",L"cert9.db-wal",L"pkcs11.txt"})){
+      if(!snapshot.Copy(source->root,{L"logins.json",L"key4.db",L"key4.db-wal",L"key4.db-journal",L"cert9.db",L"cert9.db-wal",L"cert9.db-journal",L"pkcs11.txt"})){
         report->SetString("message","Close Firefox and retry: source files are locked");return finish();}
       auto json=ReadJson(snapshot.root()/L"logins.json");auto logs=json&&json->GetType()==VTYPE_DICTIONARY?json->GetDictionary()->GetList("logins"):nullptr;
       if(!logs){report->SetString("message","Invalid Firefox login store");return finish();}
@@ -287,7 +282,7 @@ CefRefPtr<CefDictionaryValue> ImportBrowserPasswords(const ImportSource& input,c
         else{++protected_count;Wipe(secret);}Wipe(user);
       }
     } else {
-      if(!snapshot.Copy(source->root,{L"Login Data",L"Login Data-wal"}) ||
+      if(!snapshot.Copy(source->root,{L"Login Data",L"Login Data-wal",L"Login Data-journal"}) ||
          !snapshot.Copy(source->state.parent_path(),{L"Local State"})){
         report->SetString("message","Close the source browser and retry: password store is locked");return finish();}
       std::string key;auto state=ReadJson(snapshot.root()/L"Local State");
