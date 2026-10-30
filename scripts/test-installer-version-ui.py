@@ -15,7 +15,7 @@ with tempfile.TemporaryDirectory(prefix='soulu-installer-version-') as temporary
   end=time.monotonic()+60
   while time.monotonic()<end:
    try:
-    with urllib.request.urlopen(f'http://127.0.0.1:{port}/json',timeout=2) as response:targets=json.load(response)
+    with urllib.request.build_opener(urllib.request.ProxyHandler({})).open(f'http://127.0.0.1:{port}/json/list',timeout=2) as response:targets=json.load(response)
     last_targets=[{k:t.get(k) for k in ('type','title','url')} for t in targets]
     for target in targets:
      if target.get('type')!='page' or not target.get('webSocketDebuggerUrl'):continue
@@ -26,7 +26,11 @@ with tempfile.TemporaryDirectory(prefix='soulu-installer-version-') as temporary
     if ws:break
    except Exception as error:last_error=repr(error)
    time.sleep(.2)
-  if ws is None:print('INSTALLER_DIAGNOSTICS',json.dumps({'exit':process.poll(),'targets':last_targets,'error':last_error}),flush=True)
+  if ws is None:from PIL import ImageGrab
+   ImageGrab.grab().save(output.with_suffix('.failure.png'))
+   diagnostic=subprocess.run(['powershell','-NoProfile','-Command',"Get-CimInstance Win32_Process | Where-Object { $_.Name -match 'WebView|Soulu|Setup' } | Select-Object ProcessId,ParentProcessId,Name,CommandLine | ConvertTo-Json -Depth 3"],capture_output=True,text=True)
+   print('INSTALLER_PROCESSES',diagnostic.stdout,flush=True)
+   print('INSTALLER_DIAGNOSTICS',json.dumps({'exit':process.poll(),'targets':last_targets,'error':last_error}),flush=True)
   assert ws is not None,'Actual installer WebView footer not found'
   footer=s.evaluate(ws,"document.getElementById('version').textContent")
   assert expected in footer,{'expected':expected,'actualFooter':footer}

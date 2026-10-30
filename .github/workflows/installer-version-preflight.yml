@@ -38,3 +38,8 @@ jobs:
           if($code -eq 0 -or $text -notmatch 'actualFooter' -or $text -notmatch '1\.0\.67-beta'){throw 'Checker did not observe and reject the actual stale footer'}
           Write-Host 'PASS: actual packaged old installer was rejected specifically for displaying version67 instead of canonical71'
           $global:LASTEXITCODE=0
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: installer-window-diagnostics
+          path: artifacts/
