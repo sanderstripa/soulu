@@ -45,6 +45,10 @@ def main():
         command=lambda id,p:struct.pack('<HB',len(p)+1,id)+p
         session=b'SNSS'+struct.pack('<i',3)+command(0,struct.pack('<ii',1,10))+command(9,struct.pack('<ii',1,0))+command(6,struct.pack('<i',len(nav))+nav)+command(7,struct.pack('<ii',10,0))+command(255,b'')
         (source/'Sessions').mkdir();(source/'Sessions/Session_1').write_bytes(session);before=digest(source)
+        beta=local/'Google/Chrome Beta/User Data/Person 2';beta.mkdir(parents=True)
+        (beta/'Preferences').write_text('{}');(beta.parent/'Local State').write_text(json.dumps({'profile':{'info_cache':{'Person 2':{'name':'Beta custom fixture'}}}}))
+        (beta/'Bookmarks').write_text(json.dumps({'roots':{'bookmark_bar':{'type':'folder','name':'Beta','children':[{'type':'url','name':'Beta fixture','url':url+'?beta'}]}}}))
+        db(beta/'History',f"CREATE TABLE urls(id INTEGER,url TEXT,title TEXT); CREATE TABLE visits(url INTEGER,visit_time INTEGER); INSERT INTO urls VALUES(1,'{url}?beta','Beta'); INSERT INTO visits VALUES(1,13344473600123000);")
         env=dict(os.environ,LOCALAPPDATA=str(local),APPDATA=str(roaming),SOULU_UI_TEST_PORT=str(s.DEBUG_PORT),SOULU_REGRESSION_SKIP_FIRST_RUN='1')
         connections=[];process=None;shell=None;settings=None
         def socket(fragment):
@@ -70,6 +74,7 @@ def main():
         payload={'source':'Chrome:Default','target':'personal','bookmarks':True,'history':True,'passwords':True,'consent':True,'autofill':True,'tabs':True}
         try:
             start();catalog=call('catalog');check(any(p['id']=='Chrome:Default' for b in catalog for p in b['profiles']),'native-discovery-and-profile-identity')
+            check(any(p['id']=='Chrome Beta:Person 2' for b in catalog for p in b['profiles']),'native-discovers-channel-with-custom-profile-name')
             caps=call('capabilities',{'source':'Chrome:Default'});print('Synthetic source capabilities:',caps,flush=True);check(all(caps[k]['status']=='available' for k in ('bookmarks','history','passwords','autofill','tabs')),'native-five-category-capabilities')
             check(digest(source)==before,'capability-probes-do-not-modify-source')
             kernel=ctypes.windll.kernel32
@@ -140,6 +145,15 @@ def main():
             s.evaluate(settings,"document.getElementById('actionDialog').close()");stop();start()
             check(len(s.evaluate(settings,'browserShell.getBookmarks()'))==3,'imported-bookmarks-persist-after-browser-restart')
             check(call('run',payload)['categories']['passwords']['imported']==0,'imported-passwords-persist-after-restart')
+            with closing(sqlite3.connect(beta/'History',isolation_level=None)) as live:
+                live.executescript("PRAGMA journal_mode=WAL; PRAGMA wal_autocheckpoint=0; INSERT INTO visits VALUES(1,13344473600124000);")
+                check(call('capabilities',{'source':'Chrome Beta:Person 2'})['history']['status']=='available','native-live-browser-profile-not-disabled-by-existing-writer')
+                live_before=digest(beta)
+                imported=call('run',{'source':'Chrome Beta:Person 2','target':other,'bookmarks':True,'history':True})
+                check(imported['status']=='ok' and imported['categories']['history']['imported']==2 and imported['categories']['bookmarks']['imported']==2,'native-live-channel-imports-bookmarks-and-uncheckpointed-history')
+                check(digest(beta)==live_before,'live-source-database-wal-and-shm-unchanged')
+                live.execute('INSERT INTO visits VALUES(1,13344473600125000)')
+                check(True,'live-source-remains-writable-after-import')
             with closing(sqlite3.connect(source/'History')) as c:
                 with c:c.executemany('INSERT INTO visits VALUES(1,?)',[(13344473600123000+i*1000,) for i in range(1,6001)])
             cancellation=dict(payload,bookmarks=False,passwords=False,autofill=False,tabs=False)
