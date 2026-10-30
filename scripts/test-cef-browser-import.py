@@ -93,13 +93,16 @@ def main():
             check(b'fixture@example.test' not in (personal/'soulu-autofill.json').read_bytes() and b'synthetic-import-only' not in (personal/'soulu-passwords.json').read_bytes(),'native-target-stores-encrypted')
             marks=s.evaluate(settings,'browserShell.getBookmarks()');check(any(r.get('parentId',0)>0 for r in marks) and len(marks)==3,'nested-bookmarks-visible-in-existing-bookmark-backend')
             check(digest(source)==before,'native-import-does-not-change-source-or-create-sidecars')
-            bookmark_file=data/'bookmarks.json';bookmark_backup=bookmark_file.with_suffix('.backup');bookmark_bytes=bookmark_file.read_bytes()
-            bookmark_file.rename(bookmark_backup);bookmark_file.mkdir()
+            bookmark_file=data/'bookmarks.json';bookmark_bytes=bookmark_file.read_bytes()
+            # Allow reads, but deny replacement of the destination file. This
+            # fails the atomic save after nonzero account links were merged.
+            destination_lock=kernel.CreateFileW(str(bookmark_file),0x80000000,3,None,3,0,None)
+            check(destination_lock not in (None,ctypes.c_void_p(-1).value),'fixture-bookmark-destination-replacement-lock')
             try:
-                failed_bookmarks=call('run',dict(payload,history=False,passwords=False,autofill=False,tabs=False))['categories']['bookmarks']
-                check(failed_bookmarks['status']=='error' and failed_bookmarks['imported']==0 and failed_bookmarks.get('bookmarksImported',0)==0 and failed_bookmarks.get('foldersImported',0)==0,'bookmark-destination-failure-never-reports-unsaved-links-or-folders')
-                check(bookmark_backup.read_bytes()==bookmark_bytes,'bookmark-destination-failure-preserves-existing-data')
-            finally:bookmark_file.rmdir();bookmark_backup.rename(bookmark_file)
+                failed_bookmarks=call('run',{'source':'Chrome Beta:Person 2','target':'personal','bookmarks':True})['categories']['bookmarks']
+                check(failed_bookmarks['status']=='error' and 'Bookmark write failed' in failed_bookmarks.get('message','') and failed_bookmarks['imported']==0 and failed_bookmarks.get('bookmarksImported',0)==0 and failed_bookmarks.get('foldersImported',0)==0,'bookmark-destination-failure-never-reports-unsaved-links-or-folders')
+                check(bookmark_file.read_bytes()==bookmark_bytes,'bookmark-destination-failure-preserves-existing-data')
+            finally:kernel.CloseHandle(destination_lock)
             original_web=(source/'Web Data').read_bytes();form_file=personal/'soulu-autofill.json';form_backup=form_file.with_suffix('.backup');encrypted_before=form_file.read_bytes()
             with closing(sqlite3.connect(source/'Web Data',isolation_level=None)) as c:c.execute("INSERT INTO autofill VALUES('email','second@example.test')")
             form_file.rename(form_backup);form_file.mkdir()
