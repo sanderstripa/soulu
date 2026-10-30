@@ -43,3 +43,54 @@ jobs:
         with:
           name: installer-window-diagnostics
           path: artifacts/
+  pointer-and-settings:
+    runs-on: windows-2025
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 2128905cc09a7c5132365048e8d9bd97017470f4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install websocket-client pillow dxcam comtypes
+      - name: Obtain existing CEF runtime for isolated test, not publication
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download beta-1.0.70 --repo sanderstripa/soulu --pattern Soulu-Beta-1.0.70-x64.zip --dir old
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          if((Get-FileHash old/Soulu-Beta-1.0.70-x64.zip -Algorithm SHA256).Hash.ToLowerInvariant() -cne '934ba29aa6e5a8fd44085f6f199a4774cf428d7fb0c6861e8117c093fa43909b'){throw 'Wrong CEF runtime archive'}
+          Expand-Archive old/Soulu-Beta-1.0.70-x64.zip runtime
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 41059771979
+          artifact-ids: 12979520598
+          path: candidate
+          merge-multiple: true
+      - name: Exercise the new exact native binary and physical input bounds
+        shell: pwsh
+        env:
+          SOULU_REGRESSION_SKIP_FIRST_RUN: 1
+          SOULU_TEST_DEFAULT_APPS: 1
+          SOULU_UI_TEST_PORT: 19429
+          PYTHONUTF8: 1
+        run: |
+          $exe=Get-ChildItem runtime -Recurse -Filter Soulu.exe | Select-Object -First 1
+          Copy-Item candidate/* $exe.Directory.FullName -Recurse -Force
+          python scripts/test-cef-home-focus.py $exe.FullName artifacts/home-focus.json
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          $env:LOCALAPPDATA=Join-Path $env:RUNNER_TEMP 'isolated-settings-fixture'
+          $app=Start-Process $exe.FullName -PassThru
+          $env:SOULU_TEST_PROCESS_ID=[string]$app.Id
+          try {
+            python scripts/test-cef-ui.py
+            if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          } finally { Get-Process Soulu -ErrorAction SilentlyContinue | Stop-Process -Force }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: isolated-pointer-settings-evidence
+          path: artifacts/
