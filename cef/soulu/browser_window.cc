@@ -2388,9 +2388,9 @@ void BrowserWindow::HandleBridge(const std::string& request,
               auto saved=exists?ReadJson(bookmark_path):nullptr;
               if(exists&&(!saved||saved->GetType()!=VTYPE_LIST))throw std::runtime_error("Target bookmarks file is unreadable; existing data preserved");
               auto merged=MergeImportBookmarks(saved?saved->GetList():existing_bookmarks,imported_nodes,target,r,control);
-              if(control->cancelled){r->SetInt("imported",0);r->SetString("status","cancelled");}
+              if(control->cancelled){r->SetInt("imported",0);r->SetInt("bookmarksImported",0);r->SetInt("foldersImported",0);r->SetString("status","cancelled");}
               else{if(!self->SaveBookmarks(merged))throw std::runtime_error("Bookmark write failed; existing bookmarks preserved");merged_bookmarks=merged;}
-            }catch(const std::exception& e){r->SetInt("imported",0);r->SetString("status","error");r->SetString("message",e.what());}reports->SetDictionary("bookmarks",r);
+            }catch(const std::exception& e){r->SetInt("imported",0);r->SetInt("bookmarksImported",0);r->SetInt("foldersImported",0);r->SetString("status","error");r->SetString("message",e.what());}reports->SetDictionary("bookmarks",r);
           }
           if(history&&!control->cancelled)reports->SetDictionary("history",ImportBrowserHistory(source,target,control));
           if(passwords&&!control->cancelled)reports->SetDictionary("passwords",from_file?ImportPasswordCsv(file,target,control):ImportBrowserPasswords(source,target,control));
