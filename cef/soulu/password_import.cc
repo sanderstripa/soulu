@@ -103,6 +103,8 @@ class Snapshot {
   bool Copy(const std::filesystem::path& source,const std::vector<std::wstring>& files) {
     if(!LocalImportPath(source)||!LocalImportPath(root_))return false;
     std::vector<std::pair<std::wstring,HANDLE>> opened;
+    std::vector<std::unique_ptr<ImportWalGuard>> wal_guards;
+    for(const auto& name:files)if(name==L"Login Data"||name==L"key4.db"||name==L"cert9.db")wal_guards.push_back(std::make_unique<ImportWalGuard>(source/name));
     for(const auto& name:files){
       auto path=source/name;std::error_code e;
       auto attributes=GetFileAttributesW(path.c_str());

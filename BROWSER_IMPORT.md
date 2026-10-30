@@ -64,7 +64,7 @@ These are implemented adapter paths, **not verified compatibility claims for eve
 current browser version**. Capabilities are probed for the selected source, with
 available/not found/action required/unsupported/blocked states. Counts are
 reported after reading the selected data; capability probes read only headers. A locked database is reported as unavailable, with a retry instruction.
-The custom picker selects a single profile directory, not an entire User Data tree.
+The custom picker accepts a profile directory or an enclosing User Data/Profiles tree.
 
 Autofill and open-tab URLs have native readers described below. Separate favicon
 databases, foreign preferences, downloads and extensions are unsupported. Cookies,
@@ -197,4 +197,4 @@ Additional primary references: [Firefox Chrome migration](https://searchfox.org/
 
 The catalog includes registered Windows StartMenuInternet clients (both registry views), stable and preview channel profile roots, custom Chromium profile directory names, Firefox INI metadata with BOM/whitespace, and unregistered local Mozilla profiles. Chrome/Edge UserDataDir policies are included. Unknown registered products can be selected to choose their local Chromium/Mozilla profile folder. The folder picker also accepts an enclosing User Data or Profiles directory and returns each discovered profile.
 
-Database sources are opened with read/write/delete sharing and shared byte-range locks while a private database/WAL/journal copy is made. Source locks are released before parsing or destination writes. An actively writing/exclusively locked source requires closing that browser and retrying; no processes are terminated. The source SQLite database is never opened by Soulu, checkpointed or supplied with new WAL/SHM files. App-bound encrypted passwords and unsupported encrypted sessions still require a browser export; no encryption bypass is attempted.
+Database sources are opened with read/write/delete sharing and shared byte-range locks while a private database/WAL/journal copy is made. Existing WAL-index writer/checkpoint/recovery bytes are locked using SQLite’s standard shared-lock protocol before copying, so concurrent SQLite transactions encounter a normal busy lock. Source locks are released before parsing or destination writes. An actively writing/exclusively locked source requires closing that browser and retrying; no processes are terminated. The source SQLite database is never opened by Soulu, checkpointed or supplied with new WAL/SHM files. App-bound encrypted passwords and unsupported encrypted sessions still require a browser export; no encryption bypass is attempted.

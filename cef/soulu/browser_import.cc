@@ -118,6 +118,7 @@ class DatabaseSnapshot {
     root_=temp/std::filesystem::u8path("soulu-import-"+RandomId());
     try{
       std::filesystem::create_directory(root_);
+      auto wal_guard=std::make_unique<ImportWalGuard>(source);
       for(auto suffix:{L"",L"-wal",L"-journal"}){
         auto path=std::filesystem::path(source.wstring()+suffix);
         std::error_code error;bool exists=std::filesystem::exists(path,error);
@@ -139,7 +140,7 @@ class DatabaseSnapshot {
           throw std::runtime_error("Close the source browser and retry: database changed during snapshot");}
       // Release source locks immediately after the consistent copy, before
       // parsing or writing potentially large amounts of destination history.
-      for(auto h:handles_)CloseHandle(h);handles_.clear();
+      for(auto h:handles_)CloseHandle(h);handles_.clear();wal_guard.reset();
       auto filename=CefString((root_/source.filename()).wstring()).ToString();
       // Only the private snapshot may create WAL/SHM or recover an existing WAL.
       if(sqlite3_open_v2(filename.c_str(),&db_,SQLITE_OPEN_READWRITE,nullptr)!=SQLITE_OK)throw std::runtime_error("Corrupt or unsupported source database");

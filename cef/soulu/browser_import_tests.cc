@@ -120,6 +120,8 @@ int RunBrowserImportTests(const std::filesystem::path& output){
     check(BrowserImportCapabilities(source)->GetDictionary("history")->GetString("status")=="available","open-browser-readable-capability");
     auto liveHistory=ImportBrowserHistory(source,"import-live",control);
     check(liveHistory->GetString("status")=="ok"&&liveHistory->GetInt("imported")==2,"open-browser-import-includes-uncheckpointed-wal");
+    {ImportWalGuard guard(chrome/L"History");
+      check(sqlite3_exec(live,"INSERT INTO visits VALUES(1,13344473600125000)",nullptr,nullptr,nullptr)==SQLITE_BUSY,"live-writer-uses-normal-sqlite-busy-during-snapshot");}
     check(sqlite3_exec(live,"INSERT INTO visits VALUES(1,13344473600125000)",nullptr,nullptr,nullptr)==SQLITE_OK,"source-writer-resumes-after-snapshot");
     check(!std::filesystem::exists(chrome/L"History-journal"),"import-does-not-create-source-rollback-journal");
     auto held=OpenImportSourceFile(chrome/L"Bookmarks",true);
