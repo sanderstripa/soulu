@@ -116,6 +116,7 @@
     }
     async function chooseSource(entry) {
       if(entry.id==='__refresh__')return discover();
+      if(entry.needsFolder)return chooseSource({id:'__portable__'});
       if(!['__html__','__tabs_html__','__csv__','__portable__'].includes(entry.id))return entry.kind?selectFile(entry):inspect(entry);
       const token=++serial;pending='picker';notice.hidden=true;execution.hidden=true;lock();
       try{
@@ -137,7 +138,7 @@
     async function discover() {
       const token=++serial;pending='discovery';source=null;caps=null;from.setValue('',label('Ищем браузеры…','Finding browsers…'));notice.hidden=true;execution.hidden=true;drawCategories();
       try{const catalog=await call('catalog');if(closed||token!==serial)return;
-        sourceOptions=catalog.flatMap(b=>b.profiles.length?b.profiles.map(p=>({...p,text:b.browser+' · '+p.name})): [{id:'unavailable:'+b.browser,text:b.browser+label(' · профили недоступны',' · no accessible profiles'),disabled:true}]);
+        sourceOptions=catalog.flatMap(b=>b.profiles.length?b.profiles.map(p=>({...p,text:b.browser+' · '+p.name})): [{id:'unavailable:'+b.browser,text:b.browser+label(' · выбрать папку профиля…',' · choose profile folder…'),needsFolder:true}]);
         sourceChoices();from.setValue('',label('Выберите браузер или файл','Choose a browser or file'));
         if(!catalog.some(b=>b.profiles.length))error(label('Браузеры с доступными профилями не найдены. Выберите файл или папку профиля.','No accessible browser profiles found. Choose a file or profile folder.'));
       }catch(e){if(closed||token!==serial)return;sourceOptions=[];sourceChoices();from.setValue('',label('Выберите файл или папку профиля','Choose a file or profile folder'));error(e);}

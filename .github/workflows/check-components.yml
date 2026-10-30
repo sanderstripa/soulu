@@ -257,7 +257,7 @@ jobs:
       - name: Verify browser import discovery, live WAL and native bridge
         shell: pwsh
         run: |
-          python -m pip install --disable-pip-version-check websocket-client pillow
+          python -m pip install --disable-pip-version-check websocket-client pillow pywinauto pywin32
           python browser/scripts/test-browser-import-native.py "$env:build_dir/Soulu.exe" browser/artifacts/browser-import-native.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python browser/scripts/test-cef-browser-import.py "$env:build_dir/Soulu.exe" browser/artifacts/browser-import-integration.json
@@ -268,14 +268,14 @@ jobs:
       - name: Verify native internal controls
         shell: pwsh
         run: |
-          python -m pip install --disable-pip-version-check websocket-client pillow
+          python -m pip install --disable-pip-version-check websocket-client pillow pywinauto pywin32
           python browser/scripts/test-cef-next-ui.py "$env:build_dir/Soulu.exe" browser/artifacts/next-ui
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Verify integrated VOT on real YouTube
         if: ${{ !cancelled() && steps.native_build.outcome == 'success' }}
         shell: pwsh
         run: |
-          python -m pip install --disable-pip-version-check websocket-client pillow
+          python -m pip install --disable-pip-version-check websocket-client pillow pywinauto pywin32
           python browser/scripts/test-cef-video-translation.py "$env:build_dir/Soulu.exe" browser/artifacts/video-translation
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 

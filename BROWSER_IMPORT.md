@@ -192,3 +192,9 @@ Additional primary references: [Firefox Chrome migration](https://searchfox.org/
 [Chromium session commands](https://chromium.googlesource.com/chromium/src/+/refs/heads/main/components/sessions/core/session_service_commands.cc),
 [Chromium session file versions](https://chromium.googlesource.com/chromium/src/+/refs/heads/main/components/sessions/core/command_storage_backend.cc),
 [Firefox session paths](https://raw.githubusercontent.com/mozilla/gecko-dev/master/browser/components/sessionstore/SessionFile.sys.mjs).
+
+## 1.0.70 discovery and live source fixes
+
+The catalog includes registered Windows StartMenuInternet clients (both registry views), stable and preview channel profile roots, custom Chromium profile directory names, Firefox INI metadata with BOM/whitespace, and unregistered local Mozilla profiles. Chrome/Edge UserDataDir policies are included. Unknown registered products can be selected to choose their local Chromium/Mozilla profile folder. The folder picker also accepts an enclosing User Data or Profiles directory and returns each discovered profile.
+
+Database sources are opened with read/write/delete sharing and shared byte-range locks while a private database/WAL/journal copy is made. Source locks are released before parsing or destination writes. An actively writing/exclusively locked source requires closing that browser and retrying; no processes are terminated. The source SQLite database is never opened by Soulu, checkpointed or supplied with new WAL/SHM files. App-bound encrypted passwords and unsupported encrypted sessions still require a browser export; no encryption bypass is attempted.

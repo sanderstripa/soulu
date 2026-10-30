@@ -40,6 +40,15 @@ with tempfile.TemporaryDirectory(prefix='soulu-import-pickers-',ignore_cleanup_e
   assert run({'source':c['id'],'target':'personal','passwords':True,'consent':True})['categories']['passwords']['imported']==1;checks.append('native-CSV-password-import')
   assert run({'source':h['id'],'target':'personal','tabs':True,'nodes':nodes})['categories']['tabs']['imported']==1;checks.append('native-HTML-open-tab-import')
   assert run({'source':f['id'],'target':'personal','bookmarks':True})['categories']['bookmarks']['imported']==1;checks.append('native-portable-profile-import')
+  user_data=root/'multi-profile';user_data.mkdir()
+  for folder in ('Default','Person 2'):
+   profile=user_data/folder;profile.mkdir();(profile/'Preferences').write_text('{}');(profile/'Bookmarks').write_text(json.dumps({'roots':{'bookmark_bar':{'type':'folder','name':folder,'children':[{'type':'url','name':folder,'url':'https://example.test/'+folder.replace(' ','-')}]}}}))
+  selected=pick('portable',path=user_data)
+  assert len(selected['profiles'])==2;checks.append('native-user-data-picker-discovers-multiple-profiles')
+  for profile in selected['profiles']:
+   result=run({'source':profile['id'],'target':'personal','bookmarks':True})
+   assert result['status']=='ok' and result['categories']['bookmarks']['imported']==2
+  checks.append('every-manually-selected-profile-resolves-through-native-bridge')
   output.write_text(json.dumps({'ok':True,'checks':checks,'personalDataUsed':False},indent=2),encoding='utf-8');print('PASS:',checks,flush=True)
  finally:
   for ws in sockets:ws.close()

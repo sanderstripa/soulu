@@ -2,6 +2,7 @@
 #include "examples/soulu/history_store.h"
 #include "examples/soulu/import_source_file.h"
 #include <shlobj.h>
+#include <shellapi.h>
 #include "examples/soulu/third_party/sqlite3.h"
 #include "include/cef_parser.h"
 #include <windows.h>
@@ -227,11 +228,34 @@ std::vector<ImportSource> BrowserImportSources(){
   return out;
 }
 std::string ReadImportFile(const std::filesystem::path& path){return ReadText(path,20*1024*1024);}
-CefRefPtr<CefListValue> BrowserImportCatalog(){auto sources=BrowserImportSources();auto rows=CefListValue::Create();
-  for(const auto& s:specs){auto profiles=CefListValue::Create();for(const auto& p:sources)if(p.browser==s.id){auto row=CefDictionaryValue::Create();row->SetString("id",p.id);row->SetString("name",p.name);row->SetString("family",p.family);profiles->SetDictionary(profiles->GetSize(),row);}
-    bool installed=Installed(s);if(!installed&&!profiles->GetSize())continue;
-    auto row=CefDictionaryValue::Create();row->SetString("browser",s.id);row->SetBool("installed",installed);row->SetList("profiles",profiles);rows->SetDictionary(rows->GetSize(),row);
-  }return rows;
+CefRefPtr<CefListValue> BrowserImportCatalog(){auto sources=BrowserImportSources();auto rows=CefListValue::Create();std::set<std::string> listed;
+  auto add=[&](const std::string& name,bool installed){auto profiles=CefListValue::Create();for(const auto& p:sources)if(p.browser==name){auto row=CefDictionaryValue::Create();row->SetString("id",p.id);row->SetString("name",p.name);row->SetString("family",p.family);profiles->SetDictionary(profiles->GetSize(),row);}
+    if((!installed&&!profiles->GetSize())||!listed.insert(name).second)return;
+    auto row=CefDictionaryValue::Create();row->SetString("browser",name);row->SetBool("installed",installed);row->SetList("profiles",profiles);rows->SetDictionary(rows->GetSize(),row);
+  };
+  for(const auto& s:specs)add(s.id,Installed(s));
+  // Registered Windows browser clients include custom installation locations
+  // and products outside the known default-directory adapters. Show them too;
+  // selecting one without a known profile asks for its local profile folder.
+  if(!Env(L"SOULU_DATA_SECURITY_TEST_ROOT").empty())return rows;
+  const wchar_t* base=L"Software\\Clients\\StartMenuInternet";
+  auto read=[](HKEY hive,const std::wstring& key,DWORD view){wchar_t value[32768]={};DWORD bytes=sizeof(value);
+    return RegGetValueW(hive,key.c_str(),nullptr,RRF_RT_REG_SZ|RRF_RT_REG_EXPAND_SZ|view,nullptr,value,&bytes)==ERROR_SUCCESS?std::wstring(value):std::wstring();};
+  auto lower=[](std::wstring value){std::transform(value.begin(),value.end(),value.begin(),[](wchar_t c){return c==L'/'?L'\\':std::towlower(c);});return value;};
+  for(auto hive:{HKEY_CURRENT_USER,HKEY_LOCAL_MACHINE})for(auto view:{KEY_WOW64_64KEY,KEY_WOW64_32KEY}){HKEY key=nullptr;
+    if(RegOpenKeyExW(hive,base,0,KEY_ENUMERATE_SUB_KEYS|view,&key)!=ERROR_SUCCESS)continue;
+    for(DWORD i=0;i<256;++i){wchar_t child[512]={};DWORD size=512;auto code=RegEnumKeyExW(key,i,child,&size,nullptr,nullptr,nullptr,nullptr);if(code==ERROR_NO_MORE_ITEMS)break;if(code!=ERROR_SUCCESS)continue;
+      auto client=std::wstring(base)+L"\\"+child;DWORD flag=view==KEY_WOW64_64KEY?RRF_SUBKEY_WOW6464KEY:RRF_SUBKEY_WOW6432KEY;
+      auto command=read(hive,client+L"\\shell\\open\\command",flag);if(command.empty())continue;
+      int argc=0;auto argv=CommandLineToArgvW(command.c_str(),&argc);if(!argv)continue;
+      std::filesystem::path exe=argc?argv[0]:L"";LocalFree(argv);if(!File(exe))continue;
+      auto path=lower(exe.wstring()),file=lower(exe.filename().wstring());if(file==L"soulu.exe"||file==L"iexplore.exe")continue;
+      std::string name=CefString(read(hive,client,flag)).ToString();if(name.empty()||name.front()=='@')name=CefString(child).ToString();
+      for(const auto& spec:specs){auto expected=lower(spec.application);if(path.size()>=expected.size()&&path.compare(path.size()-expected.size(),expected.size(),expected)==0){name=spec.id;break;}}
+      add(name,true);
+    }RegCloseKey(key);
+  }
+  return rows;
 }
 ImportSource PortableImportSource(const std::filesystem::path& root){
   std::string family=Profile(root,"firefox")?"firefox":Profile(root,"chromium")?"chromium":"";

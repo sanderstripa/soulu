@@ -91,7 +91,7 @@ std::vector<Source> Sources() {
   append();return out;
 }
 
-// Holds read handles denying write/delete while making one consistent snapshot.
+// Holds shared byte-range locks only while making a consistent private copy.
 // Source SQLite is never opened: it cannot create a source WAL/SHM or checkpoint.
 class Snapshot {
  public:
