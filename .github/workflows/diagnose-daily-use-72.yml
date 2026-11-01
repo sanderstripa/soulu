@@ -11,7 +11,10 @@ concurrency:
 jobs:
   daily-use:
     runs-on: windows-2025
-    timeout-minutes: 15
+    timeout-minutes: 20
+    env:
+      PYTHONUTF8: "1"
+      SOULU_REGRESSION_SKIP_FIRST_RUN: "1"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -43,15 +46,32 @@ jobs:
           PYTHONUTF8: "1"
           SOULU_REGRESSION_SKIP_FIRST_RUN: "1"
         run: |
-          python -m pip install --disable-pip-version-check websocket-client
+          python -m pip install --disable-pip-version-check websocket-client pillow
           python browser/scripts/test-cef-daily-use.py "$env:runtime_dir/Soulu.exe" browser/artifacts/daily-use
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Check bookmark manager, overview and Home
+        shell: pwsh
+        run: |
+          python browser/scripts/test-cef-bookmarks-overview.py "$env:runtime_dir/Soulu.exe"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python browser/scripts/test-cef-home-pages.py "$env:runtime_dir/Soulu.exe" browser/artifacts/home-evidence.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Check Settings overlay and motion
+        shell: pwsh
+        run: |
+          $personalize='HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize'
+          New-Item $personalize -Force | Out-Null
+          Set-ItemProperty $personalize EnableTransparency 1 -Type DWord
+          python browser/scripts/test-cef-settings-overlay.py "$env:runtime_dir/Soulu.exe" browser/artifacts/settings-overlay-evidence.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python browser/scripts/test-cef-motion.py "$env:runtime_dir/Soulu.exe" browser/artifacts/motion-evidence.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: daily-use-debug
           path: |
-            browser/artifacts/daily-use
+            browser/artifacts/
             candidate/engine-version.json
           if-no-files-found: warn
       - name: Stop test processes
