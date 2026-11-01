@@ -20,7 +20,7 @@ def socket_for(part):
  target=wait(lambda:next((t for t in s.targets() if part in t.get('url','')),None))
  return s.websocket.create_connection(target['webSocketDebuggerUrl'],timeout=30,origin=s.BASE)
 def click(ws,selector):
- point=s.evaluate(ws,"(()=>{const r=document.querySelector("+json.dumps(selector)+").getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2}})()")
+ point=wait(lambda:s.evaluate(ws,"(()=>{const n=document.querySelector("+json.dumps(selector)+");if(!n)return null;const r=n.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2;if(!r.width||!r.height||r.left<0||r.top<0||r.right>innerWidth+.5||r.bottom>innerHeight+.5||!n.contains(document.elementFromPoint(x,y)))return null;return {x,y}})()"))
  for kind in ['mousePressed','mouseReleased']:s.command(ws,'Input.dispatchMouseEvent',dict(type=kind,button='left',clickCount=1,**point))
 def native_window(pid):
  handles=[];user=ctypes.windll.user32;callback_type=ctypes.WINFUNCTYPE(ctypes.c_bool,ctypes.c_void_p,ctypes.c_void_p)
