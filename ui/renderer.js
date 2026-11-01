@@ -178,7 +178,7 @@ function renderCompactTabs(){
     }
     if(previous.nextElementSibling!==node)previous.after(node);
     previous=node;
-    if(x.active)node.after($('#compactNewTabButton'));
+    if(x.active){const plus=$('#compactNewTabButton');if(node.nextElementSibling!==plus)node.after(plus);previous=plus;}
     let activity=node.querySelector('.tab-activity');if(!activity){activity=document.createElement('span');activity.className='tab-activity';x.active?node.querySelector('input').after(activity):node.append(activity);}
     const media=mediaMarkup(x);if(activity.innerHTML!==media){activity.innerHTML=media;bindMedia(activity);}
     node.dataset.tooltip=x.title||x.label||tr('newTab');
@@ -200,7 +200,7 @@ function renderCompactTabs(){
       reload.title=x.loading?tr('stop'):tr('reload');
     }
   }
-  const active=compactToolbar.querySelector('[data-active-tab]');if(active)active.after($('#compactNewTabButton'));
+  const active=compactToolbar.querySelector('[data-active-tab]'),plus=$('#compactNewTabButton');if(active&&active.nextElementSibling!==plus)active.after(plus);
   const count=wanted.filter(x=>!x.active).length;
   $('#compactTabFlow').style.setProperty('--compact-flow-width',`${Math.min(620,466+count*33)}px`);
 }
@@ -280,8 +280,8 @@ async function synchronizeSettings(){
     if(current&&signature!==lastSettingsSignature){
       lastSettingsSignature=signature;
       state.settings={...state.settings,...current};
-      renderTabs();
       appearance();
+      renderTabs();
 
     }
   }catch(error){console.error("Soulu settings synchronization failed",error);}
