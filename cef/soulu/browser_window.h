@@ -147,6 +147,7 @@ class BrowserWindow final : public CefBaseRefCounted {
     bool activate_on_attach = false;
     bool focus_address_on_attach = false;
     bool focus_home_on_load = false;
+    bool home_controls_ready = false;
     std::wstring pending_home_input;
     bool pending_home_submit = false;
     bool loading = false;

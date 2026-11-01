@@ -129,7 +129,7 @@ void BrowserWindow::ContentPageLoaded(int id) {
   auto frame=tab->browser->GetMainFrame();if(!frame)return;
   if(IsOnboardingUi(frame->GetURL())){if(id==active_tab_id_)tab->browser->GetHost()->SetFocus(true);return;}
   if(IsHomeUi(frame->GetURL())){RefreshHomePages(id);
-    if(tab->focus_home_on_load&&id==active_tab_id_&&!SettingsOverlayActive()){
+    if(tab->focus_home_on_load&&tab->home_controls_ready&&id==active_tab_id_&&!SettingsOverlayActive()){
       tab->focus_home_on_load=false;
       tab->browser->GetHost()->SetFocus(true);
       auto text=CefValue::Create();text->SetString(CefString(tab->pending_home_input));
@@ -153,7 +153,7 @@ void BrowserWindow::HandleHomeBridge(int id,const std::string& request,
   auto root=parsed->GetDictionary();const std::string action=root->GetString("action");
   auto payload=root->GetValue("payload");
   if(action=="home.get"){Reply(callback,HomeState(*tab));return;}
-  if(action=="home.ready"){ContentPageLoaded(id);ReplyEmpty(callback);return;}
+  if(action=="home.ready"){tab->home_controls_ready=true;ContentPageLoaded(id);ReplyEmpty(callback);return;}
   if(action=="home.navigate"){
     if(!payload||payload->GetType()!=VTYPE_STRING){callback->Failure(400,"Text required");return;}
     // Use exactly the omnibox parser, with this document's profile search engine.

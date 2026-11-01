@@ -2114,7 +2114,7 @@ void BrowserWindow::ReaderDocumentNavigation(int id) {
   DismissSouluMenus(hwnd_);
   CancelSitePermissions(id);
   if(auto* tab=FindTab(id)){tab->scroll_y=0;tab->glass_inset=-1;}
-  if(auto* tab=FindTab(id)){HomeCancelVoice(tab->browser?tab->browser->GetIdentifier():0);++tab->home_voice_generation;++tab->document_generation;++tab->translation_generation;tab->translation_active=false;tab->translation_resetting=false;tab->main_loading=true;tab->reader_active=false;tab->reader_article=nullptr;}
+  if(auto* tab=FindTab(id)){tab->home_controls_ready=false;HomeCancelVoice(tab->browser?tab->browser->GetIdentifier():0);++tab->home_voice_generation;++tab->document_generation;++tab->translation_generation;tab->translation_active=false;tab->translation_resetting=false;tab->main_loading=true;tab->reader_active=false;tab->reader_article=nullptr;}
   Layout();EmitState();
 }
 void BrowserWindow::ReaderDocumentLoaded(int id) {
