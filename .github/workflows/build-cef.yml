@@ -295,6 +295,7 @@ jobs:
       - name: Test Browser Import adapters and native bridge on isolated profiles
         shell: pwsh
         run: |
+          python -m pip install --disable-pip-version-check websocket-client pillow comtypes
           $exe = Get-ChildItem cef-build -Recurse -Filter Soulu.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
           python browser/scripts/test-browser-import-native.py $exe.FullName browser/artifacts/browser-import-native.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
