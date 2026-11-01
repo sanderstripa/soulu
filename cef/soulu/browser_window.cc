@@ -106,7 +106,10 @@ class LifecycleJob final : public CefDevToolsMessageObserver {
   void Start(CefRefPtr<CefBrowser> browser,bool frozen){
     browser_=browser;registration_=browser->GetHost()->AddDevToolsMessageObserver(this);
     auto args=CefDictionaryValue::Create();args->SetString("state",frozen?"frozen":"active");
-    message_=browser->GetHost()->ExecuteDevToolsMethod(0,"Page.setWebLifecycleState",args);
+    // Some browser-process protocol methods acknowledge synchronously.
+    // Register the message ID before dispatch, or that result is lost.
+    static int next_message=730000;message_=++next_message;
+    if(!browser->GetHost()->ExecuteDevToolsMethod(message_,"Page.setWebLifecycleState",args)){Finish(false);return;}
     CefRefPtr<LifecycleJob> self=this;
     CefPostDelayedTask(TID_UI,new FunctionTask([self]{self->Finish(false);}),5000);
   }

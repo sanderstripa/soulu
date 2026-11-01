@@ -23,7 +23,7 @@ function bindAddress(form,input,box){
   let selected=-1,blurTimer=0,queryTimer=0;
   const binding=new AbortController();
   form.disposeAddress=()=>{binding.abort();clearTimeout(queryTimer);clearTimeout(blurTimer);};
-  const dismiss=()=>{clearTimeout(queryTimer);clearTimeout(blurTimer);editing=false;hideSuggestions(box);if(document.activeElement===input)input.blur();input.value=addressDisplay(state.page);};
+  const dismiss=()=>{if(!box.classList.contains('visible')&&document.activeElement!==input)return;clearTimeout(queryTimer);clearTimeout(blurTimer);editing=false;hideSuggestions(box);if(document.activeElement===input)input.blur();input.value=addressDisplay(state.page);};
   document.addEventListener('pointerdown',e=>{if(!form.contains(e.target)&&!box.contains(e.target))dismiss();},{capture:true,signal:binding.signal});
   window.addEventListener('blur',dismiss,{signal:binding.signal});
   window.addEventListener('soulu-dismiss-address',dismiss,{signal:binding.signal});
