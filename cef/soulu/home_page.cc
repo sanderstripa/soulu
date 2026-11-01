@@ -153,6 +153,7 @@ void BrowserWindow::HandleHomeBridge(int id,const std::string& request,
   auto root=parsed->GetDictionary();const std::string action=root->GetString("action");
   auto payload=root->GetValue("payload");
   if(action=="home.get"){Reply(callback,HomeState(*tab));return;}
+  if(action=="home.ready"){ContentPageLoaded(id);ReplyEmpty(callback);return;}
   if(action=="home.navigate"){
     if(!payload||payload->GetType()!=VTYPE_STRING){callback->Failure(400,"Text required");return;}
     // Use exactly the omnibox parser, with this document's profile search engine.
