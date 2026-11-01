@@ -20,7 +20,7 @@ def socket_for(part):
  target=wait(lambda:next((t for t in s.targets() if part in t.get('url','')),None))
  return s.websocket.create_connection(target['webSocketDebuggerUrl'],timeout=30,origin=s.BASE)
 def click(ws,selector):
- point=s.evaluate(ws,"(()=>{const r=document.querySelector("+json.dumps(selector)+").getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2}})()")
+ point=wait(lambda:s.evaluate(ws,"(()=>{const n=document.querySelector("+json.dumps(selector)+");if(!n)return null;const r=n.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2;if(!r.width||!r.height||r.left<0||r.top<0||r.right>innerWidth+.5||r.bottom>innerHeight+.5||!n.contains(document.elementFromPoint(x,y)))return null;return {x,y}})()"))
  for kind in ['mousePressed','mouseReleased']:s.command(ws,'Input.dispatchMouseEvent',dict(type=kind,button='left',clickCount=1,**point))
 def native_window(pid):
  handles=[];user=ctypes.windll.user32;callback_type=ctypes.WINFUNCTYPE(ctypes.c_bool,ctypes.c_void_p,ctypes.c_void_p)
@@ -47,12 +47,14 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as root:
   p=subprocess.Popen([str(Path(sys.argv[1]).resolve()),'--no-proxy-server','--use-fake-device-for-media-stream'],env=env)
   shell=socket_for('/ui/index.html');connections.append(shell)
   wait(lambda:s.evaluate(shell,"!!window.browserShell&&!!document.querySelector('#classicAddress')"))
+  hwnd=wait(lambda:native_window(p.pid));wait(lambda:ctypes.windll.user32.IsWindowVisible(hwnd))
+  wait(lambda:s.evaluate(shell,"document.documentElement.classList.contains('typography-ready')"))
   state=lambda:s.evaluate(shell,'browserShell.getState()')
   s.evaluate(shell,'browserShell.navigate('+json.dumps(origin+'/login?full=address#fragment')+')')
   page=socket_for('/login?');connections.append(page)
   wait(lambda:s.evaluate(page,"document.readyState==='complete'"))
   wait(lambda:s.evaluate(shell,"document.querySelector('#classicAddress').value==='127.0.0.1'"))
-  click(shell,'#classicAddress');check(s.evaluate(shell,"document.querySelector('#classicAddress').value").endswith('/login?full=address#fragment'),'Address shows host at rest and full path/query/fragment on focus')
+  click(shell,'#classicAddress');wait(lambda:s.evaluate(shell,"document.querySelector('#classicAddress').value").endswith('/login?full=address#fragment'));check(True,'Address shows host at rest and full path/query/fragment on focus')
   s.evaluate(shell,"document.querySelector('#classicAddress').blur()")
   check(s.evaluate(shell,"(()=>{const a=document.querySelector('#classicAddressForm').getBoundingClientRect(),b=document.querySelector('#newTabButton').getBoundingClientRect();return b.left>=a.right&&b.left-a.right<12})()"),'New-tab button sits immediately beside the address')
   for width in (620,900,1280):
@@ -88,7 +90,7 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as root:
   check(True,'Web Audio output samples produce an activity indicator; zero gain clears it')
   for permission in ['microphone','camera']:s.evaluate(shell,'browserShell.getCurrentSite().then(site=>browserShell.siteAction("permission",{...site,permission:'+json.dumps(permission)+',value:0}))')
   check(not next(t for t in state()['tabs'] if t['id']==bg).get('microphoneActive'),'A granted microphone permission alone is not marked as active capture')
-  s.evaluate(background,'window.dailyStream=await navigator.mediaDevices.getUserMedia({audio:true,video:true});true')
+  s.evaluate(background,'navigator.mediaDevices.getUserMedia({audio:true,video:true}).then(stream=>{window.dailyStream=stream;return true})')
   wait(lambda:next(t for t in state()['tabs'] if t['id']==bg).get('microphoneActive') and next(t for t in state()['tabs'] if t['id']==bg).get('cameraActive'))
   s.evaluate(background,'dailyStream.getTracks().forEach(t=>t.stop())')
   wait(lambda:not next(t for t in state()['tabs'] if t['id']==bg).get('microphoneActive') and not next(t for t in state()['tabs'] if t['id']==bg).get('cameraActive'));check(True,'Camera/microphone indicators follow actual stream start and track stop')
