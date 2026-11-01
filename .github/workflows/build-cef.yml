@@ -292,6 +292,17 @@ jobs:
           python browser/scripts/test-cef-daily-use.py "$env:build_dir/Soulu.exe" browser/artifacts/daily-use
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      - name: Test Browser Import adapters and native bridge on isolated profiles
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem cef-build -Recurse -Filter Soulu.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
+          python browser/scripts/test-browser-import-native.py $exe.FullName browser/artifacts/browser-import-native.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python browser/scripts/test-cef-browser-import.py $exe.FullName browser/artifacts/browser-import-integration.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python browser/scripts/test-cef-browser-import-files.py $exe.FullName browser/artifacts/browser-import-files.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Verify integrated VOT on real YouTube
         if: ${{ !cancelled() && steps.native_build.outcome == 'success' }}
         shell: pwsh
@@ -503,17 +514,6 @@ jobs:
         run: |
           $exe = Get-ChildItem cef-build -Recurse -Filter Soulu.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
           python browser/scripts/test-cef-data-security.py $exe.FullName browser/artifacts/data-security.json
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-      - name: Test Browser Import adapters and native bridge on isolated profiles
-        shell: pwsh
-        run: |
-          $exe = Get-ChildItem cef-build -Recurse -Filter Soulu.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
-          python browser/scripts/test-browser-import-native.py $exe.FullName browser/artifacts/browser-import-native.json
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          python browser/scripts/test-cef-browser-import.py $exe.FullName browser/artifacts/browser-import-integration.json
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          python browser/scripts/test-cef-browser-import-files.py $exe.FullName browser/artifacts/browser-import-files.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test immediate settings saves, migration and native profile isolation

@@ -120,7 +120,7 @@ class BrowserWindow final : public CefBaseRefCounted {
       CefRefPtr<CefDictionaryValue> article,
       CefRefPtr<CefMessageRouterBrowserSide::Callback> callback);
   void SyncSitePolicy(int id, const std::string& url);
-  void FillSavedForm(int id,int x,int y);
+  void FillSavedForm(int id,int x,int y,bool prefer_credentials=false);
   void OfferCredential(int id, CefRefPtr<CefFrame> frame,
                        const std::string& username, std::string password,
                        const std::string& submitted_url);

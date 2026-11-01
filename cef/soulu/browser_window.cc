@@ -859,7 +859,7 @@ void BrowserWindow::ReleaseIncognito() {
     if(row&&row->GetString("profileId")!="__incognito__")history->SetDictionary(history->GetSize(),row->Copy(false));}
   downloads_=history;
 }
-void BrowserWindow::FillSavedForm(int id,int x,int y) {
+void BrowserWindow::FillSavedForm(int id,int x,int y,bool prefer_credentials) {
   auto* tab=FindTab(id);if(!tab||tab->incognito||!tab->browser||tab!=ActiveTab()||importing_)return;
   auto browser=tab->browser;const std::string profile=tab->profile_id,url=browser->GetMainFrame()->GetURL();
   if(WebOrigin(url).empty())return;
@@ -868,9 +868,9 @@ void BrowserWindow::FillSavedForm(int id,int x,int y) {
     if(e.form&&new URL(e.form.action||location.href,location.href).origin!==location.origin)return {};
     return {name:e.name||e.id,type:e.type,id:e.id,login:e.type==='password'||!!e.form?.querySelector('input[type=password]:not([autocomplete=new-password])')||e.autocomplete==='username',autocomplete:e.autocomplete.split(/\s+/).at(-1),valid:true}})())JS";
   CefRefPtr<BrowserWindow> self=this;
-  EvaluateTranslationPage(browser,url,query,[self,browser,id,profile,url,locate](CefRefPtr<CefDictionaryValue> field){
+  EvaluateTranslationPage(browser,url,query,[self,browser,id,profile,url,locate,prefer_credentials](CefRefPtr<CefDictionaryValue> field){
     auto* current=self->FindTab(id);if(!field||!field->GetBool("valid")||!current||current!=self->ActiveTab()||current->incognito||current->profile_id!=profile||browser->GetMainFrame()->GetURL()!=url)return;
-    const bool password=field->GetBool("login");auto choices=CefListValue::Create();
+    const bool password=field->GetString("type")=="password"||(prefer_credentials&&field->GetBool("login"));auto choices=CefListValue::Create();
     try{if(password){PasswordVault vault(profile);auto list=vault.List();for(size_t i=0;i<list->GetSize()&&choices->GetSize()<30;++i){auto r=list->GetDictionary(i);if(r&&r->GetString("origin")==WebOrigin(url))choices->SetDictionary(choices->GetSize(),r->Copy(false));}}
       else if(ValidAutofillField(field->GetString("name"))){auto list=ReadAutofill(profile);for(size_t i=0;i<list->GetSize()&&choices->GetSize()<30;++i){auto r=list->GetDictionary(i);if(r&&(r->GetString("name")==field->GetString("name")||r->GetString("name")=="autocomplete:"+field->GetString("autocomplete").ToString()))choices->SetDictionary(choices->GetSize(),r->Copy(false));}}
     }catch(...){return;}

@@ -458,7 +458,7 @@ bool BrowserClient::OnProcessMessageReceived(CefRefPtr<CefBrowser> browser,
     }
     if(message->GetName()=="soulu.credential.fill"&&frame->IsMain()){
       auto args=message->GetArgumentList();if(args->GetSize()==2&&args->GetType(0)==VTYPE_INT&&args->GetType(1)==VTYPE_INT)
-        owner_->FillSavedForm(tab_id_,args->GetInt(0),args->GetInt(1));return true;
+        owner_->FillSavedForm(tab_id_,args->GetInt(0),args->GetInt(1),true);return true;
     }
     if(message->GetName()=="soulu.media.ready"){
       auto reply=CefProcessMessage::Create("soulu.media.policy");reply->GetArgumentList()->SetBool(0,owner_->DeferMedia(tab_id_));
