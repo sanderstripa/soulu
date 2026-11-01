@@ -257,6 +257,14 @@ jobs:
             ${{ env.build_dir }}/licenses/
           if-no-files-found: error
 
+      - name: Verify unpacked Chrome extensions in native Settings and ordinary tabs
+        shell: pwsh
+        run: |
+          python -m pip install --disable-pip-version-check websocket-client pillow pywinauto
+          $exe = Get-ChildItem cef-build -Recurse -Filter Soulu.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
+          python browser/scripts/test-cef-extensions.py $exe.FullName browser/artifacts/extensions-evidence.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Verify video bridge and protected component fixtures
         shell: pwsh
         run: |
@@ -308,13 +316,6 @@ jobs:
           python browser/scripts/test-cef-browser-import.py $exe.FullName browser/artifacts/browser-import-integration.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python browser/scripts/test-cef-browser-import-files.py $exe.FullName browser/artifacts/browser-import-files.json
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-      - name: Verify unpacked Chrome extensions in native Settings and ordinary tabs
-        shell: pwsh
-        run: |
-          $exe = Get-ChildItem cef-build -Recurse -Filter Soulu.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
-          python browser/scripts/test-cef-extensions.py $exe.FullName browser/artifacts/extensions-evidence.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Verify integrated VOT on real YouTube
