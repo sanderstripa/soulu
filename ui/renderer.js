@@ -227,7 +227,10 @@ sidebarButtons.forEach((button)=>button.onclick=()=>window.browserShell.toggleSi
 backButtons.forEach((button)=>button.onclick=()=>window.browserShell.back());
 favoritesButtons.forEach((button)=>button.onclick=async()=>{renderBookmarks(await window.browserShell.getBookmarks());openPanel("favorites");});
 downloadsButtons.forEach((button)=>button.onclick=async()=>{if(!lastDownloads.some((x)=>x.state==="progressing"))delete button.dataset.recent;renderDownloads(await window.browserShell.getDownloads());openPanel("downloads");});
-[$("#newTabButton"),$("#compactNewTabButton")].forEach((button)=>button.onclick=()=>window.browserShell.newTab());
+[$("#newTabButton"),$("#compactNewTabButton")].forEach(button=>{
+  button.onpointerdown=e=>{if(e.button===0){e.preventDefault();window.browserShell.newTab();}};
+  button.onclick=e=>{if(e.detail===0)window.browserShell.newTab();};
+});
 vpnButtons.forEach((button)=>button.onclick=toggleVpn);
 $("#classicPageMenu").onclick=()=>window.browserShell.pageMenu();
 $('#closeDownloads').onclick=closePanel;
