@@ -145,10 +145,17 @@ def main():
                 if accept:
                     ButtonWrapper(accept[0]).click_input()
             ImageGrab.grab().save(output.parent / 'extensions-after-picker.png')
-            result = wait(lambda: s.evaluate(manager, 'window.__loadResult'))
-            check(not result.get('error') and result.get('result') is None, 'Unpacked MV3 installation through native picker')
+            print('Manager after picker:', s.evaluate(manager, '({url:location.href,result:window.__loadResult})'), flush=True)
+            print('Targets after picker:', [(t.get('type'),t.get('url')) for t in s.targets()], flush=True)
+            # Chrome may select a newly created tab when extension installation
+            # finishes. Reopen the installed list and verify persisted state,
+            # rather than depending on a JS variable in a navigated WebUI.
+            s.evaluate(settings, "document.querySelector('.extension-controls button').click()")
+            manager = socket('chrome://extensions')
+            wait(lambda: s.evaluate(manager, "typeof window.chrome?.developerPrivate?.getExtensionsInfo==='function'"))
             expression = "chrome.developerPrivate.getExtensionsInfo({includeDisabled:true,includeTerminated:true}).then(rows=>rows.find(r=>r.name==='Soulu extension acceptance')||null)"
             installed = wait(lambda: s.evaluate(manager, expression))
+            check(bool(installed), 'Unpacked MV3 installation through native picker')
             report['extensionId'] = installed['id']
             s.evaluate(settings, 'souluSettingsRequestClose()')
             wait(lambda: not any('/ui/settings.html' in t.get('url', '') for t in s.targets()))
