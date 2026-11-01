@@ -11,9 +11,9 @@ function fav(x,c="favicon"){return x?.favicon?`<img class="${c}" src="${esc(x.fa
 function fallbacks(root){root.querySelectorAll("img.favicon,img.sidebar-favicon,img.list-favicon").forEach((i)=>i.addEventListener("error",()=>i.remove(),{once:true}));}
 function translate(){document.documentElement.lang=state.settings.language;document.querySelectorAll("[data-i18n]").forEach((e)=>e.textContent=tr(e.dataset.i18n));document.querySelectorAll("[data-i18n-title]").forEach((e)=>{e.title=tr(e.dataset.i18nTitle);e.setAttribute("aria-label",e.title);});document.querySelectorAll("[data-i18n-placeholder]").forEach((e)=>e.placeholder=e.id==='classicAddress'&&state.page?.url==='soulu://home'?'':tr(e.dataset.i18nPlaceholder));}
 function setVisible(selector,visible){document.querySelectorAll(selector).forEach(el=>{el.hidden=!visible;el.style.display=visible?"":"none";});}
-function appearance(){document.body.dataset.pageGlassReady=String(!!state.pageGlassReady);document.body.dataset.fullscreen=String(!!state.fullscreen);const s=state.settings;document.body.dataset.layout=["classic","compact","adaptive"].includes(s.layout)?s.layout:"compact";document.body.dataset.theme=s.theme||"system";document.body.dataset.matte=s.mattePanel?"true":"false";document.body.dataset.addressPosition=s.addressPosition||"center";document.body.dataset.extensionsPosition=s.extensionsPosition||"left";document.body.dataset.vpnToolbar=s.vpnToolbarVisible===false?"false":"true";document.body.dataset.showSidebar=String(s.showSidebar!==false);document.body.dataset.showBack=String(s.showBack!==false);document.body.dataset.showFavorites=String(s.showFavorites!==false);document.body.dataset.showNewTab=String(s.showNewTab!==false);document.body.dataset.showDownloads=String(s.showDownloads!==false);document.body.dataset.showVpn=String(s.vpnToolbarVisible!==false);setVisible("#sidebarButton,#compactSidebarButton",s.showSidebar!==false);setVisible("#backButton,#compactBackButton",s.showBack!==false);setVisible("#favoritesButton,[data-favorites]",s.showFavorites!==false);setVisible("#newTabButton,#compactNewTabButton",s.showNewTab!==false);setVisible(".vpn-button",s.vpnToolbarVisible!==false);setVisible("#downloadsButton,#compactDownloadsButton",s.showDownloads!==false);window.souluAdaptiveToolbar?.sync(state);translate();syncDownloadVisibility();}
+function appearance(){document.body.dataset.pageGlassReady=String(!!state.pageGlassReady);document.body.dataset.fullscreen=String(!!state.fullscreen);const s=state.settings;document.body.dataset.layout=["classic","compact","adaptive"].includes(s.layout)?s.layout:"compact";document.body.dataset.theme=s.theme||"system";document.body.dataset.matte=s.mattePanel?"true":"false";document.body.dataset.addressPosition=s.addressPosition||"center";document.body.dataset.extensionsPosition=s.extensionsPosition||"left";document.body.dataset.vpnToolbar=s.vpnToolbarVisible===false?"false":"true";document.body.dataset.showSidebar=String(s.showSidebar!==false);document.body.dataset.showBack=String(s.showBack!==false);document.body.dataset.showFavorites=String(s.showFavorites!==false);document.body.dataset.showNewTab=String(s.showNewTab!==false);document.body.dataset.showDownloads=String(s.showDownloads!==false);document.body.dataset.showVpn=String(s.vpnToolbarVisible!==false);setVisible("#sidebarButton,#compactSidebarButton",s.showSidebar!==false);setVisible("#backButton,#compactBackButton",s.showBack!==false);setVisible("[data-home]",s.showHome!==false);setVisible("#favoritesButton,[data-favorites]",s.showFavorites!==false);setVisible("#newTabButton,#compactNewTabButton",s.showNewTab!==false);setVisible(".vpn-button",s.vpnToolbarVisible!==false);setVisible("#downloadsButton,#compactDownloadsButton",s.showDownloads!==false);window.souluAdaptiveToolbar?.sync(state);translate();syncDownloadVisibility();}
 function sourceLabel(s){return s==="tab"?tr("openTab"):s==="bookmark"?tr("bookmark"):s==="history"?tr("history"):s==="website"?"Сайт":tr("search");}
-function hideSuggestions(box){box.classList.remove("visible");window.browserShell.setSuggestionsHeight(0);}
+function hideSuggestions(box){++token;box.classList.remove("visible");window.browserShell.setSuggestionsHeight(0);}
 function drawSuggestions(box,items,q){q=String(q||"").trim();if(!q){hideSuggestions(box);return;}const rows=items.map((x)=>x.source==="search"?`<button type="button" class="suggestion-row" data-search="${esc(x.query)}"><b class="search-mark">⌕</b><span><strong>${esc(x.title)}</strong><small>${tr("searchFor")}</small></span><em>${tr("search")}</em></button>`:`<button type="button" class="suggestion-row" data-url="${esc(x.url)}">${fav(x)}<span><strong>${esc(x.title)}</strong><small>${esc(x.url)}</small></span><em>${sourceLabel(x.source)}</em></button>`).join("");box.innerHTML=rows+`<button type="button" class="suggestion-row" data-search="${esc(q)}"><b class="search-mark">⌕</b><span><strong>${tr("searchFor")} «${esc(q)}»</strong></span><em>${tr("search")}</em></button>`;box.classList.add("visible");box.positionForAddress?.();window.browserShell.setSuggestionsHeight(Math.min(430,box.getBoundingClientRect().top+box.querySelectorAll(".suggestion-row").length*44+18));fallbacks(box);box.querySelectorAll("[data-url]").forEach((b)=>b.onmousedown=(e)=>{e.preventDefault();window.browserShell.navigate(b.dataset.url);hideSuggestions(box);});box.querySelectorAll("[data-search]").forEach((b)=>b.onmousedown=(e)=>{e.preventDefault();window.browserShell.navigate(e.currentTarget.dataset.search);hideSuggestions(box);});}
 function bindAddress(form,input,box){
   // Keep popups outside the scrolling/transformed tab capsule so they are not clipped.
@@ -21,12 +21,19 @@ function bindAddress(form,input,box){
   document.body.append(box);
   box.positionForAddress=()=>{const r=form.getBoundingClientRect(),width=box.getBoundingClientRect().width;box.style.transform='none';box.style.top=(r.bottom+8)+'px';box.style.left=Math.max(8,Math.min(innerWidth-width-8,r.left+(r.width-width)/2))+'px';};
   let selected=-1,blurTimer=0,queryTimer=0;
+  const binding=new AbortController();
+  form.disposeAddress=()=>{binding.abort();clearTimeout(queryTimer);clearTimeout(blurTimer);};
+  const dismiss=()=>{if(!box.classList.contains('visible')&&document.activeElement!==input)return;clearTimeout(queryTimer);clearTimeout(blurTimer);editing=false;hideSuggestions(box);if(document.activeElement===input)input.blur();input.value=addressDisplay(state.page);};
+  document.addEventListener('pointerdown',e=>{if(!form.contains(e.target)&&!box.contains(e.target))dismiss();},{capture:true,signal:binding.signal});
+  window.addEventListener('blur',dismiss,{signal:binding.signal});
+  window.addEventListener('soulu-dismiss-address',dismiss,{signal:binding.signal});
+
   const refresh=()=>{clearTimeout(queryTimer);const n=++token;queryTimer=setTimeout(async()=>{
     const q=input.value;
     if(!q.trim()){hideSuggestions(box);return;}
     try{const items=await Promise.race([window.browserShell.suggestions(q),new Promise(resolve=>setTimeout(()=>resolve([]),1800))]);
-      if(n===token&&input.isConnected&&document.activeElement===input&&input.value===q){drawSuggestions(box,items||[],q);selected=-1;}
-    }catch(error){if(n===token&&document.activeElement===input)drawSuggestions(box,[],q);}
+      if(n===token&&input.isConnected&&document.hasFocus()&&document.activeElement===input&&input.value===q){drawSuggestions(box,items||[],q);selected=-1;}
+    }catch(error){if(n===token&&document.hasFocus()&&document.activeElement===input)drawSuggestions(box,[],q);}
   },140);};
   form.onsubmit=e=>{e.preventDefault();const value=input.value.trim();if(!value)return;editing=false;hideSuggestions(box);input.blur();window.browserShell.navigate(value);};
   input.onfocus=()=>{clearTimeout(blurTimer);input.value=state.page?.url==='soulu://home'?'':state.page?.url||'';editing=true;input.select();refresh();};
@@ -84,23 +91,45 @@ function classicTabMarkup(x,pinned){
   const close=`<button class="tab-action" title="${tr("close")}" aria-label="${tr("close")}" data-close-tab="${x.id}"><svg viewBox="0 0 24 24"><path d="M4 4l16 16m0-16L4 20"/></svg></button>`;
   return `<div class="classic-tab${pinned?" pinned":""}${x.active?" active":""}" role="tab" aria-selected="${!!x.active}" aria-label="${attributeTitle}" tabindex="0" data-tooltip="${attributeTitle}" data-tab-id="${x.id}">${image}<strong>${esc(title)}</strong><span class="tab-activity">${mediaMarkup(x)}</span>${close}</div>`;
 }
+function reconcileClassicTabs(container,items,pinned){
+  const existing=new Map([...container.children].map(n=>[Number(n.dataset.tabId),n]));
+  const wanted=new Set(items.map(x=>x.id));
+  for(const [id,node] of existing)if(!wanted.has(id))node.remove();
+  items.forEach((tab,index)=>{const markup=classicTabMarkup(tab,pinned);let node=existing.get(tab.id);
+    if(!node||node.tabMarkup!==markup){
+      const template=document.createElement('template');template.innerHTML=markup;const next=template.content.firstElementChild;
+      if(!node)node=next;
+      else {
+        node.className=next.className;
+        for(const name of ['aria-selected','aria-label','data-tooltip'])node.setAttribute(name,next.getAttribute(name));
+        const iconSource=String(tab.favicon||'');
+        if(node.iconSource!==iconSource)node.firstElementChild.replaceWith(next.firstElementChild);
+        const title=tab.title||tab.label||tr('newTab');node.querySelector('strong').textContent=title;if(!tab.favicon)node.firstElementChild.textContent=title.trim().charAt(0).toUpperCase()||'•';
+        const activity=node.querySelector('.tab-activity'),media=mediaMarkup(tab);if(activity.innerHTML!==media)activity.innerHTML=media;
+        const close=node.querySelector('[data-close-tab]');close.setAttribute('aria-label',tr('close'));close.dataset.tooltip=tr('close');
+      }
+      node.iconSource=String(tab.favicon||'');node.tabMarkup=markup;
+    }
+    if(container.children[index]!==node)container.insertBefore(node,container.children[index]||null);
+  });
+}
 function renderClassicTabs(){
   const previousScroll=tabStrip.scrollLeft,previousPinnedScroll=classicPinnedTabs.scrollLeft;
   const pinned=state.tabs.filter(x=>x.pinned),normal=state.tabs.filter(x=>!x.pinned);
   const signature=JSON.stringify([state.settings?.language,state.tabs.map(x=>[x.id,x.title,x.label,x.favicon,x.active,x.pinned,x.audible,x.muted,x.microphoneActive,x.cameraActive])]);
   if(signature!==classicTabsSignature){
   classicTabsSignature=signature;
-  classicPinnedTabs.innerHTML=pinned.map(x=>classicTabMarkup(x,true)).join("");
+  reconcileClassicTabs(classicPinnedTabs,pinned,true);
   classicPinnedTabs.hidden=!pinned.length;
   classicPinnedTabs.setAttribute("aria-label",state.settings?.language==="en"?"Pinned tabs":"Закреплённые вкладки");
   tabStrip.closest(".tabs-zone")?.classList.toggle("no-ordinary",!normal.length);
-  tabStrip.innerHTML=normal.map(x=>classicTabMarkup(x,false)).join("");
+  reconcileClassicTabs(tabStrip,normal,false);
   for(const container of [classicPinnedTabs,tabStrip]){
     bindMedia(container);
-    container.querySelectorAll("img.favicon").forEach(img=>img.addEventListener("error",()=>{
+    container.querySelectorAll("img.favicon").forEach(img=>{if(img.fallbackBound)return;img.fallbackBound=true;img.addEventListener("error",()=>{
       const fallback=document.createElement("span");fallback.className="favicon favicon-fallback classic-fallback";
       fallback.setAttribute("aria-hidden","true");fallback.textContent=(img.closest("[data-tab-id]")?.getAttribute("aria-label")||"•").trim().charAt(0).toUpperCase()||"•";img.replaceWith(fallback);
-    },{once:true}));
+    },{once:true});});
     container.querySelectorAll("[data-tab-id]").forEach((e)=>{
       e.onclick=(v)=>{if(!v.target.closest("[data-close-tab],[data-mute-tab]"))window.browserShell.switchTab(+e.dataset.tabId);};
       e.onkeydown=(v)=>{if(v.target===e&&(v.key==="Enter"||v.key===" ")){v.preventDefault();window.browserShell.switchTab(+e.dataset.tabId);}};
@@ -113,10 +142,10 @@ function renderClassicTabs(){
     container.querySelectorAll("[data-close-tab]").forEach((b)=>b.onclick=(e)=>{e.stopPropagation();window.browserShell.closeTab(+b.dataset.closeTab);});
   }
   }
-  requestAnimationFrame(()=>{sizeClassicTabs();const selected=state.tabs.find(x=>x.active);
+  {sizeClassicTabs();const selected=state.tabs.find(x=>x.active);
     const signature=selected?`${selected.id}:${!!selected.pinned}`:null;
     if(signature!==classicVisibleTabId){classicVisibleTabId=signature;revealClassicTab();}
-    else {tabStrip.scrollLeft=previousScroll;classicPinnedTabs.scrollLeft=previousPinnedScroll;}});
+    else {tabStrip.scrollLeft=previousScroll;classicPinnedTabs.scrollLeft=previousPinnedScroll;}}
   const input=$("#classicAddress");if(document.activeElement!==input)input.value=addressDisplay(state.page);input.placeholder=state.page?.url==='soulu://home'?'':tr("addressPlaceholder");
   $(".classic-reload").classList.toggle("loading",!!state.page?.loading);
 }
@@ -132,7 +161,7 @@ function renderCompactTabs(){
   compactToolbar.querySelectorAll('[data-compact-rendered]').forEach(n=>{
     const id=n.dataset.activeTab||n.dataset.tabId;
     const tab=wanted.find(x=>String(x.id)===id);
-    if(!keys.has(id)||Boolean(n.dataset.activeTab)!==Boolean(tab?.active)){if(n.addressSuggestions){hideSuggestions(n.addressSuggestions);n.addressSuggestions.remove();}n.remove();}
+    if(!keys.has(id)||Boolean(n.dataset.activeTab)!==Boolean(tab?.active)){if(n.addressSuggestions){n.disposeAddress?.();hideSuggestions(n.addressSuggestions);n.addressSuggestions.remove();}n.remove();}
   });
   let previous=compactTabsAnchor;
   for(const x of wanted){
@@ -180,7 +209,7 @@ function renderTabs(){renderClassicTabs();renderCompactTabs();}
 function renderSidebar(){const signature=JSON.stringify([state.settings?.language,state.tabs.map(x=>[x.id,x.title,x.label,x.favicon,x.active])]);if(signature===sidebarSignature)return;sidebarSignature=signature;const box=$("#sidebarTabs");$("#sidebarCount").textContent=`${state.tabs.length} ${tr("opened")}`;box.innerHTML=state.tabs.map((x)=>`<div class="sidebar-tab${x.active?" active":""}">${fav(x,"sidebar-favicon")}<button data-select="${x.id}"><strong>${esc(x.title||tr("newTab"))}</strong><small>${esc(x.label)}</small></button><button data-close="${x.id}">×</button></div>`).join("");fallbacks(box);box.querySelectorAll("[data-select]").forEach((b)=>b.onclick=()=>window.browserShell.switchTab(+b.dataset.select));box.querySelectorAll("[data-close]").forEach((b)=>b.onclick=()=>window.browserShell.closeTab(+b.dataset.close));}
 let pendingState=null,stateFrame=0;
 function renderState(v){pendingState=v||pendingState||state;if(stateFrame)return;stateFrame=requestAnimationFrame(()=>{stateFrame=0;applyState(pendingState);pendingState=null;});}
-function applyState(v){state=v||state;renderTabs();appearance();backButtons.forEach((button)=>button.disabled=!state.page?.canGoBack);sidebar.classList.toggle("visible",!!state.sidebarVisible&&!state.bookmarksSidebarVisible);if((!state.sidebarVisible||state.bookmarksSidebarVisible)&&sidebar.contains(document.activeElement))sidebarButtons.find(b=>b.getClientRects().length)?.focus();sidebar.inert=!state.sidebarVisible||!!state.bookmarksSidebarVisible;sidebarButtons.forEach((button)=>button.classList.toggle("active",!!state.sidebarVisible&&!state.bookmarksSidebarVisible));[$("#windowMaximize"),$("#compactWindowMaximize")].forEach((m)=>{m.title=state.maximized?tr("restore"):tr("maximize");m.innerHTML=state.maximized?'<svg viewBox="0 0 24 24"><rect x="8.25" y="5.25" width="10.5" height="10.5"/><path d="M15.75 15.75v3h-10.5v-10.5h3"/></svg>':'<svg viewBox="0 0 24 24"><rect x="5.25" y="5.25" width="13.5" height="13.5"/></svg>';});document.title=state.page?.title?`${state.page.title} — Soulu`:"Soulu";renderSidebar();}
+function applyState(v){state=v||state;appearance();renderTabs();backButtons.forEach((button)=>button.disabled=!state.page?.canGoBack);sidebar.classList.toggle("visible",!!state.sidebarVisible&&!state.bookmarksSidebarVisible);if((!state.sidebarVisible||state.bookmarksSidebarVisible)&&sidebar.contains(document.activeElement))sidebarButtons.find(b=>b.getClientRects().length)?.focus();sidebar.inert=!state.sidebarVisible||!!state.bookmarksSidebarVisible;sidebarButtons.forEach((button)=>button.classList.toggle("active",!!state.sidebarVisible&&!state.bookmarksSidebarVisible));[$("#windowMaximize"),$("#compactWindowMaximize")].forEach((m)=>{m.title=state.maximized?tr("restore"):tr("maximize");m.innerHTML=state.maximized?'<svg viewBox="0 0 24 24"><rect x="8.25" y="5.25" width="10.5" height="10.5"/><path d="M15.75 15.75v3h-10.5v-10.5h3"/></svg>':'<svg viewBox="0 0 24 24"><rect x="5.25" y="5.25" width="13.5" height="13.5"/></svg>';});document.title=state.page?.title?`${state.page.title} — Soulu`:"Soulu";renderSidebar();}
 function closePanel(){rightPanel="";[favoritesPanel,downloadsPanel].forEach((x)=>x.classList.remove("open"));[...favoritesButtons,...downloadsButtons,...vpnButtons,...settingsButtons].forEach((x)=>x.classList.remove("active"));window.browserShell.setRightPanel(0);}
 function openPanel(type){if(type==="settings")return window.browserShell.openSettingsWindow();if(rightPanel===type)return closePanel();closePanel();rightPanel=type;const map={favorites:[favoritesPanel,favoritesButtons,330],downloads:[downloadsPanel,downloadsButtons,350]},[panel,buttons,width]=map[type];panel.classList.add("open");buttons.forEach((button)=>button.classList.add("active"));window.browserShell.setRightPanel(width);}
 function bytes(n){n=+n||0;return n<1024?`${n} B`:n<1048576?`${Math.round(n/1024)} KB`:`${(n/1048576).toFixed(1)} MB`;}
@@ -225,7 +254,7 @@ window.browserShell.onState(renderState);
 // Preserve the newest native animation frame in that pending snapshot.
 function updateAdaptiveGeometry(frame){state.adaptiveToolbar=frame;if(pendingState)pendingState.adaptiveToolbar=frame;}
 window.browserShell.onAdaptiveGeometry?.(updateAdaptiveGeometry);
-window.browserShell.onSettings?.((settings)=>{state.settings={...state.settings,...settings};renderTabs();appearance();});
+window.browserShell.onSettings?.((settings)=>{state.settings={...state.settings,...settings};appearance();renderTabs();});
 window.browserShell.onDownloads(renderDownloads);
 window.browserShell.onFocusAddress(()=>{const input=state.settings.layout!=="compact"?$("#classicAddress"):$("#compactAddress");if(input&&state.page?.url==='soulu://home'){
   input.value='';input.dispatchEvent(new Event('input',{bubbles:true}));
