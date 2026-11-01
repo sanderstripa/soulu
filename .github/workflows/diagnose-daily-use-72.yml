@@ -25,8 +25,8 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: 41287104185
-          name: Soulu-cef-candidate-fdd416df211b2252b2aee459a6b6b2d26fdc6671
+          run-id: 41316441004
+          name: Soulu-cef-candidate-513a1bddbc361e41936f5d3342a97f3d90ce7c79
           path: candidate
       - name: Prepare identical CEF runtime with the freshly compiled candidate
         shell: pwsh
@@ -38,18 +38,13 @@ jobs:
           if (!$exe) { throw 'Runtime executable missing' }
           $runtime = $exe.Directory.FullName
           Copy-Item candidate/* $runtime -Recurse -Force
-          Copy-Item browser/ui/renderer.js (Join-Path $runtime 'ui/renderer.js') -Force
           "runtime_dir=$runtime" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
           Get-Content (Join-Path $runtime 'engine-version.json')
-      - name: Exercise adaptive profile transitions repeatedly
+      - name: Diagnose lifecycle policy
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client pillow comtypes pywinauto
-          foreach ($attempt in 1..5) {
-            python browser/scripts/test-cef-adaptive-toolbar.py "$env:runtime_dir/Soulu.exe" "browser/artifacts/adaptive-$attempt.json"
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          }
-          python browser/scripts/test-cef-settings.py "$env:runtime_dir/Soulu.exe" browser/artifacts/settings-evidence.json
+          python browser/scripts/test-cef-polish-performance.py "$env:runtime_dir/Soulu.exe" browser/artifacts/polish-performance
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - uses: actions/upload-artifact@v4
         if: always()
