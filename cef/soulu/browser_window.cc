@@ -1105,6 +1105,11 @@ void BrowserWindow::CloseSettingsOverlay() {
   if (settings_overlay_) settings_overlay_->Close();
 }
 void BrowserWindow::FinishSettingsTransition() {
+  if(extensions_panel_){
+    auto panel=extensions_panel_;extensions_panel_=nullptr;
+    CefRefPtr<BrowserWindow> self=this;
+    panel->Close([self]{self->FinishSettingsTransition();});return;
+  }
   if (settings_browser_) settings_browser_->GetHost()->CloseBrowser(true);
   else if (!settings_browser_pending_) SettingsClosed(nullptr);
 }
@@ -1125,6 +1130,7 @@ void BrowserWindow::SettingsClosed(CefRefPtr<CefBrowser> browser) {
   else if (!pending.empty()) NewTab(pending);
 }
 void BrowserWindow::RefreshSettingsProfile() {
+  if(extensions_panel_){extensions_panel_->Close();extensions_panel_=nullptr;}
   if (!settings_browser_) return;
   settings_profile_ = active_profile_id_;
   settings_loaded_ = nullptr;

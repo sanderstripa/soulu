@@ -8,6 +8,7 @@
 #include <shellapi.h>
 #include <shlobj.h>
 #include <algorithm>
+#include <cmath>
 
 namespace soulu {
 namespace {
@@ -173,6 +174,28 @@ bool BrowserWindow::HandleSettingsBridge(int id,const std::string& request,
   }
   if (settings_overlay_->closing()) {
     callback->Failure(409,"Настройки закрываются.");return true;
+  }
+  if(action=="settings.extensions"){
+    if(!payload||payload->GetType("visible")!=VTYPE_BOOL){callback->Failure(400,"Invalid extension panel request");return true;}
+    if(!payload->GetBool("visible")){
+      if(extensions_panel_)extensions_panel_->Place(RECT{});
+      ReplyEmpty(callback);return true;
+    }
+    RECT client={};GetClientRect(settings_browser_->GetHost()->GetWindowHandle(),&client);
+    const double scale=GetDpiForWindow(settings_overlay_->hwnd())/96.0;
+    auto number=[&](const char* key){return payload->GetType(key)==VTYPE_INT?double(payload->GetInt(key)):payload->GetType(key)==VTYPE_DOUBLE?payload->GetDouble(key):-1.0;};
+    const double dx=number("x"),dy=number("y"),dw=number("width"),dh=number("height");
+    if(!std::isfinite(dx)||!std::isfinite(dy)||!std::isfinite(dw)||!std::isfinite(dh)||
+        dx<0||dy<0||dw<1||dh<1||dx+dw>client.right/scale+1||dy+dh>client.bottom/scale+1){callback->Failure(400,"Invalid extension panel bounds");return true;}
+    const int x=static_cast<int>(dx*scale),y=static_cast<int>(dy*scale);
+    const int w=static_cast<int>(dw*scale),h=static_cast<int>(dh*scale);
+    if(x<0||y<0||w<1||h<1||x+w>client.right+1||y+h>client.bottom+1){callback->Failure(400,"Invalid extension panel bounds");return true;}
+    if(!extensions_panel_)extensions_panel_=CreateExtensionsPanel(settings_browser_->GetHost()->GetWindowHandle(),ContextForNewTab(false));
+    if(!extensions_panel_){callback->Failure(500,"Не удалось открыть менеджер расширений Chromium.");return true;}
+    extensions_panel_->Place(RECT{x,y,x+w,y+h});
+    const std::string page=payload->GetString("page");
+    if(page=="store"||page=="installed")extensions_panel_->Navigate(page=="store");
+    ReplyEmpty(callback);return true;
   }
   if(action=="settings.capabilities"){
     auto result=CefDictionaryValue::Create();bool is_default=true;

@@ -29,7 +29,7 @@ on:
         default: false
         type: boolean
   push:
-    branches: [main, codex/settings-overlay, codex/cef-stable-update, codex/beta-motion, codex/beta-typography, codex/beta-toolbar, codex/beta-adblock, codex/beta-site-reader, codex/menu-translate, codex/home-final, codex/window-polish, codex/browser-import-validation, codex/classic-responsive-implementation, codex/adaptive-toolbar]
+    branches: [codex/chrome-extensions-settings, main, codex/settings-overlay, codex/cef-stable-update, codex/beta-motion, codex/beta-typography, codex/beta-toolbar, codex/beta-adblock, codex/beta-site-reader, codex/menu-translate, codex/home-final, codex/window-polish, codex/browser-import-validation, codex/classic-responsive-implementation, codex/adaptive-toolbar]
     tags: [beta-1.0.73]
     paths:
       - "cef/**"
@@ -47,7 +47,7 @@ permissions:
 
 # Only fresh source builds can package or publish.
 concurrency:
-  group: ${{ github.ref == 'refs/heads/codex/adaptive-toolbar' && 'soulu-adaptive-ci' || github.ref == 'refs/heads/codex/classic-responsive-implementation' && 'soulu-classic-responsive-ci' || 'soulu-cef-main' }}
+  group: ${{ github.ref == 'refs/heads/codex/chrome-extensions-settings' && 'soulu-extensions-ci' || github.ref == 'refs/heads/codex/adaptive-toolbar' && 'soulu-adaptive-ci' || github.ref == 'refs/heads/codex/classic-responsive-implementation' && 'soulu-classic-responsive-ci' || 'soulu-cef-main' }}
   cancel-in-progress: true
 
 jobs:

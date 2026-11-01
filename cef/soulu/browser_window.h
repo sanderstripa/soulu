@@ -1,6 +1,7 @@
 #pragma once
 
 #include <windows.h>
+#include "examples/soulu/extensions_panel.h"
 
 #include <string>
 #include <vector>
@@ -321,6 +322,7 @@ class BrowserWindow final : public CefBaseRefCounted {
   CefRefPtr<CefDictionaryValue> settings_loaded_;
   static constexpr int kSettingsSession = -1;
   int settings_session_id_ = 0;
+  CefRefPtr<ExtensionsPanel> extensions_panel_;
   CefRefPtr<CefBrowser> settings_browser_;
   std::unique_ptr<SettingsOverlay> settings_overlay_;
   HWND settings_previous_focus_ = nullptr;
