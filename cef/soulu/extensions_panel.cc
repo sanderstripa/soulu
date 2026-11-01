@@ -21,7 +21,8 @@ class Panel final : public ExtensionsPanel, public CefClient,
   bool Start(CefRefPtr<CefRequestContext> context) {
     CEF_REQUIRE_UI_THREAD();
     CefBrowserSettings settings;
-    view_=CefBrowserView::CreateBrowserView(this,"chrome://extensions/",settings,nullptr,context,this);
+    auto extra=CefDictionaryValue::Create();extra->SetBool("souluExtensionsSurface",true);
+    view_=CefBrowserView::CreateBrowserView(this,"chrome://extensions/",settings,extra,context,this);
     if(view_) window_=CefWindow::CreateTopLevelWindow(this);
     if(!window_){view_=nullptr;return false;}
     return true;

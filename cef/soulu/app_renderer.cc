@@ -62,15 +62,17 @@ class RendererApp final : public CefApp, public CefRenderProcessHandler {
  public:
   CefRefPtr<CefRenderProcessHandler> GetRenderProcessHandler() override { return this; }
   void OnBrowserCreated(CefRefPtr<CefBrowser> browser,CefRefPtr<CefDictionaryValue> extra) override {
+    if(extra&&extra->GetBool("souluExtensionsSurface"))extension_surfaces_.insert(browser->GetIdentifier());
     if(extra&&extra->GetBool("souluIncognito"))private_browsers_.insert(browser->GetIdentifier());
   }
-  void OnBrowserDestroyed(CefRefPtr<CefBrowser> browser) override {private_browsers_.erase(browser->GetIdentifier());}
+  void OnBrowserDestroyed(CefRefPtr<CefBrowser> browser) override {private_browsers_.erase(browser->GetIdentifier());extension_surfaces_.erase(browser->GetIdentifier());}
   void OnWebKitInitialized() override {
     CefMessageRouterConfig config;
     router_ = CefMessageRouterRendererSide::Create(config);
   }
   void OnContextCreated(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame,
                         CefRefPtr<CefV8Context> context) override {
+    if(extension_surfaces_.count(browser->GetIdentifier()))return;
     router_->OnContextCreated(browser, frame, context);
     InstallVideoRuntime(browser,frame,context);
     CefURLParts parts;
@@ -167,11 +169,13 @@ class RendererApp final : public CefApp, public CefRenderProcessHandler {
     // Document pagehide and OnBeforeBrowse clear playback. Releasing an
     // isolated service world must not clear a still-playing document, and the
     // main-world context may already be gone at this point.
+    if(extension_surfaces_.count(browser->GetIdentifier()))return;
     ForgetVideoContext(context);
     router_->OnContextReleased(browser, frame, context);
   }
   bool OnProcessMessageReceived(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame,
                                 CefProcessId source, CefRefPtr<CefProcessMessage> message) override {
+    if(extension_surfaces_.count(browser->GetIdentifier()))return false;
     if(source==PID_BROWSER&&frame&&(message->GetName()=="soulu.media.activate"||message->GetName()=="soulu.media.policy")){
       auto context=frame->GetV8Context();if(!context)return true;
       const bool blocked=message->GetName()=="soulu.media.policy"&&message->GetArgumentList()->GetBool(0);
@@ -203,7 +207,7 @@ class RendererApp final : public CefApp, public CefRenderProcessHandler {
     return router_->OnProcessMessageReceived(browser, frame, source, message);
   }
  private:
-  std::set<int> private_browsers_;
+  std::set<int> private_browsers_,extension_surfaces_;
   CefRefPtr<CefMessageRouterRendererSide> router_;
   IMPLEMENT_REFCOUNTING(RendererApp);
 };

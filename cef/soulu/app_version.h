@@ -1,4 +1,4 @@
 #pragma once
 namespace soulu {
-inline constexpr const char* kSouluVersion = "1.0.73-beta";
+inline constexpr const char* kSouluVersion = "1.0.74-beta";
 }
