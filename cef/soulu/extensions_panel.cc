@@ -55,7 +55,10 @@ class Panel final : public ExtensionsPanel, public CefClient,
     if(!window_||closing_)return;
     const auto hwnd=window_->GetWindowHandle();
     const bool visible=bounds.right>bounds.left&&bounds.bottom>bounds.top;
-    if(!visible){ShowWindow(hwnd,SW_HIDE);return;}
+    if(!visible){window_->Hide();return;}
+    // Show through Views as well as Win32: native SW_SHOWWINDOW alone leaves
+    // the Aura compositor hidden and the settings backdrop visible underneath.
+    window_->Show();
     SetWindowPos(hwnd,HWND_TOP,bounds.left,bounds.top,bounds.right-bounds.left,
         bounds.bottom-bounds.top,SWP_NOACTIVATE|SWP_FRAMECHANGED|SWP_SHOWWINDOW);
   }
@@ -67,7 +70,7 @@ class Panel final : public ExtensionsPanel, public CefClient,
   }
   void Close(std::function<void()> done = {}) override {
     CEF_REQUIRE_UI_THREAD();if(done)done_=std::move(done);if(closing_)return;closing_=true;
-    if(window_)ShowWindow(window_->GetWindowHandle(),SW_HIDE);
+    if(window_)window_->Hide();
     if(browser_)browser_->GetHost()->CloseBrowser(true);
     else if(window_)window_->Close();
     else {auto complete=std::move(done_);if(complete)complete();}
