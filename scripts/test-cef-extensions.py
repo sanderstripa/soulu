@@ -106,13 +106,13 @@ def main():
                 nonlocal process
                 process = subprocess.Popen([executable, '--no-proxy-server'], env=env)
                 shell = socket('/ui/index.html')
-                wait(lambda: s.evaluate(shell, "typeof browserShell?.openSettingsWindow==='function'"))
+                wait(lambda: s.evaluate(shell, "typeof window.browserShell?.openSettingsWindow==='function'"))
                 s.evaluate(shell, 'browserShell.openSettingsWindow()')
                 settings = socket('/ui/settings.html')
-                wait(lambda: s.evaluate(settings, "document.body.classList.contains('ready')"))
+                wait(lambda: s.evaluate(settings, "document.body?.classList.contains('ready')"))
                 s.evaluate(settings, "souluSettings.openSection('extensions')")
                 manager = socket('chrome://extensions')
-                wait(lambda: s.evaluate(manager, "typeof chrome.developerPrivate?.getExtensionsInfo==='function'"))
+                wait(lambda: s.evaluate(manager, "typeof window.chrome?.developerPrivate?.getExtensionsInfo==='function'"))
                 return shell, settings, manager
 
             shell, settings, manager = start()
