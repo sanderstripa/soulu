@@ -38,6 +38,7 @@ jobs:
           if (!$exe) { throw 'Runtime executable missing' }
           $runtime = $exe.Directory.FullName
           Copy-Item candidate/* $runtime -Recurse -Force
+          Copy-Item browser/ui/renderer.js (Join-Path $runtime 'ui/renderer.js') -Force
           "runtime_dir=$runtime" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
           Get-Content (Join-Path $runtime 'engine-version.json')
       - name: Diagnose lifecycle policy
