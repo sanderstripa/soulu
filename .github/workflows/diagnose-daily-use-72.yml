@@ -19,6 +19,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           path: browser
+          ref: e7c2202b76164c929fda255983a957b7bdf44e54
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -41,12 +42,17 @@ jobs:
           Copy-Item browser/ui/renderer.js (Join-Path $runtime 'ui/renderer.js') -Force
           "runtime_dir=$runtime" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
           Get-Content (Join-Path $runtime 'engine-version.json')
-      - name: Diagnose lifecycle policy
+      - name: Preflight twelve-section settings and UI regressions
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client pillow comtypes pywinauto
-          python browser/scripts/test-cef-polish-performance.py "$env:runtime_dir/Soulu.exe" browser/artifacts/polish-performance
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $personalize='HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize'
+          New-Item $personalize -Force | Out-Null
+          Set-ItemProperty $personalize EnableTransparency 1 -Type DWord
+          foreach ($suite in @('settings','settings-overlay','motion','adaptive-toolbar','bookmarks-overview','layout')) {
+            python "browser/scripts/test-cef-$suite.py" "$env:runtime_dir/Soulu.exe" "browser/artifacts/$suite"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
       - uses: actions/upload-artifact@v4
         if: always()
         with:
