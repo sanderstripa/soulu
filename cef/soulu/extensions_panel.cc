@@ -1,4 +1,5 @@
 #include "examples/soulu/extensions_panel.h"
+#include "examples/soulu/engine_version.h"
 #include "include/cef_client.h"
 #include "include/views/cef_browser_view.h"
 #include "include/views/cef_browser_view_delegate.h"
@@ -65,8 +66,11 @@ class Panel final : public ExtensionsPanel, public CefClient,
   void Navigate(bool store) override {
     CEF_REQUIRE_UI_THREAD();
     store_=store;
-    if(browser_&&!closing_)browser_->GetMainFrame()->LoadURL(store?
+    if(browser_&&!closing_){
+      StoreCompatibility(store);
+      browser_->GetMainFrame()->LoadURL(store?
         "https://chromewebstore.google.com/category/extensions":"chrome://extensions/");
+    }
   }
   void Close(std::function<void()> done = {}) override {
     CEF_REQUIRE_UI_THREAD();if(done)done_=std::move(done);if(closing_)return;closing_=true;
@@ -76,6 +80,32 @@ class Panel final : public ExtensionsPanel, public CefClient,
     else {auto complete=std::move(done_);if(complete)complete();}
   }
  private:
+  void StoreCompatibility(bool enabled) {
+    // Web Store checks UA Client Hints in addition to webstorePrivate. Limit
+    // Chrome compatibility metadata to this catalog surface. Chromium still
+    // verifies the original package and displays its native permission prompt.
+    auto params=CefDictionaryValue::Create();
+    params->SetString("userAgent", "");
+    if(enabled){
+      const auto major=std::to_string(CHROME_VERSION_MAJOR),full=EngineVersion(4,4);
+      params->SetString("userAgent","Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/"+major+".0.0.0 Safari/537.36");
+      auto metadata=CefDictionaryValue::Create();
+      for(const auto& field:{std::string("brands"),std::string("fullVersionList")}){
+        auto brands=CefListValue::Create();
+        for(const auto* name:{"Chromium","Google Chrome"}){
+          auto brand=CefDictionaryValue::Create();brand->SetString("brand",name);
+          brand->SetString("version",field=="brands"?major:full);brands->SetDictionary(brands->GetSize(),brand);
+        }
+        metadata->SetList(field,brands);
+      }
+      metadata->SetString("fullVersion",full);metadata->SetString("platform","Windows");
+      metadata->SetString("platformVersion","10.0.0");metadata->SetString("architecture","x86");
+      metadata->SetString("model","");metadata->SetBool("mobile",false);
+      metadata->SetString("bitness","64");metadata->SetBool("wow64",false);
+      params->SetDictionary("userAgentMetadata",metadata);
+    }
+    browser_->GetHost()->ExecuteDevToolsMethod(0,"Emulation.setUserAgentOverride",params);
+  }
   HWND parent_;RECT bounds_={};bool closing_=false,store_=false;
   std::function<void()> done_;
   CefRefPtr<CefBrowser> browser_;CefRefPtr<CefBrowserView> view_;CefRefPtr<CefWindow> window_;

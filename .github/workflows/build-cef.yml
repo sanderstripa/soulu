@@ -60,6 +60,7 @@ jobs:
       # This explicit source marker records the owner's requested 1.0.74 release.
       # Ordinary main pushes continue to build without publishing.
       AUTOMATED_RELEASE: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[release 1.0.74]') }}
+      SOULU_TEST_STORE_INSTALL: 1
       SOULU_REGRESSION_SKIP_FIRST_RUN: 1
       SOULU_TEST_DEFAULT_APPS: 1
       PYTHONUTF8: 1

@@ -29,3 +29,5 @@ body[data-host=overlay]{padding:0;background:transparent}body[data-host=overlay]
 @media(max-width:650px){.vpn-profile-row{align-items:flex-start;flex-wrap:wrap}.vpn-profile-row-actions{margin-left:28px}}
 
 .extension-controls{display:flex;gap:8px;flex-wrap:wrap}.extensions-surface{width:100%;height:470px;min-height:300px;background:var(--surface);border-radius:12px;overflow:hidden}
+
+.extension-help{font:var(--type-settingsCaption);color:var(--muted)}.extension-help summary{cursor:pointer;padding:6px 0}.extension-help .note{margin:6px 0}
