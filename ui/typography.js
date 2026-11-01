@@ -17,7 +17,7 @@ window.souluTypographyReady = Promise.all([400,500,600].map(weight =>
 // use one semantic tooltip and ARIA; never leave a competing native title.
 const souluNormalizeTitles=root=>{
   const nodes=[...(root.matches?.('[title]')?[root]:[]),...root.querySelectorAll('[title]')];
-  for(const node of nodes){const title=node.getAttribute('title');if(title)node.dataset.tooltip=title;node.removeAttribute('title');}
+  for(const node of nodes){const title=node.getAttribute('title');if(title){node.dataset.tooltip=title;if(!node.textContent.trim()&&(!node.getAttribute('aria-label')||node.getAttribute('aria-label')===node.dataset.tooltipLabel)){node.setAttribute('aria-label',title);node.dataset.tooltipLabel=title;}}node.removeAttribute('title');}
 };
 souluNormalizeTitles(document);
 new MutationObserver(records=>{for(const r of records){if(r.type==='attributes')souluNormalizeTitles(r.target);else for(const node of r.addedNodes)if(node.nodeType===1)souluNormalizeTitles(node);}}).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['title']});
