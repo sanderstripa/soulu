@@ -116,12 +116,17 @@ def main():
    # The starting window must finish native activation before physical input.
    # This is before tab creation; immediate typing after +/Ctrl+T stays unchanged.
    wait(lambda:s.evaluate(initial,"document.hasFocus()&&document.activeElement?.id==='query'"))
+   s.evaluate(shell,"window.focusTrace=[];for(const name of ['pointerdown','mousedown','pointerup','mouseup','click','focusin','focusout'])document.addEventListener(name,e=>focusTrace.push({event:name,target:e.target.id||e.target.tagName,x:e.clientX,y:e.clientY,time:performance.now()}),true)")
+   u.WindowFromPoint.argtypes=[W.POINT];u.WindowFromPoint.restype=W.HWND
    for action in ('plus','Ctrl+T'):
     before=len(s.evaluate(shell,'browserShell.getState()')['tabs']);foreground(hwnd)
     if action=='plus':
      point=s.evaluate(shell,"(()=>{const r=document.querySelector('#compactNewTabButton').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()")
      scale=s.evaluate(shell,'devicePixelRatio')
-     screen=W.POINT(round(point['x']*scale),round(point['y']*scale));u.ClientToScreen(hwnd,C.byref(screen));assert work.left<=screen.x<work.right and work.top<=screen.y<work.bottom,('Pointer target outside desktop',screen.x,screen.y);assert u.SetCursorPos(screen.x,screen.y);actual=W.POINT();u.GetCursorPos(C.byref(actual));assert (actual.x,actual.y)==(screen.x,screen.y),'Windows clamped the pointer';time.sleep(.15);u.mouse_event(2,0,0,0,0);time.sleep(.05);u.mouse_event(4,0,0,0,0)
+     screen=W.POINT(round(point['x']*scale),round(point['y']*scale));u.ClientToScreen(hwnd,C.byref(screen));assert work.left<=screen.x<work.right and work.top<=screen.y<work.bottom,('Pointer target outside desktop',screen.x,screen.y);assert u.SetCursorPos(screen.x,screen.y);actual=W.POINT();u.GetCursorPos(C.byref(actual));assert (actual.x,actual.y)==(screen.x,screen.y),'Windows clamped the pointer';time.sleep(.15)
+     target=u.WindowFromPoint(screen);target_name=C.create_unicode_buffer(128);u.GetClassNameW(target,target_name,128)
+     print('PLUS_TARGET',{'point':point,'screen':[screen.x,screen.y],'hwndClass':target_name.value,'foreground':u.GetForegroundWindow()},s.evaluate(shell,"(()=>{const b=document.querySelector('#compactNewTabButton'),r=b.getBoundingClientRect();return {rect:r.toJSON(),atPoint:document.elementFromPoint("+str(point['x'])+","+str(point['y'])+")?.outerHTML,layout:document.body.dataset.layout,matte:document.body.dataset.matte,glass:document.body.dataset.pageGlassReady}})()"),flush=True)
+     u.mouse_event(2,0,0,0,0);time.sleep(.05);u.mouse_event(4,0,0,0,0)
     # No DOM wait, click, focus call or navigation bridge between creation and input.
     print('INPUT',action,'tabs before',before,'DPI',u.GetDpiForWindow(hwnd),'scale',scale if action=='plus' else None,flush=True);text('openai.com',((17,0),(ord('T'),0),(ord('T'),2),(17,2)) if action=='Ctrl+T' else ())
     wait(lambda:len(s.evaluate(shell,'browserShell.getState()')['tabs'])==before+1);page=wait(home)
@@ -135,6 +140,12 @@ def main():
    report.parent.mkdir(parents=True,exist_ok=True);report.write_text(json.dumps({'passed':True,'checks':checks,'input':'Real Windows pointer and Unicode keyboard input; no programmatic Home focus.'},ensure_ascii=False,indent=2),encoding='utf-8')
   except Exception:
    print('PROCESS EXIT',process.poll(),flush=True)
+   print('FOCUS_TRACE',s.evaluate(shell,"({events:window.focusTrace,active:document.activeElement?.outerHTML,state:browserShell.getState()})"),flush=True)
+   for item in s.targets():
+    if '/ui/home.html' in item.get('url',''):
+     try:
+      ws=link(item);print('HOME_FAILURE_VALUE',s.evaluate(ws,"({value:document.querySelector('#query')?.value,focus:document.hasFocus(),active:document.activeElement?.id})"),flush=True)
+     except Exception:pass
    from PIL import ImageGrab
    report.parent.mkdir(parents=True,exist_ok=True)
    ImageGrab.grab().save(report.with_suffix('.failure.png'))
