@@ -30,7 +30,7 @@ bool SettingsOverlay::Create() {
   SetFrostedBackdropOpacity(hwnd_, 0);
   BOOL animate = TRUE;
   if (SystemParametersInfoW(SPI_GETCLIENTAREAANIMATION, 0, &animate, 0)) reduced_ = !animate;
-  duration_ = reduced_ ? motion::kReducedOverlayMs : 380;
+  duration_ = reduced_ ? motion::kReducedOverlayMs : 240;
   Layout();
   // The invisible panel starts above the clipping bounds. Showing the host now
   // blocks input immediately and allows Chromium to prepare its first frame.

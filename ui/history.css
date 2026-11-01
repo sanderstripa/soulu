@@ -5,3 +5,5 @@
 
 /* Keep both modal actions reachable even at high DPI in a small window. */
 dialog{overflow:hidden}#clearForm{display:flex;flex-direction:column;max-height:calc(100vh - 90px)}.dialog-body{overflow:auto;min-height:0;padding:2px 5px 2px 2px;margin:-2px -5px -2px -2px}footer{flex-shrink:0}@media(max-width:650px){#clearForm{max-height:calc(100vh - 74px)}}
+
+.row-actions button{display:grid;place-items:center;min-width:40px;min-height:40px;padding:10px;font:var(--type-heading3);border-radius:10px}

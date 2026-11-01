@@ -154,6 +154,13 @@ void BrowserWindow::HandleHomeBridge(int id,const std::string& request,
     }
     ReplyEmpty(callback);tab->browser->GetMainFrame()->LoadURL(InternalUrl(url));return;
   }
+  if(action=="home.favorite.edit"){
+    if(!payload||payload->GetType()!=VTYPE_INT||id!=active_tab_id_||tab->incognito){callback->Failure(400,"Favorite required");return;}
+    auto favorites=HomeState(*tab)->GetList("favorites");
+    for(size_t i=0;i<favorites->GetSize();++i)if(favorites->GetDictionary(i)->GetInt("id")==payload->GetInt()){
+      Emit("editBookmark",payload);ReplyEmpty(callback);return;}
+    callback->Failure(404,"Favorite not found");return;
+  }
   if(action=="home.favorite"){
     if(!payload||payload->GetType()!=VTYPE_DICTIONARY){callback->Failure(400,"Favorite required");return;}
     const int mark=payload->GetDictionary()->GetInt("id");auto favorites=HomeState(*tab)->GetList("favorites");

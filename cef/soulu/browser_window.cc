@@ -562,12 +562,27 @@ bool BrowserWindow::CreateNativeWindow() {
   SystemParametersInfoW(SPI_GETWORKAREA, 0, &work, 0);
   const int width = std::min(1280L, work.right - work.left - 80L);
   const int height = std::min(820L, work.bottom - work.top - 60L);
-  const int x = work.left + (work.right - work.left - width) / 2;
-  const int y = work.top + (work.bottom - work.top - height) / 2;
+  int x = work.left + (work.right - work.left - width) / 2;
+  int y = work.top + (work.bottom - work.top - height) / 2;
+  int restored_width=width,restored_height=height;
+  if(windows_.empty())if(auto saved=ReadJson(UserDataDirectory()/L"window-placement.json");saved&&saved->GetType()==VTYPE_DICTIONARY){
+    auto p=saved->GetDictionary();RECT rect={p->GetInt("left"),p->GetInt("top"),p->GetInt("right"),p->GetInt("bottom")};
+    const int w=rect.right-rect.left,h=rect.bottom-rect.top;
+    if(w>=480&&h>=320&&w<=32768&&h<=32768&&std::abs(rect.left)<100000&&std::abs(rect.top)<100000){
+      MONITORINFO monitor={sizeof(monitor)};
+      if(GetMonitorInfoW(MonitorFromRect(&rect,MONITOR_DEFAULTTONEAREST),&monitor)){
+        restored_width=std::min(w,static_cast<int>(monitor.rcWork.right-monitor.rcWork.left));
+        restored_height=std::min(h,static_cast<int>(monitor.rcWork.bottom-monitor.rcWork.top));
+        x=std::clamp(static_cast<int>(rect.left),static_cast<int>(monitor.rcWork.left),static_cast<int>(monitor.rcWork.right)-restored_width);
+        y=std::clamp(static_cast<int>(rect.top),static_cast<int>(monitor.rcWork.top),static_cast<int>(monitor.rcWork.bottom)-restored_height);
+        restored_show_=p->GetBool("maximized")?SW_SHOWMAXIMIZED:SW_SHOWNORMAL;
+      }
+    }
+  }
   hwnd_ = CreateWindowExW(0, kWindowClass, L"Soulu",
                           WS_POPUP | WS_THICKFRAME | WS_MINIMIZEBOX | WS_CLIPCHILDREN |
                               WS_MAXIMIZEBOX | WS_SYSMENU,
-                          x, y, width, height, nullptr, nullptr, wc.hInstance, this);
+                          x, y, restored_width, restored_height, nullptr, nullptr, wc.hInstance, this);
   if (!hwnd_) return false;
   windows_.push_back(this);
 
@@ -796,7 +811,7 @@ bool BrowserWindow::AllowSite(int id,const std::string& origin,const std::string
 }
 void BrowserWindow::ApplySiteSound() {
   for(auto& tab:tabs_)if(tab.browser){auto policy=PolicyForTab(tab.id);
-    tab.browser->GetHost()->SetAudioMuted(policy&&policy->Rule(tab.url,"sound")!=0);
+    tab.browser->GetHost()->SetAudioMuted(tab.muted||(policy&&policy->Rule(tab.url,"sound")==2));
     SyncSitePolicy(tab.id,tab.url);
     auto client=static_cast<BrowserClient*>(tab.browser->GetHost()->GetClient().get());
     if(client)client->RefreshAdBlock(tab.browser);}
@@ -851,11 +866,11 @@ void BrowserWindow::FillSavedForm(int id,int x,int y) {
   const std::string locate="document.elementFromPoint("+std::to_string(x)+","+std::to_string(y)+")";
   const std::string query="(()=>{const e="+locate+R"JS(;if(!(e instanceof HTMLInputElement)||e.disabled||e.readOnly||!['text','email','tel','search','url','password'].includes(e.type)||e.autocomplete==='off'||e.autocomplete==='new-password'||e.autocomplete==='one-time-code'||e.autocomplete.includes('cc-'))return {};
     if(e.form&&new URL(e.form.action||location.href,location.href).origin!==location.origin)return {};
-    return {name:e.name||e.id,type:e.type,id:e.id,autocomplete:e.autocomplete.split(/\s+/).at(-1),valid:true}})())JS";
+    return {name:e.name||e.id,type:e.type,id:e.id,login:e.type==='password'||!!e.form?.querySelector('input[type=password]:not([autocomplete=new-password])')||e.autocomplete==='username',autocomplete:e.autocomplete.split(/\s+/).at(-1),valid:true}})())JS";
   CefRefPtr<BrowserWindow> self=this;
   EvaluateTranslationPage(browser,url,query,[self,browser,id,profile,url,locate](CefRefPtr<CefDictionaryValue> field){
     auto* current=self->FindTab(id);if(!field||!field->GetBool("valid")||!current||current!=self->ActiveTab()||current->incognito||current->profile_id!=profile||browser->GetMainFrame()->GetURL()!=url)return;
-    const bool password=field->GetString("type")=="password";auto choices=CefListValue::Create();
+    const bool password=field->GetBool("login");auto choices=CefListValue::Create();
     try{if(password){PasswordVault vault(profile);auto list=vault.List();for(size_t i=0;i<list->GetSize()&&choices->GetSize()<30;++i){auto r=list->GetDictionary(i);if(r&&r->GetString("origin")==WebOrigin(url))choices->SetDictionary(choices->GetSize(),r->Copy(false));}}
       else if(ValidAutofillField(field->GetString("name"))){auto list=ReadAutofill(profile);for(size_t i=0;i<list->GetSize()&&choices->GetSize()<30;++i){auto r=list->GetDictionary(i);if(r&&(r->GetString("name")==field->GetString("name")||r->GetString("name")=="autocomplete:"+field->GetString("autocomplete").ToString()))choices->SetDictionary(choices->GetSize(),r->Copy(false));}}
     }catch(...){return;}
@@ -865,13 +880,20 @@ void BrowserWindow::FillSavedForm(int id,int x,int y) {
     current=self->FindTab(id);if(selected<1||static_cast<size_t>(selected)>choices->GetSize()||!current||current!=self->ActiveTab()||current->incognito||current->profile_id!=profile||browser->GetMainFrame()->GetURL()!=url)return;
     auto choice=choices->GetDictionary(selected-1);std::string value;
     if(password){PasswordVault vault(profile);if(!vault.Reveal(choice->GetString("id"),value))return;}else value=choice->GetString("value");
-    auto data=field->Copy(false);data->SetString("value",value);data->SetString("username",password?choice->GetString("username"):CefString());
+    auto data=field->Copy(false);data->SetBool("credential",password);data->SetString("value",value);data->SetString("username",password?choice->GetString("username"):CefString());
     const std::string json=CefWriteJSON(Wrap(data),JSON_WRITER_DEFAULT).ToString();
     std::string script="(()=>{const d="+json+",e="+locate+R"JS(;if(!(e instanceof HTMLInputElement)||e.disabled||e.readOnly||e.type!==d.type||(e.name||e.id)!==d.name||e.id!==d.id||e.autocomplete==='off'||e.autocomplete==='new-password'||e.autocomplete==='one-time-code'||e.autocomplete.includes('cc-')||e.autocomplete.split(/\s+/).at(-1)!==d.autocomplete)return {};
       if(e.form&&new URL(e.form.action||location.href,location.href).origin!==location.origin)return {};
       const put=(field,value)=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(field,value);field.dispatchEvent(new Event('input',{bubbles:true}));field.dispatchEvent(new Event('change',{bubbles:true}));};
-      if(d.type==='password'&&e.form){const users=[...e.form.elements].filter(f=>f instanceof HTMLInputElement&&!f.disabled&&!f.readOnly&&f.autocomplete==='username');if(users.length===1&&!users[0].value)put(users[0],d.username);}
-      put(e,d.value);return {filled:true}})())JS";
+      if(d.credential){
+        const fields=e.form?[...e.form.elements]:[e];
+        const safe=f=>f instanceof HTMLInputElement&&!f.disabled&&!f.readOnly&&f.autocomplete!=='off';
+        const users=fields.filter(f=>safe(f)&&['text','email'].includes(f.type)&&!['new-password','one-time-code'].includes(f.autocomplete));
+        const user=users.find(f=>f.autocomplete==='username')||(users.includes(e)?e:users.length===1?users[0]:null);
+        const passwords=fields.filter(f=>safe(f)&&f.type==='password'&&f.autocomplete!=='new-password');
+        if(user)put(user,d.username);if(passwords.length===1)put(passwords[0],d.value);
+        if(e.type==='password'&&!passwords.includes(e))put(e,d.value);
+      }else put(e,d.value);return {filled:true}})())JS";
     EvaluateTranslationPage(browser,url,script,[](auto){});if(!value.empty())SecureZeroMemory(value.data(),value.size());
   });
 }
@@ -1095,6 +1117,7 @@ int BrowserWindow::PreparePopup(int source_id, const std::string& url,
   tab.incognito = source->incognito;
   tab.profile_id = source->profile_id;
   tab.activate_on_attach = !background;
+  tab.defer_media = background;
   if (!background) CaptureThumbnail();
   tabs_.push_back(tab);
   info.SetAsChild(hwnd_, CurrentGeometry().content);
@@ -1129,6 +1152,7 @@ void BrowserWindow::NewTab(const std::string& url, bool incognito,
   if(!incognito && foreground && (profile_id.empty()||profile_id==active_profile_id_) && NeedsOnboarding() &&
       std::none_of(tabs_.begin(),tabs_.end(),[this](const Tab& t){return !t.incognito&&t.profile_id==active_profile_id_;}))
     tab.url="soulu://onboarding";
+  tab.defer_media = !foreground;
   tab.focus_address_on_attach = foreground && tab.url=="about:blank";
   tab.focus_home_on_load = foreground && tab.url=="soulu://home";
   tab.incognito = incognito;
@@ -1155,7 +1179,7 @@ void BrowserWindow::NewTab(const std::string& url, bool incognito,
   const bool created = CefBrowserHost::CreateBrowser(
       info, new BrowserClient(this, role, id),
       InternalUrl(tab.url), browser_settings,
-      [&](){auto extra=CefDictionaryValue::Create();extra->SetBool("souluIncognito",incognito);return extra;}(),
+      [&](){auto extra=CefDictionaryValue::Create();extra->SetBool("souluIncognito",incognito);extra->SetBool("souluDeferMedia",!foreground);return extra;}(),
       request_context);
   if (!created) {
     AbortPopup(id);
@@ -1194,6 +1218,7 @@ void BrowserWindow::AttachContent(int tab_id, CefRefPtr<CefBrowser> browser) {
   if(tab->focus_address_on_attach && active_tab_id_==tab_id){
     tab->focus_address_on_attach=false;FocusAddress();
   }
+  if(tab_id==active_tab_id_)ActivateMedia(tab_id);
   ApplySiteSound();
   if (closing_) {
     browser->GetHost()->CloseBrowser(true);
@@ -1201,6 +1226,7 @@ void BrowserWindow::AttachContent(int tab_id, CefRefPtr<CefBrowser> browser) {
   }
   if (tab->activate_on_attach) {
     active_tab_id_ = tab_id;
+    ActivateMedia(tab_id);
     if(!tab->incognito)last_normal_active_[tab->profile_id]=tab_id;
     tab->activate_on_attach = false;
   }
@@ -1214,7 +1240,7 @@ void BrowserWindow::ShowWhenReady() {
   const auto* tab = ActiveTab();
   if (!tab || !tab->browser) return;
   Layout();
-  ShowWindow(hwnd_, SW_SHOW);
+  ShowWindow(hwnd_, restored_show_);
 }
 
 BrowserWindow::Tab* BrowserWindow::FindTab(int id) {
@@ -1246,6 +1272,7 @@ void BrowserWindow::SwitchTab(int id) {
   if (active_tab_id_ != id) { if(auto* old=ActiveTab();old&&old->browser)HomeCancelVoice(old->browser->GetIdentifier());CancelSitePermissions(active_tab_id_); CaptureThumbnail(); }
   active_tab_id_ = id;
   if(!tab->incognito)last_normal_active_[tab->profile_id]=id;
+  ActivateMedia(id);
   if(tab->focus_home_on_load&&tab->browser&&!tab->browser->IsLoading())ContentPageLoaded(id);
   Layout();
   EmitState();
@@ -1395,13 +1422,40 @@ void BrowserWindow::UpdateAddress(int id, const std::string& url) {
   EmitState();
 }
 void BrowserWindow::UpdateFavicon(int id, const std::string& url) {
-  if (auto* tab = FindTab(id)) tab->favicon = url;
+  if (auto* tab = FindTab(id)) {
+    tab->favicon=url;bool changed=false;
+    if(!url.empty()&&!tab->incognito)for(size_t i=0;i<bookmarks_->GetSize();++i){auto mark=bookmarks_->GetDictionary(i);
+      if(mark&&mark->GetString("profileId")==tab->profile_id&&mark->GetString("url")==tab->url&&mark->GetString("favicon")!=url){mark->SetString("favicon",url);changed=true;}}
+    if(changed){SaveBookmarks(bookmarks_);RefreshHomePages();}
+  }
   UpdateHistory(id);
   EmitState();
 }
+bool BrowserWindow::DeferMedia(int id) const {
+  for(const auto& tab:tabs_)if(tab.id==id)return tab.defer_media;
+  return false;
+}
+void BrowserWindow::ActivateMedia(int id) {
+  auto* tab=FindTab(id);if(!tab||!tab->browser)return;
+  tab->defer_media=false;
+  std::vector<CefString> frames;tab->browser->GetFrameIdentifiers(frames);
+  for(const auto& frame_id:frames)if(auto frame=tab->browser->GetFrameByIdentifier(frame_id))
+    frame->SendProcessMessage(PID_RENDERER,CefProcessMessage::Create("soulu.media.activate"));
+}
+void BrowserWindow::UpdateMediaAccess(int id,bool camera,bool microphone){
+  auto* tab=FindTab(id);if(!tab||closing_)return;
+  if(tab->camera_active==camera&&tab->microphone_active==microphone)return;
+  tab->camera_active=camera;tab->microphone_active=microphone;EmitState();
+}
+void BrowserWindow::UpdatePlayback(int id,const std::string& frame,bool playing){
+  auto* tab=FindTab(id);if(!tab||closing_)return;
+  const bool before=!tab->playing_frames.empty();
+  if(playing)tab->playing_frames.insert(frame);else tab->playing_frames.erase(frame);
+  if(before!=!tab->playing_frames.empty())EmitState();
+}
 void BrowserWindow::UpdateLoading(int id, bool loading, bool can_go_back) {
   if (auto* tab = FindTab(id)) {
-    tab->loading = loading; tab->can_go_back = can_go_back;
+    tab->loading = loading&&tab->url!="soulu://home"; tab->can_go_back = can_go_back;
     if(!loading)tab->main_loading=false;
   }
   if (!loading && overview_visible_ && id == active_tab_id_) CaptureThumbnail();
@@ -1689,7 +1743,7 @@ BrowserWindow::Geometry BrowserWindow::CurrentGeometry() const {
       layout == "classic" ? geometry::classicToolbar : geometry::mainToolbar;
   g.toolbar = static_cast<int>(std::round((height + (BookmarksBarVisible() ? geometry::bookmarks : 0)) * scale));
   if (Fullscreen()) g.toolbar = 0;
-  g.sidebar = sidebar_visible_ && bookmarks_sidebar_ ? px(276) : 0;
+  g.sidebar = sidebar_visible_ && bookmarks_sidebar_ ? px(300) : 0;
   g.panel = px(std::max(0, right_panel_width_));
   if (Fullscreen()) g.sidebar = g.panel = 0;
   const auto* active=const_cast<BrowserWindow*>(this)->ActiveTab();
@@ -1843,6 +1897,10 @@ CefRefPtr<CefDictionaryValue> BrowserWindow::State() const {
     row->SetString("favicon", tab.favicon);
     if (overview_visible_) row->SetString("thumbnail", tab.thumbnail);
     row->SetBool("loading", tab.loading);
+    row->SetBool("audible", !tab.playing_frames.empty());
+    row->SetBool("muted", tab.browser&&tab.browser->GetHost()->IsAudioMuted());
+    row->SetBool("microphoneActive",tab.microphone_active);
+    row->SetBool("cameraActive",tab.camera_active);
     row->SetBool("active", tab.id == active_tab_id_);
     row->SetBool("pinned", tab.pinned);
     row->SetBool("incognito", tab.incognito);
@@ -2515,6 +2573,18 @@ void BrowserWindow::HandleBridge(const std::string& request,
         browser->GetHost()->Find(text,forward,false,next);find_text_=text;find_browser_id_=browser->GetIdentifier();}
     }
   }
+  else if(action=="browser.home") {
+    if(auto* tab=ActiveTab();tab&&tab->browser)tab->browser->GetMainFrame()->LoadURL(InternalUrl(PageUrl("home",PageSettings(*tab))));
+  }
+  else if(action=="browser.tab.audio") {
+    auto* tab=payload&&payload->GetType()==VTYPE_INT?FindTab(payload->GetInt()):nullptr;
+    if(!tab||!tab->browser||(!tab->incognito&&tab->profile_id!=active_profile_id_)){callback->Failure(400,"Tab unavailable");return;}
+    tab->muted=!tab->browser->GetHost()->IsAudioMuted();
+    auto policy=PolicyForTab(tab->id);
+    // Unmuting from the tab also removes an explicit per-site sound block.
+    if(!tab->muted&&policy&&policy->Rule(tab->url,"sound")==2)policy->Set(tab->url,"sound",0);
+    ApplySiteSound();EmitState();
+  }
   else if (action == "browser.downloads.get") return Reply(callback, Wrap(ProfileDownloads()));
   else if (action == "browser.bookmarks.get") return Reply(callback, Wrap(ProfileBookmarks()));
   else if (action == "browser.overview") {
@@ -2846,6 +2916,22 @@ void BrowserWindow::HandleBridge(const std::string& request,
   ReplyEmpty(callback);
 }
 
+void BrowserWindow::SaveWindowPlacement() {
+  if(!hwnd_||closing_||!IsWindowVisible(hwnd_))return;
+  WINDOWPLACEMENT placement={sizeof(placement)};
+  if(Fullscreen())placement=fullscreen_placement_;
+  else if(!GetWindowPlacement(hwnd_,&placement))return;
+  auto rect=placement.rcNormalPosition;
+  // WINDOWPLACEMENT uses workspace coordinates for ordinary top-level windows.
+  MONITORINFO monitor={sizeof(monitor)};
+  if(GetMonitorInfoW(MonitorFromWindow(hwnd_,MONITOR_DEFAULTTONEAREST),&monitor)){
+    OffsetRect(&rect,monitor.rcWork.left-monitor.rcMonitor.left,monitor.rcWork.top-monitor.rcMonitor.top);
+  }
+  auto data=CefDictionaryValue::Create();data->SetInt("left",rect.left);data->SetInt("top",rect.top);
+  data->SetInt("right",rect.right);data->SetInt("bottom",rect.bottom);
+  data->SetBool("maximized",placement.showCmd==SW_SHOWMAXIMIZED||(placement.flags&WPF_RESTORETOMAXIMIZED));
+  WriteJson(UserDataDirectory()/L"window-placement.json",Wrap(data));
+}
 void BrowserWindow::CloseAll() {
   DismissSouluMenus(hwnd_);
   if(clearing_data_){close_after_clear_=true;return;}
@@ -2853,7 +2939,10 @@ void BrowserWindow::CloseAll() {
   if(importing_){close_after_import_=true;return;}
   if (closing_) return;
   SaveSession();
+  SaveWindowPlacement();
   closing_ = true;
+  // Hide the composed window before child hosts are torn down; no DWM frame flash.
+  ShowWindow(hwnd_,SW_HIDE);
   CancelSitePermissions(0);
   // Destroying an Alloy child can synchronously call BrowserClosed and erase
   // tabs_. Close a snapshot so no browser is skipped by iterator invalidation.
@@ -3045,7 +3134,7 @@ LRESULT CALLBACK BrowserWindow::WindowProc(HWND hwnd, UINT message, WPARAM wpara
       for (auto& tab : self->tabs_)
         if (tab.browser) tab.browser->GetHost()->NotifyMoveOrResizeStarted();
       return 0;
-    case WM_EXITSIZEMOVE: self->Layout(); return 0;
+    case WM_EXITSIZEMOVE: self->Layout(); self->SaveWindowPlacement(); return 0;
     case WM_DPICHANGED: {
       if (self->Fullscreen()) { self->FitFullscreenMonitor(); self->Layout(); return 0; }
       MONITORINFO monitor = {sizeof(monitor)};

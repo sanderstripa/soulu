@@ -38,3 +38,16 @@ body[data-layout=classic] .bookmarks-menu{top:var(--geometry-classic-toolbar)}bo
 .bookmarks-menu{padding:16px 12px}.bookmarks-menu .navigation-search{height:36px;font:var(--type-body)}.bookmarks-menu .bookmark-tree{max-height:none;min-height:48px}.bookmarks-menu .bookmark-item{min-height:34px;padding:7px 9px;font:var(--type-body);border-radius:8px}.bookmarks-menu .bookmark-icon{margin-right:2px}.bookmarks-menu .bookmark-actions{gap:4px;margin-top:12px;padding-top:12px}.bookmarks-menu .nav-action{font:var(--type-body);min-height:32px}.bookmarks-menu .bookmark-options{padding-top:10px;margin-top:10px}.bookmarks-menu .bookmark-line{min-width:0}
 
 .sidebar-tab:not(:has(>.sidebar-favicon)),.favorite-row:not(:has(>.list-favicon)){grid-template-columns:minmax(0,1fr) 27px}
+
+/* Compact bookmark manager: stable icon, label and explicit edit action. */
+.bookmarks-menu{display:flex;flex-direction:column;gap:10px;width:300px;padding:14px}
+.bookmarks-heading{display:flex;align-items:center;justify-content:space-between;font:var(--type-compactControl)}
+.bookmarks-heading button,.overview-close{width:36px;height:36px;min-width:36px;padding:0;border:0;border-radius:50%;font:var(--type-heading2)}
+.bookmarks-menu .bookmark-tree{flex:1;min-height:0;margin:0;overflow:auto}
+.bookmarks-menu .bookmark-item,.bookmarks-menu .nav-action,.bookmark-context .nav-action{font:var(--type-compact);min-height:36px}
+.bookmarks-bar .bookmark-item{font:var(--type-compact);height:26px}
+.bookmark-icon{position:relative;border-radius:4px;background:var(--soft);font:var(--type-caption);overflow:hidden}
+.bookmark-icon img{position:absolute;inset:0;background:var(--solid)}
+.bookmarks-menu .bookmark-actions{grid-template-columns:1fr 1fr;border-top:1px solid var(--line);gap:4px;margin:0;padding-top:10px}
+.bookmarks-menu .bookmark-options{margin:0}
+.tab-overview{contain:layout paint}

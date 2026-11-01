@@ -15,7 +15,7 @@ class BrowserApp final : public CefApp, public CefBrowserProcessHandler {
       if (GetEnvironmentVariableW(L"SOULU_UI_TEST_PORT", test_port, 12) > 0)
         command_line->AppendSwitchWithValue("remote-allow-origins", "*");
       command_line->AppendSwitch("enable-gpu-rasterization");
-      command_line->AppendSwitchWithValue("autoplay-policy", "no-user-gesture-required");
+      command_line->AppendSwitchWithValue("autoplay-policy", "document-user-activation-required");
     }
   }
 

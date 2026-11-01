@@ -15,7 +15,8 @@
    const install=button(t('Установить','Install'),()=>run(async()=>{const version=select.value==='custom'?custom.value.trim():select.value;if(!version)throw Error(t('Укажите версию.','Enter a release tag.'));note.textContent=t('Загрузка и проверка компонента…','Downloading and verifying the component…');await manage({component:id,operation:'install',version});state(await manage({component:id,operation:'status'}));note.textContent=t('Версия установлена. Для действующего соединения переподключите VPN.','Version installed. Reconnect an active VPN to use it.');}));install.disabled=true;
    const rollback=button(t('Откатить','Roll back'),()=>run(async()=>{await manage({component:id,operation:'rollback'});state(await manage({component:id,operation:'status'}));note.textContent=t('Предыдущая версия восстановлена. Переподключите действующий VPN.','Previous version restored. Reconnect an active VPN.');}));rollback.disabled=true;
    select.onchange=()=>{custom.hidden=select.value!=='custom';if(!custom.hidden)custom.focus();};
-   actions.append(check,select,custom,install,rollback);card.append(heading,installed,latest,actions,note,error);host.append(card);
+   actions.append(check,select,custom,install,rollback);const support=el('p',id==='xray'?t('Поддержка: VLESS encryption, TCP/RAW, WebSocket, gRPC, XHTTP (extra/downloadSettings), TLS и REALITY.','Support: VLESS encryption, TCP/RAW, WebSocket, gRPC, XHTTP (extra/downloadSettings), TLS and REALITY.'):t('Поддержка: HTTPMask legacy/stream/poll/auto/ws, multiplex off/auto/on, TLS/Host/path, AEAD, directional ASCII, packed downlink и ротация таблиц.','Support: HTTPMask legacy/stream/poll/auto/ws, multiplex off/auto/on, TLS/Host/path, AEAD, directional ASCII, packed downlink and table rotation.'),'note');
+   card.append(heading,installed,latest,support,actions,note,error);host.append(card);
    manage({component:id,operation:'status'}).then(state).catch(e=>error.textContent=e.message);
   }
  }

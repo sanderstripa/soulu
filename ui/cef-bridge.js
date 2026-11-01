@@ -43,6 +43,8 @@
     back: () => invoke("browser.back"),
     reload: () => invoke("browser.reload"),
     newTab: () => invoke("browser.newTab"),
+    goHome: () => invoke("browser.home"),
+    toggleTabAudio: id => invoke("browser.tab.audio",id),
     newIncognito: () => invoke("browser.newIncognito"),
     createProfile: name => invoke("browser.profile.create", name),
     switchProfile: id => invoke("browser.profile.switch", id),
@@ -72,7 +74,8 @@
     find: (value, forward = true) => invoke("browser.find", {text:value, forward}),
     suggestions: value => invoke("browser.suggestions", value),
     getDownloads: () => invoke("browser.downloads.get"),
-    setOverview: value => invoke("browser.overview", value),
+    setOverview: async value => {if(!value)await window.souluNavigation?.animateOverviewClose?.();return invoke("browser.overview",value);},
+    onEditBookmark: callback => subscribe("editBookmark",callback),
     setPopover: (value, owner = 'default') => {
       if (value) popovers.add(owner); else popovers.delete(owner);
       return invoke("browser.popover", popovers.size > 0);

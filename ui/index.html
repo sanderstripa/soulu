@@ -25,6 +25,7 @@
     <div class="compact-toolbar-surface" data-toolbar-surface>
       <button class="compact-control sidebar-button" id="compactSidebarButton" data-i18n-title="tabs"><svg viewBox="0 0 24 24"><rect x="3.25" y="4.25" width="17.5" height="15.5" rx="2.4"/><path d="M8.7 4.7v14.6"/></svg></button>
       <button class="compact-control" id="compactBackButton" data-i18n-title="back" disabled><svg viewBox="0 0 24 24"><path d="m14.5 5.5-6 6.5 6 6.5"/></svg></button>
+<button class="compact-control home-button" data-home title="Домой" aria-label="Домой"><svg viewBox="0 0 24 24"><path d="m3 11 9-8 9 8M5 10v11h5v-7h4v7h5V10"/></svg></button>
 
 
       <div class="compact-center-cluster">
@@ -58,6 +59,7 @@
       <div class="left-controls">
         <button class="toolbar-button sidebar-button" id="sidebarButton" data-i18n-title="tabs"><svg viewBox="0 0 24 24"><rect x="3.25" y="4.25" width="17.5" height="15.5" rx="2.4"/><path d="M8.7 4.7v14.6"/></svg></button>
         <button class="toolbar-button" id="backButton" data-i18n-title="back" disabled><svg viewBox="0 0 24 24"><path d="m14.5 5.5-6 6.5 6 6.5"/></svg></button>
+<button class="toolbar-button home-button" data-home title="Домой" aria-label="Домой"><svg viewBox="0 0 24 24"><path d="m3 11 9-8 9 8M5 10v11h5v-7h4v7h5V10"/></svg></button>
       </div>
 
 
@@ -73,7 +75,7 @@
           <button class="tab-action address-favorite" type="button" id="favoritesButton" data-i18n-title="favorites"><svg viewBox="0 0 24 24"><path d="m12 4 2.47 5.27L20 10.12l-4 4.1.94 5.78L12 17.27 7.06 20 8 14.22 4 10.12l5.53-.85L12 4Z"/></svg></button>
           <button class="tab-action classic-reload" type="button" data-reload data-i18n-title="reload"><svg class="reload-svg" viewBox="0 0 24 24"><path d="M19 8.13A8 8 0 1 0 20 12M19 4v4h-4"/></svg><svg class="stop-svg" viewBox="0 0 20 20"><rect x="4.5" y="4.5" width="11" height="11" rx="2"/></svg></button>
           <div class="suggestions classic-suggestions" id="classicSuggestions"></div>
-        </form>
+        </form>      <button class="toolbar-button tabs-new-button" id="newTabButton" data-i18n-title="newTab"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
       </div>
 
 
@@ -88,7 +90,7 @@
       </button>
 
 
-      <button class="toolbar-button tabs-new-button" id="newTabButton" data-i18n-title="newTab"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+
       <div class="window-controls">
         <button id="windowMinimize" data-i18n-title="minimize"><svg viewBox="0 0 24 24"><path d="M4.5 12h15"/></svg></button>
         <button id="windowMaximize" data-i18n-title="maximize"><svg viewBox="0 0 24 24"><rect x="5.25" y="5.25" width="13.5" height="13.5"/></svg></button>
@@ -109,7 +111,7 @@
 
   <aside class="sidebar" id="sidebar"><div class="panel-heading"><div><strong data-i18n="tabs">Вкладки</strong><small id="sidebarCount"></small></div><button id="sidebarNewTab">+</button></div><div id="sidebarTabs"></div></aside>
   <aside class="side-panel" id="favoritesPanel"><div class="panel-heading"><div><strong data-i18n="favorites">Избранное</strong><small data-i18n="savedPages">Сохранённые страницы</small></div><button id="addFavoriteButton">☆</button></div><div id="favoritesList"></div></aside>
-  <aside class="side-panel downloads-panel" id="downloadsPanel"><div class="panel-heading"><div><strong data-i18n="downloads">Загрузки</strong><small data-i18n="recentDownloads">Текущие и недавние</small></div></div><div id="downloadsList"></div></aside>
+  <aside class="side-panel downloads-panel" id="downloadsPanel"><div class="panel-heading"><div><strong data-i18n="downloads">Загрузки</strong><small data-i18n="recentDownloads">Текущие и недавние</small></div><button id="closeDownloads" type="button" title="Закрыть загрузки" aria-label="Закрыть загрузки">×</button></div><div id="downloadsList"></div></aside>
 
 
   <script src="motion.js"></script><script src="cef-bridge.js"></script>

@@ -5,10 +5,28 @@ func TestBundledCoresSOCKSTunnel(t *testing.T){
  base:=os.Getenv("SOULU_VPN_FIXTURE_BIN");if base==""{t.Skip("verified bundled cores supplied by the Windows packaging step")}
  oldBase:=packageBase;packageBase=base;defer func(){packageBase=oldBase}();t.Setenv("LOCALAPPDATA",t.TempDir())
  target:=httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter,r *http.Request){fmt.Fprint(w,"soulu-tunnel-fixture")}));defer target.Close();_,rawPort,_:=net.SplitHostPort(strings.TrimPrefix(target.URL,"http://"));destination,_:=strconv.Atoi(rawPort)
- for _,engine:=range []string{"xray","sudoku"}{t.Run(engine,func(t *testing.T){
+ for _,scenario:=range []struct{engine,transport string}{
+  {"xray","tcp"},{"xray","ws"},{"xray","xhttp"},{"xray","grpc"},
+  {"sudoku","raw"},{"sudoku","ws"},{"sudoku","stream"},{"sudoku","poll"},
+ }{engine:=scenario.engine;t.Run(engine+"-"+scenario.transport,func(t *testing.T){
   defer disconnect();port:=freePort(t);id:="12345678-1234-1234-1234-123456789abc";key:=strings.Repeat("ab",32);var cfg object;var link string
   if engine=="xray"{cfg=object{"log":object{"loglevel":"debug"},"inbounds":[]any{object{"listen":"127.0.0.1","port":port,"protocol":"vless","settings":object{"clients":[]any{object{"id":id}},"decryption":"none"}}},"outbounds":[]any{object{"protocol":"freedom","settings":object{"finalRules":[]any{object{"action":"allow","ip":[]string{"127.0.0.1/32"}}}}}}};link=fmt.Sprintf("vless://%s@127.0.0.1:%d?security=none&type=tcp",id,port)
   }else{cfg=object{"mode":"server","transport":"tcp","local_port":port,"key":key,"aead":"none","padding_min":5,"padding_max":15,"ascii":"prefer_entropy","enable_pure_downlink":true,"suspicious_action":"silent","httpmask":object{"disable":true},"rule_urls":[]string{"global"}};raw,_:=json.Marshal(object{"h":"127.0.0.1","p":port,"k":key,"e":"none","hd":true});link="sudoku://"+base64.RawURLEncoding.EncodeToString(raw)}
+  if engine=="xray"&&scenario.transport!="tcp"{
+    network:=scenario.transport;stream:=object{"network":network};suffix:="&path=%2Fsoulu&serviceName=soulu"
+    switch network{case "ws":stream["wsSettings"]=object{"path":"/soulu"}
+    case "xhttp":stream["xhttpSettings"]=object{"path":"/soulu"};suffix+="&mode=packet-up"
+    case "grpc":stream["grpcSettings"]=object{"serviceName":"soulu"}}
+    cfg["inbounds"].([]any)[0].(object)["streamSettings"]=stream
+    link=fmt.Sprintf("vless://%s@127.0.0.1:%d?security=none&type=%s%s",id,port,network,suffix)
+  }
+  if engine=="sudoku"&&scenario.transport!="raw"{
+    mode:=scenario.transport;mux:="auto";if mode=="ws"{mux="on"}
+    cfg["httpmask"]=object{"disable":false,"mode":mode,"multiplex":mux,"path_root":"/soulu"}
+    cfg["enable_pure_downlink"]=false;cfg["ascii"]="up_ascii_down_entropy";cfg["aead"]="chacha20-poly1305"
+    raw,_:=json.Marshal(object{"h":"127.0.0.1","p":port,"k":key,"e":"chacha20-poly1305","a":"up_ascii_down_entropy","x":true,"hm":mode,"hx":mux,"hy":"/soulu"})
+    link="sudoku://"+base64.RawURLEncoding.EncodeToString(raw)
+  }
   dir:=t.TempDir();path:=filepath.Join(dir,"server.json");raw,_:=json.Marshal(cfg);os.WriteFile(path,raw,0600);args:=[]string{"run","-config",path};if engine=="sudoku"{args=[]string{"-c",path}}
   cmd:=exec.Command(filepath.Join(base,engine,engine+".exe"),args...);hideProcess(cmd);logPath:=filepath.Join(dir,"server.log");log,e:=os.Create(logPath);if e!=nil{t.Fatal(e)};cmd.Stdout=log;cmd.Stderr=log;if e=cmd.Start();e!=nil{t.Fatal(e)};defer func(){cmd.Process.Kill();cmd.Wait();log.Close();if t.Failed(){b,_:=os.ReadFile(logPath);t.Log(string(b));b,_=os.ReadFile(filepath.Join(rootDir(),"engine.log"));t.Log(string(b))}}()
   ready:=false;for deadline:=time.Now().Add(8*time.Second);time.Now().Before(deadline);{c,e:=net.DialTimeout("tcp",fmt.Sprintf("127.0.0.1:%d",port),100*time.Millisecond);if e==nil{c.Close();ready=true;break};time.Sleep(100*time.Millisecond)};if !ready{t.Fatal("fixture server did not listen")}

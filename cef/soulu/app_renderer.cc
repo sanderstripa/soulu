@@ -17,6 +17,19 @@ class PageScrollSubmit final : public CefV8Handler {
   }
  private: IMPLEMENT_REFCOUNTING(PageScrollSubmit);
 };
+class MediaSubmit final : public CefV8Handler {
+ public:
+  bool Execute(const CefString& name,CefRefPtr<CefV8Value>,const CefV8ValueList& args,CefRefPtr<CefV8Value>&,CefString&) override {
+    auto context=CefV8Context::GetCurrentContext();if(!context)return true;
+    auto frame=context->GetFrame();auto message=CefProcessMessage::Create(name=="fill"?"soulu.credential.fill":"soulu.media.playback");
+    if(name=="fill"){
+      if(!frame->IsMain()||args.size()!=2||!args[0]->IsInt()||!args[1]->IsInt())return true;
+      message->GetArgumentList()->SetInt(0,args[0]->GetIntValue());message->GetArgumentList()->SetInt(1,args[1]->GetIntValue());
+    }else {if(args.size()!=1||!args[0]->IsBool())return true;message->GetArgumentList()->SetBool(0,args[0]->GetBoolValue());}
+    frame->SendProcessMessage(PID_BROWSER,message);return true;
+  }
+ private: IMPLEMENT_REFCOUNTING(MediaSubmit);
+};
 class CredentialSubmit final : public CefV8Handler {
  public:
   bool Execute(const CefString&,CefRefPtr<CefV8Value>,const CefV8ValueList& args,
@@ -62,6 +75,31 @@ class RendererApp final : public CefApp, public CefRenderProcessHandler {
     InstallVideoRuntime(browser,frame,context);
     CefURLParts parts;
     if(!CefParseURL(frame->GetURL(),parts)||(CefString(&parts.scheme)!="https"&&CefString(&parts.scheme)!="http"))return;
+    context->GetGlobal()->SetValue("__souluMediaSend",CefV8Value::CreateFunction("media",new MediaSubmit()),V8_PROPERTY_ATTRIBUTE_NONE);
+    if(frame->IsMain()&&!private_browsers_.count(browser->GetIdentifier()))
+      context->GetGlobal()->SetValue("__souluFillRequest",CefV8Value::CreateFunction("fill",new MediaSubmit()),V8_PROPERTY_ATTRIBUTE_NONE);
+    {CefRefPtr<CefV8Value> result;CefRefPtr<CefV8Exception> error;
+      context->Eval(R"JS((()=>{
+        const send=window.__souluMediaSend,fill=window.__souluFillRequest;
+        delete window.__souluMediaSend;delete window.__souluFillRequest;
+        let blocked=true,last=false;const pending=new Set(),play=HTMLMediaElement.prototype.play;
+        const report=()=>{const active=[...document.querySelectorAll('audio,video')].some(e=>!e.paused&&!e.ended&&!e.muted&&e.volume>0&&e.readyState>=2);if(active!==last){last=active;send(active);}};
+        HTMLMediaElement.prototype.play=function(...args){if(blocked){pending.add(this);return Promise.reject(new DOMException('Select this tab to start playback','NotAllowedError'));}return play.apply(this,args);};
+        const guard=e=>{if(blocked){pending.add(e.target);e.target.pause();}report();};
+        document.addEventListener('play',guard,true);
+        for(const event of ['playing','pause','ended','volumechange','emptied','waiting'])document.addEventListener(event,report,true);
+        const timer=setInterval(report,500);
+        Object.defineProperty(window,'__souluMediaPolicy',{configurable:true,value:defer=>{
+          blocked=defer;if(!blocked){for(const element of pending)if(element.isConnected)play.call(element).catch(()=>{});pending.clear();}report();
+        }});
+        addEventListener('pagehide',()=>{clearInterval(timer);send(false);},{once:true});
+        if(fill)document.addEventListener('pointerup',event=>{
+          const e=event.target;if(!event.isTrusted||event.button!==0||!(e instanceof HTMLInputElement)||!['password','text','email'].includes(e.type))return;
+          const x=Math.round(event.clientX),y=Math.round(event.clientY);setTimeout(()=>fill(x,y),0);
+        },true);
+      })())JS",frame->GetURL(),0,result,error);
+      frame->SendProcessMessage(PID_BROWSER,CefProcessMessage::Create("soulu.media.ready"));
+    }
     context->GetGlobal()->SetValue("__souluCosmeticSend",CefV8Value::CreateFunction("send",new CosmeticSubmit()),V8_PROPERTY_ATTRIBUTE_NONE);
     {CefRefPtr<CefV8Value> result;CefRefPtr<CefV8Exception> error;
       context->Eval(kCosmeticBootstrap,frame->GetURL(),0,result,error);}
@@ -101,11 +139,20 @@ class RendererApp final : public CefApp, public CefRenderProcessHandler {
   }
   void OnContextReleased(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame,
                          CefRefPtr<CefV8Context> context) override {
+    auto ended=CefProcessMessage::Create("soulu.media.playback");ended->GetArgumentList()->SetBool(0,false);
+    frame->SendProcessMessage(PID_BROWSER,ended);
     ForgetVideoContext(context);
     router_->OnContextReleased(browser, frame, context);
   }
   bool OnProcessMessageReceived(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame,
                                 CefProcessId source, CefRefPtr<CefProcessMessage> message) override {
+    if(source==PID_BROWSER&&frame&&(message->GetName()=="soulu.media.activate"||message->GetName()=="soulu.media.policy")){
+      auto context=frame->GetV8Context();if(!context)return true;
+      const bool blocked=message->GetName()=="soulu.media.policy"&&message->GetArgumentList()->GetBool(0);
+      context->Enter();CefRefPtr<CefV8Value> result;CefRefPtr<CefV8Exception> error;
+      context->Eval(blocked?"window.__souluMediaPolicy?.(true)":"window.__souluMediaPolicy?.(false)",frame->GetURL(),0,result,error);
+      context->Exit();return true;
+    }
     if(HandleVideoResponse(frame,source,message))return true;
     if(source==PID_BROWSER&&frame&&(message->GetName()=="soulu.adblock.selectors"||message->GetName()=="soulu.adblock.refresh")){
       auto context=frame->GetV8Context();if(!context)return true;

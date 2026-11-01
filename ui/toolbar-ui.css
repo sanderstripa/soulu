@@ -122,3 +122,17 @@ body[data-native-caption-hover=true] .browser-toolbar :is(#compactWindowMaximize
 .classic-toolbar .classic-tab.pinned .classic-fallback,.classic-toolbar .icons-only .classic-tab:not(.active) .classic-fallback{display:grid}
 .classic-toolbar .icons-only .classic-tab.active{flex:0 0 160px;min-width:160px;max-width:160px}
 .classic-toolbar .icons-only .classic-tab.active .classic-fallback{display:grid}
+
+/* Keep primary navigation next to the address, and media controls on each tab. */
+.classic-address-wrap>#newTabButton{position:absolute;left:calc(100% + 5px);top:50%;transform:translateY(-50%)}
+.compact-tab-flow>#compactNewTabButton{flex-shrink:0;margin:0 2px}
+.browser-toolbar .tab-activity{display:flex;align-items:center;gap:2px;flex:none}
+.browser-toolbar .tab-activity:empty{display:none}
+.browser-toolbar .tab-media,.browser-toolbar .tab-capture{display:grid;place-items:center;flex:0 0 24px;width:24px;height:26px;min-width:24px;padding:3px;border:0;border-radius:6px;background:transparent;color:var(--text)}
+.browser-toolbar .tab-media:hover{background:var(--soft)}
+.browser-toolbar .tab-capture{color:var(--blue)}
+.browser-toolbar .tab-activity svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.5}
+.compact-tab:has(.tab-activity:not(:empty)){width:auto;min-width:32px;flex-shrink:0;gap:2px;padding:0 5px}
+.classic-toolbar .classic-tab .tab-activity{position:relative;z-index:1}
+#closeDownloads{width:36px;height:36px;min-width:36px;border:0;border-radius:50%;font:var(--type-heading2);background:transparent;color:var(--text);cursor:pointer}
+#closeDownloads:hover{background:var(--soft)}

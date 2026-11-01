@@ -143,6 +143,9 @@ bool BrowserClient::OnPreKeyEvent(CefRefPtr<CefBrowser> browser,const CefKeyEven
   return false;
 }
 
+void BrowserClient::OnMediaAccessChange(CefRefPtr<CefBrowser>,bool camera,bool microphone){
+  if(role_==BrowserRole::kContent)owner_->UpdateMediaAccess(tab_id_,camera,microphone);
+}
 void BrowserClient::OnFullscreenModeChange(CefRefPtr<CefBrowser>, bool fullscreen) {
   if (role_ == BrowserRole::kContent) owner_->ContentFullscreen(tab_id_, fullscreen);
 }
@@ -257,7 +260,7 @@ void BrowserClient::OnLoadEnd(CefRefPtr<CefBrowser>,CefRefPtr<CefFrame> frame,in
 bool BrowserClient::OnBeforeBrowse(CefRefPtr<CefBrowser> browser,CefRefPtr<CefFrame> frame,
     CefRefPtr<CefRequest> request,bool,bool) {
   if (frame->IsMain() && owner_->GuardSettingsNavigation(tab_id_, request->GetURL())) return true;
-  CEF_REQUIRE_UI_THREAD();if(router_)router_->OnBeforeBrowse(browser,frame);
+  CEF_REQUIRE_UI_THREAD();if(role_==BrowserRole::kContent)owner_->UpdatePlayback(tab_id_,frame->GetIdentifier(),false);if(router_)router_->OnBeforeBrowse(browser,frame);
   if(role_!=BrowserRole::kShell&&frame->IsMain()){
     {std::lock_guard lock(adblock_mutex_);adblock_top_=request->GetURL();
       ++adblock_generation_;adblock_blocked_=0;adblock_checked_=0;adblock_hits_->Clear();}
@@ -448,6 +451,21 @@ bool BrowserClient::OnProcessMessageReceived(CefRefPtr<CefBrowser> browser,
                                              CefRefPtr<CefFrame> frame,
                                              CefProcessId source_process,
                                              CefRefPtr<CefProcessMessage> message) {
+  if(role_==BrowserRole::kContent&&source_process==PID_RENDERER&&frame){
+    if(message->GetName()=="soulu.media.playback"){
+      auto args=message->GetArgumentList();if(args->GetSize()==1&&args->GetType(0)==VTYPE_BOOL)
+        owner_->UpdatePlayback(tab_id_,frame->GetIdentifier(),args->GetBool(0));return true;
+    }
+    if(message->GetName()=="soulu.credential.fill"&&frame->IsMain()){
+      auto args=message->GetArgumentList();if(args->GetSize()==2&&args->GetType(0)==VTYPE_INT&&args->GetType(1)==VTYPE_INT)
+        owner_->FillSavedForm(tab_id_,args->GetInt(0),args->GetInt(1));return true;
+    }
+    if(message->GetName()=="soulu.media.ready"){
+      auto reply=CefProcessMessage::Create("soulu.media.policy");reply->GetArgumentList()->SetBool(0,owner_->DeferMedia(tab_id_));
+      frame->SendProcessMessage(PID_RENDERER,reply);return true;
+    }
+  }
+
   CEF_REQUIRE_UI_THREAD();
   if(role_==BrowserRole::kContent&&source_process==PID_RENDERER&&frame&&frame->IsMain()&&message->GetName()=="soulu.video.request"){
     auto args=message->GetArgumentList();if(args->GetSize()==2&&args->GetType(0)==VTYPE_INT&&args->GetType(1)==VTYPE_STRING&&args->GetString(1).length()<=4*1024*1024)owner_->HandleVideoRequest(tab_id_,frame,args->GetInt(0),args->GetString(1));return true;

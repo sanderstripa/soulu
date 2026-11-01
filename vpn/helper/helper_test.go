@@ -196,3 +196,19 @@ func TestOfficialReleaseCatalog(t *testing.T) {
 		t.Logf("%s: %d official Windows releases, newest %s", id, len(rows), str(rows[0], "tag_name"))
 	}
 }
+
+func TestSudokuHTTPMaskModesAndRotation(t *testing.T) {
+ for _,mode:=range []string{"legacy","stream","poll","auto","ws"}{for _,mux:=range []string{"off","auto","on"}{
+  key:=object{"h":"example.com","p":float64(8443),"k":strings.Repeat("ab",32),"a":"up_entropy_down_ascii","e":"aes-128-gcm","x":true,"t":"xpxvvpvv","ts":[]any{"xpxvvpvv","vvpxxvpv"},"hd":false,"hm":mode,"ht":true,"hh":"cdn.example.com","hx":mux,"hy":"/prefix","m":float64(9999)}
+  raw,_:=json.Marshal(key);cfg,_,err:=engineConfig("sudoku://"+base64.RawURLEncoding.EncodeToString(raw),17890)
+  if err!=nil{t.Fatal(err)};mask:=cfg["httpmask"].(object)
+  if str(mask,"mode")!=mode||str(mask,"multiplex")!=mux||mask["tls"]!=true||str(mask,"host")!="cdn.example.com"||str(mask,"path_root")!="/prefix"||cfg["enable_pure_downlink"]!=false||str(cfg,"ascii")!="up_entropy_down_ascii"||str(cfg,"aead")!="aes-128-gcm"||len(cfg["custom_tables"].([]any))!=2||cfg["local_port"]!=17890{t.Fatal("upstream short-link feature was dropped",mode,mux)}
+ }}
+}
+func TestVLESSPostQuantumAndXHTTPDownload(t *testing.T) {
+ link:="vless://12345678-1234-1234-1234-123456789abc@example.com:443?type=xhttp&security=tls&fp=chrome&alpn=h2%2Chttp%2F1.1&encryption=mlkem768x25519plus.native.0rtt.test&extra=%7B%22downloadSettings%22%3A%7B%22address%22%3A%22down.example.com%22%2C%22port%22%3A443%7D%2C%22xmux%22%3A%7B%22maxConcurrency%22%3A8%7D%7D"
+ cfg,_,err:=engineConfig(link,17890);if err!=nil{t.Fatal(err)};out:=cfg["outbounds"].([]any)[0].(object);user:=out["settings"].(object)["vnext"].([]any)[0].(object)["users"].([]any)[0].(object)
+ if str(user,"encryption")!="mlkem768x25519plus.native.0rtt.test"{t.Fatal("VLESS encryption lost")}
+ stream:=out["streamSettings"].(object);extra:=stream["xhttpSettings"].(object)["extra"].(map[string]any)
+ if extra["downloadSettings"]==nil||extra["xmux"]==nil||str(stream["tlsSettings"].(object),"fingerprint")!="chrome"{t.Fatal("XHTTP/TLS options lost")}
+}

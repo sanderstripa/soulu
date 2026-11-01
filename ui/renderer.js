@@ -6,7 +6,7 @@ en:{tabs:"Tabs",back:"Back",favorites:"Favorites",downloads:"Downloads",share:"S
 Object.assign(I.ru,{pageMenu:"Действия страницы",toolbar:"Верхняя панель",addressPosition:"Положение адресной строки",addressPositionHint:"По центру или слева",extensionsPosition:"Закреплённые расширения",extensionsPositionHint:"Относительно адресной строки",vpnOnToolbar:"VPN на панели",vpnOnToolbarHint:"Показывать закреплённую кнопку VPN",downloadsVisibility:"Иконка загрузок",downloadsVisibilityHint:"Автоскрытие или постоянное отображение",center:"По центру",left:"Слева",leftOfAddress:"Слева",rightOfAddress:"Справа",dynamic:"Динамически",always:"Всегда",vpnOn:"VPN включён",vpnOff:"VPN выключен",vpnBusy:"VPN переключается"});
 Object.assign(I.en,{pageMenu:"Page actions",toolbar:"Toolbar",addressPosition:"Address bar position",addressPositionHint:"Centered or left aligned",extensionsPosition:"Pinned extensions",extensionsPositionHint:"Relative to the address bar",vpnOnToolbar:"VPN in toolbar",vpnOnToolbarHint:"Show the pinned VPN button",downloadsVisibility:"Downloads icon",downloadsVisibilityHint:"Auto-hide or always visible",center:"Centered",left:"Left",leftOfAddress:"Left",rightOfAddress:"Right",dynamic:"Dynamic",always:"Always",vpnOn:"VPN on",vpnOff:"VPN off",vpnBusy:"VPN is switching"});
 const tr=(k)=>I[state.settings?.language||"ru"]?.[k]||k;
-function esc(v){const e=document.createElement("span");e.textContent=v??"";return e.innerHTML;}
+function esc(v){const e=document.createElement("span");e.textContent=v??"";return e.innerHTML.replaceAll('"',"&quot;").replaceAll("'","&#39;");}
 function fav(x,c="favicon"){return x?.favicon?`<img class="${c}" src="${esc(x.favicon)}" alt="">`:"";}
 function fallbacks(root){root.querySelectorAll("img.favicon,img.sidebar-favicon,img.list-favicon").forEach((i)=>i.addEventListener("error",()=>i.remove(),{once:true}));}
 function translate(){document.documentElement.lang=state.settings.language;document.querySelectorAll("[data-i18n]").forEach((e)=>e.textContent=tr(e.dataset.i18n));document.querySelectorAll("[data-i18n-title]").forEach((e)=>{e.title=tr(e.dataset.i18nTitle);e.setAttribute("aria-label",e.title);});document.querySelectorAll("[data-i18n-placeholder]").forEach((e)=>e.placeholder=e.id==='classicAddress'&&state.page?.url==='soulu://home'?'':tr(e.dataset.i18nPlaceholder));}
@@ -39,9 +39,13 @@ function bindAddress(form,input,box){
   };
 }
 
-function addressDisplay(x){return x?.url && x.url!=="soulu://home"?x.label||x.url:"";}
+function addressDisplay(x){
+  if(!x?.url||x.url==='soulu://home'||x.url==='about:blank')return '';
+  try{const u=new URL(x.url);if(['http:','https:'].includes(u.protocol))return u.hostname;}catch{}
+  return x.label||x.url;
+}
 function activeTab(x){const hasFavicon=Boolean(x.favicon),display=addressDisplay(x);return`<form class="compact-active-tab${hasFavicon?"":" no-favicon"}" data-compact-rendered data-active-tab="${x.id}"><button class="tab-action page-action" type="button" data-page-menu title="${tr("pageMenu")}"><svg viewBox="0 0 20 20"><path d="M4 5.5h12M4 10h12M4 14.5h7"/></svg></button>${fav(x)}<input id="compactAddress" class="active-address" value="${esc(display)}" placeholder="${x.url==='soulu://home'?'':tr("addressPlaceholder")}" autocomplete="off" spellcheck="false"><button class="tab-action address-favorite" type="button" data-favorites title="${tr("favorites")}"><svg viewBox="0 0 24 24"><path d="m12 4 2.47 5.27L20 10.12l-4 4.1.94 5.78L12 17.27 7.06 20 8 14.22 4 10.12l5.53-.85L12 4Z"/></svg></button><button class="tab-action reload-action${x.loading?" loading":""}" type="button" data-reload title="${x.loading?tr("stop"):tr("reload")}"><svg class="reload-svg" viewBox="0 0 24 24"><path d="M19 8.13A8 8 0 1 0 20 12M19 4v4h-4"/></svg><svg class="stop-svg" viewBox="0 0 20 20"><rect x="4.5" y="4.5" width="11" height="11" rx="2"/></svg></button><button class="tab-action close-action" type="button" data-close-active title="${tr("close")}"><svg viewBox="0 0 24 24"><path d="M4 4l16 16m0-16L4 20"/></svg></button><div class="suggestions active-suggestions" id="compactSuggestions"></div></form>`;}
-let classicVisibleTabId=null;
+let classicVisibleTabId=null,classicTabsSignature="",sidebarSignature="";
 function sizeClassicTabs(){
   if(!["classic","adaptive"].includes(document.body.dataset.layout))return;
   const ordinary=[...tabStrip.querySelectorAll(".classic-tab")];
@@ -66,28 +70,39 @@ function revealClassicTab(){
   if(a.left<r.left)container.scrollLeft+=a.left-r.left;
   else if(a.right>r.right)container.scrollLeft+=a.right-r.right;
 }
+function mediaMarkup(x){
+ const en=state.settings?.language==='en';let html='';
+ if(x.audible||x.muted)html+=`<button type="button" class="tab-media" data-mute-tab="${x.id}" aria-pressed="${!!x.muted}" title="${en?(x.muted?'Unmute tab':'Mute tab'):(x.muted?'Включить звук вкладки':'Выключить звук вкладки')}"><svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9Z"/>${x.muted?'<path d="m17 9 5 6m0-6-5 6"/>':'<path d="M17 8q5 4 0 8"/>'}</svg></button>`;
+ for(const [on,label,path] of [[x.microphoneActive,en?'Microphone in use':'Используется микрофон','M9 5a3 3 0 0 1 6 0v7a3 3 0 0 1-6 0ZM6 11v1a6 6 0 0 0 12 0v-1M12 18v4m-4 0h8'],[x.cameraActive,en?'Camera in use':'Используется камера','M3 6h12v12H3ZM15 10l6-4v12l-6-4']])if(on)html+=`<span class="tab-capture" title="${label}" aria-label="${label}"><svg viewBox="0 0 24 24"><path d="${path}"/></svg></span>`;
+ return html;
+}
+function bindMedia(root){root.querySelectorAll('[data-mute-tab]').forEach(b=>b.onclick=e=>{e.stopPropagation();e.preventDefault();window.browserShell.toggleTabAudio(+b.dataset.muteTab);});}
 function classicTabMarkup(x,pinned){
   const title=x.title||x.label||tr("newTab"), symbol=title.trim().charAt(0).toUpperCase()||"•";
   const attributeTitle=esc(title).replace(/"/g,"&quot;");
   const image=fav(x)||`<span class="favicon favicon-fallback classic-fallback" aria-hidden="true">${esc(symbol)}</span>`;
   const close=`<button class="tab-action" title="${tr("close")}" aria-label="${tr("close")}" data-close-tab="${x.id}"><svg viewBox="0 0 24 24"><path d="M4 4l16 16m0-16L4 20"/></svg></button>`;
-  return `<div class="classic-tab${pinned?" pinned":""}${x.active?" active":""}" role="tab" aria-selected="${!!x.active}" aria-label="${attributeTitle}" tabindex="0" data-tooltip="${attributeTitle}" data-tab-id="${x.id}">${image}<strong>${esc(title)}</strong>${close}</div>`;
+  return `<div class="classic-tab${pinned?" pinned":""}${x.active?" active":""}" role="tab" aria-selected="${!!x.active}" aria-label="${attributeTitle}" tabindex="0" data-tooltip="${attributeTitle}" data-tab-id="${x.id}">${image}<strong>${esc(title)}</strong><span class="tab-activity">${mediaMarkup(x)}</span>${close}</div>`;
 }
 function renderClassicTabs(){
   const previousScroll=tabStrip.scrollLeft,previousPinnedScroll=classicPinnedTabs.scrollLeft;
   const pinned=state.tabs.filter(x=>x.pinned),normal=state.tabs.filter(x=>!x.pinned);
+  const signature=JSON.stringify([state.settings?.language,state.tabs.map(x=>[x.id,x.title,x.label,x.favicon,x.active,x.pinned,x.audible,x.muted,x.microphoneActive,x.cameraActive])]);
+  if(signature!==classicTabsSignature){
+  classicTabsSignature=signature;
   classicPinnedTabs.innerHTML=pinned.map(x=>classicTabMarkup(x,true)).join("");
   classicPinnedTabs.hidden=!pinned.length;
   classicPinnedTabs.setAttribute("aria-label",state.settings?.language==="en"?"Pinned tabs":"Закреплённые вкладки");
   tabStrip.closest(".tabs-zone")?.classList.toggle("no-ordinary",!normal.length);
   tabStrip.innerHTML=normal.map(x=>classicTabMarkup(x,false)).join("");
   for(const container of [classicPinnedTabs,tabStrip]){
+    bindMedia(container);
     container.querySelectorAll("img.favicon").forEach(img=>img.addEventListener("error",()=>{
       const fallback=document.createElement("span");fallback.className="favicon favicon-fallback classic-fallback";
       fallback.setAttribute("aria-hidden","true");fallback.textContent=(img.closest("[data-tab-id]")?.getAttribute("aria-label")||"•").trim().charAt(0).toUpperCase()||"•";img.replaceWith(fallback);
     },{once:true}));
     container.querySelectorAll("[data-tab-id]").forEach((e)=>{
-      e.onclick=(v)=>{if(!v.target.closest("[data-close-tab]"))window.browserShell.switchTab(+e.dataset.tabId);};
+      e.onclick=(v)=>{if(!v.target.closest("[data-close-tab],[data-mute-tab]"))window.browserShell.switchTab(+e.dataset.tabId);};
       e.onkeydown=(v)=>{if(v.target===e&&(v.key==="Enter"||v.key===" ")){v.preventDefault();window.browserShell.switchTab(+e.dataset.tabId);}};
       e.oncontextmenu=async(v)=>{v.preventDefault();v.stopPropagation();const id=+e.dataset.tabId,tab=state.tabs.find(t=>t.id===id);if(!tab)return;
         const en=state.settings?.language==="en";
@@ -96,6 +111,7 @@ function renderClassicTabs(){
       };
     });
     container.querySelectorAll("[data-close-tab]").forEach((b)=>b.onclick=(e)=>{e.stopPropagation();window.browserShell.closeTab(+b.dataset.closeTab);});
+  }
   }
   requestAnimationFrame(()=>{sizeClassicTabs();const selected=state.tabs.find(x=>x.active);
     const signature=selected?`${selected.id}:${!!selected.pinned}`:null;
@@ -122,17 +138,20 @@ function renderCompactTabs(){
   for(const x of wanted){
     let node=compactToolbar.querySelector(x.active?`[data-active-tab="${x.id}"]`:`[data-compact-rendered][data-tab-id="${x.id}"]`);
     if(!node){
-      node=document.createRange().createContextualFragment(x.active?activeTab(x):`<button type="button" class="compact-tab" data-compact-rendered data-tab-id="${x.id}">${fav(x)}</button>`).firstElementChild;
+      node=document.createRange().createContextualFragment(x.active?activeTab(x):`<div role="tab" tabindex="0" class="compact-tab" data-compact-rendered data-tab-id="${x.id}">${fav(x)}</div>`).firstElementChild;
       if(x.active){
         bindAddress(node,node.querySelector('input'),node.querySelector('.suggestions'));
         node.querySelector('[data-reload]').onclick=()=>window.browserShell.reload();
         node.querySelector('[data-close-active]').onclick=()=>window.browserShell.closeTab(x.id);
         node.querySelector('[data-page-menu]').onclick=()=>window.browserShell.pageMenu();
         node.querySelector('[data-favorites]').onclick=async()=>{renderBookmarks(await window.browserShell.getBookmarks());openPanel('favorites');};
-      }else node.onclick=()=>window.browserShell.switchTab(x.id);
+      }else {node.onclick=e=>{if(!e.target.closest('[data-mute-tab]'))window.browserShell.switchTab(x.id);};node.onkeydown=e=>{if(e.target===node&&['Enter',' '].includes(e.key)){e.preventDefault();window.browserShell.switchTab(x.id);}};}
     }
     if(previous.nextElementSibling!==node)previous.after(node);
     previous=node;
+    if(x.active)node.after($('#compactNewTabButton'));
+    let activity=node.querySelector('.tab-activity');if(!activity){activity=document.createElement('span');activity.className='tab-activity';x.active?node.querySelector('input').after(activity):node.append(activity);}
+    const media=mediaMarkup(x);if(activity.innerHTML!==media){activity.innerHTML=media;bindMedia(activity);}
     node.dataset.tooltip=x.title||x.label||tr('newTab');
     node.removeAttribute('title');
     const src=x.url==='soulu://settings'?'settings-icon.svg':x.favicon;
@@ -152,13 +171,16 @@ function renderCompactTabs(){
       reload.title=x.loading?tr('stop'):tr('reload');
     }
   }
+  const active=compactToolbar.querySelector('[data-active-tab]');if(active)active.after($('#compactNewTabButton'));
   const count=wanted.filter(x=>!x.active).length;
   $('#compactTabFlow').style.setProperty('--compact-flow-width',`${Math.min(620,466+count*33)}px`);
 }
 
 function renderTabs(){renderClassicTabs();renderCompactTabs();}
-function renderSidebar(){const box=$("#sidebarTabs");$("#sidebarCount").textContent=`${state.tabs.length} ${tr("opened")}`;box.innerHTML=state.tabs.map((x)=>`<div class="sidebar-tab${x.active?" active":""}">${fav(x,"sidebar-favicon")}<button data-select="${x.id}"><strong>${esc(x.title||tr("newTab"))}</strong><small>${esc(x.label)}</small></button><button data-close="${x.id}">×</button></div>`).join("");fallbacks(box);box.querySelectorAll("[data-select]").forEach((b)=>b.onclick=()=>window.browserShell.switchTab(+b.dataset.select));box.querySelectorAll("[data-close]").forEach((b)=>b.onclick=()=>window.browserShell.closeTab(+b.dataset.close));}
-function renderState(v){state=v||state;renderTabs();appearance();backButtons.forEach((button)=>button.disabled=!state.page?.canGoBack);sidebar.classList.toggle("visible",!!state.sidebarVisible&&!state.bookmarksSidebarVisible);if((!state.sidebarVisible||state.bookmarksSidebarVisible)&&sidebar.contains(document.activeElement))sidebarButtons.find(b=>b.getClientRects().length)?.focus();sidebar.inert=!state.sidebarVisible||!!state.bookmarksSidebarVisible;sidebarButtons.forEach((button)=>button.classList.toggle("active",!!state.sidebarVisible&&!state.bookmarksSidebarVisible));[$("#windowMaximize"),$("#compactWindowMaximize")].forEach((m)=>{m.title=state.maximized?tr("restore"):tr("maximize");m.innerHTML=state.maximized?'<svg viewBox="0 0 24 24"><rect x="8.25" y="5.25" width="10.5" height="10.5"/><path d="M15.75 15.75v3h-10.5v-10.5h3"/></svg>':'<svg viewBox="0 0 24 24"><rect x="5.25" y="5.25" width="13.5" height="13.5"/></svg>';});document.title=state.page?.title?`${state.page.title} — Soulu`:"Soulu";renderSidebar();}
+function renderSidebar(){const signature=JSON.stringify([state.settings?.language,state.tabs.map(x=>[x.id,x.title,x.label,x.favicon,x.active])]);if(signature===sidebarSignature)return;sidebarSignature=signature;const box=$("#sidebarTabs");$("#sidebarCount").textContent=`${state.tabs.length} ${tr("opened")}`;box.innerHTML=state.tabs.map((x)=>`<div class="sidebar-tab${x.active?" active":""}">${fav(x,"sidebar-favicon")}<button data-select="${x.id}"><strong>${esc(x.title||tr("newTab"))}</strong><small>${esc(x.label)}</small></button><button data-close="${x.id}">×</button></div>`).join("");fallbacks(box);box.querySelectorAll("[data-select]").forEach((b)=>b.onclick=()=>window.browserShell.switchTab(+b.dataset.select));box.querySelectorAll("[data-close]").forEach((b)=>b.onclick=()=>window.browserShell.closeTab(+b.dataset.close));}
+let pendingState=null,stateFrame=0;
+function renderState(v){pendingState=v||pendingState||state;if(stateFrame)return;stateFrame=requestAnimationFrame(()=>{stateFrame=0;applyState(pendingState);pendingState=null;});}
+function applyState(v){state=v||state;renderTabs();appearance();backButtons.forEach((button)=>button.disabled=!state.page?.canGoBack);sidebar.classList.toggle("visible",!!state.sidebarVisible&&!state.bookmarksSidebarVisible);if((!state.sidebarVisible||state.bookmarksSidebarVisible)&&sidebar.contains(document.activeElement))sidebarButtons.find(b=>b.getClientRects().length)?.focus();sidebar.inert=!state.sidebarVisible||!!state.bookmarksSidebarVisible;sidebarButtons.forEach((button)=>button.classList.toggle("active",!!state.sidebarVisible&&!state.bookmarksSidebarVisible));[$("#windowMaximize"),$("#compactWindowMaximize")].forEach((m)=>{m.title=state.maximized?tr("restore"):tr("maximize");m.innerHTML=state.maximized?'<svg viewBox="0 0 24 24"><rect x="8.25" y="5.25" width="10.5" height="10.5"/><path d="M15.75 15.75v3h-10.5v-10.5h3"/></svg>':'<svg viewBox="0 0 24 24"><rect x="5.25" y="5.25" width="13.5" height="13.5"/></svg>';});document.title=state.page?.title?`${state.page.title} — Soulu`:"Soulu";renderSidebar();}
 function closePanel(){rightPanel="";[favoritesPanel,downloadsPanel].forEach((x)=>x.classList.remove("open"));[...favoritesButtons,...downloadsButtons,...vpnButtons,...settingsButtons].forEach((x)=>x.classList.remove("active"));window.browserShell.setRightPanel(0);}
 function openPanel(type){if(type==="settings")return window.browserShell.openSettingsWindow();if(rightPanel===type)return closePanel();closePanel();rightPanel=type;const map={favorites:[favoritesPanel,favoritesButtons,330],downloads:[downloadsPanel,downloadsButtons,350]},[panel,buttons,width]=map[type];panel.classList.add("open");buttons.forEach((button)=>button.classList.add("active"));window.browserShell.setRightPanel(width);}
 function bytes(n){n=+n||0;return n<1024?`${n} B`:n<1048576?`${Math.round(n/1024)} KB`:`${(n/1048576).toFixed(1)} MB`;}
@@ -179,6 +201,8 @@ downloadsButtons.forEach((button)=>button.onclick=async()=>{if(!lastDownloads.so
 [$("#newTabButton"),$("#compactNewTabButton")].forEach((button)=>button.onclick=()=>window.browserShell.newTab());
 vpnButtons.forEach((button)=>button.onclick=toggleVpn);
 $("#classicPageMenu").onclick=()=>window.browserShell.pageMenu();
+$('#closeDownloads').onclick=closePanel;
+for(const button of document.querySelectorAll('[data-home]'))button.onclick=()=>window.browserShell.goHome();
 $("#sidebarNewTab").onclick=()=>window.browserShell.newTab();
 $("#addFavoriteButton").onclick=async()=>renderBookmarks(await window.browserShell.addBookmark());
 [$("#windowClose"),$("#compactWindowClose")].forEach((button)=>button.onclick=()=>window.browserShell.close());

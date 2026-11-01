@@ -58,6 +58,11 @@ class BrowserWindow final : public CefBaseRefCounted {
   void UpdateAddress(int tab_id, const std::string& url);
   void UpdateFavicon(int tab_id, const std::string& url);
   void UpdateLoading(int tab_id, bool loading, bool can_go_back);
+  void UpdateMediaAccess(int id, bool camera, bool microphone);
+  void UpdatePlayback(int id, const std::string& frame, bool playing);
+  bool DeferMedia(int id) const;
+  void SaveWindowPlacement();
+  void ActivateMedia(int id);
   void StoreThumbnail(int id, const std::string& url, const std::string& data);
   void UpdateDownload(int tab_id, CefRefPtr<CefDownloadItem> item);
   void HandleBridge(const std::string& request,
@@ -140,6 +145,9 @@ class BrowserWindow final : public CefBaseRefCounted {
     std::wstring pending_home_input;
     bool pending_home_submit = false;
     bool loading = false;
+    bool defer_media = false, muted = false;
+    bool camera_active = false, microphone_active = false;
+    std::set<std::string> playing_frames;
     bool can_go_back = false;
     bool reader_active = false;
     bool main_loading = false;
@@ -226,6 +234,7 @@ class BrowserWindow final : public CefBaseRefCounted {
   bool fullscreen_applied_ = false;
   bool caption_pressed_ = false;
   bool caption_hovered_ = false;
+  int restored_show_ = SW_SHOWNORMAL;
   WINDOWPLACEMENT fullscreen_placement_ = {sizeof(WINDOWPLACEMENT)};
   RECT fullscreen_bounds_ = {};
   LONG_PTR fullscreen_style_ = 0;
