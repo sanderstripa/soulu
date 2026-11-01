@@ -1,0 +1,60 @@
+name: Diagnose daily browsing on the compiled candidate
+on:
+  push:
+    branches: [codex/daily-use-check-72]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: soulu-daily-use-debug
+  cancel-in-progress: true
+jobs:
+  daily-use:
+    runs-on: windows-2025
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: browser
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: 41279009245
+          name: Soulu-cef-candidate-a8bcd6b2ad09256421873d3b97659b3a9a531773
+          path: candidate
+      - name: Prepare identical CEF runtime with the freshly compiled candidate
+        shell: pwsh
+        run: |
+          Invoke-WebRequest 'https://github.com/sanderstripa/soulu/releases/download/beta-1.0.71/Soulu-Beta-1.0.71-x64.zip' -OutFile base.zip
+          if ((Get-FileHash base.zip -Algorithm SHA256).Hash.ToLowerInvariant() -cne 'e89c400d5e7b5ac36ff8a52f0eeaff4504e2d34ec3136ea092c79234e541e3e5') { throw 'Baseline runtime archive digest mismatch' }
+          Expand-Archive base.zip runtime
+          $exe = Get-ChildItem runtime -Filter Soulu.exe -Recurse | Select-Object -First 1
+          if (!$exe) { throw 'Runtime executable missing' }
+          $runtime = $exe.Directory.FullName
+          Copy-Item candidate/* $runtime -Recurse -Force
+          "runtime_dir=$runtime" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+          Get-Content (Join-Path $runtime 'engine-version.json')
+      - name: Run daily-use regression
+        shell: pwsh
+        env:
+          PYTHONUTF8: "1"
+          SOULU_REGRESSION_SKIP_FIRST_RUN: "1"
+        run: |
+          python -m pip install --disable-pip-version-check websocket-client
+          python browser/scripts/test-cef-daily-use.py "$env:runtime_dir/Soulu.exe" browser/artifacts/daily-use
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: daily-use-debug
+          path: |
+            browser/artifacts/daily-use
+            candidate/engine-version.json
+          if-no-files-found: warn
+      - name: Stop test processes
+        if: always()
+        shell: pwsh
+        run: Get-Process Soulu -ErrorAction SilentlyContinue | Stop-Process -Force
