@@ -31,8 +31,8 @@ jobs:
       - name: Prepare identical CEF runtime with the freshly compiled candidate
         shell: pwsh
         run: |
-          Invoke-WebRequest 'https://github.com/sanderstripa/soulu/releases/download/beta-1.0.71/Soulu-Beta-1.0.71-x64.zip' -OutFile base.zip
-          if ((Get-FileHash base.zip -Algorithm SHA256).Hash.ToLowerInvariant() -cne 'e89c400d5e7b5ac36ff8a52f0eeaff4504e2d34ec3136ea092c79234e541e3e5') { throw 'Baseline runtime archive digest mismatch' }
+          Invoke-WebRequest 'https://github.com/sanderstripa/soulu/releases/download/beta-1.0.72/Soulu-Beta-1.0.72-x64.zip' -OutFile base.zip
+          if ((Get-FileHash base.zip -Algorithm SHA256).Hash.ToLowerInvariant() -cne '1fd4cf4984d285c02a532ee60b6f2345b7a99b31570058cb8c3312fef53bae4b') { throw 'Baseline runtime archive digest mismatch' }
           Expand-Archive base.zip runtime
           $exe = Get-ChildItem runtime -Filter Soulu.exe -Recurse | Select-Object -First 1
           if (!$exe) { throw 'Runtime executable missing' }
