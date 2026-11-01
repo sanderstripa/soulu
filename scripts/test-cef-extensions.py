@@ -177,8 +177,9 @@ def main():
             check(True, 'Store opens inside the embedded Chrome surface')
             if os.environ.get('SOULU_TEST_STORE_INSTALL') == '1':
                 store = socket('chromewebstore.google.com/')
-                s.navigate(store, 'https://chromewebstore.google.com/detail/bitwarden-password-manager/nngceckbapebfimnlniiiahkandclblb')
-                wait(lambda: s.evaluate(store, "document.readyState==='complete'"), 60)
+                s.command(store, 'Page.navigate', {'url':'https://chromewebstore.google.com/detail/bitwarden-password-manager/nngceckbapebfimnlniiiahkandclblb'})
+                wait(lambda: s.evaluate(store, "location.href.includes('nngceckbapebfimnlniiiahkandclblb')&&document.readyState==='complete'"), 60)
+                ImageGrab.grab().save(output.parent / 'store-page.png')
                 print('Store page:', s.evaluate(store, "({url:location.href,title:document.title,text:document.body.innerText.slice(0,7000)})"), flush=True)
                 wait(lambda: s.evaluate(store, "[...document.querySelectorAll('button')].some(b=>/^(Add to Chrome|Добавить в Chrome|Установить)$/.test(b.innerText.trim()))"), 60)
                 coords = s.evaluate(store, "(()=>{const b=[...document.querySelectorAll('button')].find(b=>/^(Add to Chrome|Добавить в Chrome|Установить)$/.test(b.innerText.trim()));if(b.disabled||b.getAttribute('aria-disabled')==='true')throw Error('Store installation is disabled');b.scrollIntoView({block:'center'});const r=b.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()")
