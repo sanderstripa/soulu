@@ -83,7 +83,25 @@ class RendererApp final : public CefApp, public CefRenderProcessHandler {
         const send=window.__souluMediaSend,fill=window.__souluFillRequest;
         delete window.__souluMediaSend;delete window.__souluFillRequest;
         let blocked=true,last=false;const pending=new Set(),play=HTMLMediaElement.prototype.play;
-        const report=()=>{const active=[...document.querySelectorAll('audio,video')].some(e=>!e.paused&&!e.ended&&!e.muted&&e.volume>0&&e.readyState>=2);if(active!==last){last=active;send(active);}};
+        // Side taps observe actual Web Audio samples without rerouting playback.
+        // Analyser outputs are deliberately disconnected: audible graph is unchanged.
+        const taps=new Set(),connect=AudioNode.prototype.connect,disconnect=AudioNode.prototype.disconnect;
+        AudioNode.prototype.connect=function(target,output=0,input=0){
+          const result=connect.apply(this,arguments);
+          if(target instanceof AudioDestinationNode&&taps.size<256&&![...taps].some(t=>t.source===this&&t.target===target&&t.output===output)){
+            try{const analyser=this.context.createAnalyser();analyser.fftSize=256;connect.call(this,analyser,output,0);taps.add({source:this,target,output,analyser,samples:new Float32Array(256)});}catch{}
+          }return result;
+        };
+        AudioNode.prototype.disconnect=function(target,output){
+          const result=disconnect.apply(this,arguments);
+          for(const tap of taps)if(tap.source===this&&(!arguments.length||typeof target==='number'&&tap.output===target||target===tap.target&&(arguments.length<2||output===tap.output))){
+            try{disconnect.call(this,tap.analyser,tap.output,0);}catch{}taps.delete(tap);
+          }return result;
+        };
+        const webAudioActive=()=>{let active=false;for(const tap of taps){if(tap.source.context.state==='closed'){taps.delete(tap);continue;}if(tap.source.context.state!=='running')continue;
+          tap.analyser.getFloatTimeDomainData(tap.samples);if(tap.samples.some(v=>Math.abs(v)>.001))active=true;
+        }return active;};
+        const report=()=>{const active=[...document.querySelectorAll('audio,video')].some(e=>!e.paused&&!e.ended&&!e.muted&&e.volume>0&&e.readyState>=3&&!e.seeking)||webAudioActive();if(active!==last){last=active;send(active);}};
         HTMLMediaElement.prototype.play=function(...args){if(blocked){pending.add(this);return Promise.reject(new DOMException('Select this tab to start playback','NotAllowedError'));}return play.apply(this,args);};
         const guard=e=>{if(blocked){pending.add(e.target);e.target.pause();}report();};
         document.addEventListener('play',guard,true);

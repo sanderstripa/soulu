@@ -1275,6 +1275,7 @@ void BrowserWindow::SwitchTab(int id) {
   ActivateMedia(id);
   if(tab->focus_home_on_load&&tab->browser&&!tab->browser->IsLoading())ContentPageLoaded(id);
   Layout();
+  if(tab->browser&&!settings_overlay_&&!overview_visible_&&!popover_visible_)tab->browser->GetHost()->SetFocus(true);
   EmitState();
 }
 

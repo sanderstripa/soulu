@@ -124,7 +124,9 @@ body[data-native-caption-hover=true] .browser-toolbar :is(#compactWindowMaximize
 .classic-toolbar .icons-only .classic-tab.active .classic-fallback{display:grid}
 
 /* Keep primary navigation next to the address, and media controls on each tab. */
-.classic-address-wrap>#newTabButton{position:absolute;left:calc(100% + 5px);top:50%;transform:translateY(-50%)}
+.classic-address-wrap{align-items:center}
+.classic-address-wrap>.classic-address-pill{flex:1 1 auto;min-width:0}
+.classic-address-wrap>#newTabButton{position:relative;inset:auto;transform:none;margin-left:5px;flex-shrink:0}
 .compact-tab-flow>#compactNewTabButton{flex-shrink:0;margin:0 2px}
 .browser-toolbar .tab-activity{display:flex;align-items:center;gap:2px;flex:none}
 .browser-toolbar .tab-activity:empty{display:none}

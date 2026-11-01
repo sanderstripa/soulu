@@ -35,7 +35,7 @@ with wave.open(buf,'wb') as wav:
  wav.setparams((1,2,8000,0,'NONE','not compressed'));wav.writeframes(b''.join(struct.pack('<h',int(5000*math.sin(i*math.tau*440/8000))) for i in range(8000)))
 class Handler(http.server.BaseHTTPRequestHandler):
  def do_GET(self):
-  data=buf.getvalue() if self.path.startswith('/tone.wav') else b'<title>Daily use</title><form><input id="user" autocomplete="username"><input id="password" type="password" autocomplete="current-password"></form><audio id="audio" autoplay loop src="/tone.wav"></audio><button id="play" onclick="audio.play()">Play</button>'
+  data=buf.getvalue() if self.path.startswith('/tone.wav') else b'<title>Daily use</title><form><input id="user" autocomplete="username"><input id="password" type="password" autocomplete="current-password"></form><audio id="audio" autoplay loop src="/tone.wav"></audio><button id="play" onclick="audio.play()">Play</button><button id="webAudio" onclick="window.ac=new AudioContext();window.osc=ac.createOscillator();window.gain=ac.createGain();gain.gain.value=.1;osc.connect(gain);gain.connect(ac.destination);osc.start();ac.resume()">Web Audio</button>'
   self.send_response(200);self.send_header('Content-Type','audio/wav' if self.path.startswith('/tone.wav') else 'text/html');self.send_header('Content-Length',str(len(data)));self.end_headers();self.wfile.write(data)
  def log_message(self,*args):pass
 server=http.server.ThreadingHTTPServer(('127.0.0.1',0),Handler);threading.Thread(target=server.serve_forever,daemon=True).start();origin=f'http://127.0.0.1:{server.server_port}'
@@ -55,6 +55,10 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as root:
   click(shell,'#classicAddress');check(s.evaluate(shell,"document.querySelector('#classicAddress').value").endswith('/login?full=address#fragment'),'Address shows host at rest and full path/query/fragment on focus')
   s.evaluate(shell,"document.querySelector('#classicAddress').blur()")
   check(s.evaluate(shell,"(()=>{const a=document.querySelector('#classicAddressForm').getBoundingClientRect(),b=document.querySelector('#newTabButton').getBoundingClientRect();return b.left>=a.right&&b.left-a.right<12})()"),'New-tab button sits immediately beside the address')
+  for width in (620,900,1280):
+   s.command(shell,'Emulation.setDeviceMetricsOverride',{'width':width,'height':760,'deviceScaleFactor':1,'mobile':False});time.sleep(.15)
+   check(s.evaluate(shell,"(()=>{const b=document.querySelector('#newTabButton').getBoundingClientRect(),a=document.querySelector('#classicAddressForm').getBoundingClientRect();return b.left>=a.right&&b.right<=innerWidth&&[...document.querySelectorAll('.classic-navigation-right button')].every(n=>{const r=n.getBoundingClientRect();return !r.width||b.right<=r.left||b.left>=r.right})})()"),f'Address/new-tab controls do not overlap service buttons at {width}px')
+  s.command(shell,'Emulation.clearDeviceMetricsOverride')
   # Repeated loading/state updates must preserve the tab DOM and focused controls.
   s.evaluate(shell,"window.dailyTab=document.querySelector('.classic-tab');window.dailyFavicon=dailyTab.querySelector('.favicon')")
   for _ in range(15):s.evaluate(shell,'browserShell.getState().then(v=>__souluEmit("state",v))')
@@ -62,10 +66,20 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as root:
   original=state()['activeTabId'];s.evaluate(shell,'browserShell.openTab('+json.dumps(origin+'/background')+',true)')
   background=socket_for('/background');connections.append(background);wait(lambda:s.evaluate(background,"document.querySelector('audio')?.readyState>=2"));time.sleep(1)
   check(s.evaluate(background,"document.querySelector('audio').paused"),'Opening an audio/video page in a new background tab does not start playback')
-  bg=next(t['id'] for t in state()['tabs'] if '/background' in t['url']);s.evaluate(shell,f'browserShell.switchTab({bg})');click(background,'#play')
+  bg=next(t['id'] for t in state()['tabs'] if '/background' in t['url']);s.evaluate(shell,f'browserShell.switchTab({bg})');wait(lambda:state()['activeTabId']==bg);click(background,'#play')
+  playback=s.command(background,'Runtime.evaluate',{'expression':"document.querySelector('#audio').play().then(()=>({playing:!document.querySelector('#audio').paused}),e=>({error:e.name+': '+e.message}))",'awaitPromise':True,'returnByValue':True,'userGesture':True})
+  print('PLAYBACK',json.dumps(playback),flush=True)
+  print('MEDIA_STATE',json.dumps(s.evaluate(background,"(()=>{const a=document.querySelector('#audio');return {paused:a.paused,ready:a.readyState,volume:a.volume,muted:a.muted,error:a.error?.message,policy:typeof window.__souluMediaPolicy,focus:document.hasFocus()}})()")),flush=True)
+  check(playback.get('result',{}).get('value',{}).get('playing'),'Selected media tab accepts a user-initiated play request')
   wait(lambda:any(t.get('audible') for t in state()['tabs'] if t['id']==bg))
   wait(lambda:s.evaluate(shell,"!!document.querySelector('[data-mute-tab]')"));click(shell,f'#tabStrip [data-mute-tab="{bg}"]')
   wait(lambda:next(t for t in state()['tabs'] if t['id']==bg).get('muted'));check(True,'Playback indicator and one-click tab mute are connected to the native browser')
+  s.evaluate(background,"audio.pause()")
+  s.evaluate(shell,f'browserShell.toggleTabAudio({bg})');s.command(background,'Runtime.evaluate',{'expression':"document.querySelector('#webAudio').click()",'userGesture':True})
+  wait(lambda:next(t for t in state()['tabs'] if t['id']==bg).get('audible'))
+  s.evaluate(background,"gain.gain.value=0")
+  wait(lambda:not next(t for t in state()['tabs'] if t['id']==bg).get('audible'));s.evaluate(background,"osc.stop();ac.close()")
+  check(True,'Web Audio output samples produce an activity indicator; zero gain clears it')
   for permission in ['microphone','camera']:s.evaluate(shell,'browserShell.getCurrentSite().then(site=>browserShell.siteAction("permission",{...site,permission:'+json.dumps(permission)+',value:0}))')
   check(not next(t for t in state()['tabs'] if t['id']==bg).get('microphoneActive'),'A granted microphone permission alone is not marked as active capture')
   s.evaluate(background,'window.dailyStream=await navigator.mediaDevices.getUserMedia({audio:true,video:true});true')
