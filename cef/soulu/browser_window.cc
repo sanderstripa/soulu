@@ -102,23 +102,23 @@ class FunctionTask final : public CefTask {
 // Observe the actual lifecycle acknowledgement; never report a rejected freeze as applied.
 class LifecycleJob final : public CefDevToolsMessageObserver {
  public:
-  explicit LifecycleJob(std::function<void(bool)> done):done_(std::move(done)){}
+  explicit LifecycleJob(std::function<void(bool,const std::string&)> done):done_(std::move(done)){}
   void Start(CefRefPtr<CefBrowser> browser,bool frozen){
     browser_=browser;registration_=browser->GetHost()->AddDevToolsMessageObserver(this);
     auto args=CefDictionaryValue::Create();args->SetString("state",frozen?"frozen":"active");
     // Some browser-process protocol methods acknowledge synchronously.
     // Register the message ID before dispatch, or that result is lost.
     static int next_message=730000;message_=++next_message;
-    if(!browser->GetHost()->ExecuteDevToolsMethod(message_,"Page.setWebLifecycleState",args)){Finish(false);return;}
+    if(!browser->GetHost()->ExecuteDevToolsMethod(message_,"Page.setWebLifecycleState",args)){Finish(false,"Protocol method rejected");return;}
     CefRefPtr<LifecycleJob> self=this;
-    CefPostDelayedTask(TID_UI,new FunctionTask([self]{self->Finish(false);}),5000);
+    CefPostDelayedTask(TID_UI,new FunctionTask([self]{self->Finish(false,"Protocol acknowledgement timed out");}),5000);
   }
-  void OnDevToolsMethodResult(CefRefPtr<CefBrowser>,int id,bool success,const void*,size_t) override {
-    if(id==message_)Finish(success);
+  void OnDevToolsMethodResult(CefRefPtr<CefBrowser>,int id,bool success,const void* result,size_t size) override {
+    if(id==message_)Finish(success,success?"":std::string(static_cast<const char*>(result),std::min<size_t>(size,2048)));
   }
  private:
-  void Finish(bool success){if(!done_)return;auto done=std::move(done_);registration_=nullptr;browser_=nullptr;done(success);}
-  std::function<void(bool)> done_;CefRefPtr<CefBrowser> browser_;CefRefPtr<CefRegistration> registration_;int message_=0;
+  void Finish(bool success,const std::string& error){if(!done_)return;auto done=std::move(done_);registration_=nullptr;browser_=nullptr;done(success,error);}
+  std::function<void(bool,const std::string&)> done_;CefRefPtr<CefBrowser> browser_;CefRefPtr<CefRegistration> registration_;int message_=0;
   IMPLEMENT_REFCOUNTING(LifecycleJob);
 };
 // One operation owns its observer and deadline. Chromium's isolated world
@@ -1495,12 +1495,12 @@ void BrowserWindow::SetTabFrozen(int id,bool frozen){
   auto* tab=FindTab(id);if(!tab||!tab->browser||tab->lifecycle_pending||tab->frozen==frozen)return;
   tab->lifecycle_pending=true;
   const int generation=tab->document_generation;CefRefPtr<BrowserWindow> self=this;
-  CefRefPtr<LifecycleJob> job=new LifecycleJob([self,id,generation,frozen](bool success){self->CompleteTabFreeze(id,generation,frozen,success);});
+  CefRefPtr<LifecycleJob> job=new LifecycleJob([self,id,generation,frozen](bool success,const std::string& error){self->CompleteTabFreeze(id,generation,frozen,success,error);});
   job->Start(tab->browser,frozen);
 }
-void BrowserWindow::CompleteTabFreeze(int id,int generation,bool frozen,bool success){
+void BrowserWindow::CompleteTabFreeze(int id,int generation,bool frozen,bool success,const std::string& error){
   auto* tab=FindTab(id);if(!tab||closing_)return;
-  tab->lifecycle_pending=false;
+  tab->lifecycle_pending=false;tab->suspension_error=error;
   if(tab->document_generation!=generation){if(frozen&&success){tab->frozen=true;SetTabFrozen(id,false);}return;}
   if(!success)return;
   tab->frozen=frozen;if(!frozen)tab->manually_paused=false;
@@ -1518,7 +1518,7 @@ void BrowserWindow::ApplyPerformancePolicy(bool immediate){
   std::map<std::string,CefRefPtr<CefDictionaryValue>> configs;configs[active_profile_id_]=settings_;
   for(auto& tab:tabs_){
     if(!tab.browser)continue;
-    if(tab.id==active_tab_id_){tab.hidden_since=0;tab.manually_paused=false;SetTabFrozen(tab.id,false);continue;}
+    if(tab.id==active_tab_id_){tab.suspension_eligible=false;tab.hidden_since=0;tab.manually_paused=false;SetTabFrozen(tab.id,false);continue;}
     if(!tab.hidden_since)tab.hidden_since=now;
     // Profile-local policy is retained even while another profile is active.
     auto config=tab.incognito?settings_:configs[tab.profile_id];
@@ -1529,6 +1529,7 @@ void BrowserWindow::ApplyPerformancePolicy(bool immediate){
     for(size_t i=0;i<downloads_->GetSize();++i){auto d=downloads_->GetDictionary(i);if(d&&d->GetInt("tabId")==tab.id&&d->GetString("state")=="progressing")eligible=false;}
     const auto host=SiteDomain(tab.url);std::istringstream lines(config->GetString("performanceExclusions").ToString());std::string domain;
     while(std::getline(lines,domain)){const auto first=domain.find_first_not_of(" \t\r"),last=domain.find_last_not_of(" \t\r");if(first==std::string::npos)continue;domain=domain.substr(first,last-first+1);std::transform(domain.begin(),domain.end(),domain.begin(),[](unsigned char c){return static_cast<char>(std::tolower(c));});if(host==domain||(host.size()>domain.size()&&host.compare(host.size()-domain.size(),domain.size(),domain)==0&&host[host.size()-domain.size()-1]=='.'))eligible=false;}
+    tab.suspension_eligible=eligible;
     if(!eligible){tab.manually_paused=false;SetTabFrozen(tab.id,false);continue;}
     const std::string timeout=config->GetString("backgroundTabTimeout");
     const ULONGLONG seconds=mode=="eco"||timeout=="60"?60:timeout=="900"?900:timeout=="1800"?1800:300;
@@ -1989,6 +1990,10 @@ CefRefPtr<CefDictionaryValue> BrowserWindow::State() const {
     if (overview_visible_) row->SetString("thumbnail", tab.thumbnail);
     row->SetBool("loading", tab.loading);
     row->SetBool("suspended",tab.frozen);
+    row->SetBool("suspensionPending",tab.lifecycle_pending);
+    row->SetBool("suspensionEligible",tab.suspension_eligible);
+    row->SetString("suspensionError",tab.suspension_error);
+    row->SetBool("mainLoading",tab.main_loading);
     row->SetBool("audible", !tab.playing_frames.empty());
     row->SetBool("muted", tab.browser&&tab.browser->GetHost()->IsAudioMuted());
     row->SetBool("microphoneActive",tab.microphone_active);

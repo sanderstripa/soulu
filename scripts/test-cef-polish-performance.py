@@ -89,7 +89,11 @@ with tempfile.TemporaryDirectory(prefix='soulu-polish-',ignore_cleanup_errors=Tr
   wait(lambda:not state()['adaptiveToolbar']['running'])
   s.evaluate(shell,'browserShell.setSettings({freezeBackgroundTabs:true,memorySaver:true,performanceMode:"balanced"})')
   s.evaluate(shell,'browserShell.optimizeBackgroundTabs()')
-  wait(lambda:next(t for t in state()['tabs'] if t['id']==first).get('suspended'))
+  try:wait(lambda:next(t for t in state()['tabs'] if t['id']==first).get('suspended'))
+  except Exception:
+   print('LIFECYCLE_FAILURE_STATE',json.dumps(state()),flush=True)
+   print('LIFECYCLE_PAGE',s.evaluate(page,'({visibility:document.visibilityState,ticks})'),flush=True)
+   raise
   check(not next(t for t in state()['tabs'] if t['id']==second).get('suspended'),'Manual optimization pauses only a background tab')
   before=s.evaluate(page,'ticks');time.sleep(.6);check(s.evaluate(page,'ticks')==before,'Paused tab actually stops JavaScript timers')
   s.evaluate(shell,f'browserShell.switchTab({first})');wait(lambda:not next(t for t in state()['tabs'] if t['id']==first).get('suspended'));wait(lambda:s.evaluate(page,'ticks')>before)
