@@ -17,6 +17,13 @@ foreach($id in @('xray','sudoku')){
   if(@($exe).Count -ne 1){throw "$id executable missing or duplicated"}
   $target=Join-Path $Destination $id;New-Item -ItemType Directory -Force $target | Out-Null
   Copy-Item $exe.FullName (Join-Path $target "$id.exe") -Force
+  @(
+    "Unmodified $id core $($pin.version), distributed as an external process."
+    "Upstream and corresponding source: https://github.com/$($pin.repository)/tree/$($pin.version)"
+    "Source archive: https://github.com/$($pin.repository)/archive/refs/tags/$($pin.version).tar.gz"
+    "Binary archive: $($pin.url)"
+    "Binary archive SHA-256: $($pin.sha256)"
+  ) | Set-Content (Join-Path $target 'SOURCE.txt') -Encoding utf8NoBOM
   foreach($data in @('geoip.dat','geosite.dat')){Get-ChildItem $unpacked -Filter $data -File -Recurse | Select-Object -First 1 | ForEach-Object {Copy-Item $_.FullName (Join-Path $target $data) -Force}}
   $stamps[$id]=@{version=$pin.version;sha256=(Get-FileHash (Join-Path $target "$id.exe") -Algorithm SHA256).Hash.ToLowerInvariant()}
  }finally{Remove-Item $temp -Recurse -Force -ErrorAction SilentlyContinue}

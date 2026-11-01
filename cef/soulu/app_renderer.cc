@@ -164,10 +164,9 @@ class RendererApp final : public CefApp, public CefRenderProcessHandler {
   }
   void OnContextReleased(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame,
                          CefRefPtr<CefV8Context> context) override {
-    if(auto main_context=frame->GetV8Context();main_context&&main_context->IsSame(context)){
-      auto ended=CefProcessMessage::Create("soulu.media.playback");ended->GetArgumentList()->SetBool(0,false);
-      frame->SendProcessMessage(PID_BROWSER,ended);
-    }
+    // Document pagehide and OnBeforeBrowse clear playback. Releasing an
+    // isolated service world must not clear a still-playing document, and the
+    // main-world context may already be gone at this point.
     ForgetVideoContext(context);
     router_->OnContextReleased(browser, frame, context);
   }

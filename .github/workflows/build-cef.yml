@@ -286,6 +286,12 @@ jobs:
           python browser/scripts/test-cef-next-ui.py "$env:build_dir/Soulu.exe" browser/artifacts/next-ui
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      - name: Verify daily-use fixes in the native browser
+        shell: pwsh
+        run: |
+          python browser/scripts/test-cef-daily-use.py "$env:build_dir/Soulu.exe" browser/artifacts/daily-use
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Verify integrated VOT on real YouTube
         if: ${{ !cancelled() && steps.native_build.outcome == 'success' }}
         shell: pwsh
@@ -314,12 +320,6 @@ jobs:
           finally {
             Get-Process Soulu -ErrorAction SilentlyContinue | Stop-Process -Force
           }
-
-      - name: Verify daily-use fixes in the native browser
-        shell: pwsh
-        run: |
-          python browser/scripts/test-cef-daily-use.py "$env:build_dir/Soulu.exe" browser/artifacts/daily-use
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test third Adaptive toolbar animation and live page retention
         shell: pwsh
