@@ -25,8 +25,8 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: 41279009245
-          name: Soulu-cef-candidate-a8bcd6b2ad09256421873d3b97659b3a9a531773
+          run-id: 41287104185
+          name: Soulu-cef-candidate-fdd416df211b2252b2aee459a6b6b2d26fdc6671
           path: candidate
       - name: Prepare identical CEF runtime with the freshly compiled candidate
         shell: pwsh
@@ -46,8 +46,17 @@ jobs:
           PYTHONUTF8: "1"
           SOULU_REGRESSION_SKIP_FIRST_RUN: "1"
         run: |
-          python -m pip install --disable-pip-version-check websocket-client pillow
+          python -m pip install --disable-pip-version-check websocket-client pillow comtypes
           python browser/scripts/test-cef-daily-use.py "$env:runtime_dir/Soulu.exe" browser/artifacts/daily-use
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Check native and imported field autofill compatibility
+        shell: pwsh
+        run: |
+          python browser/scripts/test-browser-import-native.py "$env:runtime_dir/Soulu.exe" browser/artifacts/browser-import-native.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python browser/scripts/test-cef-browser-import.py "$env:runtime_dir/Soulu.exe" browser/artifacts/browser-import-integration.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python browser/scripts/test-cef-browser-import-files.py "$env:runtime_dir/Soulu.exe" browser/artifacts/browser-import-files.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Check bookmark manager, overview and Home
         shell: pwsh
