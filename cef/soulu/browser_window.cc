@@ -106,18 +106,26 @@ class LifecycleJob final : public CefDevToolsMessageObserver {
   void Start(CefRefPtr<CefBrowser> browser,bool frozen){
     browser_=browser;registration_=browser->GetHost()->AddDevToolsMessageObserver(this);
     auto args=CefDictionaryValue::Create();args->SetString("state",frozen?"frozen":"active");
-    // Some browser-process protocol methods acknowledge synchronously.
-    // Register the message ID before dispatch, or that result is lost.
-    static int next_message=730000;message_=++next_message;
-    if(!browser->GetHost()->ExecuteDevToolsMethod(message_,"Page.setWebLifecycleState",args)){Finish(false,"Protocol method rejected");return;}
+    // CEF may renumber a suggested ID and browser-process commands may reply
+    // inline. Buffer replies until ExecuteDevToolsMethod returns its actual ID.
+    dispatching_=true;
+    message_=browser->GetHost()->ExecuteDevToolsMethod(0,"Page.setWebLifecycleState",args);
+    dispatching_=false;
+    if(!message_){Finish(false,"Protocol method rejected");return;}
+    auto early=early_results_.find(message_);
+    if(early!=early_results_.end()){const auto result=early->second;early_results_.clear();Finish(result.first,result.second);return;}
+    early_results_.clear();
     CefRefPtr<LifecycleJob> self=this;
     CefPostDelayedTask(TID_UI,new FunctionTask([self]{self->Finish(false,"Protocol acknowledgement timed out");}),5000);
   }
   void OnDevToolsMethodResult(CefRefPtr<CefBrowser>,int id,bool success,const void* result,size_t size) override {
-    if(id==message_)Finish(success,success?"":std::string(static_cast<const char*>(result),std::min<size_t>(size,2048)));
+    const std::string error=success||!result?"":std::string(static_cast<const char*>(result),std::min<size_t>(size,2048));
+    if(dispatching_){early_results_[id]={success,error};return;}
+    if(id==message_)Finish(success,error);
   }
  private:
   void Finish(bool success,const std::string& error){if(!done_)return;auto done=std::move(done_);registration_=nullptr;browser_=nullptr;done(success,error);}
+  bool dispatching_=false;std::map<int,std::pair<bool,std::string>> early_results_;
   std::function<void(bool,const std::string&)> done_;CefRefPtr<CefBrowser> browser_;CefRefPtr<CefRegistration> registration_;int message_=0;
   IMPLEMENT_REFCOUNTING(LifecycleJob);
 };
