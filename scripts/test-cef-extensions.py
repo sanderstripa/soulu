@@ -177,21 +177,23 @@ def main():
             check(True, 'Store opens inside the embedded Chrome surface')
             if os.environ.get('SOULU_TEST_STORE_INSTALL') == '1':
                 store = socket('chromewebstore.google.com/')
-                s.command(store, 'Emulation.setUserAgentOverride', {
-                    'userAgent':s.evaluate(store,'navigator.userAgent'),
-                    'userAgentMetadata':{
-                        'brands':[{'brand':'Chromium','version':'156'},{'brand':'Google Chrome','version':'156'}],
-                        'fullVersionList':[{'brand':'Chromium','version':'156.0.8078.48'},{'brand':'Google Chrome','version':'156.0.8078.48'}],
-                        'fullVersion':'156.0.8078.48','platform':'Windows','platformVersion':'10.0.0',
-                        'architecture':'x86','model':'','mobile':False,'bitness':'64','wow64':False
-                    }})
+                if os.environ.get('SOULU_TEST_STORE_METADATA') == '1':
+                    s.command(store, 'Emulation.setUserAgentOverride', {
+                        'userAgent':s.evaluate(store,'navigator.userAgent'),
+                        'userAgentMetadata':{
+                            'brands':[{'brand':'Chromium','version':'156'},{'brand':'Google Chrome','version':'156'}],
+                            'fullVersionList':[{'brand':'Chromium','version':'156.0.8078.48'},{'brand':'Google Chrome','version':'156.0.8078.48'}],
+                            'fullVersion':'156.0.8078.48','platform':'Windows','platformVersion':'10.0.0',
+                            'architecture':'x86','model':'','mobile':False,'bitness':'64','wow64':False
+                        }})
                 s.command(store, 'Page.navigate', {'url':'https://chromewebstore.google.com/detail/bitwarden-password-manager/nngceckbapebfimnlniiiahkandclblb'})
                 wait(lambda: s.evaluate(store, "location.href.includes('nngceckbapebfimnlniiiahkandclblb')&&document.readyState==='complete'"), 60)
                 ImageGrab.grab().save(output.parent / 'store-page.png')
                 print('Store page:', s.evaluate(store, "({url:location.href,title:document.title,text:document.body.innerText.slice(0,7000)})"), flush=True)
-                wait(lambda: s.evaluate(store, "[...document.querySelectorAll('button')].some(b=>/^(Add to Chrome|Добавить в Chrome|Установить)$/.test(b.innerText.trim()))"), 60)
+                s.evaluate(store, "[...document.querySelectorAll('button')].find(b=>b.innerText.trim()==='Нет, спасибо'&&b.getClientRects().length)?.click()")
+                wait(lambda: s.evaluate(store, "[...document.querySelectorAll('button')].some(b=>/^(Add to Chrome|Добавить в Chrome|Установить)$/.test(b.innerText.trim())&&!b.disabled&&b.getAttribute('aria-disabled')!=='true')"), 60)
                 print('Store APIs:', s.evaluate(store, "({ua:navigator.userAgent,brands:navigator.userAgentData?.brands,apis:Object.keys(window.chrome||{}),webstore:typeof window.chrome?.webstorePrivate,management:typeof window.chrome?.management})"), flush=True)
-                coords = s.evaluate(store, "(()=>{const b=[...document.querySelectorAll('button')].find(b=>/^(Add to Chrome|Добавить в Chrome|Установить)$/.test(b.innerText.trim()));if(b.disabled||b.getAttribute('aria-disabled')==='true')throw Error('Store installation is disabled');b.scrollIntoView({block:'center'});const r=b.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()")
+                coords = s.evaluate(store, "(()=>{const b=[...document.querySelectorAll('button')].find(b=>/^(Add to Chrome|Добавить в Chrome|Установить)$/.test(b.innerText.trim()));if(b.disabled||b.getAttribute('aria-disabled')==='true')throw Error('Store installation is disabled');b.scrollIntoView({block:'center',inline:'center'});const r=b.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()")
                 s.command(store, 'Input.dispatchMouseEvent', {**coords,'type':'mousePressed','button':'left','clickCount':1})
                 s.command(store, 'Input.dispatchMouseEvent', {**coords,'type':'mouseReleased','button':'left','clickCount':1})
                 time.sleep(2)
@@ -201,7 +203,7 @@ def main():
                 def consent():
                     for window in Desktop(backend='uia').windows(process=process.pid):
                         for b in window.descendants(control_type='Button'):
-                            if b.window_text().strip() in ('Add extension','Добавить расширение'):
+                            if b.window_text().strip() in ('Add extension','Добавить расширение','Установить расширение'):
                                 return b
                 accept = wait(consent, 45)
                 ImageGrab.grab().save(output.parent / 'store-permission-prompt.png')

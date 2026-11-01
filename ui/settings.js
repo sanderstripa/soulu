@@ -96,12 +96,14 @@ for(const kind of ['startup','newTab','home']){const n=$('control-settings-'+kin
     for(const g of s.groups){const card=el('article',undefined,'card');card.append(el('h3',t(g.ru,g.en)));
       for(const r of g.rows){const n=el('div',undefined,'row'+(r.type==='textarea'?' long':''));n.id='control-'+r.store+'-'+r.key;n.tabIndex=-1;const text=el('span');text.append(el('b',t(r.ru,r.en)));if(r.hint)text.append(el('small',t(r.hint,r.enHint)));n.append(text);
         if(r.type==='extensionCatalog'){
-          n.classList.add('long');
+          n.classList.add('long');n.replaceChildren();card.querySelector('h3')?.remove();
           const controls=el('div',undefined,'extension-controls');
           controls.append(button(t('Установленные','Installed'),()=>placeExtensions('installed')),
             button(t('Chrome Web Store','Chrome Web Store'),()=>placeExtensions('store')));
-          n.append(controls,el('p',t('Для локальной установки включите «Режим разработчика» ниже и нажмите «Загрузить распакованное расширение». Выберите папку с manifest.json. Разрешения и удаление доступны в карточке расширения.','For local installation, enable Developer mode below and choose Load unpacked. Select the folder containing manifest.json. Permissions and removal are available on each extension card.'),'note'));
-          n.append(el('p',t('Совместимость зависит от расширения. Функции, требующие панели Chrome, могут быть недоступны в оболочке Soulu.','Compatibility depends on the extension. Features requiring the Chrome toolbar may be unavailable in the Soulu shell.'),'note'));
+          const help=el('details',undefined,'extension-help');help.append(el('summary',t('Локальная установка и совместимость','Local installation and compatibility')));
+          help.append(el('p',t('Для локальной установки включите «Режим разработчика» ниже и нажмите «Загрузить распакованное расширение». Выберите папку с manifest.json. Разрешения и удаление доступны в карточке расширения.','For local installation, enable Developer mode below and choose Load unpacked. Select the folder containing manifest.json. Permissions and removal are available on each extension card.'),'note'));
+          help.append(el('p',t('Совместимость зависит от расширения. Функции, требующие панели Chrome, могут быть недоступны в оболочке Soulu.','Compatibility depends on the extension. Features requiring the Chrome toolbar may be unavailable in the Soulu shell.'),'note'));
+          help.addEventListener('toggle',scheduleExtensions);n.append(controls,help);
           const host=el('div',undefined,'extensions-surface');host.id='extensionsSurface';n.append(host);
           card.append(n);requestAnimationFrame(()=>placeExtensions());continue;
         }
@@ -145,7 +147,7 @@ for(const kind of ['startup','newTab','home']){const n=$('control-settings-'+kin
       const animation=node.animate([{opacity:0,transform:reduced?'none':'translateY(5px)'},{opacity:1,transform:'none'}],
         {duration:reduced?90:320,delay:reduced?0:45,easing:'cubic-bezier(.25,.1,.25,1)',fill:'backwards'});
       sectionAnimations.add(animation);
-      animation.finished.catch(()=>{}).finally(()=>sectionAnimations.delete(animation));
+      animation.finished.then(scheduleExtensions,()=>{}).finally(()=>sectionAnimations.delete(animation));
     }
   }
 
