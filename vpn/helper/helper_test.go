@@ -209,6 +209,6 @@ func TestVLESSPostQuantumAndXHTTPDownload(t *testing.T) {
  link:="vless://12345678-1234-1234-1234-123456789abc@example.com:443?type=xhttp&security=tls&fp=chrome&alpn=h2%2Chttp%2F1.1&encryption=mlkem768x25519plus.native.0rtt.test&extra=%7B%22downloadSettings%22%3A%7B%22address%22%3A%22down.example.com%22%2C%22port%22%3A443%7D%2C%22xmux%22%3A%7B%22maxConcurrency%22%3A8%7D%7D"
  cfg,_,err:=engineConfig(link,17890);if err!=nil{t.Fatal(err)};out:=cfg["outbounds"].([]any)[0].(object);user:=out["settings"].(object)["vnext"].([]any)[0].(object)["users"].([]any)[0].(object)
  if str(user,"encryption")!="mlkem768x25519plus.native.0rtt.test"{t.Fatal("VLESS encryption lost")}
- stream:=out["streamSettings"].(object);extra:=stream["xhttpSettings"].(object)["extra"].(map[string]any)
+ stream:=out["streamSettings"].(object);extra:=stream["xhttpSettings"].(object)["extra"].(object)
  if extra["downloadSettings"]==nil||extra["xmux"]==nil||str(stream["tlsSettings"].(object),"fingerprint")!="chrome"{t.Fatal("XHTTP/TLS options lost")}
 }
