@@ -40,15 +40,20 @@ jobs:
           Copy-Item candidate/* $runtime -Recurse -Force
           "runtime_dir=$runtime" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
           Get-Content (Join-Path $runtime 'engine-version.json')
-      - name: Check settings transaction and remaining native regressions
+      - name: Preflight remaining native release suites
         shell: pwsh
         run: |
-          python -m pip install --disable-pip-version-check websocket-client pillow comtypes pywinauto
-          python browser/scripts/test-cef-settings.py "$env:runtime_dir/Soulu.exe" browser/artifacts/settings-evidence.json
+          python -m pip install --disable-pip-version-check websocket-client pillow comtypes pywinauto dxcam
+          foreach ($suite in @('onboarding','default-links','site-reader','storage','content-policy','navigation')) {
+            $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP "soulu-preflight-$suite"
+            python "browser/scripts/test-cef-$suite.py" "$env:runtime_dir/Soulu.exe"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+          $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP 'soulu-preflight-link-menu'
+          python browser/scripts/test-cef-link-menu.py "$env:runtime_dir/Soulu.exe" browser/artifacts/native-menu-visuals
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          python browser/scripts/test-cef-toolbar.py "$env:runtime_dir/Soulu.exe" browser/artifacts/toolbar-evidence.json
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          python browser/scripts/test-cef-profile-isolation.py "$env:runtime_dir/Soulu.exe" browser/artifacts/profile-isolation.json
+          $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP 'soulu-preflight-layout'
+          python browser/scripts/test-cef-layout.py "$env:runtime_dir/Soulu.exe" browser/artifacts/layout
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - uses: actions/upload-artifact@v4
         if: always()
