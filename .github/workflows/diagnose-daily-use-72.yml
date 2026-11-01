@@ -38,16 +38,18 @@ jobs:
           if (!$exe) { throw 'Runtime executable missing' }
           $runtime = $exe.Directory.FullName
           Copy-Item candidate/* $runtime -Recurse -Force
+          Copy-Item browser/ui/renderer.js (Join-Path $runtime 'ui/renderer.js') -Force
           "runtime_dir=$runtime" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
           Get-Content (Join-Path $runtime 'engine-version.json')
-      - name: Preflight public content acceptance
+      - name: Exercise adaptive profile transitions repeatedly
         shell: pwsh
         run: |
-          python -m pip install --disable-pip-version-check websocket-client pillow comtypes pywinauto dxcam
-          python browser/scripts/test-cef-reader-public.py "$env:runtime_dir/Soulu.exe" browser/artifacts/reader
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP 'soulu-preflight-sites'
-          python browser/scripts/test-cef-sites.py "$env:runtime_dir/Soulu.exe" browser/artifacts/sites-evidence.json
+          python -m pip install --disable-pip-version-check websocket-client pillow comtypes pywinauto
+          foreach ($attempt in 1..5) {
+            python browser/scripts/test-cef-adaptive-toolbar.py "$env:runtime_dir/Soulu.exe" "browser/artifacts/adaptive-$attempt.json"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+          python browser/scripts/test-cef-settings.py "$env:runtime_dir/Soulu.exe" browser/artifacts/settings-evidence.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - uses: actions/upload-artifact@v4
         if: always()
