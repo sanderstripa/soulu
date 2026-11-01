@@ -97,7 +97,7 @@ def main():
    assert ok,label;checks.append(label);print('PASS:',label,flush=True)
   try:
    shell=link(wait(lambda:next((target for target in s.targets() if '/ui/index.html' in target.get('url','')),None)))
-   wait(lambda:s.evaluate(shell,"typeof window.browserShell?.getState==='function'"));hwnd=wait(lambda:native_window(process.pid));foreground(hwnd)
+   wait(lambda:s.evaluate(shell,"typeof window.browserShell?.getState==='function' && document.documentElement.classList.contains('typography-ready')"));hwnd=wait(lambda:native_window(process.pid));foreground(hwnd)
    # Hosted desktop can be narrower than the restored 1200px window.
    # Keep the real pointer target inside the work area; Windows otherwise
    # clamps SetCursorPos and clicks an unrelated point off the button.
@@ -108,7 +108,7 @@ def main():
     return abs(s.evaluate(shell,'innerWidth*devicePixelRatio')-(client.right-client.left))<2
    wait(layout_ready)
    s.evaluate(shell,"browserShell.setSettings({layout:'compact',newTabMode:'soulu',homeMode:'soulu'})")
-   wait(lambda:s.evaluate(shell,"document.querySelector('#compactNewTabButton').getBoundingClientRect().width>0"))
+   wait(lambda:s.evaluate(shell,"(()=>{const n=document.querySelector('#compactNewTabButton'),r=n.getBoundingClientRect();return r.width>0&&getComputedStyle(n).visibility==='visible'&&n.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))})()"))
    # Finish the initial onboarding transition before starting the input test.
    initial=wait(home)
    wait(lambda:s.evaluate(initial,"document.readyState==='complete'"))
