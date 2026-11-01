@@ -15,6 +15,7 @@ jobs:
     timeout-minutes: 20
     env:
       PYTHONUTF8: 1
+      SOULU_TEST_STORE_INSTALL: 1
       SOULU_REGRESSION_SKIP_FIRST_RUN: 1
     steps:
       - uses: actions/checkout@v4
