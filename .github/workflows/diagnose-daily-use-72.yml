@@ -25,8 +25,8 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: 41320665065
-          name: Soulu-cef-candidate-e7c2202b76164c929fda255983a957b7bdf44e54
+          run-id: 41322443013
+          name: Soulu-cef-candidate-6a82d09b052409c1694b766dfcd0d594cd036249
           path: candidate
       - name: Prepare identical CEF runtime with the freshly compiled candidate
         shell: pwsh
