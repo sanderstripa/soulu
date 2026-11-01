@@ -1044,6 +1044,7 @@ bool BrowserWindow::IsSettingsUrl(const std::string& url) const {
       url == canonical || url.rfind(canonical + "#", 0) == 0 || url.rfind(canonical + "?", 0) == 0;
 }
 void BrowserWindow::OpenSettingsOverlay() {
+  CancelHomeFocus();
   CancelSitePermissions(active_tab_id_);
   if (closing_) return;
   if (settings_overlay_) { FocusSettings(); return; }
@@ -1558,6 +1559,9 @@ void BrowserWindow::ApplyPerformancePolicy(bool immediate){
     if(immediate)tab.manually_paused=true;
     if(tab.manually_paused||now-tab.hidden_since>=seconds*1000)SetTabFrozen(tab.id,true);
   }
+}
+void BrowserWindow::CancelHomeFocus(){
+  if(auto* tab=ActiveTab()){tab->focus_home_on_load=false;tab->pending_home_input.clear();tab->pending_home_submit=false;}
 }
 void BrowserWindow::DismissAddressSuggestions(){
   if(!suggestions_height_||!shell_)return;
@@ -3289,6 +3293,7 @@ LRESULT CALLBACK BrowserWindow::WindowProc(HWND hwnd, UINT message, WPARAM wpara
       if (self->HandleFullscreenKey(static_cast<int>(wparam))) return 0;
       break;
     case WM_TIMER: if(wparam==7301){self->ApplyPerformancePolicy();return 0;}break;
+    case ShellSurface::kPointerDown: self->CancelHomeFocus();return 0;
     case WM_ACTIVATE:
       if(LOWORD(wparam)==WA_INACTIVE)self->DismissAddressSuggestions();
       break;

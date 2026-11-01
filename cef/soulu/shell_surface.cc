@@ -223,6 +223,7 @@ LRESULT CALLBACK ShellSurface::Proc(HWND hwnd, UINT message, WPARAM wp, LPARAM l
     case WM_MOUSELEAVE: { self->tracking_ = false; CefMouseEvent e; e.modifiers = Modifiers(); host->SendMouseMoveEvent(e, true); return 0; }
     case WM_LBUTTONDOWN: case WM_RBUTTONDOWN: case WM_MBUTTONDOWN:
     case WM_LBUTTONDBLCLK: case WM_RBUTTONDBLCLK: {
+      SendMessage(self->parent_,kPointerDown,0,0);
       self->Focus(); SetCapture(hwnd);
       const auto button = (message == WM_RBUTTONDOWN || message == WM_RBUTTONDBLCLK) ? MBT_RIGHT : message == WM_MBUTTONDOWN ? MBT_MIDDLE : MBT_LEFT;
       host->SendMouseClickEvent(self->Mouse(lp), button, false, (message == WM_LBUTTONDBLCLK || message == WM_RBUTTONDBLCLK) ? 2 : 1); return 0;

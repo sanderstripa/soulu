@@ -2,6 +2,7 @@
 
 - Fix VPN icon vertical movement under hover/pressed/busy styling; keep the address row at a fixed height when adaptive tabs open or close.
 - Update tab selection, labels and media in place instead of replacing sibling elements. Closing an active tab selects its adjacent sibling within the same profile/private group. Calculate widths before painting and retain the latest native animation frame.
+- Keep compact new-tab controls attached during state refreshes. Start pointer-driven tab creation on press and buffer immediate Home typing until the content view is ready; address/Settings intent cancels that buffer.
 - Close address suggestions on outside clicks, content focus and native window deactivation. Cancel stale suggestion results and dispose detached address bindings.
 - Prevent duplicate Settings hover labels: use one DOM tooltip, remove competing native titles, and suppress native tooltip rendering on Settings surfaces.
 - Add a persisted Home toolbar button toggle in Interface settings.

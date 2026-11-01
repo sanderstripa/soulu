@@ -178,7 +178,7 @@ function renderCompactTabs(){
     }
     if(previous.nextElementSibling!==node)previous.after(node);
     previous=node;
-    if(x.active)node.after($('#compactNewTabButton'));
+    if(x.active){const plus=$('#compactNewTabButton');if(node.nextElementSibling!==plus)node.after(plus);previous=plus;}
     let activity=node.querySelector('.tab-activity');if(!activity){activity=document.createElement('span');activity.className='tab-activity';x.active?node.querySelector('input').after(activity):node.append(activity);}
     const media=mediaMarkup(x);if(activity.innerHTML!==media){activity.innerHTML=media;bindMedia(activity);}
     node.dataset.tooltip=x.title||x.label||tr('newTab');
@@ -200,7 +200,7 @@ function renderCompactTabs(){
       reload.title=x.loading?tr('stop'):tr('reload');
     }
   }
-  const active=compactToolbar.querySelector('[data-active-tab]');if(active)active.after($('#compactNewTabButton'));
+  const active=compactToolbar.querySelector('[data-active-tab]'),plus=$('#compactNewTabButton');if(active&&active.nextElementSibling!==plus)active.after(plus);
   const count=wanted.filter(x=>!x.active).length;
   $('#compactTabFlow').style.setProperty('--compact-flow-width',`${Math.min(620,466+count*33)}px`);
 }
@@ -227,7 +227,10 @@ sidebarButtons.forEach((button)=>button.onclick=()=>window.browserShell.toggleSi
 backButtons.forEach((button)=>button.onclick=()=>window.browserShell.back());
 favoritesButtons.forEach((button)=>button.onclick=async()=>{renderBookmarks(await window.browserShell.getBookmarks());openPanel("favorites");});
 downloadsButtons.forEach((button)=>button.onclick=async()=>{if(!lastDownloads.some((x)=>x.state==="progressing"))delete button.dataset.recent;renderDownloads(await window.browserShell.getDownloads());openPanel("downloads");});
-[$("#newTabButton"),$("#compactNewTabButton")].forEach((button)=>button.onclick=()=>window.browserShell.newTab());
+[$("#newTabButton"),$("#compactNewTabButton")].forEach(button=>{
+  button.onpointerdown=e=>{if(e.button===0){e.preventDefault();window.browserShell.newTab();}};
+  button.onclick=e=>{if(e.detail===0)window.browserShell.newTab();};
+});
 vpnButtons.forEach((button)=>button.onclick=toggleVpn);
 $("#classicPageMenu").onclick=()=>window.browserShell.pageMenu();
 $('#closeDownloads').onclick=closePanel;
@@ -280,8 +283,8 @@ async function synchronizeSettings(){
     if(current&&signature!==lastSettingsSignature){
       lastSettingsSignature=signature;
       state.settings={...state.settings,...current};
-      renderTabs();
       appearance();
+      renderTabs();
 
     }
   }catch(error){console.error("Soulu settings synchronization failed",error);}

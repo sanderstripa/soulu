@@ -15,6 +15,7 @@ class ShellSurface final : public CefRenderHandler {
   void PrepareResize(int width, int height, float scale);
   void CommitResize();
   static constexpr UINT kFirstFrame = WM_APP + 73;
+  static constexpr UINT kPointerDown = WM_APP + 74;
   void Focus();
   void Cursor(HCURSOR cursor);
   void SetMaximizeRect(CefRect rect) { maximize_rect_ = rect; }

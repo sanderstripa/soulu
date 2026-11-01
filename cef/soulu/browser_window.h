@@ -63,6 +63,7 @@ class BrowserWindow final : public CefBaseRefCounted {
   bool DeferMedia(int id) const;
   void SaveWindowPlacement();
   void DismissAddressSuggestions();
+  void CancelHomeFocus();
   void ApplyPerformancePolicy(bool immediate = false);
   void SetTabFrozen(int id, bool frozen);
   void CompleteTabFreeze(int id, int generation, bool frozen, bool success, const std::string& error);
