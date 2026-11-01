@@ -85,13 +85,15 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as root:
   wait(lambda:s.evaluate(shell,"!document.querySelector('#downloadsPanel').classList.contains('open')"));check(len(state()['tabs'])==count,'Downloads close button dismisses the panel without closing a tab')
   click(shell,'.classic-toolbar [data-home]');wait(lambda:state()['page']['url']=='soulu://home');check(not state()['page']['loading'],'Home button returns to the configured home page without a permanent loading spinner')
   # Native host geometry survives a clean restart, including maximize state.
-  hwnd=wait(lambda:native_window(p.pid));wait(lambda:ctypes.windll.user32.IsWindowVisible(hwnd));ctypes.windll.user32.ShowWindow(hwnd,9);ctypes.windll.user32.MoveWindow(hwnd,73,61,980,700,True)
+  class Rect(ctypes.Structure):_fields_=[('left',ctypes.c_long),('top',ctypes.c_long),('right',ctypes.c_long),('bottom',ctypes.c_long)]
+  work=Rect();ctypes.windll.user32.SystemParametersInfoW(0x0030,0,ctypes.byref(work),0)
+  expected=(work.left+20,work.top+20,min(980,work.right-work.left-40),min(650,work.bottom-work.top-40))
+  hwnd=wait(lambda:native_window(p.pid));wait(lambda:ctypes.windll.user32.IsWindowVisible(hwnd));ctypes.windll.user32.ShowWindow(hwnd,9);ctypes.windll.user32.MoveWindow(hwnd,*expected,True)
   for ws in connections:ws.close()
   connections.clear();s.close_normally(p);p=None
   placement=Path(root)/'Soulu'/'User Data'/'window-placement.json';check(placement.exists(),'Native window placement is persisted on close')
   p=subprocess.Popen([str(Path(sys.argv[1]).resolve()),'--no-proxy-server'],env=env);shell=socket_for('/ui/index.html');connections.append(shell);hwnd=wait(lambda:native_window(p.pid))
-  class Rect(ctypes.Structure):_fields_=[('left',ctypes.c_long),('top',ctypes.c_long),('right',ctypes.c_long),('bottom',ctypes.c_long)]
-  rect=Rect();ctypes.windll.user32.GetWindowRect(hwnd,ctypes.byref(rect));check(abs(rect.left-73)<=2 and abs(rect.top-61)<=2 and abs(rect.right-rect.left-980)<=2,'Window position and normal size are restored on restart')
+  wait(lambda:ctypes.windll.user32.IsWindowVisible(hwnd));rect=Rect();ctypes.windll.user32.GetWindowRect(hwnd,ctypes.byref(rect));check(abs(rect.left-expected[0])<=2 and abs(rect.top-expected[1])<=2 and abs(rect.right-rect.left-expected[2])<=2,'Window position and normal size are restored on restart')
   ctypes.windll.user32.ShowWindow(hwnd,3)
   for ws in connections:ws.close()
   connections.clear();s.close_normally(p);p=None
