@@ -46,7 +46,7 @@ jobs:
           PYTHONUTF8: "1"
           SOULU_REGRESSION_SKIP_FIRST_RUN: "1"
         run: |
-          python -m pip install --disable-pip-version-check websocket-client pillow comtypes
+          python -m pip install --disable-pip-version-check websocket-client pillow comtypes pywinauto
           python browser/scripts/test-cef-daily-use.py "$env:runtime_dir/Soulu.exe" browser/artifacts/daily-use
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Check native and imported field autofill compatibility
