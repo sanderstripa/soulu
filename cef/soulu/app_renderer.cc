@@ -75,6 +75,11 @@ class RendererApp final : public CefApp, public CefRenderProcessHandler {
     InstallVideoRuntime(browser,frame,context);
     CefURLParts parts;
     if(!CefParseURL(frame->GetURL(),parts)||(CefString(&parts.scheme)!="https"&&CefString(&parts.scheme)!="http"))return;
+    // Isolated DevTools/translation worlds share the DOM but have independent
+    // globals. Installing a second blocked play listener there pauses media even
+    // after the main world is activated. Own media lifecycle in the main world.
+    auto main_context=frame->GetV8Context();
+    if(main_context&&main_context->IsSame(context)){
     context->GetGlobal()->SetValue("__souluMediaSend",CefV8Value::CreateFunction("media",new MediaSubmit()),V8_PROPERTY_ATTRIBUTE_NONE);
     if(frame->IsMain()&&!private_browsers_.count(browser->GetIdentifier()))
       context->GetGlobal()->SetValue("__souluFillRequest",CefV8Value::CreateFunction("fill",new MediaSubmit()),V8_PROPERTY_ATTRIBUTE_NONE);
@@ -101,22 +106,24 @@ class RendererApp final : public CefApp, public CefRenderProcessHandler {
         const webAudioActive=()=>{let active=false;for(const tap of taps){if(tap.source.context.state==='closed'){taps.delete(tap);continue;}if(tap.source.context.state!=='running')continue;
           tap.analyser.getFloatTimeDomainData(tap.samples);if(tap.samples.some(v=>Math.abs(v)>.001))active=true;
         }return active;};
-        const report=()=>{const active=[...document.querySelectorAll('audio,video')].some(e=>!e.paused&&!e.ended&&!e.muted&&e.volume>0&&e.readyState>=3&&!e.seeking)||webAudioActive();if(active!==last){last=active;send(active);}};
+        const report=()=>{const active=[...document.querySelectorAll('audio,video')].some(e=>!e.paused&&!e.ended&&!e.muted&&e.volume>0&&e.readyState>=3&&!e.seeking)||webAudioActive();if(active!==last||active){last=active;send(active);}};
         HTMLMediaElement.prototype.play=function(...args){if(blocked){pending.add(this);return Promise.reject(new DOMException('Select this tab to start playback','NotAllowedError'));}return play.apply(this,args);};
         const guard=e=>{if(blocked){pending.add(e.target);e.target.pause();}report();};
         document.addEventListener('play',guard,true);
         for(const event of ['playing','pause','ended','volumechange','emptied','waiting'])document.addEventListener(event,report,true);
-        const timer=setInterval(report,500);
+        let timer=setInterval(report,500);
         Object.defineProperty(window,'__souluMediaPolicy',{configurable:true,value:defer=>{
           blocked=defer;if(!blocked){for(const element of pending)if(element.isConnected)play.call(element).catch(()=>{});pending.clear();}report();
         }});
-        addEventListener('pagehide',()=>{clearInterval(timer);send(false);},{once:true});
+        addEventListener('pagehide',()=>{clearInterval(timer);last=false;send(false);});
+        addEventListener('pageshow',()=>{clearInterval(timer);timer=setInterval(report,500);last=false;report();});
         if(fill)document.addEventListener('pointerup',event=>{
           const e=event.target;if(!event.isTrusted||event.button!==0||!(e instanceof HTMLInputElement)||!['password','text','email'].includes(e.type))return;
           const x=Math.round(event.clientX),y=Math.round(event.clientY);setTimeout(()=>fill(x,y),0);
         },true);
       })())JS",frame->GetURL(),0,result,error);
       frame->SendProcessMessage(PID_BROWSER,CefProcessMessage::Create("soulu.media.ready"));
+    }
     }
     context->GetGlobal()->SetValue("__souluCosmeticSend",CefV8Value::CreateFunction("send",new CosmeticSubmit()),V8_PROPERTY_ATTRIBUTE_NONE);
     {CefRefPtr<CefV8Value> result;CefRefPtr<CefV8Exception> error;
@@ -157,8 +164,10 @@ class RendererApp final : public CefApp, public CefRenderProcessHandler {
   }
   void OnContextReleased(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame,
                          CefRefPtr<CefV8Context> context) override {
-    auto ended=CefProcessMessage::Create("soulu.media.playback");ended->GetArgumentList()->SetBool(0,false);
-    frame->SendProcessMessage(PID_BROWSER,ended);
+    if(auto main_context=frame->GetV8Context();main_context&&main_context->IsSame(context)){
+      auto ended=CefProcessMessage::Create("soulu.media.playback");ended->GetArgumentList()->SetBool(0,false);
+      frame->SendProcessMessage(PID_BROWSER,ended);
+    }
     ForgetVideoContext(context);
     router_->OnContextReleased(browser, frame, context);
   }

@@ -138,3 +138,7 @@ body[data-native-caption-hover=true] .browser-toolbar :is(#compactWindowMaximize
 .classic-toolbar .classic-tab .tab-activity{position:relative;z-index:1}
 #closeDownloads{width:36px;height:36px;min-width:36px;border:0;border-radius:50%;font:var(--type-heading2);background:transparent;color:var(--text);cursor:pointer}
 #closeDownloads:hover{background:var(--soft)}
+.classic-toolbar .classic-tab:has(.tab-activity:not(:empty)){min-width:160px}
+.classic-toolbar .classic-tab.active:has(.tab-activity:not(:empty)){min-width:200px}
+.classic-toolbar .icons-only .classic-tab:not(.active):has(.tab-activity:not(:empty)),.classic-toolbar .classic-tab.pinned:not(.active):has(.tab-activity:not(:empty)){flex:0 0 auto;min-width:max-content;max-width:none;padding-left:6px;padding-right:6px}
+.classic-toolbar .classic-tab .tab-media{visibility:visible}

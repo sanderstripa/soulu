@@ -63,6 +63,12 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as root:
   s.evaluate(shell,"window.dailyTab=document.querySelector('.classic-tab');window.dailyFavicon=dailyTab.querySelector('.favicon')")
   for _ in range(15):s.evaluate(shell,'browserShell.getState().then(v=>__souluEmit("state",v))')
   time.sleep(.2);check(s.evaluate(shell,"window.dailyTab===document.querySelector('.classic-tab')"),'Unchanged tab nodes survive repeated state events')
+  # A native translation/reader job can create an isolated world in this frame.
+  # Such a world must never install its own background-media guard.
+  frame=s.command(page,'Page.getFrameTree')['frameTree']['frame']['id']
+  world=s.command(page,'Page.createIsolatedWorld',{'frameId':frame,'worldName':'daily-isolated'})['executionContextId']
+  isolated=s.command(page,'Runtime.evaluate',{'expression':"typeof window.__souluMediaPolicy",'contextId':world,'returnByValue':True})
+  check(isolated['result'].get('value')=='undefined','Service JavaScript worlds do not install a second background-playback guard')
   original=state()['activeTabId'];s.evaluate(shell,'browserShell.openTab('+json.dumps(origin+'/background')+',true)')
   background=socket_for('/background');connections.append(background);wait(lambda:s.evaluate(background,"document.querySelector('audio')?.readyState>=2"));time.sleep(1)
   check(s.evaluate(background,"document.querySelector('audio').paused"),'Opening an audio/video page in a new background tab does not start playback')
