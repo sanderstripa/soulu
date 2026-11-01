@@ -182,9 +182,13 @@ def main():
                 ImageGrab.grab().save(output.parent / 'store-page.png')
                 print('Store page:', s.evaluate(store, "({url:location.href,title:document.title,text:document.body.innerText.slice(0,7000)})"), flush=True)
                 wait(lambda: s.evaluate(store, "[...document.querySelectorAll('button')].some(b=>/^(Add to Chrome|Добавить в Chrome|Установить)$/.test(b.innerText.trim()))"), 60)
+                print('Store APIs:', s.evaluate(store, "({ua:navigator.userAgent,brands:navigator.userAgentData?.brands,apis:Object.keys(window.chrome||{}),webstore:typeof window.chrome?.webstorePrivate,management:typeof window.chrome?.management})"), flush=True)
                 coords = s.evaluate(store, "(()=>{const b=[...document.querySelectorAll('button')].find(b=>/^(Add to Chrome|Добавить в Chrome|Установить)$/.test(b.innerText.trim()));if(b.disabled||b.getAttribute('aria-disabled')==='true')throw Error('Store installation is disabled');b.scrollIntoView({block:'center'});const r=b.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()")
                 s.command(store, 'Input.dispatchMouseEvent', {**coords,'type':'mousePressed','button':'left','clickCount':1})
                 s.command(store, 'Input.dispatchMouseEvent', {**coords,'type':'mouseReleased','button':'left','clickCount':1})
+                time.sleep(2)
+                print('After Store install click:', s.evaluate(store, "document.body.innerText.slice(0,1800)"), flush=True)
+                ImageGrab.grab().save(output.parent / 'store-after-click.png')
                 from pywinauto import Desktop
                 def consent():
                     for window in Desktop(backend='uia').windows(process=process.pid):
