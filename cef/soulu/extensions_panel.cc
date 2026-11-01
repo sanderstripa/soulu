@@ -7,14 +7,23 @@
 #include "include/views/cef_fill_layout.h"
 #include "include/views/cef_window_delegate.h"
 #include "include/wrapper/cef_helpers.h"
+#include <map>
+#include <vector>
+#include <algorithm>
 
 namespace soulu {
 namespace {
+class Panel;
+std::vector<Panel*> panels;
 class Panel final : public ExtensionsPanel, public CefClient,
     public CefLifeSpanHandler, public CefWindowDelegate,
     public CefBrowserViewDelegate {
  public:
   explicit Panel(HWND parent) : parent_(parent) {}
+  ~Panel() override {panels.erase(std::remove(panels.begin(),panels.end(),this),panels.end());}
+  bool Owns(CefRefPtr<CefRequestContext> context) const {return !closing_&&context_&&context_->IsSharingWith(context);}
+  void Adopt(CefRefPtr<CefBrowser> browser){popups_[browser->GetIdentifier()]=browser;if(closing_)browser->GetHost()->CloseBrowser(true);}
+  void PopupClosed(CefRefPtr<CefBrowser> browser){popups_.erase(browser->GetIdentifier());CompleteClose();}
   CefRefPtr<CefLifeSpanHandler> GetLifeSpanHandler() override { return this; }
   cef_runtime_style_t GetWindowRuntimeStyle() override { return CEF_RUNTIME_STYLE_CHROME; }
   cef_runtime_style_t GetBrowserRuntimeStyle() override { return CEF_RUNTIME_STYLE_CHROME; }
@@ -22,12 +31,13 @@ class Panel final : public ExtensionsPanel, public CefClient,
   CefRect GetInitialBounds(CefRefPtr<CefWindow>) override { return CefRect(0,0,800,500); }
   bool Start(CefRefPtr<CefRequestContext> context) {
     CEF_REQUIRE_UI_THREAD();
+    context_=context;
     CefBrowserSettings settings;
     auto extra=CefDictionaryValue::Create();extra->SetBool("souluExtensionsSurface",true);
     view_=CefBrowserView::CreateBrowserView(this,"chrome://extensions/",settings,extra,context,this);
     if(view_) window_=CefWindow::CreateTopLevelWindow(this);
     if(!window_){view_=nullptr;return false;}
-    return true;
+    panels.push_back(this);return true;
   }
   void OnWindowCreated(CefRefPtr<CefWindow> window) override {
     window_=window;
@@ -42,14 +52,21 @@ class Panel final : public ExtensionsPanel, public CefClient,
   }
   bool CanClose(CefRefPtr<CefWindow>) override { return !browser_||browser_->GetHost()->TryCloseBrowser(); }
   void OnWindowDestroyed(CefRefPtr<CefWindow>) override {
-    window_=nullptr;view_=nullptr;auto done=std::move(done_);if(done)done();
+    window_=nullptr;view_=nullptr;CompleteClose();
   }
   void OnAfterCreated(CefRefPtr<CefBrowser> browser) override {
-    browser_=browser;if(closing_)browser->GetHost()->CloseBrowser(true);
-    else if(store_)Navigate(true);
+    // Store installations and extensions may create welcome/options windows.
+    // Their callbacks use the same client: never replace the manager browser.
+    if(!primary_created_){primary_created_=true;browser_=browser;}
+    else popups_[browser->GetIdentifier()]=browser;
+    if(closing_)browser->GetHost()->CloseBrowser(true);
+    else if(browser_&&browser_->IsSame(browser)&&store_)Navigate(true);
   }
-  void OnBeforeClose(CefRefPtr<CefBrowser>) override {
-    browser_=nullptr;if(window_)window_->Close();
+  void OnBeforeClose(CefRefPtr<CefBrowser> browser) override {
+    if(browser_&&browser_->IsSame(browser)){
+      browser_=nullptr;if(window_)window_->Close();
+    }else popups_.erase(browser->GetIdentifier());
+    CompleteClose();
   }
   void Place(const RECT& bounds) override {
     CEF_REQUIRE_UI_THREAD();bounds_=bounds;
@@ -75,11 +92,19 @@ class Panel final : public ExtensionsPanel, public CefClient,
   void Close(std::function<void()> done = {}) override {
     CEF_REQUIRE_UI_THREAD();if(done)done_=std::move(done);if(closing_)return;closing_=true;
     if(window_)window_->Hide();
-    if(browser_)browser_->GetHost()->CloseBrowser(true);
-    else if(window_)window_->Close();
-    else {auto complete=std::move(done_);if(complete)complete();}
+    // Close a snapshot; callbacks can erase entries while the requests run.
+    std::vector<CefRefPtr<CefBrowser>> closing;
+    for(const auto& [id,browser]:popups_)closing.push_back(browser);
+    if(browser_)closing.push_back(browser_);
+    for(const auto& browser:closing)browser->GetHost()->CloseBrowser(true);
+    if(!browser_&&window_)window_->Close();
+    CompleteClose();
   }
  private:
+  void CompleteClose(){
+    if(!closing_||browser_||window_||!popups_.empty())return;
+    auto complete=std::move(done_);if(complete)complete();
+  }
   void StoreCompatibility(bool enabled) {
     // Web Store checks UA Client Hints in addition to webstorePrivate. Limit
     // Chrome compatibility metadata to this catalog surface. Chromium still
@@ -106,12 +131,51 @@ class Panel final : public ExtensionsPanel, public CefClient,
     }
     browser_->GetHost()->ExecuteDevToolsMethod(0,"Emulation.setUserAgentOverride",params);
   }
-  HWND parent_;RECT bounds_={};bool closing_=false,store_=false;
+  HWND parent_;RECT bounds_={};bool closing_=false,store_=false,primary_created_=false;
+  CefRefPtr<CefRequestContext> context_;
+  std::map<int,CefRefPtr<CefBrowser>> popups_;
   std::function<void()> done_;
   CefRefPtr<CefBrowser> browser_;CefRefPtr<CefBrowserView> view_;CefRefPtr<CefWindow> window_;
   IMPLEMENT_REFCOUNTING(Panel);
 };
+
+// Chrome UI-created tabs/windows do not necessarily inherit a CefClient. CEF
+// explicitly leaves such browsers unmanaged unless GetDefaultClient supplies
+// one, and unmanaged windows block CefShutdown after the Soulu host closes.
+class DefaultClient final:public CefClient,public CefLifeSpanHandler {
+ public:
+  CefRefPtr<CefLifeSpanHandler> GetLifeSpanHandler() override{return this;}
+  void OnAfterCreated(CefRefPtr<CefBrowser> browser) override {
+    Entry entry;entry.browser=browser;
+    const auto context=browser->GetHost()->GetRequestContext();
+    for(auto* panel:panels)if(panel->Owns(context)){entry.owner=panel;panel->Adopt(browser);break;}
+    browsers_[browser->GetIdentifier()]=entry;
+    if(closing_)browser->GetHost()->CloseBrowser(true);
+  }
+  void OnBeforeClose(CefRefPtr<CefBrowser> browser) override {
+    const auto it=browsers_.find(browser->GetIdentifier());
+    CefRefPtr<Panel> owner;
+    if(it!=browsers_.end()){owner=it->second.owner;browsers_.erase(it);}
+    if(owner)owner->PopupClosed(browser);
+    Complete();
+  }
+  void Close(std::function<void()> done){
+    CEF_REQUIRE_UI_THREAD();closing_=true;done_=std::move(done);
+    std::vector<CefRefPtr<CefBrowser>> snapshot;
+    for(const auto& [id,entry]:browsers_)snapshot.push_back(entry.browser);
+    for(const auto& browser:snapshot)browser->GetHost()->CloseBrowser(true);
+    Complete();
+  }
+ private:
+  void Complete(){if(!closing_||!browsers_.empty())return;auto done=std::move(done_);if(done)done();}
+  struct Entry{CefRefPtr<CefBrowser> browser;CefRefPtr<Panel> owner;};
+  std::map<int,Entry> browsers_;bool closing_=false;std::function<void()> done_;
+  IMPLEMENT_REFCOUNTING(DefaultClient);
+};
+CefRefPtr<DefaultClient> Default(){static CefRefPtr<DefaultClient> client=new DefaultClient();return client;}
 }
+CefRefPtr<CefClient> ExtensionDefaultClient(){return Default();}
+void CloseExtensionWindows(std::function<void()> done){Default()->Close(std::move(done));}
 CefRefPtr<ExtensionsPanel> CreateExtensionsPanel(HWND parent,CefRefPtr<CefRequestContext> context) {
   CefRefPtr<Panel> panel=new Panel(parent);
   if(!panel->Start(context))return nullptr;

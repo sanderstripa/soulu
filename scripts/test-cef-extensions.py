@@ -82,6 +82,8 @@ def main():
 
     def stop():
         nonlocal process
+        if process and process.poll() is None:
+            print('Targets at close:', [(t.get('type'),t.get('url')) for t in s.targets()], flush=True)
         for ws in connections:
             ws.close()
         connections.clear()
@@ -205,10 +207,18 @@ def main():
                         for b in window.descendants(control_type='Button'):
                             if b.window_text().strip() in ('Add extension','Добавить расширение','Установить расширение'):
                                 return b
-                accept = wait(consent, 45)
                 ImageGrab.grab().save(output.parent / 'store-permission-prompt.png')
-                accept.click_input()
-                time.sleep(4)
+                try:
+                    accept = wait(consent, 8)
+                except AssertionError:
+                    # Embedded Chrome Views may not appear under the parent's
+                    # UIA tree. The native consent dialog starts on Cancel;
+                    # select its preceding Install button using real keyboard input.
+                    from pywinauto.keyboard import send_keys
+                    send_keys('+{TAB}{ENTER}')
+                else:
+                    accept.click_input()
+                wait(lambda: s.evaluate(store, "chrome.management.get('nngceckbapebfimnlniiiahkandclblb').then(x=>x.enabled,()=>false)"), 120)
                 s.evaluate(settings, "document.querySelector('.extension-controls button').click()")
                 manager = socket('chrome://extensions')
                 wait(lambda: s.evaluate(manager, "typeof window.chrome?.developerPrivate?.getExtensionsInfo==='function'"))

@@ -3087,8 +3087,12 @@ void BrowserWindow::CloseAll() {
 void BrowserWindow::CookieStoreFlushed() {
   CEF_REQUIRE_UI_THREAD();
   if (pending_cookie_flushes_ > 0) --pending_cookie_flushes_;
-  if (flushing_cookies_ && pending_cookie_flushes_ == 0 && hwnd_)
-    DestroyWindow(hwnd_);
+  if (flushing_cookies_ && pending_cookie_flushes_ == 0 && hwnd_) {
+    if(windows_.size()==1){
+      CefRefPtr<BrowserWindow> self=this;
+      CloseExtensionWindows([self]{if(self->hwnd_)DestroyWindow(self->hwnd_);});
+    }else DestroyWindow(hwnd_);
+  }
 }
 
 void BrowserWindow::FinishClose() {

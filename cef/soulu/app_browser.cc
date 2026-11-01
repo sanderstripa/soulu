@@ -19,6 +19,8 @@ class BrowserApp final : public CefApp, public CefBrowserProcessHandler {
     }
   }
 
+  CefRefPtr<CefClient> GetDefaultClient() override {return ExtensionDefaultClient();}
+
   void OnContextInitialized() override { BrowserWindow::Create(); }
   bool OnAlreadyRunningAppRelaunch(CefRefPtr<CefCommandLine> command_line,
       const CefString&) override {
