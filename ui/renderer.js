@@ -221,6 +221,10 @@ document.addEventListener("contextmenu",(event)=>{if(!event.target.closest(".bro
 
 window.vpn.onState(updateVpnState);
 window.browserShell.onState(renderState);
+// Geometry ticks can arrive after a state snapshot but before its batched paint.
+// Preserve the newest native animation frame in that pending snapshot.
+function updateAdaptiveGeometry(frame){state.adaptiveToolbar=frame;if(pendingState)pendingState.adaptiveToolbar=frame;}
+window.browserShell.onAdaptiveGeometry?.(updateAdaptiveGeometry);
 window.browserShell.onSettings?.((settings)=>{state.settings={...state.settings,...settings};renderTabs();appearance();});
 window.browserShell.onDownloads(renderDownloads);
 window.browserShell.onFocusAddress(()=>{const input=state.settings.layout!=="compact"?$("#classicAddress"):$("#compactAddress");if(input&&state.page?.url==='soulu://home'){
