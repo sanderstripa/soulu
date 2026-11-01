@@ -3,7 +3,7 @@ import base64,ctypes,http.server,importlib.util,json,os,subprocess,sys,tempfile,
 from pathlib import Path
 spec=importlib.util.spec_from_file_location('daily',Path(__file__).with_name('test-cef-storage.py'));s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
 os.environ['NO_PROXY']='localhost,127.0.0.1,::1';os.environ['SOULU_REGRESSION_SKIP_FIRST_RUN']='1'
-checks=[];sockets=[]
+checks=[];sockets=[];passed=False
 def wait(fn,timeout=30):
  end=time.monotonic()+timeout;last=None
  while time.monotonic()<end:
@@ -105,19 +105,22 @@ with tempfile.TemporaryDirectory(prefix='soulu-polish-',ignore_cleanup_errors=Tr
   s.evaluate(shell,'browserShell.setSettings({performanceExclusions:"",performanceMode:"performance"})');s.evaluate(shell,'browserShell.optimizeBackgroundTabs()');time.sleep(.4)
   check(not next(t for t in state()['tabs'] if t['id']==first).get('suspended'),'Maximum performance mode keeps background tabs running')
   # Keep the address and retained sibling tabs stable through closing a third tab.
-  s.evaluate(shell,"window.retained=document.querySelector('#tabStrip [data-tab-id=\""+str(first)+"\"]');window.addressY=document.querySelector('#classicAddressForm').getBoundingClientRect().y")
+  wait(lambda:s.evaluate(shell,"!!document.querySelector('#tabStrip [data-tab-id=\""+str(first)+"\"]:not(.pinned):not(.active)')&&!!document.querySelector('#tabStrip [data-tab-id=\""+str(second)+"\"].active')"))
+  s.evaluate(shell,"window.retained=document.querySelector('#tabStrip [data-tab-id=\""+str(first)+"\"]');window.retainedMarkup=retained?.tabMarkup;window.addressY=document.querySelector('#classicAddressForm').getBoundingClientRect().y")
   s.evaluate(shell,'browserShell.newTab()');third=state()['activeTabId'];s.evaluate(shell,f'browserShell.closeTab({third})');wait(lambda:len(state()['tabs'])==2)
   wait(lambda:s.evaluate(shell,"document.querySelectorAll('#tabStrip .classic-tab').length===2"))
+  check(state()['activeTabId']==second,'Closing the active tab selects its adjacent sibling rather than the first tab')
+  print('RETAINED_NODE',s.evaluate(shell,"({same:retained===document.querySelector('#tabStrip [data-tab-id=\""+str(first)+"\"]'),before:retainedMarkup,after:document.querySelector('#tabStrip [data-tab-id=\""+str(first)+"\"]')?.tabMarkup})"),flush=True)
   check(s.evaluate(shell,"retained===document.querySelector('#tabStrip [data-tab-id=\""+str(first)+"\"]')"),'Closing a tab preserves unchanged sibling DOM nodes')
   s.evaluate(shell,f'browserShell.closeTab({first})');wait(lambda:len(state()['tabs'])==1 and not state()['adaptiveToolbar']['running'])
   check(abs(s.evaluate(shell,"document.querySelector('#classicAddressForm').getBoundingClientRect().y-addressY"))<.5,'Address and VPN row do not jump vertically when the last extra tab closes')
   s.evaluate(shell,'browserShell.setBookmarksSidebar(true)');wait(lambda:s.evaluate(shell,"!document.querySelector('.bookmarks-menu').hidden"))
   check(s.evaluate(shell,"document.querySelector('.bookmarks-heading').querySelectorAll('button').length===0"),'Bookmark panel has no close cross')
   check(s.evaluate(shell,"[...document.querySelectorAll('.bookmark-actions button')].filter(n=>n.textContent.includes('Добавить текущую')).every(n=>{const t=document.createRange();t.selectNodeContents(n);return t.getClientRects().length<=2})"),'Add current page occupies at most two text lines')
-  shot=s.command(shell,'Page.captureScreenshot',{'format':'png'});(out/'bookmarks.png').write_bytes(base64.b64decode(shot['data']))
+  shot=s.command(shell,'Page.captureScreenshot',{'format':'png'});(out/'bookmarks.png').write_bytes(base64.b64decode(shot['data']));passed=True
  finally:
   for ws in sockets:
    try:ws.close()
    except Exception:pass
   s.close_normally(process);server.shutdown()
-  (out/'evidence.json').write_text(json.dumps({'passed':len(checks)>=30,'checks':checks},ensure_ascii=False,indent=2),encoding='utf-8')
+  (out/'evidence.json').write_text(json.dumps({'passed':passed,'checks':checks},ensure_ascii=False,indent=2),encoding='utf-8')

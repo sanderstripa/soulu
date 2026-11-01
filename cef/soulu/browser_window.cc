@@ -1324,6 +1324,18 @@ void BrowserWindow::SwitchTab(int id) {
   EmitState();
 }
 
+int BrowserWindow::AdjacentTab(int id) const {
+  const auto closed=std::find_if(tabs_.begin(),tabs_.end(),[id](const Tab& tab){return tab.id==id;});
+  if(closed==tabs_.end())return 0;
+  int previous=0;bool passed=false;
+  for(const auto& tab:tabs_){
+    if(tab.id==id){passed=true;continue;}
+    if(tab.incognito!=closed->incognito||(!tab.incognito&&tab.profile_id!=closed->profile_id))continue;
+    if(passed)return previous?previous:tab.id;
+    previous=tab.id;
+  }
+  return previous;
+}
 void BrowserWindow::CloseTab(int id) {
   DismissSouluMenus(hwnd_);
   CancelSitePermissions(id);
@@ -1337,12 +1349,13 @@ void BrowserWindow::CloseTab(int id) {
     return;
   }
   const bool active = id == active_tab_id_;
+  const int adjacent=AdjacentTab(id);
   const bool incognito = it->incognito;
   const std::string profile = it->profile_id;
   tabs_.erase(it);
   if (active) {
     active_tab_id_ = 0;
-    ReplaceLastTab(incognito, profile);
+    if(adjacent&&!closing_)SwitchTab(adjacent);else ReplaceLastTab(incognito, profile);
   }
   ReleaseIncognito();
   Layout();
@@ -1365,11 +1378,12 @@ void BrowserWindow::BrowserClosed(CefRefPtr<CefBrowser> browser, int tab_id,
     }
     const bool incognito = tab->incognito;
     const std::string profile = tab->profile_id;
+    const int adjacent=AdjacentTab(tab_id);
     tabs_.erase(std::remove_if(tabs_.begin(), tabs_.end(),
         [tab_id](const Tab& tab) { return tab.id == tab_id; }), tabs_.end());
     if (active_tab_id_ == tab_id) {
       active_tab_id_ = 0;
-      ReplaceLastTab(incognito, profile);
+      if(adjacent&&!closing_)SwitchTab(adjacent);else ReplaceLastTab(incognito, profile);
     }
     ReleaseIncognito();
   }

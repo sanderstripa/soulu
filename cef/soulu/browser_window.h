@@ -207,6 +207,7 @@ class BrowserWindow final : public CefBaseRefCounted {
   bool SaveSettingsSnapshot(CefRefPtr<CefDictionaryValue> requested, std::string& error);
   void RefreshSettingsAppearance();
   bool GuardSettingsClose(int id, bool all = false);
+  int AdjacentTab(int id) const;
   void SwitchProfile(const std::string& id);
   void LoadProfileSettings();
   void ReleaseIncognito();
