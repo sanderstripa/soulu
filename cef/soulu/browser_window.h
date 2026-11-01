@@ -62,6 +62,10 @@ class BrowserWindow final : public CefBaseRefCounted {
   void UpdatePlayback(int id, const std::string& frame, bool playing);
   bool DeferMedia(int id) const;
   void SaveWindowPlacement();
+  void DismissAddressSuggestions();
+  void ApplyPerformancePolicy(bool immediate = false);
+  void SetTabFrozen(int id, bool frozen);
+  void CompleteTabFreeze(int id, int generation, bool frozen, bool success);
   void ActivateMedia(int id);
   void StoreThumbnail(int id, const std::string& url, const std::string& data);
   void UpdateDownload(int tab_id, CefRefPtr<CefDownloadItem> item);
@@ -145,6 +149,8 @@ class BrowserWindow final : public CefBaseRefCounted {
     std::wstring pending_home_input;
     bool pending_home_submit = false;
     bool loading = false;
+    bool frozen = false, lifecycle_pending = false, manually_paused = false;
+    ULONGLONG hidden_since = 0;
     bool defer_media = false, muted = false;
     bool camera_active = false, microphone_active = false;
     std::set<std::string> playing_frames;

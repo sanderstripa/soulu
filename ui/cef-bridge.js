@@ -41,6 +41,7 @@
     navigate: value => invoke("browser.navigate", value),
     home: () => invoke("browser.home"),
     back: () => invoke("browser.back"),
+    optimizeBackgroundTabs: () => invoke("browser.performance.optimize"),
     reload: () => invoke("browser.reload"),
     newTab: () => invoke("browser.newTab"),
     goHome: () => invoke("browser.home"),

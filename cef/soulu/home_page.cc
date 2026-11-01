@@ -15,8 +15,13 @@ std::string LocalPage(const char* name) {
   std::string value=CefString(path.wstring()).ToString();
   std::replace(value.begin(),value.end(),'\\','/');
   std::string encoded;
-  for(unsigned char c:value)encoded+=c==' '?"%20":std::string(1,c);
-  return "file:///"+encoded;
+  const char* hex="0123456789ABCDEF";
+  for(unsigned char c:value){
+    if((c>='a'&&c<='z')||(c>='A'&&c<='Z')||(c>='0'&&c<='9')||c=='/'||c==':'||c=='-'||c=='_'||c=='.'||c=='~')encoded+=static_cast<char>(c);
+    else {encoded+='%';encoded+=hex[c>>4];encoded+=hex[c&15];}
+  }
+  CefURLParts parts;const std::string url="file:///"+encoded;
+  return CefParseURL(url,parts)?CefString(&parts.spec).ToString():url;
 }
 std::string WebUrl(std::string value) {
   const auto first=value.find_first_not_of(" \t\r\n");
@@ -62,7 +67,11 @@ std::string BrowserWindow::InternalUrl(const std::string& url) const {
   return url;
 }
 bool BrowserWindow::IsHomeUi(const std::string& url) const {
-  return url==InternalUrl("soulu://home");
+  CefURLParts actual,expected;
+  if(!CefParseURL(url,actual)||!CefParseURL(InternalUrl("soulu://home"),expected)||CefString(&actual.scheme)!="file")return false;
+  const auto a=CefURIDecode(CefString(&actual.path),true,static_cast<cef_uri_unescape_rule_t>(UU_SPACES|UU_URL_SPECIAL_CHARS_EXCEPT_PATH_SEPARATORS)).ToWString();
+  const auto b=CefURIDecode(CefString(&expected.path),true,static_cast<cef_uri_unescape_rule_t>(UU_SPACES|UU_URL_SPECIAL_CHARS_EXCEPT_PATH_SEPARATORS)).ToWString();
+  return CefString(&actual.host)==CefString(&expected.host)&&_wcsicmp(a.c_str(),b.c_str())==0;
 }
 std::string BrowserWindow::PageUrl(const std::string& kind,CefRefPtr<CefDictionaryValue> config) const {
   const std::string mode=config->GetString(kind+"Mode");

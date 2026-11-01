@@ -25,6 +25,7 @@ class BrowserClient final : public CefClient,
                             public CefPermissionHandler,
                             public CefContextMenuHandler,
                             public CefKeyboardHandler,
+                            public CefFocusHandler,
                             public CefJSDialogHandler {
  public:
   BrowserClient(CefRefPtr<BrowserWindow> owner, BrowserRole role, int tab_id = 0);
@@ -45,6 +46,8 @@ class BrowserClient final : public CefClient,
   void OnResetDialogState(CefRefPtr<CefBrowser>) override;
   CefRefPtr<CefDictionaryValue> AdBlockSnapshot();
   void RefreshAdBlock(CefRefPtr<CefBrowser> browser);
+  CefRefPtr<CefFocusHandler> GetFocusHandler() override { return this; }
+  void OnGotFocus(CefRefPtr<CefBrowser>) override;
   bool OnTooltip(CefRefPtr<CefBrowser>,CefString&) override;
   void OnMediaAccessChange(CefRefPtr<CefBrowser>,bool,bool) override;
   void OnFullscreenModeChange(CefRefPtr<CefBrowser>, bool fullscreen) override;

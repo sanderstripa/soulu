@@ -14,7 +14,13 @@ window.souluTypographyReady = Promise.all([400,500,600].map(weight =>
 });
 
 // Native title bubbles cannot select a page's private @font-face. Own pages
-// use one semantic tooltip; keep title/ARIA attributes for their callers.
+// use one semantic tooltip and ARIA; never leave a competing native title.
+const souluNormalizeTitles=root=>{
+  const nodes=[...(root.matches?.('[title]')?[root]:[]),...root.querySelectorAll('[title]')];
+  for(const node of nodes){const title=node.getAttribute('title');if(title)node.dataset.tooltip=title;node.removeAttribute('title');}
+};
+souluNormalizeTitles(document);
+new MutationObserver(records=>{for(const r of records){if(r.type==='attributes')souluNormalizeTitles(r.target);else for(const node of r.addedNodes)if(node.nodeType===1)souluNormalizeTitles(node);}}).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['title']});
 (() => {
   const tip=document.createElement('div');tip.className='soulu-type-tooltip';
   tip.id='soulu-type-tooltip';tip.setAttribute('role','tooltip');tip.hidden=true;

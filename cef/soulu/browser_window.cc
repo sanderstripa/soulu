@@ -34,6 +34,8 @@
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+#include <cctype>
+#include <sstream>
 #include <unordered_map>
 
 #include "examples/soulu/browser_client.h"
@@ -96,6 +98,25 @@ class FunctionTask final : public CefTask {
  private:
   std::function<void()> function_;
   IMPLEMENT_REFCOUNTING(FunctionTask);
+};
+// Observe the actual lifecycle acknowledgement; never report a rejected freeze as applied.
+class LifecycleJob final : public CefDevToolsMessageObserver {
+ public:
+  explicit LifecycleJob(std::function<void(bool)> done):done_(std::move(done)){}
+  void Start(CefRefPtr<CefBrowser> browser,bool frozen){
+    browser_=browser;registration_=browser->GetHost()->AddDevToolsMessageObserver(this);
+    auto args=CefDictionaryValue::Create();args->SetString("state",frozen?"frozen":"active");
+    message_=browser->GetHost()->ExecuteDevToolsMethod(0,"Page.setWebLifecycleState",args);
+    CefRefPtr<LifecycleJob> self=this;
+    CefPostDelayedTask(TID_UI,new FunctionTask([self]{self->Finish(false);}),5000);
+  }
+  void OnDevToolsMethodResult(CefRefPtr<CefBrowser>,int id,bool success,const void*,size_t) override {
+    if(id==message_)Finish(success);
+  }
+ private:
+  void Finish(bool success){if(!done_)return;auto done=std::move(done_);registration_=nullptr;browser_=nullptr;done(success);}
+  std::function<void(bool)> done_;CefRefPtr<CefBrowser> browser_;CefRefPtr<CefRegistration> registration_;int message_=0;
+  IMPLEMENT_REFCOUNTING(LifecycleJob);
 };
 // One operation owns its observer and deadline. Chromium's isolated world
 // prevents page scripts from replacing Readability, DOM APIs or URL parsing.
@@ -351,8 +372,13 @@ std::string FileUrl(std::filesystem::path path) {
   std::string value = CefString(std::filesystem::absolute(path).wstring()).ToString();
   std::replace(value.begin(), value.end(), '\\', '/');
   std::string encoded;
-  for (unsigned char c : value) encoded += c == ' ' ? "%20" : std::string(1, c);
-  return "file:///" + encoded;
+  const char* hex="0123456789ABCDEF";
+  for(unsigned char c:value){
+    if((c>='a'&&c<='z')||(c>='A'&&c<='Z')||(c>='0'&&c<='9')||c=='/'||c==':'||c=='-'||c=='_'||c=='.'||c=='~')encoded+=static_cast<char>(c);
+    else {encoded+='%';encoded+=hex[c>>4];encoded+=hex[c&15];}
+  }
+  CefURLParts parts;const std::string url="file:///"+encoded;
+  return CefParseURL(url,parts)?CefString(&parts.spec).ToString():url;
 }
 
 CefRefPtr<CefValue> Wrap(CefRefPtr<CefDictionaryValue> dictionary) {
@@ -411,6 +437,12 @@ BrowserWindow::BrowserWindow()
   settings_->SetString("extensionsPosition", "left");
   settings_->SetBool("vpnToolbarVisible", true);
   settings_->SetBool("showSidebar", true);
+  settings_->SetBool("showHome", true);
+  settings_->SetString("performanceMode", "balanced");
+  settings_->SetBool("freezeBackgroundTabs", false);
+  settings_->SetBool("memorySaver", true);
+  settings_->SetString("backgroundTabTimeout", "300");
+  settings_->SetString("performanceExclusions", "");
   settings_->SetBool("showBack", true);
   settings_->SetBool("showFavorites", true);
   settings_->SetBool("showNewTab", true);
@@ -1195,6 +1227,7 @@ void BrowserWindow::NewTab(const std::string& url, bool incognito,
 void BrowserWindow::AttachShell(CefRefPtr<CefBrowser> browser) {
   shell_ = browser;
   surface_->Attach(browser);
+  SetTimer(hwnd_,7301,1000,nullptr);
   InitializeProfiles();
   if(!secondary_url_.empty()){
     NewTab(secondary_url_,secondary_incognito_,true,secondary_context_,secondary_profile_);
@@ -1271,6 +1304,7 @@ void BrowserWindow::SwitchTab(int id) {
   }
   if (active_tab_id_ != id) { if(auto* old=ActiveTab();old&&old->browser)HomeCancelVoice(old->browser->GetIdentifier());CancelSitePermissions(active_tab_id_); CaptureThumbnail(); }
   active_tab_id_ = id;
+  SetTabFrozen(id,false);
   if(!tab->incognito)last_normal_active_[tab->profile_id]=id;
   ActivateMedia(id);
   if(tab->focus_home_on_load&&tab->browser&&!tab->browser->IsLoading())ContentPageLoaded(id);
@@ -1405,7 +1439,7 @@ void BrowserWindow::UpdateTitle(int id, const std::string& title) {
 }
 void BrowserWindow::UpdateAddress(int id, const std::string& url) {
   if (auto* tab = FindTab(id)) {
-    const std::string next = IsHistoryUi(url) ? "soulu://history" : url == InternalUrl("about:blank") ? "about:blank" : (url == InternalUrl("soulu://home") ? "soulu://home" : (IsOnboardingUi(url)?"soulu://onboarding":url));
+    const std::string next = IsHistoryUi(url) ? "soulu://history" : url == InternalUrl("about:blank") ? "about:blank" : (IsHomeUi(url) ? "soulu://home" : (IsOnboardingUi(url)?"soulu://onboarding":url));
     if (next != tab->url) {
       const bool reset=tab->translation_active||tab->translation_resetting;
       ++tab->translation_generation;tab->translation_active=false;tab->translation_resetting=reset;
@@ -1454,9 +1488,60 @@ void BrowserWindow::UpdatePlayback(int id,const std::string& frame,bool playing)
   if(playing)tab->playing_frames.insert(frame);else tab->playing_frames.erase(frame);
   if(before!=!tab->playing_frames.empty())EmitState();
 }
+void BrowserWindow::SetTabFrozen(int id,bool frozen){
+  auto* tab=FindTab(id);if(!tab||!tab->browser||tab->lifecycle_pending||tab->frozen==frozen)return;
+  tab->lifecycle_pending=true;
+  const int generation=tab->document_generation;CefRefPtr<BrowserWindow> self=this;
+  CefRefPtr<LifecycleJob> job=new LifecycleJob([self,id,generation,frozen](bool success){self->CompleteTabFreeze(id,generation,frozen,success);});
+  job->Start(tab->browser,frozen);
+}
+void BrowserWindow::CompleteTabFreeze(int id,int generation,bool frozen,bool success){
+  auto* tab=FindTab(id);if(!tab||closing_)return;
+  tab->lifecycle_pending=false;
+  if(tab->document_generation!=generation){if(frozen&&success){tab->frozen=true;SetTabFrozen(id,false);}return;}
+  if(!success)return;
+  tab->frozen=frozen;if(!frozen)tab->manually_paused=false;
+  if(frozen&&(id==active_tab_id_||tab->camera_active||tab->microphone_active||!tab->playing_frames.empty())){SetTabFrozen(id,false);return;}
+  if(frozen){
+    auto config=settings_;
+    if(!tab->incognito&&tab->profile_id!=active_profile_id_){auto saved=ReadJson(ProfileRoot(tab->profile_id)/L"soulu-settings.json");config=saved&&saved->GetType()==VTYPE_DICTIONARY?saved->GetDictionary():initial_settings_;}
+    if(config&&config->GetBool("memorySaver"))tab->browser->GetHost()->ExecuteDevToolsMethod(0,"HeapProfiler.collectGarbage",nullptr);
+  }
+  EmitState();
+}
+void BrowserWindow::ApplyPerformancePolicy(bool immediate){
+  if(closing_)return;
+  const auto now=GetTickCount64();
+  std::map<std::string,CefRefPtr<CefDictionaryValue>> configs;configs[active_profile_id_]=settings_;
+  for(auto& tab:tabs_){
+    if(!tab.browser)continue;
+    if(tab.id==active_tab_id_){tab.hidden_since=0;tab.manually_paused=false;SetTabFrozen(tab.id,false);continue;}
+    if(!tab.hidden_since)tab.hidden_since=now;
+    // Profile-local policy is retained even while another profile is active.
+    auto config=tab.incognito?settings_:configs[tab.profile_id];
+    if(!config){auto saved=ReadJson(ProfileRoot(tab.profile_id)/L"soulu-settings.json");config=saved&&saved->GetType()==VTYPE_DICTIONARY?saved->GetDictionary():initial_settings_;configs[tab.profile_id]=config;}
+    const std::string mode=config->GetString("performanceMode");
+    bool eligible=mode!="performance"&&(immediate||tab.manually_paused||mode=="eco"||config->GetBool("freezeBackgroundTabs"));
+    eligible=eligible&&!tab.pinned&&!tab.camera_active&&!tab.microphone_active&&tab.playing_frames.empty()&&!tab.loading&&!tab.main_loading&&WebOrigin(tab.url).size()>0;
+    for(size_t i=0;i<downloads_->GetSize();++i){auto d=downloads_->GetDictionary(i);if(d&&d->GetInt("tabId")==tab.id&&d->GetString("state")=="progressing")eligible=false;}
+    const auto host=SiteDomain(tab.url);std::istringstream lines(config->GetString("performanceExclusions").ToString());std::string domain;
+    while(std::getline(lines,domain)){const auto first=domain.find_first_not_of(" \t\r"),last=domain.find_last_not_of(" \t\r");if(first==std::string::npos)continue;domain=domain.substr(first,last-first+1);std::transform(domain.begin(),domain.end(),domain.begin(),[](unsigned char c){return static_cast<char>(std::tolower(c));});if(host==domain||(host.size()>domain.size()&&host.compare(host.size()-domain.size(),domain.size(),domain)==0&&host[host.size()-domain.size()-1]=='.'))eligible=false;}
+    if(!eligible){tab.manually_paused=false;SetTabFrozen(tab.id,false);continue;}
+    const std::string timeout=config->GetString("backgroundTabTimeout");
+    const ULONGLONG seconds=mode=="eco"||timeout=="60"?60:timeout=="900"?900:timeout=="1800"?1800:300;
+    if(immediate)tab.manually_paused=true;
+    if(tab.manually_paused||now-tab.hidden_since>=seconds*1000)SetTabFrozen(tab.id,true);
+  }
+}
+void BrowserWindow::DismissAddressSuggestions(){
+  if(!suggestions_height_||!shell_)return;
+  suggestions_height_=0;
+  shell_->GetMainFrame()->ExecuteJavaScript("window.dispatchEvent(new Event('soulu-dismiss-address'))",shell_->GetMainFrame()->GetURL(),0);
+  Layout();
+}
 void BrowserWindow::UpdateLoading(int id, bool loading, bool can_go_back) {
   if (auto* tab = FindTab(id)) {
-    tab->loading = loading&&tab->url!="soulu://home"; tab->can_go_back = can_go_back;
+    tab->loading = loading&&tab->url!="soulu://home"&&!(tab->browser&&IsHomeUi(tab->browser->GetMainFrame()->GetURL())); tab->can_go_back = can_go_back;
     if(!loading)tab->main_loading=false;
   }
   if (!loading && overview_visible_ && id == active_tab_id_) CaptureThumbnail();
@@ -1467,6 +1552,7 @@ void BrowserWindow::UpdateDownload(int tab_id, CefRefPtr<CefDownloadItem> item) 
   auto* tab=FindTab(tab_id);if(!tab)return;
   auto row = CefDictionaryValue::Create();
   row->SetInt("id", static_cast<int>(item->GetId()));
+  row->SetInt("tabId",tab_id);
   row->SetString("filename", item->GetSuggestedFileName());
   row->SetDouble("receivedBytes", static_cast<double>(item->GetReceivedBytes()));
   row->SetDouble("totalBytes", static_cast<double>(item->GetTotalBytes()));
@@ -1762,6 +1848,7 @@ void BrowserWindow::Layout() {
   CEF_REQUIRE_UI_THREAD();
   if (!hwnd_ || IsIconic(hwnd_)) return;
   SyncAdaptiveToolbar();
+  if(auto* active=ActiveTab())SetTabFrozen(active->id,false);
   const auto g = CurrentGeometry();
   struct Position { HWND hwnd, after; int x, y, width, height; UINT flags; };
   std::vector<Position> positions;
@@ -1898,6 +1985,7 @@ CefRefPtr<CefDictionaryValue> BrowserWindow::State() const {
     row->SetString("favicon", tab.favicon);
     if (overview_visible_) row->SetString("thumbnail", tab.thumbnail);
     row->SetBool("loading", tab.loading);
+    row->SetBool("suspended",tab.frozen);
     row->SetBool("audible", !tab.playing_frames.empty());
     row->SetBool("muted", tab.browser&&tab.browser->GetHost()->IsAudioMuted());
     row->SetBool("microphoneActive",tab.microphone_active);
@@ -2308,6 +2396,7 @@ void BrowserWindow::HandleBridge(const std::string& request,
       NavigateHome(*tab);
     }
   }
+  else if(action=="browser.performance.optimize"){ApplyPerformancePolicy(true);return Reply(callback,State());}
   else if (action == "browser.newIncognito") NewTab("", true);
   else if (action == "browser.profile.create") {
     std::string name = payload && payload->GetType() == VTYPE_STRING
@@ -3168,6 +3257,10 @@ LRESULT CALLBACK BrowserWindow::WindowProc(HWND hwnd, UINT message, WPARAM wpara
       // HWND rather than a CEF child. Keep fullscreen keys available there too.
       if (wparam == VK_F11 && (lparam & (1LL << 30))) return 0;
       if (self->HandleFullscreenKey(static_cast<int>(wparam))) return 0;
+      break;
+    case WM_TIMER: if(wparam==7301){self->ApplyPerformancePolicy();return 0;}break;
+    case WM_ACTIVATE:
+      if(LOWORD(wparam)==WA_INACTIVE)self->DismissAddressSuggestions();
       break;
     case WM_SETFOCUS:
       if (self->settings_overlay_) self->FocusSettings();

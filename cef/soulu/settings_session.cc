@@ -46,7 +46,7 @@ CefRefPtr<CefDictionaryValue> BrowserWindow::SettingsSnapshot() {
   return data;
 }
 void BrowserWindow::RefreshSettingsAppearance() {
-  ApplyWindowAppearance();ApplyContentTheme();Layout();EmitState();
+  ApplyWindowAppearance();ApplyContentTheme();ApplyPerformancePolicy();Layout();EmitState();
 }
 bool BrowserWindow::GuardSettingsClose(int id,bool all) {
   if (!settings_overlay_ || (!all && id != kSettingsSession)) return false;
@@ -95,6 +95,8 @@ bool BrowserWindow::SaveSettingsSnapshot(CefRefPtr<CefDictionaryValue> requested
     next->SetValue(key,changed->Copy());
   }
   const std::pair<const char*,std::vector<std::string>> enums[]={
+    {"performanceMode",{"balanced","eco","performance"}},
+    {"backgroundTabTimeout",{"60","300","900","1800"}},
     {"historyDefaultFilter",{"all","today","yesterday","week","older"}},
     {"theme",{"system","light","dark"}},{"language",{"ru","en"}},{"translationTarget",{"ru","en"}},
     {"layout",{"compact","classic","adaptive"}},{"searchEngine",{"google","yandex","bing","duckduckgo"}},

@@ -3,20 +3,20 @@ body[data-layout=adaptive] {
   --adaptive-progress:0;
   --adaptive-toolbar-height:var(--geometry-adaptive-single-toolbar);
   --chrome-height:var(--adaptive-toolbar-height);
-  --caption-height:calc(68px - 20px * var(--adaptive-progress));
+  --caption-height:48px;
 }
 body[data-layout=adaptive] .compact-toolbar {display:none}
 body[data-layout=adaptive] .classic-toolbar {
   display:block;position:relative;height:var(--chrome-height);padding:0;
 }
 body[data-layout=adaptive] .classic-main-row {
-  height:calc(68px - 20px * var(--adaptive-progress));
+  height:48px;
   grid-template-columns:minmax(210px,1fr) minmax(0,640px) minmax(210px,1fr);
 }
 body[data-layout=adaptive] .classic-toolbar .tabs-zone {
   position:absolute;top:48px;left:0;right:0;height:40px;padding:2px 8px 6px;
   opacity:var(--adaptive-progress);
-  transform:translateY(calc(12px * (1 - var(--adaptive-progress))));
+  transform:none;
 }
 body[data-layout=adaptive][data-adaptive-expanded=false] .tabs-zone {pointer-events:none}
 body[data-layout=adaptive] .classic-toolbar .tabs-zone.no-ordinary .tab-strip {display:none}
@@ -52,7 +52,7 @@ body[data-layout=adaptive][data-bookmarks-bar=true][data-bookmarks-position=abov
   top:calc(48px + var(--geometry-bookmarks));
 }
 body[data-layout=adaptive][data-bookmarks-bar=true][data-bookmarks-position=above] .bookmarks-bar {
-  top:calc(68px - 20px * var(--adaptive-progress));
+  top:48px;
 }
 body[data-layout=adaptive] :is(.sidebar,.side-panel,.vpn-panel,.settings-panel,.bookmarks-menu,.tab-overview,.reader-view,.navigation-shield) {
   top:var(--content-top);

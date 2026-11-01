@@ -17,10 +17,11 @@
 #include "include/cef_parser.h"
 
 namespace soulu {
+void BrowserClient::OnGotFocus(CefRefPtr<CefBrowser>){if(role_==BrowserRole::kContent)owner_->DismissAddressSuggestions();}
 bool BrowserClient::OnTooltip(CefRefPtr<CefBrowser> browser,CefString&){
   const std::string url=browser->GetMainFrame()->GetURL();
   // Internal pages draw title tooltips with their shared DOM typography.
-  return owner_->IsTrustedUi(url)||owner_->IsHomeUi(url)||owner_->IsHistoryUi(url)||owner_->IsOnboardingUi(url);
+  return role_ != BrowserRole::kContent || owner_->IsTrustedUi(url)||owner_->IsHomeUi(url)||owner_->IsHistoryUi(url)||owner_->IsOnboardingUi(url);
 }
 bool BrowserClient::OnJSDialog(CefRefPtr<CefBrowser>, const CefString& origin, JSDialogType type,
     const CefString& message, const CefString& initial,

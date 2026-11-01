@@ -14,7 +14,7 @@
   const grid=el('div','overview-grid');overview.append(grid);search.oninput=renderOverview;
   const menuSearch=el('input','navigation-search');menuSearch.placeholder='Поиск закладок';menuSearch.setAttribute('aria-label','Поиск закладок');menuSearch.oninput=()=>{pane='list';query=menuSearch.value;renderMenu();};
   const contents=el('div','bookmark-tree'), actions=el('div','bookmark-actions');
-  const menuHeading=el('div','bookmarks-heading');menuHeading.append(el('strong','','Закладки'),button('×',()=>closeMenu()));menuHeading.lastChild.setAttribute('aria-label','Закрыть закладки');
+  const menuHeading=el('div','bookmarks-heading');menuHeading.append(el('strong','','Закладки'));
   menu.append(menuHeading,menuSearch,contents,actions);
   const nextId=()=>rows.reduce((n,r)=>Math.max(n,Number(r.id)||0),0)+1;
   const children=id=>rows.filter(r=>(r.parentId||0)===id).sort((a,b)=>(a.order||0)-(b.order||0));

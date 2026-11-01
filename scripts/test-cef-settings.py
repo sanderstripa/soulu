@@ -96,8 +96,8 @@ def main():
             check(evaluate('souluSettings.current.reader.size')==21,'Reader migration preserves canonical values')
             check(saved()['layout']=='adaptive','Legacy Classic selection migrates to Main')
             capture('cards-dark')
-            sections=['general','interface','startup','search','privacy','vpn','reading','profiles','about']
-            check(evaluate("[...document.querySelectorAll('#homeCards [data-section]')].map(n=>n.dataset.section)")==sections,'Exactly nine canonical Settings sections')
+            sections=['general','interface','startup','search','privacy','vpn','reading','translation','extensions','performance','profiles','about']
+            check(evaluate("[...document.querySelectorAll('#homeCards [data-section]')].map(n=>n.dataset.section)")==sections,'Exactly twelve canonical Settings sections')
             for name in sections:
                 section(name)
                 check(evaluate("document.querySelector('.nav-item.active').dataset.section==="+json.dumps(name)),'Section navigation: '+name)

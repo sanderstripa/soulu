@@ -49,7 +49,7 @@ def main():
             report['systemReducedAtLaunch']=evaluate('souluMotion.reduced')
             s.command(settings,'Emulation.setEmulatedMedia',{'features':[{'name':'prefers-reduced-motion','value':'no-preference'}]})
             keys=evaluate('[...document.querySelectorAll("#homeCards [data-section]")].map(n=>n.dataset.section)')
-            check(len(keys)==9,'Nine Settings categories preserved')
+            check(len(keys)==12,'Twelve Settings categories available')
             for key in keys:
                 evaluate('document.querySelector('+json.dumps(card(key))+').scrollIntoView({block:"center"})')
                 # Observe the ephemeral layer in the same renderer turn as activation.

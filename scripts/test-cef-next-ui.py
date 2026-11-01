@@ -103,11 +103,11 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as root:
   check(True,'Deleting the active key disconnects VPN and retains the other saved key')
   saved=json.loads((Path(root)/'Soulu'/'User Data'/'settings.json').read_text())['vpn']
   check(len(saved['profiles'])==1 and saved['defaultProfileId']==saved['lastProfileId'],'Saved list and default are written to the native persistent store')
-  s.evaluate(settings,"souluSettings.openSection('reading')");time.sleep(.2)
+  s.evaluate(settings,"souluSettings.openSection('translation')");time.sleep(.2)
   check(s.evaluate(settings,"document.querySelector('#videoTranslationEnabled').checked"),'Video Translate is enabled by default')
   s.evaluate(settings,"souluVideoSettings.open()")
   wait(lambda:s.evaluate(settings,"document.querySelector('#actionDialog').open&&document.querySelectorAll('#actionContent .row').length>=40"))
-  check(True,'Video Translate options are available inside Reading and translation')
+  check(True,'Video Translate options are available inside Translation')
   s.evaluate(settings,"(async()=>{const n=[...document.querySelectorAll('#actionContent button')].find(n=>n.getAttribute('aria-label')==='Горячая клавиша перевода');n.click();await Promise.resolve();n.dispatchEvent(new KeyboardEvent('keydown',{key:'Control',code:'ControlLeft',ctrlKey:true,bubbles:true}));n.dispatchEvent(new KeyboardEvent('keydown',{key:'k',code:'KeyK',ctrlKey:true,bubbles:true}))})()")
   wait(lambda:s.evaluate(settings,"new Promise((resolve,reject)=>cefQuery({request:JSON.stringify({action:'browser.video.settings'}),onSuccess:s=>resolve(JSON.parse(s).translationHotkey==='ControlLeft+K'),onFailure:(_,s)=>reject(Error(s))}))"))
   check(True,'Video hotkey capture preserves physical modifier codes required by VOT')
