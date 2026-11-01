@@ -1477,6 +1477,7 @@ void BrowserWindow::UpdateAddress(int id, const std::string& url) {
       ++tab->document_generation;tab->reader_active=false;tab->reader_article=nullptr;
     }
     tab->url = next;
+    if(next=="soulu://home")tab->loading=false;
     if(next!="soulu://home"){tab->focus_home_on_load=false;tab->pending_home_input.clear();tab->pending_home_submit=false;}
   }
   Layout();
@@ -2014,7 +2015,7 @@ CefRefPtr<CefDictionaryValue> BrowserWindow::State() const {
         (is_settings ? "Настройки Soulu" : tab.url));
     row->SetString("favicon", tab.favicon);
     if (overview_visible_) row->SetString("thumbnail", tab.thumbnail);
-    row->SetBool("loading", tab.loading);
+    row->SetBool("loading", tab.loading&&tab.url!="soulu://home");
     row->SetBool("suspended",tab.frozen);
     row->SetBool("suspensionPending",tab.lifecycle_pending);
     row->SetBool("suspensionEligible",tab.suspension_eligible);
@@ -2074,7 +2075,7 @@ CefRefPtr<CefDictionaryValue> BrowserWindow::State() const {
     page->SetString("label", tab->url == "about:blank" ? "" :
         (is_settings ? "Настройки Soulu" : tab->url));
     page->SetString("favicon", tab->favicon);
-    page->SetBool("loading", tab->loading);
+    page->SetBool("loading", tab->loading&&tab->url!="soulu://home");
     page->SetBool("canGoBack", tab->can_go_back);
     page->SetInt("generation",tab->document_generation);
     state->SetDictionary("page", page);
