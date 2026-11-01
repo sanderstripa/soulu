@@ -147,7 +147,9 @@ def check(label, sidebar=False, screenshot=False):
         # same bounds, viewport and live modal-loop assertions below.
         host = ch['CefBrowserWindow'] if 'CefBrowserWindow' in ch else ch['Chrome_WidgetWin_1']
         content = child_rect(host)
-        left = round(276 * scale) if sidebar else 0
+        left = round(300 * scale) if sidebar else 0
+        if sidebar:
+            assert evaluate(shell, 'document.querySelector(".bookmarks-menu").getBoundingClientRect().width') == 300
         layout = evaluate(shell, 'document.body.dataset.layout')
         base_height = 86 if layout == 'classic' else 58
         bar_visible = evaluate(shell, 'document.body.dataset.bookmarksBar === "true"')
@@ -297,14 +299,15 @@ with tempfile.TemporaryDirectory(prefix='soulu-layout-', ignore_cleanup_errors=T
                     if layout == 'classic':
                         structure = evaluate(shell, '''(() => {
                             const r=s=>document.querySelector(s).getBoundingClientRect();
-                            const a=r('.classic-address-pill'),n=r('.classic-main-row'),t=r('.classic-toolbar .tabs-zone'),p=r('.classic-tab');
-                            return {nav:n.height,tabs:t.height,addressBottom:a.bottom,tabsTop:t.top,tabBottom:p.bottom,tabsBottom:t.bottom,center:a.x+a.width/2,width:innerWidth,tabsBackground:getComputedStyle(document.querySelector('.classic-toolbar .tabs-zone')).backgroundColor,divider:getComputedStyle(document.querySelector('.classic-toolbar .tabs-zone')).borderTopWidth};
+                            const a=r('.classic-address-pill'),g=r('.classic-address-wrap'),b=r('#newTabButton'),n=r('.classic-main-row'),t=r('.classic-toolbar .tabs-zone'),p=r('.classic-tab');
+                            return {nav:n.height,tabs:t.height,addressBottom:a.bottom,tabsTop:t.top,tabBottom:p.bottom,tabsBottom:t.bottom,center:g.x+g.width/2,newTabGap:b.left-a.right,newTabBottom:b.bottom,width:innerWidth,tabsBackground:getComputedStyle(document.querySelector('.classic-toolbar .tabs-zone')).backgroundColor,divider:getComputedStyle(document.querySelector('.classic-toolbar .tabs-zone')).borderTopWidth};
                         })()''')
                         assert structure['nav'] == 48 and structure['tabs'] == 38, structure
                         assert structure['addressBottom'] <= structure['tabsTop'], structure
                         assert structure['tabsBottom'] - structure['tabBottom'] >= 6, structure
                         assert structure['divider'] == '0px', structure
                         assert abs(structure['center'] - structure['width']/2) <= 1, structure
+                        assert 4 <= structure['newTabGap'] <= 6 and structure['newTabBottom'] <= structure['tabsTop'], structure
                         assert structure['tabsBackground'] == 'rgba(0, 0, 0, 0)', structure
                         resize(640, 480)
                         check(label+'-narrow')
