@@ -19,15 +19,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           path: browser
-          ref: e7c2202b76164c929fda255983a957b7bdf44e54
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - uses: actions/download-artifact@v4
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: 41319039626
-          name: Soulu-cef-candidate-37932f041f89dc169ef5ff39769413edb1f0c681
+          run-id: 41320665065
+          name: Soulu-cef-candidate-e7c2202b76164c929fda255983a957b7bdf44e54
           path: candidate
       - name: Prepare identical CEF runtime with the freshly compiled candidate
         shell: pwsh
@@ -42,15 +41,12 @@ jobs:
           Copy-Item browser/ui/renderer.js (Join-Path $runtime 'ui/renderer.js') -Force
           "runtime_dir=$runtime" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
           Get-Content (Join-Path $runtime 'engine-version.json')
-      - name: Preflight twelve-section settings and UI regressions
+      - name: Verify real new-tab pointer input repeatedly
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client pillow comtypes pywinauto
-          $personalize='HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize'
-          New-Item $personalize -Force | Out-Null
-          Set-ItemProperty $personalize EnableTransparency 1 -Type DWord
-          foreach ($suite in @('settings','settings-overlay','motion','adaptive-toolbar','bookmarks-overview','layout')) {
-            python "browser/scripts/test-cef-$suite.py" "$env:runtime_dir/Soulu.exe" "browser/artifacts/$suite"
+          foreach ($attempt in 1..3) {
+            python browser/scripts/test-cef-home-focus.py "$env:runtime_dir/Soulu.exe" "browser/artifacts/focus-$attempt.json"
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
       - uses: actions/upload-artifact@v4
