@@ -88,7 +88,7 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as root:
   check(True,'Web Audio output samples produce an activity indicator; zero gain clears it')
   for permission in ['microphone','camera']:s.evaluate(shell,'browserShell.getCurrentSite().then(site=>browserShell.siteAction("permission",{...site,permission:'+json.dumps(permission)+',value:0}))')
   check(not next(t for t in state()['tabs'] if t['id']==bg).get('microphoneActive'),'A granted microphone permission alone is not marked as active capture')
-  s.evaluate(background,'window.dailyStream=await navigator.mediaDevices.getUserMedia({audio:true,video:true});true')
+  s.evaluate(background,'navigator.mediaDevices.getUserMedia({audio:true,video:true}).then(stream=>{window.dailyStream=stream;return true})')
   wait(lambda:next(t for t in state()['tabs'] if t['id']==bg).get('microphoneActive') and next(t for t in state()['tabs'] if t['id']==bg).get('cameraActive'))
   s.evaluate(background,'dailyStream.getTracks().forEach(t=>t.stop())')
   wait(lambda:not next(t for t in state()['tabs'] if t['id']==bg).get('microphoneActive') and not next(t for t in state()['tabs'] if t['id']==bg).get('cameraActive'));check(True,'Camera/microphone indicators follow actual stream start and track stop')
