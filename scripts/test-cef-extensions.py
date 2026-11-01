@@ -177,6 +177,14 @@ def main():
             check(True, 'Store opens inside the embedded Chrome surface')
             if os.environ.get('SOULU_TEST_STORE_INSTALL') == '1':
                 store = socket('chromewebstore.google.com/')
+                s.command(store, 'Emulation.setUserAgentOverride', {
+                    'userAgent':s.evaluate(store,'navigator.userAgent'),
+                    'userAgentMetadata':{
+                        'brands':[{'brand':'Chromium','version':'156'},{'brand':'Google Chrome','version':'156'}],
+                        'fullVersionList':[{'brand':'Chromium','version':'156.0.8078.48'},{'brand':'Google Chrome','version':'156.0.8078.48'}],
+                        'fullVersion':'156.0.8078.48','platform':'Windows','platformVersion':'10.0.0',
+                        'architecture':'x86','model':'','mobile':False,'bitness':'64','wow64':False
+                    }})
                 s.command(store, 'Page.navigate', {'url':'https://chromewebstore.google.com/detail/bitwarden-password-manager/nngceckbapebfimnlniiiahkandclblb'})
                 wait(lambda: s.evaluate(store, "location.href.includes('nngceckbapebfimnlniiiahkandclblb')&&document.readyState==='complete'"), 60)
                 ImageGrab.grab().save(output.parent / 'store-page.png')
