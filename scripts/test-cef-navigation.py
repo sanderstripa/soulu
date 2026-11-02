@@ -109,13 +109,23 @@ try:
     assert native_windows(process) == main_windows, 'background tab created another native window'
     assert s.evaluate(content, 'location.href') == initial_url
     assert s.command(content, 'Page.getNavigationHistory') == initial_history, 'background tab changed opener history'
-    assert not any(t.get('url', '').startswith('chrome://omnibox-popup') for t in s.targets())
+    # Chrome preloads hidden browser_ui surfaces for its retained native toolbar.
+    # These are not navigable Soulu tabs; reject leaked page targets instead.
+    assert not any(t.get('type') == 'page' and t.get('url', '').startswith('chrome://omnibox-popup') for t in s.targets())
     print(json.dumps({'window_open': 'internal tab', 'opener': 'preserved',
                       'popup_close': 'opener retained', 'background_tab': 'active tab retained',
                       'top_level_windows': len(main_windows)}))
     content.close()
     shell.close()
     s.close_normally(process)
+except Exception:
+    try:
+        print('Navigation failure state:', json.dumps(state()), flush=True)
+        print('Navigation native windows:', native_windows(process), flush=True)
+        print('Navigation targets:', [(t.get('type'),t.get('url')) for t in s.targets()], flush=True)
+    except Exception:
+        pass
+    raise
 finally:
     if process.poll() is None:
         process.kill()

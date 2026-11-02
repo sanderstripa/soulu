@@ -1173,12 +1173,17 @@ int BrowserWindow::PreparePopup(int source_id, const std::string& url,
   tab.defer_media = background;
   if (!background) CaptureThumbnail();
   tabs_.push_back(tab);
-  info.SetAsChild(hwnd_, CurrentGeometry().content);
-  // Soulu owns the window and tab lifecycle. The default Chrome runtime
-  // creates a Chrome Browser window even when a native parent is supplied.
-  info.runtime_style = source->chrome_host?CEF_RUNTIME_STYLE_CHROME:CEF_RUNTIME_STYLE_ALLOY;
-  // Keep the child hidden until AttachContent applies the selected tab's layout.
-  info.style &= ~WS_VISIBLE;
+  if(source->chrome_host){
+    // A native parent forces CEF's ChromeChildWindow delegate, even for a
+    // Views-hosted opener. Keep this popup Views-hosted so our delegate can
+    // attach its BrowserView to the existing Soulu tab and preserve opener.
+    info=CefWindowInfo();
+    info.runtime_style=CEF_RUNTIME_STYLE_CHROME;
+  }else{
+    info.SetAsChild(hwnd_, CurrentGeometry().content);
+    info.runtime_style=CEF_RUNTIME_STYLE_ALLOY;
+    info.style &= ~WS_VISIBLE;
+  }
   EmitState();
   return tab.id;
 }
