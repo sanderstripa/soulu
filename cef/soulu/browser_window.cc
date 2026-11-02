@@ -1702,7 +1702,7 @@ void BrowserWindow::CaptureThumbnail() {
     if(StretchBlt(memory,0,0,width,height,screen,origin.x,origin.y,bounds.right,bounds.bottom,SRCCOPY|CAPTUREBLT)){
       const size_t size=static_cast<size_t>(width)*height*4;
       auto* bytes=static_cast<unsigned char*>(pixels);for(size_t i=3;i<size;i+=4)bytes[i]=255;
-      auto image=CefImage::Create();
+      auto image=CefImage::CreateImage();
       if(image->AddBitmap(1.0f,width,height,CEF_COLOR_TYPE_BGRA_8888,CEF_ALPHA_TYPE_OPAQUE,pixels,size)){
         int encoded_width=0,encoded_height=0;auto jpeg=image->GetAsJPEG(1.0f,70,encoded_width,encoded_height);
         if(jpeg&&jpeg->GetSize()<=2*1024*1024){std::vector<unsigned char> encoded(jpeg->GetSize());jpeg->GetData(encoded.data(),encoded.size(),0);
