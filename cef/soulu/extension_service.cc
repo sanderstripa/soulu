@@ -90,13 +90,15 @@ class Service final:public ExtensionService,public CefClient,public CefLifeSpanH
     if(!frame->IsMain()||frame->GetURL().ToString().rfind("chrome://extensions/",0)!=0||closing_)return;
     ready_=true;auto queued=std::move(queued_);queued_.clear();for(auto& task:queued)task();
   }
+  // Chromium supplies pinnedToToolbar only when ToolbarActionsModel has an
+  // action. isExtensionAction belongs to a keyboard command, not ExtensionInfo.
   void List(ExtensionReply done)override{
     CefRefPtr<Service> self=this;
     Ready([self,done]{Evaluate(self->browser_,R"JS((async()=>{
       const rows=await chrome.developerPrivate.getExtensionsInfo({includeDisabled:true,includeTerminated:true});
       const items=await Promise.all(rows.filter(e=>e.type==='EXTENSION').map(async e=>{
         let icon='';try{const r=await fetch(e.iconUrl);const blob=await r.blob();icon=await new Promise((resolve,reject)=>{const f=new FileReader();f.onload=()=>resolve(f.result);f.onerror=reject;f.readAsDataURL(blob)});}catch{}
-        return {id:e.id,name:e.name,version:e.version,enabled:e.state==='ENABLED',pinned:!!e.pinnedToToolbar,action:!!e.isExtensionAction,path:e.path||'',icon:icon.startsWith('data:image/')?icon:''};
+        return {id:e.id,name:e.name,version:e.version,enabled:e.state==='ENABLED',pinned:!!e.pinnedToToolbar,action:typeof e.pinnedToToolbar==='boolean',path:e.path||'',icon:icon.startsWith('data:image/')?icon:''};
       }));return {items};
     })())JS",[self,done](CefRefPtr<CefDictionaryValue> result,const std::string& error){
       auto items=result?result->GetList("items"):nullptr;
@@ -113,7 +115,7 @@ class Service final:public ExtensionService,public CefClient,public CefLifeSpanH
   }
   void Pin(const std::string& id,bool pinned,ExtensionReply done)override{
     if(!ValidId(id)){done(nullptr,"Invalid extension ID");return;}
-    Ready([this,id,pinned,done]{Evaluate(browser_,"(async()=>{const all=await chrome.developerPrivate.getExtensionsInfo({includeDisabled:true,includeTerminated:true});if(!all.some(e=>e.id==='"+id+"'&&e.isExtensionAction))throw Error('Extension has no action');await chrome.developerPrivate.updateExtensionConfiguration({extensionId:'"+id+"',pinnedToToolbar:"+(pinned?"true":"false")+"});return {ok:true}})()",done);},done);
+    Ready([this,id,pinned,done]{Evaluate(browser_,"(async()=>{const all=await chrome.developerPrivate.getExtensionsInfo({includeDisabled:true,includeTerminated:true});if(!all.some(e=>e.id==='"+id+"'&&typeof e.pinnedToToolbar==='boolean'))throw Error('Extension has no action');await chrome.developerPrivate.updateExtensionConfiguration({extensionId:'"+id+"',pinnedToToolbar:"+(pinned?"true":"false")+"});return {ok:true}})()",done);},done);
   }
   void Open(CefRefPtr<CefBrowser> browser,const std::string& id,ExtensionReply done)override{
     if(!ValidId(id)||!browser||browser->GetHost()->GetRuntimeStyle()!=CEF_RUNTIME_STYLE_CHROME){done(nullptr,"A Chrome-style Soulu tab is required");return;}

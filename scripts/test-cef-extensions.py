@@ -163,7 +163,7 @@ def main():
             wait(lambda: not any('/ui/settings.html' in t.get('url', '') for t in s.targets()))
             s.evaluate(shell, 'browserShell.openTab(' + json.dumps(url) + ')')
             content = socket(url)
-            check(wait(lambda: s.evaluate(content, "document.documentElement.dataset.souluExtensionFixture==='active'")), 'Content script runs in an ordinary Alloy Soulu tab')
+            check(wait(lambda: s.evaluate(content, "document.documentElement.dataset.souluExtensionFixture==='active'")), 'Content script runs in an ordinary Chrome-style Soulu tab')
             stop()
             shell, settings, manager = start()
             check(s.evaluate(manager, expression)['id'] == installed['id'], 'Installed extension persists after restart')
@@ -225,6 +225,27 @@ def main():
                 store_extension = wait(lambda: s.evaluate(manager, "chrome.developerPrivate.getExtensionsInfo({includeDisabled:true,includeTerminated:true}).then(rows=>rows.find(r=>r.id==='nngceckbapebfimnlniiiahkandclblb')||null)"), 90)
                 check(store_extension.get('state') == 'ENABLED', 'Bitwarden installs from the official Chrome Web Store with native consent')
                 ImageGrab.grab().save(output.parent / 'store-installed.png')
+                bitwarden = 'nngceckbapebfimnlniiiahkandclblb'
+                profile = s.evaluate(shell, 'browserShell.getState()')['activeProfileId']
+                selector = '#extensionPins input[data-extension-id="' + bitwarden + '"]'
+                wait(lambda: s.evaluate(settings, '!!document.querySelector('+json.dumps(selector)+')'))
+                s.evaluate(settings, '(()=>{const pin=document.querySelector('+json.dumps(selector)+');pin.checked=true;pin.dispatchEvent(new Event("change",{bubbles:true}));return true})()')
+                wait(lambda: s.evaluate(shell, 'browserShell.extensions("list",'+json.dumps({'profile':profile})+').then(r=>r.items.some(e=>e.id==="'+bitwarden+'"&&e.pinned))'))
+                s.evaluate(settings, 'souluSettingsRequestClose()')
+                wait(lambda: not any('/ui/settings.html' in t.get('url','') for t in s.targets()))
+                s.evaluate(shell, 'browserShell.openTab('+json.dumps(url)+')')
+                action_selector = '[data-extension-toolbar] [data-extension-id="' + bitwarden + '"]'
+                wait(lambda: s.evaluate(shell, '!!document.querySelector('+json.dumps(action_selector)+')'))
+                count = len(s.evaluate(shell, 'browserShell.getState()')['tabs'])
+                s.evaluate(shell, '[...document.querySelectorAll('+json.dumps(action_selector)+')].find(b=>b.getClientRects().length).click()')
+                popup = socket('chrome-extension://'+bitwarden+'/popup/')
+                text = wait(lambda: s.evaluate(popup, 'document.body?.innerText'))
+                wait(lambda: s.evaluate(popup, '/(Log in|Log In|Email|email|Войти|почт)/.test(document.body.innerText)'), 60)
+                check(len(s.evaluate(shell, 'browserShell.getState()')['tabs']) == count, 'Real Bitwarden opens its own action popup without a Soulu tab')
+                check(True, 'Bitwarden initializes its account login interface')
+                report['bitwardenPopupText'] = s.evaluate(popup, 'document.body.innerText.slice(0,3000)')
+                ImageGrab.grab().save(output.parent / 'bitwarden-popup.png')
+
             report['passed'] = True
             stop()
     finally:

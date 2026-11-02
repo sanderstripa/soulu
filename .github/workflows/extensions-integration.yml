@@ -18,6 +18,7 @@ jobs:
       BETA_NUMBER: 74
       SOULU_REGRESSION_SKIP_FIRST_RUN: 1
       SOULU_TEST_DEFAULT_APPS: 1
+      SOULU_TEST_STORE_INSTALL: 1
       PYTHONUTF8: 1
       PYTHONDONTWRITEBYTECODE: 1
     steps:
@@ -219,6 +220,12 @@ jobs:
           python -m pip install --disable-pip-version-check websocket-client pillow pywinauto
           python browser/scripts/test-cef-extension-actions.py "$env:build_dir/Soulu.exe" browser/artifacts/extension-actions/evidence.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify official Store Bitwarden popup
+        shell: pwsh
+        run: |
+          python browser/scripts/test-cef-extensions.py "$env:build_dir/Soulu.exe" browser/artifacts/store/evidence.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Preserve functional extension evidence
         if: always()
         uses: actions/upload-artifact@v4

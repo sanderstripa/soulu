@@ -73,7 +73,7 @@ chrome.runtime.onMessage.addListener((m,sender,reply)=>{(async()=>{
    controls=wait(lambda:p.dialog_controls(process.pid));edits=[c for c in controls if c[1]=='Edit'];edit=next((e for e in edits if e[3]==1152),edits[-1]);button=next(c for c in controls if c[1]=='Button' and c[3]==1)
    EditWrapper(edit[0]).set_edit_text(str(fixture));ButtonWrapper(button[0]).click_input()
    def row():return s.evaluate(manager,"chrome.developerPrivate.getExtensionsInfo({includeDisabled:true,includeTerminated:true}).then(rows=>rows.find(e=>e.name==='Soulu functional extension')||null)")
-   installed=wait(row);ident=installed['id'];report['extensionId']=ident;check(True,'Install real MV3 fixture with action, worker and content script')
+   installed=wait(row);print('Native extension info:',json.dumps(installed),flush=True);ident=installed['id'];report['extensionId']=ident;check(True,'Install real MV3 fixture with action, worker and content script')
    profile=call(shell,'getState')['activeProfileId']
    # Pin using the real settings control, not a synthetic backend-only flag.
    wait(lambda:s.evaluate(settings,"!!document.querySelector('#extensionPins input[data-extension-id="+json.dumps(ident)+"]')"))
@@ -94,7 +94,11 @@ chrome.runtime.onMessage.addListener((m,sender,reply)=>{(async()=>{
    ImageGrab.grab().save(output.parent/'extension-popup.png')
    s.evaluate(popup,"document.querySelector('#fill').click()")
    wait(lambda:s.evaluate(content,"username.value==='fixture-user'&&password.value==='fixture-password'"));check(True,'Worker uses chrome.scripting to autofill the active login form')
-   s.evaluate(content,"username.value='saved-user';password.value='saved-password';login.requestSubmit();true")
+   # A real submit also offers Soulu's own password save. Decline that
+   # separate vault prompt so it cannot block the extension worker test.
+   s.sequence+=1;content.send(json.dumps({'id':s.sequence,'method':'Runtime.evaluate','params':{'expression':"username.value='saved-user';password.value='saved-password';login.requestSubmit();true"}}))
+   decline=wait(lambda:next((c for c in p.dialog_controls(process.pid) if c[1]=='Button' and c[3]==7),None))
+   ButtonWrapper(decline[0]).click_input()
    wait(lambda:s.evaluate(content,"document.documentElement.dataset.extensionSaved==='true'"));check(True,'Content script saves synthetic credentials through the worker')
    stop();shell=start();profile=call(shell,'getState')['activeProfileId'];rows=extension(shell,'list',profile)['items'];check(any(e['id']==ident and e['pinned'] for e in rows),'Installed extension and pin survive restart')
    call(shell,'openTab',url);content=socket(url);wait(lambda:s.evaluate(content,"document.documentElement.dataset.extensionReady==='yes'"));wait(lambda:s.evaluate(shell,"!!document.querySelector('[data-extension-id="+json.dumps(ident)+"]')"))
@@ -110,6 +114,7 @@ chrome.runtime.onMessage.addListener((m,sender,reply)=>{(async()=>{
   if process and not report['passed']:
    try:
     ImageGrab.grab().save(output.parent/'failure.png')
+    report['toolbarErrors']=s.evaluate(shell,"[...document.querySelectorAll('[data-extension-toolbar] button')].map(b=>({id:b.dataset.extensionId,title:b.title,disabled:b.disabled}))")
     report['targets']=[{'type':t.get('type'),'url':t.get('url')} for t in s.targets()]
     print('FAILURE TARGETS',json.dumps(report['targets']),flush=True)
    except Exception:pass
