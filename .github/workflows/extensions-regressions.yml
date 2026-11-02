@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [navigation, daily-use, polish, bookmarks-overview]
+        suite: [layout, security, menus, home]
     env:
       PYTHONUTF8: 1
       SOULU_REGRESSION_SKIP_FIRST_RUN: 1
@@ -61,16 +61,27 @@ jobs:
       - name: Exercise native browser regression
         shell: pwsh
         run: |
-          switch ($env:SUITE) {
-            'bookmarks-overview' { python scripts/test-cef-bookmarks-overview.py runtime/Soulu.exe }
-            'daily-use' { python scripts/test-cef-daily-use.py runtime/Soulu.exe artifacts/daily-use }
-            'polish' { python scripts/test-cef-polish-performance.py runtime/Soulu.exe artifacts/polish }
-            'navigation' { python scripts/test-cef-navigation.py runtime/Soulu.exe }
-            'layout' { python scripts/test-cef-layout.py runtime/Soulu.exe artifacts/layout }
-            'profiles' { python scripts/test-cef-profile-isolation.py runtime/Soulu.exe }
-            'typography' { python scripts/test-cef-typography.py runtime/Soulu.exe artifacts/typography-runtime.json }
+          $personalize='HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize'
+          New-Item $personalize -Force | Out-Null
+          Set-ItemProperty $personalize EnableTransparency 1 -Type DWord
+          $groups=@{
+            layout=@('adaptive-toolbar','classic-responsive','window-states','motion','toolbar')
+            security=@('history','data-security','settings','adblock-lifetime')
+            menus=@('menu-system','menu-actions')
+            home=@('onboarding','default-links','home-pages','home-focus')
           }
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $failures=@()
+          foreach ($suite in $groups[$env:SUITE]) {
+            Get-Process Soulu -ErrorAction SilentlyContinue | Stop-Process -Force
+            $env:LOCALAPPDATA=Join-Path $env:RUNNER_TEMP "soulu-preflight-$env:SUITE-$suite"
+            $env:APPDATA=Join-Path $env:RUNNER_TEMP "soulu-preflight-$env:SUITE-$suite-roaming"
+            python "scripts/test-cef-$suite.py" runtime/Soulu.exe "artifacts/$suite"
+            $code=$LASTEXITCODE
+            if ($code -ne 0) { $failures+=$suite; Write-Host "FAILED SUITE: $suite ($code)" }
+            else { Write-Host "PASSED SUITE: $suite" }
+          }
+          $failures | ConvertTo-Json | Set-Content artifacts/failures.json
+          if ($failures.Count) { exit 1 }
       - uses: actions/upload-artifact@v4
         if: always()
         with:
