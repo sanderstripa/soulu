@@ -245,6 +245,11 @@ def main():
                     return s.evaluate(popup, """(()=>{
                       const email=document.querySelector('input[type=email],input[autocomplete=username],input[name=email]');
                       if(email&&email.getClientRects().length&&!email.disabled)return true;
+                      if(location.hash.includes('default-password-manager-prompt')){
+                        const skip=[...document.querySelectorAll('button,a,[role=button]')].find(b=>b.getClientRects().length&&/^(Skip|Пропустить)$/i.test(b.innerText.trim()));
+                        if(skip)skip.click();
+                        return false;
+                      }
                       const login=[...document.querySelectorAll('button,a,[role=button]')].find(b=>b.getClientRects().length&&/(Log\\s*in|Login|Войти|Вход)/i.test(b.innerText));
                       if(login)login.click();
                       return false;
