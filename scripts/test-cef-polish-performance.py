@@ -70,10 +70,8 @@ with tempfile.TemporaryDirectory(prefix='soulu-polish-',ignore_cleanup_errors=Tr
   s.evaluate(shell,'browserShell.navigate('+json.dumps(origin+'/first')+')');page=connect('/first');wait(lambda:s.evaluate(page,'typeof identity==="number"'))
   click(shell,'#classicAddress');wait(lambda:s.evaluate(shell,"!!document.querySelector('.suggestions.visible')"))
   click(shell,'#sidebarButton');wait(lambda:not s.evaluate(shell,"!!document.querySelector('.suggestions.visible')"));check(True,'Address suggestions close on another toolbar control')
-  s.evaluate(shell,"window.__addressEvents=[];for(const type of ['focus','blur','pointerdown','click','soulu-dismiss-address'])window.addEventListener(type,e=>__addressEvents.push({type,target:e.target?.id,active:document.activeElement?.id,focus:document.hasFocus(),value:document.querySelector('#classicAddress')?.value,at:performance.now()}),true);browserShell.toggleSidebar()")
-  click(shell,'#classicAddress');time.sleep(3)
-  print('ADDRESS DIAGNOSTIC:',s.evaluate(shell,"JSON.stringify({events:window.__addressEvents,active:document.activeElement?.id,focus:document.hasFocus(),sidebar:document.querySelector('.sidebar')?.getBoundingClientRect().toJSON(),address:document.querySelector('#classicAddress')?.getBoundingClientRect().toJSON(),value:document.querySelector('#classicAddress')?.value,visible:!!document.querySelector('.suggestions.visible'),layout:document.body.dataset.layout})"),flush=True)
-  wait(lambda:s.evaluate(shell,"!!document.querySelector('.suggestions.visible')"))
+  s.evaluate(shell,'browserShell.toggleSidebar()')
+  click(shell,'#classicAddress');wait(lambda:s.evaluate(shell,"!!document.querySelector('.suggestions.visible')"))
   # Deliver the same native deactivation message Windows sends for a desktop/other-app click.
   hwnds=[];u=ctypes.windll.user32
   @ctypes.WINFUNCTYPE(ctypes.c_bool,ctypes.c_void_p,ctypes.c_void_p)
@@ -90,8 +88,6 @@ with tempfile.TemporaryDirectory(prefix='soulu-polish-',ignore_cleanup_errors=Tr
   second=state()['activeTabId'];s.evaluate(shell,'browserShell.navigate('+json.dumps(origin+'/second')+')');other=connect('/second');wait(lambda:s.evaluate(other,'typeof identity==="number"'))
   wait(lambda:not state()['adaptiveToolbar']['running'])
   s.evaluate(shell,'browserShell.setSettings({freezeBackgroundTabs:true,memorySaver:true,performanceMode:"balanced"})')
-  s.evaluate(page,"window.__lifecycleEvents=[];for(const kind of ['freeze','resume','visibilitychange'])document.addEventListener(kind,()=>__lifecycleEvents.push({kind,ticks,visibility:document.visibilityState,at:performance.now()}))")
-  s.command(page,'Tracing.start',{'categories':'content,blink,renderer.scheduler','options':'record-as-much-as-possible'})
   s.evaluate(shell,'browserShell.optimizeBackgroundTabs()')
   try:wait(lambda:next(t for t in state()['tabs'] if t['id']==first).get('suspended'))
   except Exception:
@@ -99,21 +95,6 @@ with tempfile.TemporaryDirectory(prefix='soulu-polish-',ignore_cleanup_errors=Tr
    print('LIFECYCLE_PAGE',s.evaluate(page,'({visibility:document.visibilityState,ticks})'),flush=True)
    raise
   check(not next(t for t in state()['tabs'] if t['id']==second).get('suspended'),'Manual optimization pauses only a background tab')
-  print('LIFECYCLE BEFORE',s.evaluate(page,'({visibility:document.visibilityState,ticks,events:window.__lifecycleEvents})'),flush=True)
-  for _ in range(4):
-   time.sleep(.3);print('LIFECYCLE SAMPLE',s.evaluate(page,'({visibility:document.visibilityState,ticks,events:window.__lifecycleEvents})'),flush=True)
-  print('DIRECT FREEZE',s.command(page,'Page.setWebLifecycleState',{'state':'frozen'}),flush=True)
-  for _ in range(4):
-   time.sleep(.3);print('DIRECT SAMPLE',s.evaluate(page,'({visibility:document.visibilityState,ticks,events:window.__lifecycleEvents})'),flush=True)
-  s.sequence+=1;trace_id=s.sequence;page.send(json.dumps({'id':trace_id,'method':'Tracing.end','params':{}}));trace_events=[]
-  while True:
-   packet=json.loads(page.recv())
-   if packet.get('method')=='Tracing.dataCollected':trace_events.extend(packet['params']['value'])
-   if packet.get('method')=='Tracing.tracingComplete':break
-  (out/'lifecycle-trace.json').write_text(json.dumps({'traceEvents':trace_events}),encoding='utf-8')
-  for event in trace_events:
-   if any(word.lower() in event.get('name','').lower() for word in ['SetPageFrozen','SetPageVisible','LifecycleState','WasHidden','WasShown']):
-    print('LIFECYCLE TRACE',json.dumps(event),flush=True)
   before=s.evaluate(page,'ticks');time.sleep(.6);check(s.evaluate(page,'ticks')==before,'Paused tab actually stops JavaScript timers')
   s.evaluate(shell,f'browserShell.switchTab({first})');wait(lambda:not next(t for t in state()['tabs'] if t['id']==first).get('suspended'));wait(lambda:s.evaluate(page,'ticks')>before)
   check(s.evaluate(page,'identity')==original['identity'] and s.evaluate(page,"document.querySelector('#draft').value")=='Unsent text','Opening a paused tab resumes without reload or loss of form data')
