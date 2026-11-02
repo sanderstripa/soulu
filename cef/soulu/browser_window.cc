@@ -1325,6 +1325,7 @@ std::string BrowserWindow::VisibleProfileId() const {
 void BrowserWindow::SwitchTab(int id) {
   DismissSouluMenus(hwnd_);
   auto* tab=FindTab(id);if(!tab)return;
+  DismissAddressSuggestions();
   if (content_fullscreen_id_ && content_fullscreen_id_ != id) {
     if (auto* old = FindTab(content_fullscreen_id_); old && old->browser)
       old->browser->GetHost()->ExitFullscreen(!browser_fullscreen_);

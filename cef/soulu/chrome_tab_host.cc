@@ -62,6 +62,9 @@ class Host final:public ChromeTabHost,public CefWindowDelegate,public CefBrowser
   }
   void SetVisible(bool visible,bool activate) override {
     CEF_REQUIRE_UI_THREAD();visible_=visible;if(!window_)return;
+    // Keep Chromium's content view visibility in sync with the Win32 child.
+    // Hiding the native container alone leaves the BrowserView logically shown.
+    if(view_&&view_->IsVisible()!=visible)view_->SetVisible(visible);
     if(visible){if(!window_->IsVisible())window_->Show();if(activate)window_->Activate();}
     else window_->Hide();Resize();
   }
