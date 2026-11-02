@@ -90,7 +90,7 @@ class Host final:public ChromeTabHost,public CefWindowDelegate,public CefBrowser
   void ArmActionPopup(const CefRect& anchor) override {
     DismissActionPopup();anchor_=anchor;existing_popups_.clear();
     EnumThreadWindows(GetCurrentThreadId(),SnapshotPopup,reinterpret_cast<LPARAM>(this));
-    popup_deadline_=GetTickCount64()+5000;mouse_down_=MouseDown();
+    popup_deadline_=GetTickCount64()+15000;mouse_down_=MouseDown();
     const auto generation=++popup_generation_;WatchActionPopup(generation);
   }
   void Close() override{DismissActionPopup();closing_=true;if(view_&&view_->GetBrowser())view_->GetBrowser()->GetHost()->CloseBrowser(true);else if(window_)window_->Close();}
@@ -116,6 +116,14 @@ class Host final:public ChromeTabHost,public CefWindowDelegate,public CefBrowser
     for(HWND owner=GetWindow(hwnd,GW_OWNER);owner;owner=GetWindow(owner,GW_OWNER)){
       if(owner==host||owner==self->parent_){self->action_popup_=hwnd;return FALSE;}
     }
+    // Store-installed extensions can retain the installer's Chrome owner
+    // instead of the reparented tab widget. Accept only a newly shown,
+    // frameless Chrome popup containing an actual web renderer on this UI
+    // thread; normal browser windows, menus and tooltips are excluded.
+    if(!(GetWindowLongPtrW(hwnd,GWL_STYLE)&WS_CAPTION)){
+      NativeFocusTarget renderer;EnumChildWindows(hwnd,FindRenderer,reinterpret_cast<LPARAM>(&renderer));
+      if(renderer.window){self->action_popup_=hwnd;return FALSE;}
+    }
     return TRUE;
   }
   void DismissActionPopup(){
@@ -129,7 +137,7 @@ class Host final:public ChromeTabHost,public CefWindowDelegate,public CefBrowser
       EnumThreadWindows(GetCurrentThreadId(),FindActionPopup,reinterpret_cast<LPARAM>(this));
       if(!action_popup_){if(GetTickCount64()>=popup_deadline_)return;}
       else {popup_started_=GetTickCount64();}
-    }else if(!IsWindow(action_popup_)||!IsWindowVisible(action_popup_)){action_popup_=nullptr;return;}
+    }else if(!IsWindow(action_popup_)||!IsWindowVisible(action_popup_)){action_popup_=nullptr;if(GetTickCount64()>=popup_deadline_)return;}
     if(action_popup_){
       RECT bounds={};GetWindowRect(action_popup_,&bounds);
       POINT anchor={anchor_.x+anchor_.width,anchor_.y+anchor_.height};

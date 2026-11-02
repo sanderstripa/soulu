@@ -15,6 +15,7 @@ import tempfile
 import threading
 import time
 from PIL import ImageGrab
+from pywinauto import mouse
 from pywinauto.controls.win32_controls import EditWrapper, ButtonWrapper
 
 
@@ -26,6 +27,7 @@ def module(name, filename):
 
 s = module('storage', 'test-cef-storage.py')
 p = module('platform', 'test-cef-platform.py')
+o = module('overlay', 'test-cef-settings-overlay.py')
 os.environ['NO_PROXY'] = 'localhost,127.0.0.1,::1'
 os.environ['SOULU_REGRESSION_SKIP_FIRST_RUN'] = '1'
 s.DEBUG_PORT = s.free_port()
@@ -262,7 +264,17 @@ def main():
                 check(len(s.evaluate(shell, 'browserShell.getState()')['tabs']) == count, 'Real Bitwarden opens its own action popup without a Soulu tab')
                 check(True, 'Bitwarden initializes its account login interface')
                 report['bitwardenPopupText'] = s.evaluate(popup, 'document.body.innerText.slice(0,3000)')
+                anchor=s.evaluate(shell,'(()=>{const r=[...document.querySelectorAll('+json.dumps(action_selector)+')].find(b=>b.getClientRects().length).getBoundingClientRect();return {x:r.x,bottom:r.bottom,scale:devicePixelRatio}})()')
+                host=wait(lambda:next(iter(o.windows(process.pid,'SouluBrowserWindow')),None));client=o.client_rect(host)
+                def anchored():
+                    geometry=s.evaluate(popup,'({x:screenX,y:screenY,width:outerWidth,height:outerHeight})')
+                    report['bitwardenGeometry']=geometry;report['bitwardenAnchor']=anchor
+                    return abs(geometry['y']-(client[1]/anchor['scale']+anchor['bottom']+6))<24 and geometry['width']<=800 and geometry['height']<=600
+                check(wait(anchored,5),'Real Bitwarden popup is sized and anchored below its Soulu button after onboarding')
                 ImageGrab.grab().save(output.parent / 'bitwarden-popup.png')
+                mouse.press(coords=(client[2]-40,client[3]-40));time.sleep(.1);mouse.release(coords=(client[2]-40,client[3]-40))
+                wait(lambda:not any('chrome-extension://'+bitwarden+'/popup/' in t.get('url','') for t in s.targets()))
+                check(True,'Real Bitwarden popup closes on an outside native click')
 
             report['passed'] = True
             stop()
