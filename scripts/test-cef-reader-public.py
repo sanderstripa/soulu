@@ -40,6 +40,12 @@ with tempfile.TemporaryDirectory(prefix='soulu-reader-public-',ignore_cleanup_er
    site=s.evaluate(shell,'browserShell.getCurrentSite()')
    payload={k:site[k] for k in ('tabId','url','generation')};payload.update(values or {})
    return s.evaluate(shell,'browserShell.siteAction('+json.dumps(name)+','+json.dumps(payload)+')')
+  def document_ready(fragment,minimum=0):
+   try:
+    return s.evaluate(page,"(()=>{return location.href.includes("+json.dumps(fragment)+")&&document.readyState!=='loading'&&(document.body?.innerText.length||0)>="+str(minimum)+"})()")
+   except AssertionError as error:
+    if 'context' in str(error).lower():return False
+    raise
   for index,(url,titlePart) in enumerate(articles):
    s.evaluate(shell,'browserShell.navigate('+json.dumps(url)+')')
    try:
@@ -48,6 +54,7 @@ with tempfile.TemporaryDirectory(prefix='soulu-reader-public-',ignore_cleanup_er
     print(json.dumps({'requested':url,'nativePage':s.evaluate(shell,'browserShell.getState().then(s=>s.page)')},ensure_ascii=False),flush=True)
     raise
    assert not s.evaluate(page,'location.href').startswith('chrome-error:'),url
+   wait(lambda:document_ready(url.split('?')[0],500))
    result=action('reader.enter');article=result['article']
    assert titlePart.lower() in article['title'].lower(),article['title']
    assert article['author'].lower() not in ('x','twitter','facebook','linkedin'), 'Social label used as author'
@@ -73,7 +80,7 @@ with tempfile.TemporaryDirectory(prefix='soulu-reader-public-',ignore_cleanup_er
    s.evaluate(shell,'browserShell.navigate('+json.dumps('https://'+host)+')')
    print('NAVIGATE PUBLIC',host,flush=True)
    try:
-    wait(lambda:s.evaluate(shell,'browserShell.getState().then(s=>!s.page.loading&&s.page.url.includes('+json.dumps(host)+'))'))
+    wait(lambda:document_ready(host,10) and s.evaluate(shell,'browserShell.getCurrentSite().then(s=>s.url.includes('+json.dumps(host)+'))')))
    except Exception:
     print('PUBLIC NAVIGATION FAILURE',json.dumps({'host':host,'shell':s.evaluate(shell,'browserShell.getState()'),'document':s.evaluate(page,"({url:location.href,title:document.title,ready:document.readyState})")},ensure_ascii=False),flush=True)
     raise
