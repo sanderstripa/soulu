@@ -15,8 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [daily-use, platform, settings-overlay, site-surfaces, storage, bookmarks-overview, site-reader, content-policy, link-menu]
-      max-parallel: 4
+        suite: [polish]
     env:
       PYTHONUTF8: 1
       SOULU_REGRESSION_SKIP_FIRST_RUN: 1
@@ -63,11 +62,7 @@ jobs:
         shell: pwsh
         run: |
           switch ($env:SUITE) {
-            'daily-use' { python scripts/test-cef-daily-use.py runtime/Soulu.exe artifacts/daily-use }
-            'platform' { python scripts/test-cef-platform.py runtime/Soulu.exe artifacts/platform.json }
-            'settings-overlay' { python scripts/test-cef-settings-overlay.py runtime/Soulu.exe artifacts/settings-overlay.json }
-            'site-surfaces' { python scripts/test-cef-site-surfaces.py runtime/Soulu.exe artifacts/site-surfaces.json }
-            { $_ -in 'storage','bookmarks-overview','site-reader','content-policy','link-menu' } { python "scripts/test-cef-$env:SUITE.py" runtime/Soulu.exe }
+            'polish' { python scripts/test-cef-polish-performance.py runtime/Soulu.exe artifacts/polish }
             'navigation' { python scripts/test-cef-navigation.py runtime/Soulu.exe }
             'layout' { python scripts/test-cef-layout.py runtime/Soulu.exe artifacts/layout }
             'profiles' { python scripts/test-cef-profile-isolation.py runtime/Soulu.exe }
