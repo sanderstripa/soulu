@@ -1208,6 +1208,10 @@ void BrowserWindow::NewTab(const std::string& url, bool incognito,
   tabs_.push_back(tab);
   const int previous_active = active_tab_id_;
   if (foreground) { if(auto* previous=FindTab(previous_active);previous&&previous->browser)HomeCancelVoice(previous->browser->GetIdentifier());CancelSitePermissions(previous_active);CaptureThumbnail(); active_tab_id_ = id; if(!incognito)last_normal_active_[tab.profile_id]=id; }
+  // Ctrl+T starts in the old Chrome renderer. Move native keyboard focus to
+  // the persistent toolbar before hiding that renderer: Chrome discards input
+  // sent to a hidden view. BufferHomeInput owns typing until Home is ready.
+  if(foreground&&tab.focus_home_on_load&&surface_)surface_->Focus();
 
   CefWindowInfo info;
   info.SetAsChild(hwnd_, CurrentGeometry().content);

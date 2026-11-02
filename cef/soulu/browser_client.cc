@@ -20,6 +20,21 @@
 
 namespace soulu {
 namespace {
+// Chrome validates standard command IDs before OnContextMenuCommand. Public
+// CEF IDs belong to Alloy; sending them to Chrome hits its NOTREACHED handler.
+int MenuCommand(CefRefPtr<CefBrowser> browser,int command){
+  if(browser->GetHost()->GetRuntimeStyle()!=CEF_RUNTIME_STYLE_CHROME)return command;
+  switch(command){
+    case MENU_ID_BACK:return 33000;case MENU_ID_FORWARD:return 33001;
+    case MENU_ID_RELOAD:return 33002;case MENU_ID_STOPLOAD:return 33006;
+    case MENU_ID_VIEW_SOURCE:return 35002;case MENU_ID_PRINT:return 35003;
+    case MENU_ID_COPY:return 50150;case MENU_ID_CUT:return 50151;
+    case MENU_ID_PASTE:return 50152;case MENU_ID_DELETE:return 50153;
+    case MENU_ID_UNDO:return 50154;case MENU_ID_REDO:return 50155;
+    case MENU_ID_SELECT_ALL:return 50156;case MENU_ID_PASTE_MATCH_STYLE:return 50157;
+    default:return command;
+  }
+}
 class BrowserActionTask final:public CefTask {
  public:explicit BrowserActionTask(std::function<void()> action):action_(std::move(action)){}void Execute()override{action_();}
  private:std::function<void()> action_;IMPLEMENT_REFCOUNTING(BrowserActionTask);
@@ -340,13 +355,14 @@ void BrowserClient::OnBeforeContextMenu(CefRefPtr<CefBrowser> browser,CefRefPtr<
     return;
   }
   const bool internal=owner_->IsTrustedUi(frame->GetURL())||owner_->IsHomeUi(frame->GetURL())||owner_->IsHistoryUi(frame->GetURL())||owner_->IsOnboardingUi(frame->GetURL());
-  if(internal){model->Clear();if(!params->GetSelectionText().empty())model->AddItem(MENU_ID_COPY,label("Копировать","Copy"));return;}
+  if(internal){model->Clear();if(!params->GetSelectionText().empty())model->AddItem(MenuCommand(browser,MENU_ID_COPY),label("Копировать","Copy"));return;}
   if(browser->GetHost()->GetRuntimeStyle()==CEF_RUNTIME_STYLE_CHROME){
     for(size_t i=model->GetCount();i>0;--i)if(!ExtensionContextItem(model,i-1))model->RemoveAt(i-1);
   }else model->Clear();
   bool browser_items=false;
   auto add=[&](int id,const char* ru,const char* english,bool enabled=true){
     if(!browser_items&&model->GetCount()&&model->GetTypeAt(model->GetCount()-1)!=MENUITEMTYPE_SEPARATOR)model->AddSeparator();
+    id=MenuCommand(browser,id);
     browser_items=true;model->AddItem(id,label(ru,english));model->SetEnabled(id,enabled);
   };
   const auto link=params->GetLinkUrl().ToString(),source=params->GetSourceUrl().ToString();
@@ -407,7 +423,7 @@ bool BrowserClient::RunContextMenu(CefRefPtr<CefBrowser> browser,
       MenuItem item;item.command=source->GetCommandIdAt(i);item.label=source->GetLabelAt(i).ToWString();
       if(item.command<MENU_ID_USER_FIRST||item.command>MENU_ID_USER_LAST)item.label=MenuLabel(item.label);
       auto tab=item.label.find(L'\t');if(tab!=std::wstring::npos){item.accelerator=item.label.substr(tab+1);item.label.resize(tab);}
-      switch(item.command){case MENU_ID_BACK:item.accelerator=L"Alt+←";break;case MENU_ID_FORWARD:item.accelerator=L"Alt+→";break;case MENU_ID_RELOAD:item.accelerator=L"Ctrl+R";break;case MENU_ID_PRINT:item.accelerator=L"Ctrl+P";break;case MENU_ID_VIEW_SOURCE:item.accelerator=L"Ctrl+U";break;case kPageSave:item.accelerator=L"Ctrl+S";break;case MENU_ID_COPY:item.accelerator=L"Ctrl+C";break;case MENU_ID_CUT:item.accelerator=L"Ctrl+X";break;case MENU_ID_PASTE:item.accelerator=L"Ctrl+V";break;case MENU_ID_SELECT_ALL:item.accelerator=L"Ctrl+A";break;}
+      switch(item.command){case MENU_ID_BACK:case 33000:item.accelerator=L"Alt+←";break;case MENU_ID_FORWARD:case 33001:item.accelerator=L"Alt+→";break;case MENU_ID_RELOAD:case 33002:item.accelerator=L"Ctrl+R";break;case MENU_ID_PRINT:case 35003:item.accelerator=L"Ctrl+P";break;case MENU_ID_VIEW_SOURCE:case 35002:item.accelerator=L"Ctrl+U";break;case kPageSave:item.accelerator=L"Ctrl+S";break;case MENU_ID_COPY:case 50150:item.accelerator=L"Ctrl+C";break;case MENU_ID_CUT:case 50151:item.accelerator=L"Ctrl+X";break;case MENU_ID_PASTE:case 50152:item.accelerator=L"Ctrl+V";break;case MENU_ID_SELECT_ALL:case 50156:item.accelerator=L"Ctrl+A";break;}
       item.enabled=source->IsEnabledAt(i);item.checked=source->IsCheckedAt(i);
       if(source->GetTypeAt(i)==MENUITEMTYPE_CHECK)item.type=MenuItemType::Check;
       if(source->GetTypeAt(i)==MENUITEMTYPE_RADIO)item.type=MenuItemType::Radio;
@@ -424,8 +440,8 @@ bool BrowserClient::RunContextMenu(CefRefPtr<CefBrowser> browser,
     if(!browser->IsValid()||browser->GetMainFrame()->GetURL()!=menu_url||!keep_alive->owner_->MenuTabActive(keep_alive->tab_id_)||!IsWindow(keep_alive->owner_->hwnd())){callback->Cancel();return;}
     if(hit&&hit->GetBool("readonly")){
       const bool en=keep_alive->owner_->MenuEnglish();snapshot.clear();
-      snapshot.push_back(MenuItem{MENU_ID_COPY,en?L"Copy":L"Копировать"});snapshot.back().accelerator=L"Ctrl+C";snapshot.back().enabled=hit->GetBool("selected");
-      snapshot.push_back(MenuItem{MENU_ID_SELECT_ALL,en?L"Select all":L"Выделить всё"});snapshot.back().accelerator=L"Ctrl+A";
+      snapshot.push_back(MenuItem{MenuCommand(browser,MENU_ID_COPY),en?L"Copy":L"Копировать"});snapshot.back().accelerator=L"Ctrl+C";snapshot.back().enabled=hit->GetBool("selected");
+      snapshot.push_back(MenuItem{MenuCommand(browser,MENU_ID_SELECT_ALL),en?L"Select all":L"Выделить всё"});snapshot.back().accelerator=L"Ctrl+A";
     }
     const int command=ShowSouluMenu(keep_alive->owner_->hwnd(),point,std::move(snapshot),{keep_alive->owner_->MenuDark()});
     if(command)callback->Continue(command,EVENTFLAG_NONE);else callback->Cancel();
