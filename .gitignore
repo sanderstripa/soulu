@@ -20,3 +20,11 @@ ui/speech/ggml-tiny.bin
 
 /.connect-installer-source/
 /.tmp/
+
+# Local Gecko runtime downloads and generated packages
+/gecko-cache/
+/gecko-out/
+/gecko-linux/
+/gecko-acceptance/
+/gecko-smoke.log
+/gecko-preview-1.zip

@@ -1,0 +1,44 @@
+@font-face{font-family:Onest;src:url('ui/fonts/Onest-Regular.ttf');font-weight:400}
+@font-face{font-family:Onest;src:url('ui/fonts/Onest-Medium.ttf');font-weight:500}
+@font-face{font-family:Onest;src:url('ui/fonts/Onest-SemiBold.ttf');font-weight:600}
+:root{--soulu-bg:#f6f6f8;--soulu-field:#e9e9ed;--soulu-text:#191a1e;--toolbar-bgcolor:var(--soulu-bg)!important;--toolbar-color:var(--soulu-text)!important;--lwt-accent-color:var(--soulu-bg)!important;--lwt-text-color:var(--soulu-text)!important;--tab-min-height:30px!important;--tab-border-radius:16px!important;--urlbar-min-height:34px!important;--toolbarbutton-border-radius:50%!important;--toolbarbutton-inner-padding:7px!important;--toolbarbutton-outer-padding:2px!important;font-family:Onest,sans-serif!important}
+:root[soulu-dark]{--soulu-bg:#08090b;--soulu-field:#24252c;--soulu-text:#eeeeef;color-scheme:dark}
+#navigator-toolbox{display:flex!important;flex-direction:column!important;background:var(--soulu-bg)!important;border:0!important;box-shadow:none!important}
+#nav-bar{order:0!important;height:48px!important;min-height:48px!important;border:0!important;box-shadow:none!important;background:transparent!important;padding-inline:8px!important}
+#TabsToolbar{order:1!important;height:40px!important;min-height:40px!important;padding:2px 8px 6px!important}
+:root[soulu-single] #TabsToolbar{visibility:collapse!important}
+:root[soulu-single] #nav-bar{padding-bottom:20px!important;height:68px!important}
+#PersonalToolbar{order:2!important;border:0!important;background:var(--soulu-bg)!important;font-size:12px!important}
+#toolbar-menubar{order:-1!important}
+#TabsToolbar .titlebar-spacer,#TabsToolbar .titlebar-buttonbox-container,#firefox-view-button,#alltabs-button,#private-browsing-indicator-with-label{display:none!important}
+#soulu-caption{margin-inline-start:auto;align-self:stretch}
+#soulu-caption .titlebar-button{width:42px!important;padding:0!important;align-items:center;justify-content:center}
+#urlbar-container{max-width:640px!important;min-width:180px!important;margin-inline:auto!important;flex:1!important}
+#urlbar{font-family:Onest,sans-serif!important;font-size:13px!important}
+#urlbar-background{border-radius:18px!important;background:var(--soulu-field)!important;border:1px solid transparent!important;box-shadow:none!important}
+#urlbar[open] #urlbar-background{border:1px solid color-mix(in srgb,currentColor 14%,transparent)!important;box-shadow:0 12px 35px #0003!important}
+#urlbar-input{text-align:center}#urlbar[focused] #urlbar-input{text-align:start}
+#tabbrowser-tabs{background:var(--soulu-field)!important;border-radius:16px!important}
+.tab-background{border:1px solid transparent!important;margin:0!important;box-shadow:none!important}
+.tab-background[selected]{background:light-dark(#fff,#494b55)!important;border-color:light-dark(#d0d1d8,#60636f)!important}
+.tabbrowser-tab{padding:0!important;min-width:40px!important;max-width:none!important;flex:1!important;font-family:Onest,sans-serif!important;font-size:13px!important}
+.tabbrowser-tab[selected]{min-width:160px!important}.tab-label-container{text-align:center!important}.tab-content{padding-inline:12px!important}
+#tabs-newtab-button,#new-tab-button{display:none!important}#soulu-newtab{margin-inline-start:4px!important}
+#soulu-vpn[connected]{color:#899657!important}#soulu-vpn[blocked]{color:#df5c64!important}
+#soulu-settings{list-style-image:url('ui/settings-icon.svg')}
+#soulu-vpn{list-style-image:url('vpn.svg')}#soulu-newtab{list-style-image:url('newtab.svg')}
+#soulu-sidebar{list-style-image:url('sidebar.svg')}
+.toolbarbutton-1{font-family:Onest,sans-serif!important}.toolbarbutton-1>.toolbarbutton-icon{width:30px!important;height:30px!important}
+#PanelUI-menu-button{display:none!important}
+:root[inFullscreen] #soulu-caption{display:none!important}
+@media(max-width:800px){#urlbar-container{max-width:none!important}#forward-button,#home-button{display:none!important}}
+#PersonalToolbar[soulu-icons-only] .bookmark-item:not([container]) .toolbarbutton-text{display:none!important}
+#TabsToolbar,#nav-bar{box-sizing:border-box!important}
+#TabsToolbar{max-height:40px!important;overflow:clip!important}
+#forward-button,#sidebar-button,#sidebar-launcher-splitter{display:none!important}
+#urlbar-container{margin-inline:0!important}
+#soulu-vpn{margin-inline-start:auto!important}
+#soulu-newtab{margin-inline-end:auto!important}
+:root[soulu-address-left] #soulu-vpn{margin-inline-start:0!important}
+#urlbar #stop-reload-button{align-items:center}
+#urlbar #stop-reload-button .toolbarbutton-icon{width:26px!important;height:26px!important;padding:5px!important}
