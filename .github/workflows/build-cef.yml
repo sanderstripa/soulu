@@ -746,7 +746,7 @@ jobs:
           if($manifest.sha256 -ne (Get-FileHash $out).Hash.ToLowerInvariant()){throw 'Installer checksum mismatch'}
           $version = Get-Content browser/artifacts/engine-version.json -Raw | ConvertFrom-Json
           "Soulu Beta 1.0.$env:BETA_NUMBER. Verified CEF $($version.cef) / Chromium $($version.chromium). Source: $env:GITHUB_SHA. Build: $env:GITHUB_RUN_ID." | Set-Content browser/artifacts/release-notes.md -Encoding utf8
-          'Extensions: Chromium extension management, local unpacked installation and Chrome Web Store are embedded in Settings. Chrome-toolbar-dependent features and Bitwarden account/autofill flows are not verified; complete Chrome extension compatibility is not claimed.' | Add-Content browser/artifacts/release-notes.md -Encoding utf8
+          'Extensions: per-profile installation and native runtime, Settings pin/unpin controls, and toolbar icons after VPN. Native action popups, MV3 workers, messaging, storage, active tabs, scripting, page autofill, synthetic credential saving and restart persistence are exercised by the integration suite. Chrome Web Store Bitwarden installation and login UI are checked. Signing into a real Bitwarden vault and its authenticated autofill/save flows are not verified; complete Chrome API coverage is not claimed.' | Add-Content browser/artifacts/release-notes.md -Encoding utf8
           Get-Content browser/RELEASE_NOTES.md | Add-Content browser/artifacts/release-notes.md -Encoding utf8
           "passed=true" >> $env:GITHUB_OUTPUT
       - name: Upload verified engine evidence
