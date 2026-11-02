@@ -23,13 +23,20 @@ class Call final:public CefDevToolsMessageObserver {
  public:
   void Start(CefRefPtr<CefBrowser> browser,const std::string& method,CefRefPtr<CefDictionaryValue> params,ExtensionReply done){
     browser_=browser;done_=std::move(done);registration_=browser->GetHost()->AddDevToolsMessageObserver(this);
-    id_=browser->GetHost()->ExecuteDevToolsMethod(0,method,params);
+    // Browser/Target commands can reply inside ExecuteDevToolsMethod. Buffer
+    // those responses until CEF has returned its unique, monotonic message ID.
+    issuing_=true;id_=browser->GetHost()->ExecuteDevToolsMethod(0,method,params);issuing_=false;
+    auto early=std::move(early_);early_.clear();
+    for(const auto& result:early)OnDevToolsMethodResult(browser,result.id,result.ok,result.bytes.data(),result.bytes.size());
+    if(!done_)return;
     if(!id_){Finish(nullptr,"Chromium did not accept the extension request");return;}
-    CefRefPtr<Call> self=this;CefPostDelayedTask(TID_UI,new Task([self]{self->Finish(nullptr,"Extension request timed out");}),15000);
+    CefRefPtr<Call> self=this;CefPostDelayedTask(TID_UI,new Task([self,method]{self->Finish(nullptr,"Extension request timed out: "+method);}),15000);
   }
   void OnDevToolsAgentDetached(CefRefPtr<CefBrowser>) override {Finish(nullptr,"Extension browser closed");}
   void OnDevToolsMethodResult(CefRefPtr<CefBrowser>,int id,bool ok,const void* bytes,size_t size) override {
-    if(id!=id_||!done_)return;
+    if(!done_)return;
+    if(issuing_){early_.push_back({id,ok,std::string(static_cast<const char*>(bytes),size)});return;}
+    if(id!=id_)return;
     auto value=CefParseJSON(std::string(static_cast<const char*>(bytes),size),JSON_PARSER_RFC);
     auto data=value&&value->GetType()==VTYPE_DICTIONARY?value->GetDictionary():nullptr;
     std::string error;if(!ok)error=data&&data->HasKey("message")?data->GetString("message").ToString():"Chromium extension request failed";
@@ -41,6 +48,8 @@ class Call final:public CefDevToolsMessageObserver {
   }
  private:
   void Finish(CefRefPtr<CefDictionaryValue> value,const std::string& error){if(!done_)return;auto done=std::move(done_);registration_=nullptr;browser_=nullptr;done(value,error);}
+  struct Result{int id;bool ok;std::string bytes;};
+  bool issuing_=false;std::vector<Result> early_;
   int id_=0;ExtensionReply done_;CefRefPtr<CefBrowser> browser_;CefRefPtr<CefRegistration> registration_;IMPLEMENT_REFCOUNTING(Call);
 };
 void Run(CefRefPtr<CefBrowser> browser,const std::string& method,CefRefPtr<CefDictionaryValue> params,ExtensionReply done){CefRefPtr<Call> call=new Call();call->Start(browser,method,params,std::move(done));}
@@ -104,7 +113,7 @@ class Service final:public ExtensionService,public CefClient,public CefLifeSpanH
     Ready([self,done]{Evaluate(self->browser_,R"JS((async()=>{
       const rows=await chrome.developerPrivate.getExtensionsInfo({includeDisabled:true,includeTerminated:true});
       const items=await Promise.all(rows.filter(e=>e.type==='EXTENSION').map(async e=>{
-        let icon='';try{const r=await fetch(e.iconUrl);const blob=await r.blob();icon=await new Promise((resolve,reject)=>{const f=new FileReader();f.onload=()=>resolve(f.result);f.onerror=reject;f.readAsDataURL(blob)});}catch{}
+        let icon=(e.iconUrl||'').startsWith('data:image/')?e.iconUrl:'';if(!icon)try{const r=await fetch(e.iconUrl);const blob=await r.blob();icon=await new Promise((resolve,reject)=>{const f=new FileReader();f.onload=()=>resolve(f.result);f.onerror=reject;f.readAsDataURL(blob)});}catch{}
         return {id:e.id,name:e.name,version:e.version,enabled:e.state==='ENABLED',pinned:!!e.pinnedToToolbar,action:typeof e.pinnedToToolbar==='boolean',path:e.path||'',icon:icon.startsWith('data:image/')?icon:''};
       }));return {items};
     })())JS",[self,done](CefRefPtr<CefDictionaryValue> result,const std::string& error){

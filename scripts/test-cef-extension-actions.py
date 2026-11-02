@@ -119,6 +119,7 @@ chrome.runtime.onMessage.addListener((m,sender,reply)=>{(async()=>{
    try:
     ImageGrab.grab().save(output.parent/'failure.png')
     report['browserState']=call(shell,'getState')
+    report['actionError']=s.evaluate(shell,'window.souluExtensionToolbar.lastError')
     report['toolbarErrors']=s.evaluate(shell,"[...document.querySelectorAll('[data-extension-toolbar] button')].map(b=>({id:b.dataset.extensionId,title:b.title,disabled:b.disabled}))")
     report['targets']=[{'type':t.get('type'),'url':t.get('url')} for t in s.targets()]
     print('FAILURE TARGETS',json.dumps(report['targets']),flush=True)

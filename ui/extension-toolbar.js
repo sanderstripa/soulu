@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  let profile='',items=[],request=0;
+  let profile='',items=[],request=0,lastError='';
   const getProfile=state=>state.incognito?'__incognito__':state.activeProfileId;
   function draw(){
     for(const host of document.querySelectorAll('[data-extension-toolbar]')){
@@ -11,7 +11,7 @@
         button.dataset.extensionId=item.id;button.title=item.name;button.setAttribute('aria-label',item.name);
         if(/^data:image\/(png|webp|jpeg|gif);base64,/i.test(item.icon||'')){const icon=document.createElement('img');icon.src=item.icon;icon.alt='';button.append(icon);}
         else button.textContent=item.name.slice(0,1);
-        button.onclick=async()=>{button.disabled=true;try{await window.browserShell.extensions('open',{profile,id:item.id});}catch(error){button.title=error.message;console.error('Extension action:',error);}finally{button.disabled=false;}};
+        button.onclick=async()=>{button.disabled=true;lastError='';try{await window.browserShell.extensions('open',{profile,id:item.id});}catch(error){lastError=error.message;button.title=error.message;console.error('Extension action:',error);}finally{button.disabled=false;}};
         host.append(button);
       }
       document.body.style.setProperty('--extension-toolbar-width',`${host.children.length*32}px`);
@@ -25,6 +25,6 @@
     catch(error){console.error('Extensions:',error);}
   }
   window.browserShell.onState(state=>{const next=getProfile(state);if(next&&next!==profile){profile=next;items=[];draw();refresh();}});
-  window.souluExtensionToolbar={refresh,get items(){return items;}};
+  window.souluExtensionToolbar={refresh,get items(){return items;},get lastError(){return lastError;}};
   refresh();setInterval(refresh,2000);
 })();
