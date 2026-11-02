@@ -178,6 +178,20 @@ with tempfile.TemporaryDirectory(prefix='soulu-navigation-', ignore_cleanup_erro
         s.evaluate(shell,"window.browserShell.setSettings({bookmarksBarPosition:'hidden'})")
         assert not s.evaluate(shell,'window.browserShell.getState()')['bookmarksBarVisible'], 'Hidden position did not hide bar'
         s.evaluate(shell,"window.browserShell.setSettings({bookmarksBarMode:'always',bookmarksBarPosition:'above'})")
+        user=ctypes.windll.user32
+        user.GetForegroundWindow.restype=ctypes.c_void_p
+        user.GetAncestor.argtypes=[ctypes.c_void_p,ctypes.c_uint];user.GetAncestor.restype=ctypes.c_void_p
+        main_window=next(h for h in windows(process.pid) if (lambda text: (user.GetClassNameW(h,text,128),text.value)[1])(ctypes.create_unicode_buffer(128))=='SouluBrowserWindow')
+        foreground=user.GetForegroundWindow()
+        current=ctypes.windll.kernel32.GetCurrentThreadId();attached=[]
+        try:
+            for thread in {user.GetWindowThreadProcessId(foreground,None) if foreground else 0,user.GetWindowThreadProcessId(main_window,None)}:
+                if thread and thread!=current and user.AttachThreadInput(current,thread,True):attached.append(thread)
+            user.ShowWindow(main_window,9);user.BringWindowToTop(main_window);user.SetForegroundWindow(main_window)
+        finally:
+            for thread in attached:user.AttachThreadInput(current,thread,False)
+        time.sleep(.2)
+        print('THUMBNAIL FOREGROUND',{'main':main_window,'foreground':user.GetForegroundWindow(),'root':user.GetAncestor(user.GetForegroundWindow(),2)},flush=True)
         before=windows(process.pid)
         assert s.evaluate(shell,"document.querySelector('.classic-toolbar .navigation-toolbar-button').parentElement.classList.contains('window-controls')")
         s.evaluate(shell,"document.querySelector('.compact-toolbar .navigation-toolbar-button').click()")

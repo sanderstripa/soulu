@@ -195,6 +195,7 @@ try:
     assert handles, ('Browser HWND missing for process',wanted_pid)
     hwnd=handles[0]
     user.GetForegroundWindow.restype=wintypes.HWND
+    user.GetWindow.argtypes=[wintypes.HWND,wintypes.UINT];user.GetWindow.restype=wintypes.HWND
     user.GetAncestor.argtypes=[wintypes.HWND,wintypes.UINT];user.GetAncestor.restype=wintypes.HWND
     user.WindowFromPoint.argtypes=[wintypes.POINT];user.WindowFromPoint.restype=wintypes.HWND
     user.AttachThreadInput.argtypes=[wintypes.DWORD,wintypes.DWORD,wintypes.BOOL]
@@ -294,6 +295,14 @@ try:
     # Deterministic native work-area/resize checks are mandatory elsewhere.
     if desktop_ready and user.GetForegroundWindow()==hwnd:
         before=wintypes.RECT();user.GetWindowRect(hwnd,ctypes.byref(before))
+        edge=wintypes.POINT(before.right-2,(before.top+before.bottom)//2)
+        hit=user.WindowFromPoint(edge);name=ctypes.create_unicode_buffer(128);user.GetClassNameW(hit,name,128)
+        print('RESIZE HIT',{'hwnd':int(hit or 0),'class':name.value,'rootHit':int(user.SendMessageW(hwnd,0x84,0,(edge.y<<16)|(edge.x&65535))),'childHit':int(user.SendMessageW(hit,0x84,0,(edge.y<<16)|(edge.x&65535)))},flush=True)
+        children=[];child=user.GetWindow(hwnd,5)
+        while child:
+            name=ctypes.create_unicode_buffer(128);user.GetClassNameW(child,name,128);r=wintypes.RECT();user.GetWindowRect(child,ctypes.byref(r))
+            children.append({'hwnd':int(child),'class':name.value,'visible':bool(user.IsWindowVisible(child)),'rect':[r.left,r.top,r.right,r.bottom]});child=user.GetWindow(child,2)
+        print('RESIZE CHILDREN',children,flush=True)
         user.SetCursorPos(before.right-2,(before.top+before.bottom)//2)
         user.mouse_event(2,0,0,0,0);time.sleep(.2)
         user.SetCursorPos(before.right-142,(before.top+before.bottom)//2);time.sleep(.5)
