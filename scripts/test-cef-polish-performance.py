@@ -90,6 +90,7 @@ with tempfile.TemporaryDirectory(prefix='soulu-polish-',ignore_cleanup_errors=Tr
   second=state()['activeTabId'];s.evaluate(shell,'browserShell.navigate('+json.dumps(origin+'/second')+')');other=connect('/second');wait(lambda:s.evaluate(other,'typeof identity==="number"'))
   wait(lambda:not state()['adaptiveToolbar']['running'])
   s.evaluate(shell,'browserShell.setSettings({freezeBackgroundTabs:true,memorySaver:true,performanceMode:"balanced"})')
+  s.evaluate(page,"window.__lifecycleEvents=[];for(const kind of ['freeze','resume','visibilitychange'])document.addEventListener(kind,()=>__lifecycleEvents.push({kind,ticks,visibility:document.visibilityState,at:performance.now()}))")
   s.evaluate(shell,'browserShell.optimizeBackgroundTabs()')
   try:wait(lambda:next(t for t in state()['tabs'] if t['id']==first).get('suspended'))
   except Exception:
@@ -97,6 +98,12 @@ with tempfile.TemporaryDirectory(prefix='soulu-polish-',ignore_cleanup_errors=Tr
    print('LIFECYCLE_PAGE',s.evaluate(page,'({visibility:document.visibilityState,ticks})'),flush=True)
    raise
   check(not next(t for t in state()['tabs'] if t['id']==second).get('suspended'),'Manual optimization pauses only a background tab')
+  print('LIFECYCLE BEFORE',s.evaluate(page,'({visibility:document.visibilityState,ticks,events:window.__lifecycleEvents})'),flush=True)
+  for _ in range(4):
+   time.sleep(.3);print('LIFECYCLE SAMPLE',s.evaluate(page,'({visibility:document.visibilityState,ticks,events:window.__lifecycleEvents})'),flush=True)
+  print('DIRECT FREEZE',s.command(page,'Page.setWebLifecycleState',{'state':'frozen'}),flush=True)
+  for _ in range(4):
+   time.sleep(.3);print('DIRECT SAMPLE',s.evaluate(page,'({visibility:document.visibilityState,ticks,events:window.__lifecycleEvents})'),flush=True)
   before=s.evaluate(page,'ticks');time.sleep(.6);check(s.evaluate(page,'ticks')==before,'Paused tab actually stops JavaScript timers')
   s.evaluate(shell,f'browserShell.switchTab({first})');wait(lambda:not next(t for t in state()['tabs'] if t['id']==first).get('suspended'));wait(lambda:s.evaluate(page,'ticks')>before)
   check(s.evaluate(page,'identity')==original['identity'] and s.evaluate(page,"document.querySelector('#draft').value")=='Unsent text','Opening a paused tab resumes without reload or loss of form data')
