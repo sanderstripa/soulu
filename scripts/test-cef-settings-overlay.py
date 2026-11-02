@@ -175,7 +175,7 @@ def main():
             check(wait(lambda: bool(u.IsChild(overlay,focus(main_window)))), 'Real Windows keyboard focus is inside Settings')
             animations = w.BOOL()
             assert u.SystemParametersInfoW(0x1042, 0, c.byref(animations), 0)
-            duration = 380 if animations.value else 90
+            duration = 320 if animations.value else 90
             check(state()['settingsOverlayDuration']==duration, 'Transition duration respects Windows animation preference')
             initial = edit('JSON.stringify(souluSettings.current)')
             call('openSettingsWindow')

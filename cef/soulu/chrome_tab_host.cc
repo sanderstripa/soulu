@@ -1,6 +1,7 @@
 #include "examples/soulu/chrome_tab_host.h"
 #include <algorithm>
 #include <set>
+#include <cwchar>
 #include "include/cef_cookie.h"
 #include "include/cef_task.h"
 #include "include/base/cef_logging.h"
