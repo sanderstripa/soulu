@@ -1172,8 +1172,10 @@ int BrowserWindow::PreparePopup(int source_id, const std::string& url,
   tab.activate_on_attach = !background;
   tab.defer_media = background;
   if (!background) CaptureThumbnail();
+  // Capture before push_back: adding a tab can invalidate the opener pointer.
+  const bool chrome_popup=source->chrome_host!=nullptr;
   tabs_.push_back(tab);
-  if(source->chrome_host){
+  if(chrome_popup){
     // A native parent forces CEF's ChromeChildWindow delegate, even for a
     // Views-hosted opener. Keep this popup Views-hosted so our delegate can
     // attach its BrowserView to the existing Soulu tab and preserve opener.
