@@ -22,7 +22,7 @@ namespace soulu {
 namespace {
 // Chrome validates standard command IDs before OnContextMenuCommand. Public
 // CEF IDs belong to Alloy; sending them to Chrome hits its NOTREACHED handler.
-int MenuCommand(CefRefPtr<CefBrowser> browser,int command){
+int NativeContextCommand(CefRefPtr<CefBrowser> browser,int command){
   if(browser->GetHost()->GetRuntimeStyle()!=CEF_RUNTIME_STYLE_CHROME)return command;
   switch(command){
     case MENU_ID_BACK:return 33000;case MENU_ID_FORWARD:return 33001;
@@ -355,14 +355,14 @@ void BrowserClient::OnBeforeContextMenu(CefRefPtr<CefBrowser> browser,CefRefPtr<
     return;
   }
   const bool internal=owner_->IsTrustedUi(frame->GetURL())||owner_->IsHomeUi(frame->GetURL())||owner_->IsHistoryUi(frame->GetURL())||owner_->IsOnboardingUi(frame->GetURL());
-  if(internal){model->Clear();if(!params->GetSelectionText().empty())model->AddItem(MenuCommand(browser,MENU_ID_COPY),label("Копировать","Copy"));return;}
+  if(internal){model->Clear();if(!params->GetSelectionText().empty())model->AddItem(NativeContextCommand(browser,MENU_ID_COPY),label("Копировать","Copy"));return;}
   if(browser->GetHost()->GetRuntimeStyle()==CEF_RUNTIME_STYLE_CHROME){
     for(size_t i=model->GetCount();i>0;--i)if(!ExtensionContextItem(model,i-1))model->RemoveAt(i-1);
   }else model->Clear();
   bool browser_items=false;
   auto add=[&](int id,const char* ru,const char* english,bool enabled=true){
     if(!browser_items&&model->GetCount()&&model->GetTypeAt(model->GetCount()-1)!=MENUITEMTYPE_SEPARATOR)model->AddSeparator();
-    id=MenuCommand(browser,id);
+    id=NativeContextCommand(browser,id);
     browser_items=true;model->AddItem(id,label(ru,english));model->SetEnabled(id,enabled);
   };
   const auto link=params->GetLinkUrl().ToString(),source=params->GetSourceUrl().ToString();
@@ -440,8 +440,8 @@ bool BrowserClient::RunContextMenu(CefRefPtr<CefBrowser> browser,
     if(!browser->IsValid()||browser->GetMainFrame()->GetURL()!=menu_url||!keep_alive->owner_->MenuTabActive(keep_alive->tab_id_)||!IsWindow(keep_alive->owner_->hwnd())){callback->Cancel();return;}
     if(hit&&hit->GetBool("readonly")){
       const bool en=keep_alive->owner_->MenuEnglish();snapshot.clear();
-      snapshot.push_back(MenuItem{MenuCommand(browser,MENU_ID_COPY),en?L"Copy":L"Копировать"});snapshot.back().accelerator=L"Ctrl+C";snapshot.back().enabled=hit->GetBool("selected");
-      snapshot.push_back(MenuItem{MenuCommand(browser,MENU_ID_SELECT_ALL),en?L"Select all":L"Выделить всё"});snapshot.back().accelerator=L"Ctrl+A";
+      snapshot.push_back(MenuItem{NativeContextCommand(browser,MENU_ID_COPY),en?L"Copy":L"Копировать"});snapshot.back().accelerator=L"Ctrl+C";snapshot.back().enabled=hit->GetBool("selected");
+      snapshot.push_back(MenuItem{NativeContextCommand(browser,MENU_ID_SELECT_ALL),en?L"Select all":L"Выделить всё"});snapshot.back().accelerator=L"Ctrl+A";
     }
     const int command=ShowSouluMenu(keep_alive->owner_->hwnd(),point,std::move(snapshot),{keep_alive->owner_->MenuDark()});
     if(command)callback->Continue(command,EVENTFLAG_NONE);else callback->Cancel();
@@ -453,7 +453,7 @@ bool BrowserClient::RunContextMenu(CefRefPtr<CefBrowser> browser,
   return true;
 }
 
-bool BrowserClient::OnContextMenuCommand(CefRefPtr<CefBrowser> browser,
+bool BrowserClient::OnContextNativeContextCommand(CefRefPtr<CefBrowser> browser,
     CefRefPtr<CefFrame> frame, CefRefPtr<CefContextMenuParams> params,
     int command, EventFlags) {
   CEF_REQUIRE_UI_THREAD();
