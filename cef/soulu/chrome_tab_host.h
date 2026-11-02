@@ -13,5 +13,6 @@ class ChromeTabHost:public virtual CefBaseRefCounted {
 CefRefPtr<ChromeTabHost> CreateChromeTab(HWND parent,CefRefPtr<CefClient> client,
     const std::string& url,const CefBrowserSettings& settings,
     CefRefPtr<CefDictionaryValue> extra,CefRefPtr<CefRequestContext> context,
-    std::function<void(CefRefPtr<CefBrowser>,CefRefPtr<ChromeTabHost>)> popup_ready={});
+    std::function<void(CefRefPtr<CefBrowser>,CefRefPtr<ChromeTabHost>)> popup_ready={},
+    std::function<void()> failed={});
 }

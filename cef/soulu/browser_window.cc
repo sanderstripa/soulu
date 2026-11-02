@@ -1227,7 +1227,7 @@ void BrowserWindow::NewTab(const std::string& url, bool incognito,
   // captures that policy; function-argument evaluation order is unspecified.
   auto request_context=context?context:ContextForNewTab(incognito);
   auto extra=CefDictionaryValue::Create();extra->SetBool("souluIncognito",incognito);extra->SetBool("souluDeferMedia",!foreground);
-  auto chrome_host=CreateChromeTab(hwnd_,new BrowserClient(this,role,id),InternalUrl(tab.url),browser_settings,extra,request_context,[this](CefRefPtr<CefBrowser> browser,CefRefPtr<ChromeTabHost> host){AttachChromePopup(browser,host);});
+  auto chrome_host=CreateChromeTab(hwnd_,new BrowserClient(this,role,id),InternalUrl(tab.url),browser_settings,extra,request_context,[this](CefRefPtr<CefBrowser> browser,CefRefPtr<ChromeTabHost> host){AttachChromePopup(browser,host);},[this,id]{AbortPopup(id);});
   const bool created=chrome_host!=nullptr;
   if(auto* created_tab=FindTab(id))created_tab->chrome_host=chrome_host;
   Layout();
@@ -1360,6 +1360,7 @@ void BrowserWindow::CloseTab(int id) {
     it->browser->GetHost()->CloseBrowser(true);
     return;
   }
+  if(it->chrome_host)it->chrome_host->Close();
   const bool active = id == active_tab_id_;
   const int adjacent=AdjacentTab(id);
   const bool incognito = it->incognito;
@@ -3093,7 +3094,8 @@ void BrowserWindow::CloseAll() {
   // Destroying an Alloy child can synchronously call BrowserClosed and erase
   // tabs_. Close a snapshot so no browser is skipped by iterator invalidation.
   std::vector<CefRefPtr<CefBrowser>> browsers;
-  for (const auto& tab : tabs_) if (tab.browser) browsers.push_back(tab.browser);
+  for (const auto& tab : tabs_) {if (tab.browser) browsers.push_back(tab.browser);else if(tab.chrome_host)tab.chrome_host->Close();}
+  tabs_.erase(std::remove_if(tabs_.begin(),tabs_.end(),[](const Tab& tab){return !tab.browser&&tab.chrome_host;}),tabs_.end());
   if (shell_) browsers.push_back(shell_);
   for (const auto& browser : browsers) browser->GetHost()->CloseBrowser(true);
   if (!shell_ && tabs_.empty()) FinishClose();

@@ -146,7 +146,7 @@ def main():
             click(card('interface'));evaluate('souluSettingsRequestClose()')
             o.wait(lambda:not o.windows(process.pid,'SouluSettingsOverlay'))
             # Tab sidebar is an overlay: webpage geometry must stay unchanged.
-            target=next(t for t in s.targets() if t.get('type')=='page' and '/ui/index.html' not in t.get('url','') and '/ui/settings.html' not in t.get('url',''))
+            target=next(t for t in s.targets() if t.get('type')=='page' and '/ui/index.html' not in t.get('url','') and '/ui/settings.html' not in t.get('url','') and not t.get('url','').startswith('chrome://extensions/shortcuts'))
             page=s.websocket.create_connection(target['webSocketDebuggerUrl'],timeout=30,origin=s.BASE);sockets.append(page)
             def surface():return s.evaluate(shell,'new Promise((resolve,reject)=>cefQuery({request:JSON.stringify({action:"browser.surfaceDiagnostics"}),onSuccess:v=>resolve(JSON.parse(v)),onFailure:(_,m)=>reject(Error(m))}))')
             for layout in ['compact','classic']:

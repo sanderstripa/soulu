@@ -1,5 +1,7 @@
 #include "examples/soulu/chrome_tab_host.h"
 #include <algorithm>
+#include "include/cef_cookie.h"
+#include "include/base/cef_logging.h"
 #include "include/views/cef_browser_view.h"
 #include "include/views/cef_browser_view_delegate.h"
 #include "include/views/cef_window.h"
@@ -9,6 +11,10 @@
 #include "include/views/cef_layout.h"
 #include "include/wrapper/cef_helpers.h"
 namespace soulu { namespace {
+class Completion final:public CefCompletionCallback {
+ public:explicit Completion(std::function<void()> done):done_(std::move(done)){}void OnComplete()override{done_();}
+ private:std::function<void()> done_;IMPLEMENT_REFCOUNTING(Completion);
+};
 class Host final:public ChromeTabHost,public CefWindowDelegate,public CefBrowserViewDelegate {
  public:
   explicit Host(HWND parent,std::function<void(CefRefPtr<CefBrowser>,CefRefPtr<ChromeTabHost>)> ready={}):parent_(parent),popup_ready_(std::move(ready)){}
@@ -17,11 +23,19 @@ class Host final:public ChromeTabHost,public CefWindowDelegate,public CefBrowser
   ChromeToolbarType GetChromeToolbarType(CefRefPtr<CefBrowserView>) override{return CEF_CTT_NORMAL;}
   bool IsFrameless(CefRefPtr<CefWindow>) override{return true;}
   CefRect GetInitialBounds(CefRefPtr<CefWindow>) override{return CefRect(0,0,1000,700);}
+  void SetFailure(std::function<void()> failed){failed_=std::move(failed);}
   bool Start(CefRefPtr<CefClient> client,const std::string& url,const CefBrowserSettings& settings,
       CefRefPtr<CefDictionaryValue> extra,CefRefPtr<CefRequestContext> context){
-    view_=CefBrowserView::CreateBrowserView(client,url,settings,extra,context,this);
-    if(!view_)return false;
-    window_=CefWindow::CreateTopLevelWindow(this);return window_!=nullptr;
+    if(!context)context=CefRequestContext::GetGlobalContext();
+    CefRefPtr<Host> self=this;
+    // Unlike CreateBrowser(), CreateBrowserView() requires an initialized
+    // request context. Cookie storage completion is the public async barrier.
+    return context->GetCookieManager(new Completion([self,client,url,settings,extra,context]{
+      if(self->closing_)return;
+      self->view_=CefBrowserView::CreateBrowserView(client,url,settings,extra,context,self);
+      if(self->view_)self->window_=CefWindow::CreateTopLevelWindow(self);
+      if(!self->view_||!self->window_){LOG(ERROR)<<"Chrome tab host creation failed after context initialization";if(self->failed_)self->failed_();}
+    }))!=nullptr;
   }
   void OnWindowCreated(CefRefPtr<CefWindow> window) override {
     window_=window;auto hwnd=window->GetWindowHandle();
@@ -51,7 +65,7 @@ class Host final:public ChromeTabHost,public CefWindowDelegate,public CefBrowser
     if(visible){if(!window_->IsVisible())window_->Show();if(activate)window_->Activate();}
     else window_->Hide();Resize();
   }
-  void Close() override{if(view_&&view_->GetBrowser())view_->GetBrowser()->GetHost()->CloseBrowser(true);else if(window_)window_->Close();}
+  void Close() override{closing_=true;if(view_&&view_->GetBrowser())view_->GetBrowser()->GetHost()->CloseBrowser(true);else if(window_)window_->Close();}
  private:
   void Resize(){
     if(!window_||!view_)return;const auto size=window_->GetSize();
@@ -61,14 +75,15 @@ class Host final:public ChromeTabHost,public CefWindowDelegate,public CefBrowser
     view_->SetBounds(CefRect(0,-toolbar_height,std::max(1,size.width),std::max(1,size.height)+toolbar_height));
   }
   std::function<void(CefRefPtr<CefBrowser>,CefRefPtr<ChromeTabHost>)> popup_ready_;
-  HWND parent_;bool visible_=false;CefRefPtr<CefWindow> window_;
+  std::function<void()> failed_;
+  HWND parent_;bool visible_=false,closing_=false;CefRefPtr<CefWindow> window_;
   CefRefPtr<CefBrowserView> view_;CefRefPtr<CefView> toolbar_;
   IMPLEMENT_REFCOUNTING(Host);
 };
 }
 CefRefPtr<ChromeTabHost> CreateChromeTab(HWND parent,CefRefPtr<CefClient> client,
     const std::string& url,const CefBrowserSettings& settings,CefRefPtr<CefDictionaryValue> extra,
-    CefRefPtr<CefRequestContext> context,std::function<void(CefRefPtr<CefBrowser>,CefRefPtr<ChromeTabHost>)> popup_ready){
-  CefRefPtr<Host> host=new Host(parent,std::move(popup_ready));if(!host->Start(client,url,settings,extra,context))return nullptr;return host;
+    CefRefPtr<CefRequestContext> context,std::function<void(CefRefPtr<CefBrowser>,CefRefPtr<ChromeTabHost>)> popup_ready,std::function<void()> failed){
+  CefRefPtr<Host> host=new Host(parent,std::move(popup_ready));host->SetFailure(std::move(failed));if(!host->Start(client,url,settings,extra,context))return nullptr;return host;
 }
 }

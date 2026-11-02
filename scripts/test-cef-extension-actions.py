@@ -65,7 +65,7 @@ chrome.runtime.onMessage.addListener((m,sender,reply)=>{(async()=>{
    env=dict(os.environ,LOCALAPPDATA=str(root/'local'),APPDATA=str(root/'roaming'),SOULU_UI_TEST_PORT=str(s.DEBUG_PORT),SOULU_REGRESSION_SKIP_FIRST_RUN='1')
    def start():
     nonlocal process
-    process=subprocess.Popen([exe,'--no-proxy-server'],env=env);shell=socket('/ui/index.html');wait(lambda:s.evaluate(shell,"typeof window.browserShell?.extensions==='function'"));return shell
+    process=subprocess.Popen([exe,'--no-proxy-server','--enable-logging','--log-file='+str(output.parent/'cef.log')],env=env);shell=socket('/ui/index.html');wait(lambda:s.evaluate(shell,"typeof window.browserShell?.extensions==='function'"));return shell
    shell=start();call(shell,'openSettingsWindow');settings=socket('/ui/settings.html');wait(lambda:s.evaluate(settings,"document.body?.classList.contains('ready')"));s.evaluate(settings,"souluSettings.openSection('extensions')");manager=socket('chrome://extensions/')
    wait(lambda:s.evaluate(manager,"typeof window.chrome?.developerPrivate?.loadUnpacked==='function'"))
    s.evaluate(manager,'chrome.developerPrivate.updateProfileConfiguration({inDeveloperMode:true})')
