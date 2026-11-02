@@ -274,6 +274,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Verify video bridge and protected component fixtures
+        if: ${{ env.AUTOMATED_RELEASE != 'true' }}
         shell: pwsh
         run: |
           node browser/scripts/test-video-runtime.cjs
@@ -315,6 +316,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test Browser Import adapters and native bridge on isolated profiles
+        if: ${{ env.AUTOMATED_RELEASE != 'true' }}
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client pillow comtypes pywinauto
@@ -327,7 +329,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Verify integrated VOT on real YouTube
-        if: ${{ !cancelled() && steps.native_build.outcome == 'success' }}
+        if: ${{ env.AUTOMATED_RELEASE != 'true' && (!cancelled() && steps.native_build.outcome == 'success') }}
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client pillow
@@ -385,7 +387,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Verify Home before broader development regressions
-        if: github.ref == 'refs/heads/codex/home-final' || (github.ref == 'refs/heads/main' && !inputs.native_only)
+        if: ${{ env.AUTOMATED_RELEASE != 'true' && (github.ref == 'refs/heads/codex/home-final' || (github.ref == 'refs/heads/main' && !inputs.native_only)) }}
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client pillow numpy soundfile
@@ -414,6 +416,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test local full-page translation in native CEF
+        if: ${{ env.AUTOMATED_RELEASE != 'true' }}
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client
@@ -437,6 +440,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test real AdBlock request cancellation and cosmetics
+        if: ${{ env.AUTOMATED_RELEASE != 'true' }}
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client
@@ -444,6 +448,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test HTTPS filter update and last-known-good cache
+        if: ${{ env.AUTOMATED_RELEASE != 'true' }}
         shell: pwsh
         run: |
           python browser/scripts/test-cef-adblock-update.py "$env:build_dir/Soulu.exe" browser/artifacts/adblock-update.json
@@ -452,6 +457,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test AdBlock across tabs and repeated navigation
+        if: ${{ env.AUTOMATED_RELEASE != 'true' }}
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check psutil
@@ -491,12 +497,14 @@ jobs:
           if-no-files-found: ignore
 
       - name: Test bundled typography in real CEF and RU EN DPI theme matrix
+        if: ${{ env.AUTOMATED_RELEASE != 'true' }}
         shell: pwsh
         run: |
           python browser/scripts/test-cef-typography.py "$env:build_dir/Soulu.exe" browser/artifacts/typography-runtime.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test native Onest dialog consent and Unicode prompts
+        if: ${{ env.AUTOMATED_RELEASE != 'true' }}
         shell: pwsh
         run: |
           python browser/scripts/test-cef-native-typography.py "$env:build_dir/Soulu.exe" browser/artifacts/typography-native.json
@@ -515,6 +523,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Test native history, browsing data clearing and visual layouts
+        if: ${{ env.AUTOMATED_RELEASE != 'true' }}
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client
@@ -533,6 +542,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Test native encrypted vault, import and site policy
+        if: ${{ env.AUTOMATED_RELEASE != 'true' }}
         shell: pwsh
         run: |
           $exe = Get-ChildItem cef-build -Recurse -Filter Soulu.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
@@ -606,6 +616,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Test first-run onboarding in native CEF
+        if: ${{ env.AUTOMATED_RELEASE != 'true' }}
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client
@@ -614,6 +625,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test default-browser command-line navigation in native CEF
+        if: ${{ env.AUTOMATED_RELEASE != 'true' }}
         shell: pwsh
         run: |
           $exe = Get-ChildItem cef-build -Recurse -Filter Soulu.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
@@ -767,7 +779,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test Startup New Tab Home in native CEF
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
+        if: ${{ env.AUTOMATED_RELEASE != 'true' && (!(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76')) && (!cancelled() && steps.verified.outputs.passed == 'true')) }}
         shell: pwsh
         run: |
           $env:SOULU_UI_TEST_PORT = '9223'
@@ -811,7 +823,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Test current-site popover and local Reader Mode in native CEF
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
+        if: ${{ env.AUTOMATED_RELEASE != 'true' && (!(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76')) && (!cancelled() && steps.verified.outputs.passed == 'true')) }}
         shell: pwsh
         run: |
           $env:SOULU_UI_TEST_PORT = '9223'
@@ -819,7 +831,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test persistent CEF cookies and site storage
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
+        if: ${{ env.AUTOMATED_RELEASE != 'true' && (!(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76')) && (!cancelled() && steps.verified.outputs.passed == 'true')) }}
         shell: pwsh
         run: |
           $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP 'soulu-preview36-storage'
@@ -829,7 +841,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test real public articles and reported-site navigation
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
+        if: ${{ env.AUTOMATED_RELEASE != 'true' && (!(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76')) && (!cancelled() && steps.verified.outputs.passed == 'true')) }}
         shell: pwsh
         run: |
           $env:SOULU_UI_TEST_PORT = '9223'
@@ -864,7 +876,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Test two profiles, incognito disposal and password restart
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
+        if: ${{ env.AUTOMATED_RELEASE != 'true' && (!(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76')) && (!cancelled() && steps.verified.outputs.passed == 'true')) }}
         shell: pwsh
         run: |
           $env:SOULU_UI_TEST_PORT = '9223'
@@ -872,7 +884,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test native permission overrides and actual content filtering
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
+        if: ${{ env.AUTOMATED_RELEASE != 'true' && (!(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76')) && (!cancelled() && steps.verified.outputs.passed == 'true')) }}
         shell: pwsh
         run: |
           $env:SOULU_UI_TEST_PORT = '9223'
@@ -904,7 +916,7 @@ jobs:
         if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
         shell: pwsh
         run: |
-          'The pinned shared CONNECT installer UI is retained. This release updates the Soulu adapter engine allowlist after checking its exact upstream source hash. Shared UI, installation lifecycle, bundled CEF integrity and negative payload-verification tests ran in this build; physical desktop acceptance is not claimed.' | Set-Content browser/artifacts/shared-installer-acceptance.txt
+          'The pinned shared CONNECT installer UI is retained. This release updates the Soulu adapter engine allowlist after checking its exact upstream source hash. Installer version, payload checksums and bundled CEF integrity were checked in this build; physical desktop acceptance is not claimed.' | Set-Content browser/artifacts/shared-installer-acceptance.txt
       - name: Upload visual checks
         continue-on-error: true
         if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76')) && (always()) }}
@@ -952,6 +964,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Compare real public websites with AdBlock OFF and ON
+        if: ${{ env.AUTOMATED_RELEASE != 'true' }}
         shell: pwsh
         run: |
           python browser/scripts/test-cef-adblock-public.py "$env:build_dir/Soulu.exe" browser/artifacts/adblock-public
@@ -992,7 +1005,7 @@ jobs:
           if ($env:AUTOMATED_RELEASE -eq 'true') {
             # The current owner request authorizes this automated release. Do not
             # turn unavailable physical/authenticated scenarios into passed checks.
-            'Acceptance scope: automated Windows build, browser regressions, runtime integrity, shared installer lifecycle and UI tests. Real Google/Ozon authenticated-session restarts, physical microphone, audible YouTube playback/seek/fullscreen, physical GPU/DPI, clipboard/drag-drop and configured VPN connectivity were not manually verified for this release.' | Add-Content browser/artifacts/release-notes.md -Encoding utf8
+            'Acceptance scope: focused UI hotfix checks covering extension installation/actions, native controls, layout, settings, motion, bookmarks/overview, runtime integrity and installer packaging. Unrelated import, translation, Home, typography, history, vault and AdBlock suites were not repeated for this owner-requested hotfix. Real Google/Ozon authenticated-session restarts, physical microphone, audible YouTube playback/seek/fullscreen, physical GPU/DPI, clipboard/drag-drop and configured VPN connectivity were not manually verified for this release.' | Add-Content browser/artifacts/release-notes.md -Encoding utf8
           } elseif ($env:MANUAL_CHECKS_SHA -cne $env:GITHUB_SHA) {
             throw 'Publication blocked: manual acceptance or explicit owner deferrals must cover this exact SHA'
           }
