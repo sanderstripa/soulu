@@ -53,6 +53,10 @@ jobs:
           New-ItemProperty -Path $key -Name DumpFolder -PropertyType ExpandString -Value "$env:GITHUB_WORKSPACE\artifacts\dumps" -Force | Out-Null
           New-ItemProperty -Path $key -Name DumpType -PropertyType DWord -Value 1 -Force | Out-Null
           New-ItemProperty -Path $key -Name DumpCount -PropertyType DWord -Value 3 -Force | Out-Null
+          New-Item -ItemType Directory -Force tools | Out-Null
+          Invoke-WebRequest 'https://download.sysinternals.com/files/Procdump.zip' -OutFile tools/procdump.zip
+          Expand-Archive tools/procdump.zip tools/ -Force
+          'SOULU_EXTENSION_DUMP_TOOL='+"$env:GITHUB_WORKSPACE/tools/procdump64.exe" | Out-File $env:GITHUB_ENV -Append
           python -m pip install --disable-pip-version-check websocket-client pillow pywinauto
       - name: Verify real popup lifecycle and saved credentials
         shell: pwsh

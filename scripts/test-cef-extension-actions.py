@@ -26,7 +26,7 @@ class Page(http.server.BaseHTTPRequestHandler):
 
 def main():
  exe=str(Path(sys.argv[1]).resolve());output=Path(sys.argv[2]).resolve();output.parent.mkdir(parents=True,exist_ok=True)
- report={'passed':False,'checks':[]};connections=[];process=None
+ report={'passed':False,'checks':[]};connections=[];process=None;monitors=[]
  server=http.server.ThreadingHTTPServer(('127.0.0.1',0),Page);threading.Thread(target=server.serve_forever,daemon=True).start();url=f'http://127.0.0.1:{server.server_port}/login'
  def check(ok,label):
   assert ok,label
@@ -65,7 +65,10 @@ chrome.runtime.onMessage.addListener((m,sender,reply)=>{(async()=>{
    env=dict(os.environ,LOCALAPPDATA=str(root/'local'),APPDATA=str(root/'roaming'),SOULU_UI_TEST_PORT=str(s.DEBUG_PORT),SOULU_REGRESSION_SKIP_FIRST_RUN='1')
    def start():
     nonlocal process
-    process=subprocess.Popen([exe,'--no-proxy-server','--enable-logging','--log-file='+str(output.parent/'cef.log')],env=env);shell=socket('/ui/index.html');wait(lambda:s.evaluate(shell,"typeof window.browserShell?.extensions==='function'"));return shell
+    process=subprocess.Popen([exe,'--no-proxy-server','--enable-logging','--log-file='+str(output.parent/'cef.log')],env=env)
+    if os.environ.get('SOULU_EXTENSION_DUMP_TOOL'):
+     dumpdir=output.parent/'dumps';dumpdir.mkdir(exist_ok=True);monitors.append(subprocess.Popen([os.environ['SOULU_EXTENSION_DUMP_TOOL'],'-accepteula','-e','-mm','-o',str(process.pid),str(dumpdir)]))
+    shell=socket('/ui/index.html');wait(lambda:s.evaluate(shell,"typeof window.browserShell?.extensions==='function'"));return shell
    shell=start();call(shell,'openSettingsWindow');settings=socket('/ui/settings.html');wait(lambda:s.evaluate(settings,"document.body?.classList.contains('ready')"));s.evaluate(settings,"souluSettings.openSection('extensions')");manager=socket('chrome://extensions/')
    wait(lambda:s.evaluate(manager,"typeof window.chrome?.developerPrivate?.loadUnpacked==='function'"))
    s.evaluate(manager,'chrome.developerPrivate.updateProfileConfiguration({inDeveloperMode:true})')
@@ -101,11 +104,14 @@ chrome.runtime.onMessage.addListener((m,sender,reply)=>{(async()=>{
    wait(lambda:s.evaluate(popup,"!!JSON.parse(document.querySelector('#result').textContent||'{}').filled"))
    s.sequence+=1;popup.send(json.dumps({'id':s.sequence,'method':'Runtime.evaluate','params':{'expression':'window.close();true'}}))
    wait(lambda:not any('chrome-extension://'+ident+'/popup.html' in t.get('url','') for t in s.targets()))
+   time.sleep(.5)
    check(len(call(shell,'getState')['tabs'])==before,'Closing the native popup preserves all Soulu tabs')
    # A real submit also offers Soulu's own password save. Decline that
    # separate vault prompt so it cannot block the extension worker test.
    s.sequence+=1;content.send(json.dumps({'id':s.sequence,'method':'Runtime.evaluate','params':{'expression':"username.value='saved-user';password.value='saved-password';login.requestSubmit();true"}}))
    decline=wait(lambda:next((c for c in p.dialog_controls(process.pid) if c[1]=='Button' and c[3]==7),None))
+   ImageGrab.grab().save(output.parent/'password-consent.png')
+   print('Password dialog:',[(c[1],c[2],c[3]) for c in p.dialog_controls(process.pid)],flush=True)
    ButtonWrapper(decline[0]).click_input()
    wait(lambda:s.evaluate(content,"document.documentElement.dataset.extensionSaved==='true'"));check(True,'Content script saves synthetic credentials through the worker')
    stop();shell=start();profile=call(shell,'getState')['activeProfileId'];rows=extension(shell,'list',profile)['items'];check(any(e['id']==ident and e['pinned'] for e in rows),'Installed extension and pin survive restart')
@@ -120,6 +126,8 @@ chrome.runtime.onMessage.addListener((m,sender,reply)=>{(async()=>{
    stop();report['passed']=True
  finally:
   if process and not report['passed']:
+   try:process.wait(timeout=5)
+   except subprocess.TimeoutExpired:pass
    report['processExitCode']=process.poll()
    try:
     ImageGrab.grab().save(output.parent/'failure.png')
@@ -132,5 +140,7 @@ chrome.runtime.onMessage.addListener((m,sender,reply)=>{(async()=>{
   if process:
    try:stop()
    except Exception:process.kill();process.wait()
+  for monitor in monitors:
+   if monitor.poll() is None:monitor.terminate()
   server.shutdown();output.write_text(json.dumps(report,indent=2),encoding='utf-8')
 if __name__=='__main__':main()
