@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [navigation]
+        suite: [polish]
     env:
       PYTHONUTF8: 1
       SOULU_REGRESSION_SKIP_FIRST_RUN: 1
@@ -30,9 +30,9 @@ jobs:
       - name: Restore exact compiled candidate
         uses: actions/download-artifact@v4
         with:
-          name: Soulu-cef-candidate-fdb2671c350aed98a28c3b2a1bb1fd9a2ea2c1ba
+          name: Soulu-cef-candidate-7c13ae30aba1d71d771fd2aad96570756ecde294
           path: runtime
-          run-id: 41450088757
+          run-id: 41447654689
           github-token: ${{ github.token }}
       - name: Restore the approved CEF runtime
         shell: pwsh
@@ -62,7 +62,6 @@ jobs:
         shell: pwsh
         run: |
           switch ($env:SUITE) {
-            'daily-use' { python scripts/test-cef-daily-use.py runtime/Soulu.exe artifacts/daily-use }
             'polish' { python scripts/test-cef-polish-performance.py runtime/Soulu.exe artifacts/polish }
             'navigation' { python scripts/test-cef-navigation.py runtime/Soulu.exe }
             'layout' { python scripts/test-cef-layout.py runtime/Soulu.exe artifacts/layout }
