@@ -29,7 +29,7 @@ def main():
   with tempfile.TemporaryDirectory(prefix='soulu-ui-hotfix-',ignore_cleanup_errors=True) as temp:
    env=dict(os.environ,LOCALAPPDATA=temp,SOULU_UI_TEST_PORT=str(s.DEBUG_PORT),SOULU_REGRESSION_SKIP_FIRST_RUN='1')
    process=subprocess.Popen([exe,'--no-proxy-server'],env=env);shell=connect('/ui/index.html')
-   o.wait(lambda:s.evaluate(shell,"typeof browserShell?.getState==='function'"))
+   o.wait(lambda:s.evaluate(shell,"typeof window.browserShell?.getState==='function'"))
    def call(method,value=None):return s.evaluate(shell,'browserShell.'+method+'('+('' if value is None else json.dumps(value))+')')
    def state():return call('getState')
    hwnd=o.wait(lambda:next(iter(o.windows(process.pid,'SouluBrowserWindow')),None));u.MoveWindow(hwnd,40,30,940,640,True);u.SetForegroundWindow(hwnd)
