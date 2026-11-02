@@ -240,7 +240,20 @@ def main():
                 s.evaluate(shell, '[...document.querySelectorAll('+json.dumps(action_selector)+')].find(b=>b.getClientRects().length).click()')
                 popup = socket('chrome-extension://'+bitwarden+'/popup/')
                 text = wait(lambda: s.evaluate(popup, 'document.body?.innerText'))
-                wait(lambda: s.evaluate(popup, '/(Log in|Log In|Email|email|Войти|почт)/.test(document.body.innerText)'), 60)
+                print('Bitwarden popup initial:', s.evaluate(popup, '({url:location.href,ready:document.readyState,text:document.body.innerText.slice(0,5000)})'), flush=True)
+                def login_ready():
+                    return s.evaluate(popup, """(()=>{
+                      const email=document.querySelector('input[type=email],input[autocomplete=username],input[name=email]');
+                      if(email&&email.getClientRects().length&&!email.disabled)return true;
+                      const login=[...document.querySelectorAll('button,a,[role=button]')].find(b=>b.getClientRects().length&&/(Log\\s*in|Login|Войти|Вход)/i.test(b.innerText));
+                      if(login)login.click();
+                      return false;
+                    })()""")
+                try:
+                    wait(login_ready, 60)
+                finally:
+                    print('Bitwarden popup final:', s.evaluate(popup, '({url:location.href,ready:document.readyState,text:document.body.innerText.slice(0,5000),inputs:[...document.querySelectorAll("input")].map(e=>({type:e.type,name:e.name,visible:!!e.getClientRects().length,disabled:e.disabled}))})'), flush=True)
+                    ImageGrab.grab().save(output.parent / 'bitwarden-popup.png')
                 check(len(s.evaluate(shell, 'browserShell.getState()')['tabs']) == count, 'Real Bitwarden opens its own action popup without a Soulu tab')
                 check(True, 'Bitwarden initializes its account login interface')
                 report['bitwardenPopupText'] = s.evaluate(popup, 'document.body.innerText.slice(0,3000)')
