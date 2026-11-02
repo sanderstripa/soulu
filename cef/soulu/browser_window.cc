@@ -17,6 +17,7 @@
 #include "include/cef_app.h"
 #include "include/cef_command_line.h"
 #include "include/cef_devtools_message_observer.h"
+#include "include/cef_image.h"
 
 #include <windowsx.h>
 #include <shellapi.h>
@@ -197,25 +198,6 @@ class SiteStorageJob final : public CefDevToolsMessageObserver {
   CefRefPtr<CefMessageRouterBrowserSide::Callback> callback_;
   IMPLEMENT_REFCOUNTING(SiteStorageJob);
 };
-// A single request at a navigation boundary; no additional CEF renderer or HWND.
-class ThumbnailObserver final : public CefDevToolsMessageObserver {
- public:
-  ThumbnailObserver(CefRefPtr<BrowserWindow> owner, int id, std::string url)
-      : owner_(owner), id_(id), url_(std::move(url)) {}
-  void OnDevToolsMethodResult(CefRefPtr<CefBrowser>, int message_id, bool success,
-                             const void* result, size_t size) override {
-    if(message_id!=900001 || !success) return;
-    auto parsed=CefParseJSON(std::string(static_cast<const char*>(result),size),JSON_PARSER_RFC);
-    if(parsed && parsed->GetType()==VTYPE_DICTIONARY) {
-      auto data=parsed->GetDictionary()->GetString("data").ToString();
-      if(!data.empty()) owner_->StoreThumbnail(id_,url_,"data:image/jpeg;base64,"+data);
-    }
-  }
- private:
-  CefRefPtr<BrowserWindow> owner_; int id_; std::string url_;
-  IMPLEMENT_REFCOUNTING(ThumbnailObserver);
-};
-
 // Requests without a browser/frame (notably Service Worker network traffic)
 // still traverse a profile-owned hook. Never consult mutable tab/UI state on IO.
 class WorkerResourceHandler final : public CefResourceRequestHandler {
@@ -1688,17 +1670,43 @@ void BrowserWindow::StoreThumbnail(int id, const std::string& url, const std::st
 
 void BrowserWindow::CaptureThumbnail() {
   auto* tab=ActiveTab();
-  if(!tab || !tab->browser || IsIconic(hwnd_)) return;
-  HWND child=tab->browser->GetHost()->GetWindowHandle(); RECT r={}; GetClientRect(child,&r);
-  if(!IsWindowVisible(child) || r.right<2 || r.bottom<2) return;
-  auto params=CefDictionaryValue::Create();params->SetString("format","jpeg");params->SetInt("quality",70);
-  params->SetBool("fromSurface",true);params->SetBool("captureBeyondViewport",false);
-  // A clip makes Chromium temporarily resize/emulate this viewport and later
-  // restore its old size. A tab switch or native layout change can race that
-  // restoration. Capture the existing viewport; the Overview image scales it.
-  // StoreThumbnail retains its per-image and aggregate memory limits.
-  tab->thumbnail_registration=tab->browser->GetHost()->AddDevToolsMessageObserver(new ThumbnailObserver(this,tab->id,tab->url));
-  tab->browser->GetHost()->ExecuteDevToolsMethod(900001,"Page.captureScreenshot",params);
+  if(!tab||!tab->browser||IsIconic(hwnd_))return;
+  const HWND child=tab->browser->GetHost()->GetWindowHandle();
+  RECT bounds={};
+  if(!IsWindowVisible(child)||!GetClientRect(child,&bounds)||bounds.right<2||bounds.bottom<2)return;
+  // Read the already composed, foreground viewport before hiding this tab.
+  // Page.captureScreenshot keeps a capturer alive while awaiting a new frame;
+  // switching a native Chrome child can strand that request in
+  // HiddenButPainting, preventing its renderer from ever freezing.
+  const HWND foreground=GetForegroundWindow();
+  if(!foreground||GetAncestor(foreground,GA_ROOT)!=hwnd_)return;
+  POINT origin={0,0};if(!ClientToScreen(child,&origin))return;
+  const double scale=std::min({1.0,480.0/bounds.right,320.0/bounds.bottom});
+  const int width=std::max(1,static_cast<int>(std::round(bounds.right*scale)));
+  const int height=std::max(1,static_cast<int>(std::round(bounds.bottom*scale)));
+  HDC screen=GetDC(nullptr);if(!screen)return;
+  HDC memory=CreateCompatibleDC(screen);
+  BITMAPINFO info={};info.bmiHeader.biSize=sizeof(BITMAPINFOHEADER);
+  info.bmiHeader.biWidth=width;info.bmiHeader.biHeight=-height;
+  info.bmiHeader.biPlanes=1;info.bmiHeader.biBitCount=32;info.bmiHeader.biCompression=BI_RGB;
+  void* pixels=nullptr;HBITMAP bitmap=memory?CreateDIBSection(screen,&info,DIB_RGB_COLORS,&pixels,nullptr,0):nullptr;
+  std::string data;
+  if(bitmap&&pixels){
+    const auto previous=SelectObject(memory,bitmap);SetStretchBltMode(memory,HALFTONE);SetBrushOrgEx(memory,0,0,nullptr);
+    if(StretchBlt(memory,0,0,width,height,screen,origin.x,origin.y,bounds.right,bounds.bottom,SRCCOPY|CAPTUREBLT)){
+      const size_t size=static_cast<size_t>(width)*height*4;
+      auto* bytes=static_cast<unsigned char*>(pixels);for(size_t i=3;i<size;i+=4)bytes[i]=255;
+      auto image=CefImage::Create();
+      if(image->AddBitmap(1.0f,width,height,CEF_COLOR_TYPE_BGRA_8888,CEF_ALPHA_TYPE_OPAQUE,pixels,size)){
+        int encoded_width=0,encoded_height=0;auto jpeg=image->GetAsJPEG(1.0f,70,encoded_width,encoded_height);
+        if(jpeg&&jpeg->GetSize()<=2*1024*1024){std::vector<unsigned char> encoded(jpeg->GetSize());jpeg->GetData(encoded.data(),encoded.size(),0);
+          data="data:image/jpeg;base64,"+CefBase64Encode(encoded.data(),encoded.size()).ToString();}
+      }
+    }
+    SelectObject(memory,previous);
+  }
+  if(bitmap)DeleteObject(bitmap);if(memory)DeleteDC(memory);ReleaseDC(nullptr,screen);
+  if(!data.empty())StoreThumbnail(tab->id,tab->url,data);
 }
 
 bool BrowserWindow::HandleFullscreenKey(int key) {

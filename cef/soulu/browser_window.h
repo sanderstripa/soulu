@@ -148,7 +148,6 @@ class BrowserWindow final : public CefBaseRefCounted {
     std::string favicon;
     std::string thumbnail;
     std::string history_visit;
-    CefRefPtr<CefRegistration> thumbnail_registration;
     std::string profile_id = "personal";
     bool incognito = false;
     bool pinned = false;
