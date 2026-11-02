@@ -1,0 +1,75 @@
+name: Preflight native Chrome browser regressions
+on:
+  push:
+    branches: [codex/extension-regressions]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: soulu-native-chrome-regressions
+  cancel-in-progress: true
+jobs:
+  regression:
+    runs-on: windows-2025
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [navigation, layout, profiles, typography]
+    env:
+      PYTHONUTF8: 1
+      SOULU_REGRESSION_SKIP_FIRST_RUN: 1
+      SOULU_TEST_DEFAULT_APPS: 1
+      NO_PROXY: localhost,127.0.0.1,::1
+      SUITE: ${{ matrix.suite }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Restore exact compiled candidate
+        uses: actions/download-artifact@v4
+        with:
+          name: Soulu-cef-candidate-ea32be0bad31462ee21425795b064126a19c48e6
+          path: runtime
+          run-id: 41422669605
+          github-token: ${{ github.token }}
+      - name: Restore the approved CEF runtime
+        shell: pwsh
+        run: |
+          $index = Invoke-RestMethod 'https://cef-builds.spotifycdn.com/index.json'
+          $version = @($index.windows64.versions | Where-Object cef_version -eq '156.0.14+g4fa4ab5+chromium-156.0.8078.48')
+          if ($version.Count -ne 1) { throw 'Approved engine missing' }
+          $archive = @($version[0].files | Where-Object type -eq 'standard')
+          if ($archive.Count -ne 1 -or $archive[0].sha1 -ne '7a1049f0facf3b6ce9efc4d683cf1bac72691ba6') { throw 'Engine checksum changed' }
+          Invoke-WebRequest ('https://cef-builds.spotifycdn.com/' + $archive[0].name) -OutFile cef.tar.bz2
+          if ((Get-FileHash cef.tar.bz2 -Algorithm SHA1).Hash -ne $archive[0].sha1) { throw 'Corrupt engine archive' }
+          New-Item -ItemType Directory -Force cef | Out-Null
+          tar -xjf cef.tar.bz2 -C cef
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $dist = Get-ChildItem cef -Directory | Select-Object -First 1
+          Copy-Item -Recurse -Force "$($dist.FullName)/Release/*" runtime/
+          Copy-Item -Recurse -Force "$($dist.FullName)/Resources/*" runtime/
+      - name: Prepare isolated regression fixtures
+        shell: pwsh
+        run: |
+          Copy-Item ui/extension-toolbar.css runtime/ui/extension-toolbar.css -Force
+          python -m pip install --disable-pip-version-check websocket-client pillow pywinauto dxcam comtypes fonttools
+          New-Item -ItemType Directory -Force artifacts | Out-Null
+          "LOCALAPPDATA=$env:RUNNER_TEMP/soulu-preflight-$env:SUITE" | Out-File $env:GITHUB_ENV -Append
+          "APPDATA=$env:RUNNER_TEMP/soulu-preflight-$env:SUITE-roaming" | Out-File $env:GITHUB_ENV -Append
+      - name: Exercise native browser regression
+        shell: pwsh
+        run: |
+          switch ($env:SUITE) {
+            'navigation' { python scripts/test-cef-navigation.py runtime/Soulu.exe }
+            'layout' { python scripts/test-cef-layout.py runtime/Soulu.exe artifacts/layout }
+            'profiles' { python scripts/test-cef-profile-isolation.py runtime/Soulu.exe }
+            'typography' { python scripts/test-cef-typography.py runtime/Soulu.exe artifacts/typography-runtime.json }
+          }
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Soulu-native-regression-${{ matrix.suite }}-${{ github.sha }}
+          path: artifacts/
