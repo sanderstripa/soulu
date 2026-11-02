@@ -453,7 +453,7 @@ bool BrowserClient::RunContextMenu(CefRefPtr<CefBrowser> browser,
   return true;
 }
 
-bool BrowserClient::OnContextNativeContextCommand(CefRefPtr<CefBrowser> browser,
+bool BrowserClient::OnContextMenuCommand(CefRefPtr<CefBrowser> browser,
     CefRefPtr<CefFrame> frame, CefRefPtr<CefContextMenuParams> params,
     int command, EventFlags) {
   CEF_REQUIRE_UI_THREAD();
