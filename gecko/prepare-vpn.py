@@ -1,6 +1,6 @@
 import pathlib,json,urllib.request,hashlib,zipfile,shutil,subprocess,os
 root=pathlib.Path(__file__).resolve().parent.parent
-pins=json.loads((root/'vpn/components-pin.json').read_text());target=root/'gecko-out/runtime/soulu/vpn';target.mkdir(parents=True,exist_ok=True);stamps={}
+pins=json.loads((root/'vpn/components-pin.json').read_text(encoding='utf-8'));target=root/'gecko-out/runtime/soulu/vpn';target.mkdir(parents=True,exist_ok=True);stamps={}
 for name,pin in pins.items():
  archive=root/'gecko-cache'/pin['archive']
  if not archive.exists():

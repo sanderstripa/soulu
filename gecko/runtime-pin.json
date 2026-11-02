@@ -2,8 +2,8 @@
   "version": "159.0",
   "archives": {
     "win64": {
-      "path": "win64/en-US/Firefox Setup 159.0.exe",
-      "sha256": "8776887b79925abbdd407fcdfe257d8382b54e24be52a6466426b95a804d6790"
+      "path": "win64/ru/Firefox Setup 159.0.exe",
+      "sha256": "d5d2d468fed4cd6e74335d0b72142d1b193709f6ecc40ed1ff4c5fa0686f4348"
     },
     "linux-x86_64": {
       "path": "linux-x86_64/en-US/firefox-159.0.tar.xz",

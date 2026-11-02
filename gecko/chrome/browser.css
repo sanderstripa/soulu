@@ -42,3 +42,8 @@
 :root[soulu-address-left] #soulu-vpn{margin-inline-start:0!important}
 #urlbar #stop-reload-button{align-items:center}
 #urlbar #stop-reload-button .toolbarbutton-icon{width:26px!important;height:26px!important;padding:5px!important}
+:root{--lwt-tab-text:var(--soulu-text)!important;--lwt-selected-tab-background-color:light-dark(#fff,#494b55)!important;--lwt-tab-line-color:transparent!important}
+.tabbrowser-tab,.tabbrowser-tab[selected],.tab-label{color:var(--soulu-text)!important}
+.tab-content{height:30px!important;box-sizing:border-box!important}
+.tab-close-button{width:22px!important;height:22px!important;border-radius:50%!important;padding:5px!important}
+.tab-icon-image{width:16px!important;height:16px!important}

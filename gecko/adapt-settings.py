@@ -2,7 +2,7 @@
 import pathlib
 
 def adapt(path):
- s=path.read_text()
+ s=path.read_text(encoding='utf-8')
  anchor="sections.splice(0,sections.length,old.general,old.interface,old.tabs,old.search,old.sites,old.vpn,reading,translation,extensions,performance,old.profiles,old.updates);"
  extra="""
   // Preview 1 keeps the canonical section structure without pretending CEF services exist.
@@ -16,4 +16,4 @@ def adapt(path):
 """
  assert anchor in s;s=s.replace(anchor,anchor+extra)
  s=s.replace("async function runAction(key){", "async function runAction(key){if(key.startsWith('gecko'))return invoke(key);")
- path.write_text(s)
+ path.write_text(s,encoding='utf-8')

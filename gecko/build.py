@@ -9,14 +9,14 @@ def fetch(url,path):
   print('Download',url,flush=True)
   with urllib.request.urlopen(url,timeout=180) as response,path.open('wb') as f:shutil.copyfileobj(response,f)
  return path
-pin=json.loads((ROOT/'gecko/runtime-pin.json').read_text())
+pin=json.loads((ROOT/'gecko/runtime-pin.json').read_text(encoding='utf-8'))
 version=pin['version'];platform=args.platform
 base=f'https://archive.mozilla.org/pub/firefox/releases/{version}'
 checks=fetch(base+'/SHA256SUMS',cache/f'{version}-SHA256SUMS')
-rel=f'{platform}/en-US/Firefox Setup {version}.exe' if platform=='win64' else f'{platform}/en-US/firefox-{version}.tar.xz'
-archive=fetch(base+'/'+urllib.request.quote(rel),cache/pathlib.Path(rel).name)
+rel=pin['archives'][platform]['path']
+archive=fetch(base+'/'+urllib.request.quote(rel),cache/(platform+'-'+rel.split('/')[1]+'-'+pathlib.Path(rel).name))
 expected=pin['archives'][platform]['sha256']
-assert next(line.split()[0] for line in checks.read_text().splitlines() if line.split(maxsplit=1)[1].lstrip('*')==rel)==expected
+assert next(line.split()[0] for line in checks.read_text(encoding='utf-8').splitlines() if line.split(maxsplit=1)[1].lstrip('*')==rel)==expected
 digest=hashlib.sha256(archive.read_bytes()).hexdigest()
 if digest!=expected:raise RuntimeError('Mozilla runtime checksum mismatch')
 if out.exists():shutil.rmtree(out)
@@ -36,15 +36,15 @@ shutil.copy(ROOT/'gecko/soulu.cfg',runtime/'soulu.cfg')
 shutil.copy(ROOT/'gecko/defaults/pref/autoconfig.js',runtime/'defaults/pref/autoconfig.js')
 # Reuse the exact current Soulu settings DOM/CSS and substitute only its backend.
 settings=runtime/'soulu/chrome/ui/settings.html'
-s=settings.read_text();s=s.replace('<script src="motion.js">','<script src="../bridge.js"></script><script src="motion.js">');settings.write_text(s)
-js=runtime/'soulu/chrome/ui/settings.js';s=js.read_text();s=s.replace("opt('adaptive','Основная','Main'),opt('compact','Компактная','Compact')","opt('adaptive','Основная','Main')")
+s=settings.read_text(encoding='utf-8');s=s.replace('<script src="motion.js">','<script src="../bridge.js"></script><script src="motion.js">');settings.write_text(s,encoding='utf-8')
+js=runtime/'soulu/chrome/ui/settings.js';s=js.read_text(encoding='utf-8');s=s.replace("opt('adaptive','Основная','Main'),opt('compact','Компактная','Compact')","opt('adaptive','Основная','Main')")
 s=s.replace("['CEF',state.update?.cef],['Chromium',state.update?.chromium]","['Gecko',state.update?.gecko],['Firefox',state.update?.firefox]")
 s=s.replace("chromewebstore.google.com","addons.mozilla.org/firefox")
 # Native Firefox managers provide these actions without extracting passwords into the Soulu page.
 s=s.replace("if(key==='history'||key==='clearData')", "if(key==='passwords')return window.browserShell.openTab('about:logins');if(key==='import')return window.browserShell.openTab('about:preferences#general');if(key==='siteData')return window.browserShell.openTab('about:preferences#privacy');if(key==='history'||key==='clearData')")
 # Extensions run in Firefox's native, sandboxed manager rather than the CEF embedded frame.
 s=s.replace("const extensions={", "const extensions={")
-js.write_text(s)
+js.write_text(s,encoding='utf-8')
 import importlib.util
 spec=importlib.util.spec_from_file_location('adapt',ROOT/'gecko/adapt-settings.py');adapter=importlib.util.module_from_spec(spec);spec.loader.exec_module(adapter);adapter.adapt(js)
 (runtime/'distribution').mkdir(exist_ok=True)
