@@ -11,6 +11,7 @@
 #include <string>
 #include <cstring>
 #include <tuple>
+#include <functional>
 #include "include/cef_image.h"
 
 #include "examples/soulu/browser_window.h"
@@ -19,6 +20,20 @@
 
 namespace soulu {
 namespace {
+class BrowserActionTask final:public CefTask {
+ public:explicit BrowserActionTask(std::function<void()> action):action_(std::move(action)){}void Execute()override{action_();}
+ private:std::function<void()> action_;IMPLEMENT_REFCOUNTING(BrowserActionTask);
+};
+// Chromium 156 reserves 49000..50099 for extension context-menu commands.
+// Keep their original models/delegates while replacing browser-owned entries.
+bool ExtensionContextItem(CefRefPtr<CefMenuModel> model,size_t index){
+  if(!model->IsVisibleAt(index))return false;
+  const int command=model->GetCommandIdAt(index);
+  if(command>=49000&&command<50100)return true;
+  if(auto child=model->GetSubMenuAt(index))
+    for(size_t i=0;i<child->GetCount();++i)if(ExtensionContextItem(child,i))return true;
+  return false;
+}
 class CredentialOfferTask final:public CefTask {
  public:
   CredentialOfferTask(CefRefPtr<BrowserWindow> owner,int id,CefRefPtr<CefFrame> frame,
@@ -147,8 +162,13 @@ bool BrowserClient::OnPreKeyEvent(CefRefPtr<CefBrowser> browser,const CefKeyEven
   // opening Settings cancel that intent before another control can receive text.
   if ((role_ == BrowserRole::kContent || role_ == BrowserRole::kShell) && owner_->BufferHomeInput(event)) return true;
   if(event.type==KEYEVENT_RAWKEYDOWN&&(event.modifiers&EVENTFLAG_CONTROL_DOWN)&&!(event.modifiers&EVENTFLAG_ALT_DOWN)) {
-    if(event.windows_key_code=='H'){owner_->OpenHistory();return true;}
-    if(event.windows_key_code==VK_DELETE&&(event.modifiers&EVENTFLAG_SHIFT_DOWN)){owner_->OpenHistory(true);return true;}
+    const bool clear=event.windows_key_code==VK_DELETE&&(event.modifiers&EVENTFLAG_SHIFT_DOWN);
+    if(event.windows_key_code=='H'||clear){
+      // Return the input acknowledgement before changing Chrome's active view.
+      CefRefPtr<BrowserWindow> owner=owner_;
+      CefPostTask(TID_UI,new BrowserActionTask([owner,clear]{owner->OpenHistory(clear);}));
+      return true;
+    }
   }
   // Leave Ctrl+Shift+L available for password-manager extension commands.
   if(event.type==KEYEVENT_RAWKEYDOWN &&
@@ -302,15 +322,33 @@ void BrowserClient::OnBeforeContextMenu(CefRefPtr<CefBrowser> browser,CefRefPtr<
       {MENU_ID_NO_SPELLING_SUGGESTIONS,"Нет вариантов исправления","No spelling suggestions"},
       {MENU_ID_ADD_TO_DICTIONARY,"Добавить в словарь","Add to dictionary"}};
     for(const auto& [id,ru,english]:labels)if(model->GetIndexOf(id)>=0)model->SetLabel(id,label(ru,english));
+    if(browser->GetHost()->GetRuntimeStyle()==CEF_RUNTIME_STYLE_CHROME){
+      // Native Chrome command IDs differ from the public Alloy MENU_ID values.
+      // Preserve Chrome spelling/extension commands and localize its edit rows.
+      const std::tuple<int,const char*,const char*> chrome_labels[]={
+        {50154,"Отменить","Undo"},{50155,"Повторить","Redo"},
+        {50151,"Вырезать","Cut"},{50150,"Копировать","Copy"},
+        {50152,"Вставить","Paste"},{50157,"Вставить как обычный текст","Paste as plain text"},
+        {50153,"Удалить","Delete"},{50156,"Выделить всё","Select all"},
+        {57313,"Нет вариантов исправления","No spelling suggestions"},
+        {41110,"Добавить в словарь","Add to dictionary"}};
+      for(const auto& [id,ru,english]:chrome_labels)if(model->GetIndexOf(id)>=0)model->SetLabel(id,label(ru,english));
+    }
     if(role_==BrowserRole::kContent&&frame&&frame->IsMain()&&!WebOrigin(frame->GetURL()).empty()){
       model->AddSeparator();model->AddItem(kFillSavedForm,label("Заполнить из Soulu…","Fill from Soulu…"));
     }
     return;
   }
   const bool internal=owner_->IsTrustedUi(frame->GetURL())||owner_->IsHomeUi(frame->GetURL())||owner_->IsHistoryUi(frame->GetURL())||owner_->IsOnboardingUi(frame->GetURL());
-  model->Clear();
-  if(internal){if(!params->GetSelectionText().empty())model->AddItem(MENU_ID_COPY,label("Копировать","Copy"));return;}
-  auto add=[&](int id,const char* ru,const char* english,bool enabled=true){model->AddItem(id,label(ru,english));model->SetEnabled(id,enabled);};
+  if(internal){model->Clear();if(!params->GetSelectionText().empty())model->AddItem(MENU_ID_COPY,label("Копировать","Copy"));return;}
+  if(browser->GetHost()->GetRuntimeStyle()==CEF_RUNTIME_STYLE_CHROME){
+    for(size_t i=model->GetCount();i>0;--i)if(!ExtensionContextItem(model,i-1))model->RemoveAt(i-1);
+  }else model->Clear();
+  bool browser_items=false;
+  auto add=[&](int id,const char* ru,const char* english,bool enabled=true){
+    if(!browser_items&&model->GetCount()&&model->GetTypeAt(model->GetCount()-1)!=MENUITEMTYPE_SEPARATOR)model->AddSeparator();
+    browser_items=true;model->AddItem(id,label(ru,english));model->SetEnabled(id,enabled);
+  };
   const auto link=params->GetLinkUrl().ToString(),source=params->GetSourceUrl().ToString();
   if(!link.empty()){
     const bool web=DownloadableLink(link);
@@ -342,7 +380,7 @@ void BrowserClient::OnBeforeContextMenu(CefRefPtr<CefBrowser> browser,CefRefPtr<
     std::string selected=params->GetSelectionText().ToString();if(selected.size()>80)selected=selected.substr(0,77)+"…";
     model->AddItem(kSelectionSearch,std::string(en?"Search for “":"Искать «")+selected+(en?"”":"»"));
   }
-  if(!model->GetCount()){
+  if(!browser_items){
     add(MENU_ID_BACK,"Назад","Back",browser->CanGoBack());add(MENU_ID_FORWARD,"Вперёд","Forward",browser->CanGoForward());
     add(MENU_ID_RELOAD,"Перезагрузить","Reload");model->AddSeparator();
     add(kPageSave,"Сохранить как…","Save as…",DownloadableLink(params->GetPageUrl()));add(MENU_ID_PRINT,"Печать…","Print…");
@@ -364,9 +402,10 @@ bool BrowserClient::RunContextMenu(CefRefPtr<CefBrowser> browser,
   auto copy=[&](auto&& recurse,CefRefPtr<CefMenuModel> source)->MenuModel {
     MenuModel result;
     for(size_t i=0;i<source->GetCount();++i){
+      if(!source->IsVisibleAt(i))continue;
       if(source->GetTypeAt(i)==MENUITEMTYPE_SEPARATOR){result.push_back(MenuItem::Separator());continue;}
       MenuItem item;item.command=source->GetCommandIdAt(i);item.label=source->GetLabelAt(i).ToWString();
-      if(item.command<MENU_ID_USER_FIRST)item.label=MenuLabel(item.label);
+      if(item.command<MENU_ID_USER_FIRST||item.command>MENU_ID_USER_LAST)item.label=MenuLabel(item.label);
       auto tab=item.label.find(L'\t');if(tab!=std::wstring::npos){item.accelerator=item.label.substr(tab+1);item.label.resize(tab);}
       switch(item.command){case MENU_ID_BACK:item.accelerator=L"Alt+←";break;case MENU_ID_FORWARD:item.accelerator=L"Alt+→";break;case MENU_ID_RELOAD:item.accelerator=L"Ctrl+R";break;case MENU_ID_PRINT:item.accelerator=L"Ctrl+P";break;case MENU_ID_VIEW_SOURCE:item.accelerator=L"Ctrl+U";break;case kPageSave:item.accelerator=L"Ctrl+S";break;case MENU_ID_COPY:item.accelerator=L"Ctrl+C";break;case MENU_ID_CUT:item.accelerator=L"Ctrl+X";break;case MENU_ID_PASTE:item.accelerator=L"Ctrl+V";break;case MENU_ID_SELECT_ALL:item.accelerator=L"Ctrl+A";break;}
       item.enabled=source->IsEnabledAt(i);item.checked=source->IsCheckedAt(i);
@@ -399,10 +438,30 @@ bool BrowserClient::RunContextMenu(CefRefPtr<CefBrowser> browser,
 }
 
 bool BrowserClient::OnContextMenuCommand(CefRefPtr<CefBrowser> browser,
-    CefRefPtr<CefFrame>, CefRefPtr<CefContextMenuParams> params,
+    CefRefPtr<CefFrame> frame, CefRefPtr<CefContextMenuParams> params,
     int command, EventFlags) {
   CEF_REQUIRE_UI_THREAD();
   if(role_!=BrowserRole::kContent)return false;
+  // Soulu adds public CEF command IDs to its own page menus. Chrome's
+  // default controller expects native IDs, so dispatch these through CEF.
+  if(!frame)frame=browser->GetFocusedFrame();
+  switch(command){
+    case MENU_ID_BACK:browser->GoBack();return true;
+    case MENU_ID_FORWARD:browser->GoForward();return true;
+    case MENU_ID_RELOAD:browser->Reload();return true;
+    case MENU_ID_RELOAD_NOCACHE:browser->ReloadIgnoreCache();return true;
+    case MENU_ID_STOPLOAD:browser->StopLoad();return true;
+    case MENU_ID_PRINT:browser->GetHost()->Print();return true;
+    case MENU_ID_VIEW_SOURCE:if(frame)frame->ViewSource();return true;
+    case MENU_ID_UNDO:if(frame)frame->Undo();return true;
+    case MENU_ID_REDO:if(frame)frame->Redo();return true;
+    case MENU_ID_CUT:if(frame)frame->Cut();return true;
+    case MENU_ID_COPY:if(frame)frame->Copy();return true;
+    case MENU_ID_PASTE:if(frame)frame->Paste();return true;
+    case MENU_ID_PASTE_MATCH_STYLE:if(frame)frame->PasteAndMatchStyle();return true;
+    case MENU_ID_DELETE:if(frame)frame->Delete();return true;
+    case MENU_ID_SELECT_ALL:if(frame)frame->SelectAll();return true;
+  }
   if(command==kFillSavedForm){owner_->FillSavedForm(tab_id_,params->GetXCoord(),params->GetYCoord());return true;}
   if(command==kPageTranslate){owner_->MenuTranslate(tab_id_);return true;}
   if(command==kPageQR){owner_->MenuQR(tab_id_);return true;}

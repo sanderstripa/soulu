@@ -951,7 +951,7 @@ void BrowserWindow::OfferCredential(int id,CefRefPtr<CefFrame> frame,
      !vault.Put(origin,username,password,true))
     TypographyMessageBox(hwnd_,L"Не удалось сохранить пароль.",L"Soulu",MB_OK|MB_ICONERROR);
   if(auto* current=FindTab(id);current&&current==ActiveTab()&&current->browser)
-    current->browser->GetHost()->SetFocus(true);
+    FocusContent(current);
   SecureZeroMemory(password.data(),password.size());
   credential_prompt_open_=false;
 }
@@ -1114,7 +1114,7 @@ void BrowserWindow::SettingsClosed(CefRefPtr<CefBrowser> browser) {
   BlockSettingsBackground(false);
   const HWND previous = settings_previous_focus_; settings_previous_focus_ = nullptr;
   if (IsWindow(previous) && IsWindowEnabled(previous)) SetFocus(previous);
-  else if (auto* tab = ActiveTab(); tab && tab->browser) tab->browser->GetHost()->SetFocus(true);
+  else if (auto* tab = ActiveTab(); tab && tab->browser) FocusContent(tab);
   EmitState();
   if (all) CloseAll();
   else if (!pending.empty()) NewTab(pending);
@@ -1306,6 +1306,12 @@ BrowserWindow::Tab* BrowserWindow::FindTab(int id) {
   return it == tabs_.end() ? nullptr : &*it;
 }
 
+void BrowserWindow::FocusContent(Tab* tab){
+  if(!tab||!tab->browser)return;
+  if(tab->chrome_host)tab->chrome_host->SetVisible(true,true);
+  else tab->browser->GetHost()->SetFocus(true);
+}
+
 BrowserWindow::Tab* BrowserWindow::ActiveTab() { return FindTab(active_tab_id_); }
 
 std::string BrowserWindow::VisibleProfileId() const {
@@ -1335,7 +1341,7 @@ void BrowserWindow::SwitchTab(int id) {
   ActivateMedia(id);
   if(tab->focus_home_on_load&&tab->browser&&!tab->browser->IsLoading())ContentPageLoaded(id);
   Layout();
-  if(tab->browser&&!settings_overlay_&&!overview_visible_&&!popover_visible_){if(tab->chrome_host)tab->chrome_host->SetVisible(true,true);tab->browser->GetHost()->SetFocus(true);}
+  if(tab->browser&&!settings_overlay_&&!overview_visible_&&!popover_visible_)FocusContent(tab);
   EmitState();
 }
 
@@ -1811,7 +1817,7 @@ void BrowserWindow::UpdateFullscreen() {
   Layout();
   EmitState();
   if (auto* tab = ActiveTab(); fullscreen && tab && tab->browser)
-    tab->browser->GetHost()->SetFocus(true);
+    FocusContent(tab);
 }
 
 CefRefPtr<CefDictionaryValue> BrowserWindow::AdaptiveToolbarState() const {
@@ -1836,7 +1842,9 @@ void BrowserWindow::SyncAdaptiveToolbar() {
     return;
   }
   const std::string profile = VisibleProfileId();
+  const bool initializing=!IsWindowVisible(hwnd_);
   const auto count = std::count_if(tabs_.begin(), tabs_.end(), [&](const Tab& tab) {
+    if(!initializing&&!tab.browser)return false;
     return tab.incognito ? profile == "__incognito__" : tab.profile_id == profile;
   });
   const bool expanded = count > 1;
@@ -1854,7 +1862,7 @@ void BrowserWindow::SyncAdaptiveToolbar() {
   adaptive_expanded_ = expanded;
   adaptive_from_height_ = adaptive_height_;
   adaptive_from_progress_ = adaptive_progress_;
-  adaptive_started_ = GetTickCount64();
+  adaptive_started_ = 0; // Start the clock on the first runnable UI frame.
   BOOL animate = TRUE;
   SystemParametersInfoW(SPI_GETCLIENTAREAANIMATION, 0, &animate, 0);
   adaptive_duration_ = animate ? motion::kAdaptiveToolbarMs : motion::kReducedOverlayMs;
@@ -1869,6 +1877,7 @@ void BrowserWindow::SyncAdaptiveToolbar() {
 
 void BrowserWindow::AdvanceAdaptiveToolbar(unsigned generation) {
   if (generation != adaptive_generation_ || closing_ || !hwnd_ || !adaptive_running_) return;
+  if(!adaptive_started_)adaptive_started_=GetTickCount64();
   const double t = std::clamp(static_cast<double>(GetTickCount64() - adaptive_started_) /
       adaptive_duration_, 0.0, 1.0);
   const double eased = t * t * (3 - 2 * t);
@@ -2410,7 +2419,7 @@ void BrowserWindow::HandleBridge(const std::string& request,
     }
     pending.done(allowed);RefreshSitePermissions();Layout();EmitState();
     if(permission_requests_.empty())if(auto* current=ActiveTab();current&&current->browser)
-      current->browser->GetHost()->SetFocus(true);
+      FocusContent(current);
     ReplyEmpty(callback);return;
   }
   if(HandleSiteAction(action,payload,callback))return;
@@ -3358,7 +3367,7 @@ LRESULT CALLBACK BrowserWindow::WindowProc(HWND hwnd, UINT message, WPARAM wpara
     case WM_SETFOCUS:
       if (self->settings_overlay_) self->FocusSettings();
       else if (auto* tab = self->ActiveTab(); tab && tab->browser)
-        tab->browser->GetHost()->SetFocus(true);
+        self->FocusContent(tab);
       return 0;
     case WM_DWMCOMPOSITIONCHANGED: self->ApplyWindowAppearance(); return 0;
     case WM_SETTINGCHANGE: self->ApplyWindowAppearance(); self->ApplyContentTheme(); break;

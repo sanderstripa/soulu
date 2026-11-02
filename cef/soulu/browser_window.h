@@ -278,6 +278,7 @@ class BrowserWindow final : public CefBaseRefCounted {
   void FinishClose();
   Tab* ActiveTab();
   Tab* FindTab(int id);
+  void FocusContent(Tab* tab);
   std::string VisibleProfileId() const;
   std::string NormalizeAddress(const std::string& value, const std::string& engine_override = "") const;
   CefRefPtr<CefDictionaryValue> State() const;

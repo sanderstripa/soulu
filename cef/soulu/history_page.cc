@@ -22,6 +22,7 @@ void BrowserWindow::UpdateHistory(int id){auto* tab=FindTab(id);if(tab&&!tab->in
   HistoryFor(tab->profile_id)->Update(tab->history_visit,tab->title,tab->favicon);}
 void BrowserWindow::OpenHistory(bool clear){
   CEF_REQUIRE_UI_THREAD();
+  if(closing_)return;
   // Private mode never exposes a normal profile's history or clearing controls.
   if(auto* tab=ActiveTab();tab&&tab->incognito){NewTab("soulu://history",true);return;}
   for(const auto& tab:tabs_)if(!tab.incognito&&tab.profile_id==active_profile_id_&&

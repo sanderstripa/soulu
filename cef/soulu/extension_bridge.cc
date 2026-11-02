@@ -34,7 +34,7 @@ bool BrowserWindow::HandleExtensionBridge(const std::string& action,CefRefPtr<Ce
     auto items=result?result->GetList("items"):nullptr;bool allowed=false;
     if(items)for(size_t i=0;i<items->GetSize();++i){auto item=items->GetDictionary(i);if(item&&item->GetString("id")==id&&item->GetBool("enabled")&&item->GetBool("pinned")&&item->GetBool("action"))allowed=true;}
     if(!error.empty()||!allowed){callback->Failure(403,error.empty()?"Расширение не закреплено или отключено.":error);return;}
-    if(tab->chrome_host)tab->chrome_host->SetVisible(true,true);browser->GetHost()->SetFocus(true);
+    self->FocusContent(tab);
     service->Open(browser,id,reply);
   });return true;
 }

@@ -1,6 +1,7 @@
 #include "examples/soulu/chrome_tab_host.h"
 #include <algorithm>
 #include "include/cef_cookie.h"
+#include "include/cef_task.h"
 #include "include/base/cef_logging.h"
 #include "include/views/cef_browser_view.h"
 #include "include/views/cef_browser_view_delegate.h"
@@ -11,6 +12,10 @@
 #include "include/views/cef_layout.h"
 #include "include/wrapper/cef_helpers.h"
 namespace soulu { namespace {
+class Task final:public CefTask {
+ public:explicit Task(std::function<void()> done):done_(std::move(done)){}void Execute()override{done_();}
+ private:std::function<void()> done_;IMPLEMENT_REFCOUNTING(Task);
+};
 class Completion final:public CefCompletionCallback {
  public:explicit Completion(std::function<void()> done):done_(std::move(done)){}void OnComplete()override{done_();}
  private:std::function<void()> done_;IMPLEMENT_REFCOUNTING(Completion);
@@ -31,10 +36,14 @@ class Host final:public ChromeTabHost,public CefWindowDelegate,public CefBrowser
     // Unlike CreateBrowser(), CreateBrowserView() requires an initialized
     // request context. Cookie storage completion is the public async barrier.
     return context->GetCookieManager(new Completion([self,client,url,settings,extra,context]{
-      if(self->closing_)return;
-      self->view_=CefBrowserView::CreateBrowserView(client,url,settings,extra,context,self);
-      if(self->view_)self->window_=CefWindow::CreateTopLevelWindow(self);
-      if(!self->view_||!self->window_){LOG(ERROR)<<"Chrome tab host creation failed after context initialization";if(self->failed_)self->failed_();}
+      // Never create a synchronous Chrome Views widget inside a keyboard,
+      // router or cookie-completion callback. Let that callback unwind first.
+      CefPostTask(TID_UI,new Task([self,client,url,settings,extra,context]{
+        if(self->closing_)return;
+        self->view_=CefBrowserView::CreateBrowserView(client,url,settings,extra,context,self);
+        if(self->view_)self->window_=CefWindow::CreateTopLevelWindow(self);
+        if(!self->view_||!self->window_){LOG(ERROR)<<"Chrome tab host creation failed after context initialization";if(self->failed_)self->failed_();}
+      }));
     }))!=nullptr;
   }
   void OnWindowCreated(CefRefPtr<CefWindow> window) override {
@@ -65,7 +74,7 @@ class Host final:public ChromeTabHost,public CefWindowDelegate,public CefBrowser
     // Keep Chromium's content view visibility in sync with the Win32 child.
     // Hiding the native container alone leaves the BrowserView logically shown.
     if(view_&&view_->IsVisible()!=visible)view_->SetVisible(visible);
-    if(visible){if(!window_->IsVisible())window_->Show();if(activate)window_->Activate();}
+    if(visible){if(!window_->IsVisible())window_->Show();if(activate&&!focusing_)FocusNativeContent();}
     else window_->Hide();Resize();
     // A Chrome widget can raise itself when shown. Content must stay below
     // the custom toolbar, page glass and the owner's native resize border.
@@ -73,6 +82,29 @@ class Host final:public ChromeTabHost,public CefWindowDelegate,public CefBrowser
   }
   void Close() override{closing_=true;if(view_&&view_->GetBrowser())view_->GetBrowser()->GetHost()->CloseBrowser(true);else if(window_)window_->Close();}
  private:
+  struct NativeFocusTarget {HWND window=nullptr;LONGLONG area=0;};
+  static BOOL CALLBACK FindRenderer(HWND window,LPARAM data){
+    wchar_t name[64]={};GetClassNameW(window,name,64);
+    if(IsWindowVisible(window)&&lstrcmpW(name,L"Chrome_RenderWidgetHostHWND")==0){
+      RECT bounds={};if(GetClientRect(window,&bounds)){
+        const LONGLONG area=static_cast<LONGLONG>(bounds.right-bounds.left)*(bounds.bottom-bounds.top);
+        auto* target=reinterpret_cast<NativeFocusTarget*>(data);
+        if(area>target->area){target->window=window;target->area=area;}
+      }
+    }
+    return TRUE;
+  }
+  void FocusNativeContent(){
+    focusing_=true;window_->Activate();
+    if(auto browser=view_?view_->GetBrowser():nullptr)browser->GetHost()->SetFocus(true);
+    // A Views widget reparented to a foreign Win32 host cannot become the
+    // top-level active HWND. Forward keyboard focus to its visible renderer,
+    // as Windows would when the user clicks the web page.
+    NativeFocusTarget target;
+    EnumChildWindows(window_->GetWindowHandle(),FindRenderer,reinterpret_cast<LPARAM>(&target));
+    if(target.window&&::GetFocus()!=target.window)::SetFocus(target.window);
+    focusing_=false;
+  }
   void Resize(){
     if(!window_||!view_)return;const auto size=window_->GetSize();
     // Clip the native toolbar above the child viewport while preserving its
@@ -82,7 +114,7 @@ class Host final:public ChromeTabHost,public CefWindowDelegate,public CefBrowser
   }
   std::function<void(CefRefPtr<CefBrowser>,CefRefPtr<ChromeTabHost>)> popup_ready_;
   std::function<void()> failed_;
-  HWND parent_;bool visible_=false,closing_=false;CefRefPtr<CefWindow> window_;
+  HWND parent_;bool visible_=false,closing_=false,focusing_=false;CefRefPtr<CefWindow> window_;
   CefRefPtr<CefBrowserView> view_;CefRefPtr<CefView> toolbar_;
   IMPLEMENT_REFCOUNTING(Host);
 };

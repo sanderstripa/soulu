@@ -127,11 +127,11 @@ void BrowserWindow::RefreshHomePages(int id) {
 void BrowserWindow::ContentPageLoaded(int id) {
   auto* tab=FindTab(id);if(!tab||!tab->browser)return;
   auto frame=tab->browser->GetMainFrame();if(!frame)return;
-  if(IsOnboardingUi(frame->GetURL())){if(id==active_tab_id_)tab->browser->GetHost()->SetFocus(true);return;}
+  if(IsOnboardingUi(frame->GetURL())){if(id==active_tab_id_)FocusContent(tab);return;}
   if(IsHomeUi(frame->GetURL())){RefreshHomePages(id);
     if(tab->focus_home_on_load&&tab->home_controls_ready&&id==active_tab_id_&&!SettingsOverlayActive()){
       tab->focus_home_on_load=false;
-      tab->browser->GetHost()->SetFocus(true);
+      FocusContent(tab);
       auto text=CefValue::Create();text->SetString(CefString(tab->pending_home_input));
       const auto submit=tab->pending_home_submit;tab->pending_home_input.clear();tab->pending_home_submit=false;
       frame->ExecuteJavaScript("window.souluHomeFocus&&window.souluHomeFocus("+CefWriteJSON(text,JSON_WRITER_DEFAULT).ToString()+","+(submit?"true":"false")+")",frame->GetURL(),0);
