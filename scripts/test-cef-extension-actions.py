@@ -34,7 +34,7 @@ def main():
  def socket(fragment):
   def find():
    for t in s.targets():
-    if fragment in t.get('url','') and '/shortcuts' not in t.get('url',''):
+    if (t.get('url','')==fragment if fragment.startswith('http') else fragment in t.get('url','')) and '/shortcuts' not in t.get('url',''):
      ws=s.websocket.create_connection(t['webSocketDebuggerUrl'],timeout=40,origin=s.BASE);connections.append(ws);return ws
   return wait(find)
  def call(shell,method,value=None):return s.evaluate(shell,'browserShell.'+method+'('+('' if value is None else json.dumps(value))+')')
@@ -85,6 +85,10 @@ chrome.runtime.onMessage.addListener((m,sender,reply)=>{(async()=>{
    wait(lambda:s.evaluate(shell,"!!document.querySelector('[data-extension-toolbar] [data-extension-id="+json.dumps(ident)+"]')"))
    check(s.evaluate(shell,"[...document.querySelectorAll('[data-extension-toolbar]')].every(h=>h.previousElementSibling.classList.contains('vpn-button'))"),'Extension icons are immediately after VPN')
    check(s.evaluate(shell,"!!document.querySelector('[data-extension-id="+json.dumps(ident)+"] img[src^=\"data:image/\"]')"),'Real extension icon is supplied from its profile')
+   selected=call(shell,'getState')['activeTabId']
+   call(shell,'openTab',url+'/other');other_page=socket(url+'/other')
+   wait(lambda:s.evaluate(other_page,"document.documentElement.dataset.extensionReady==='yes'"))
+   call(shell,'switchTab',selected)
    before=len(call(shell,'getState')['tabs'])
    s.evaluate(shell,"[...document.querySelectorAll('[data-extension-id="+json.dumps(ident)+"]')].find(b=>b.getClientRects().length).click()")
    popup=socket('chrome-extension://'+ident+'/popup.html')

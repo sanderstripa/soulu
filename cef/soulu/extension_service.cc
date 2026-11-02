@@ -3,6 +3,7 @@
 #include "include/cef_client.h"
 #include "include/cef_parser.h"
 #include "include/cef_task.h"
+#include "include/cef_cookie.h"
 #include "include/cef_devtools_message_observer.h"
 #include "include/views/cef_browser_view.h"
 #include "include/views/cef_browser_view_delegate.h"
@@ -17,6 +18,7 @@
 #include <iterator>
 namespace soulu { namespace {
 class Task final:public CefTask{public:explicit Task(std::function<void()> fn):fn_(std::move(fn)){}void Execute()override{fn_();}private:std::function<void()> fn_;IMPLEMENT_REFCOUNTING(Task);};
+class Completion final:public CefCompletionCallback{public:explicit Completion(std::function<void()> fn):fn_(std::move(fn)){}void OnComplete()override{fn_();}private:std::function<void()> fn_;IMPLEMENT_REFCOUNTING(Completion);};
 class Call final:public CefDevToolsMessageObserver {
  public:
   void Start(CefRefPtr<CefBrowser> browser,const std::string& method,CefRefPtr<CefDictionaryValue> params,ExtensionReply done){
@@ -77,10 +79,14 @@ class Service final:public ExtensionService,public CefClient,public CefLifeSpanH
   cef_runtime_style_t GetBrowserRuntimeStyle()override{return CEF_RUNTIME_STYLE_CHROME;}
   CefRect GetInitialBounds(CefRefPtr<CefWindow>)override{return CefRect(0,0,800,600);}
   bool Start(CefRefPtr<CefRequestContext> context){
-    context_=context;
-    CefBrowserSettings settings;auto extra=CefDictionaryValue::Create();extra->SetBool("souluExtensionsSurface",true);
-    view_=CefBrowserView::CreateBrowserView(this,"chrome://extensions/shortcuts?soulu-worker=1",settings,extra,context,this);
-    if(view_)window_=CefWindow::CreateTopLevelWindow(this);return window_!=nullptr;
+    context_=context;CefRefPtr<Service> self=this;
+    return context->GetCookieManager(new Completion([self,context]{
+      if(self->closing_)return;
+      CefBrowserSettings settings;auto extra=CefDictionaryValue::Create();extra->SetBool("souluExtensionsSurface",true);
+      self->view_=CefBrowserView::CreateBrowserView(self,"chrome://extensions/shortcuts?soulu-worker=1",settings,extra,context,self);
+      if(self->view_)self->window_=CefWindow::CreateTopLevelWindow(self);
+      if(!self->view_||!self->window_){self->closing_=true;auto tasks=std::move(self->queued_);self->queued_.clear();for(auto& task:tasks)task();self->CompleteClose();}
+    }))!=nullptr;
   }
   void OnWindowCreated(CefRefPtr<CefWindow> window)override{window_=window;window->SetToFillLayout();window->AddChildView(view_);}
   bool CanClose(CefRefPtr<CefWindow>)override{return !browser_||browser_->GetHost()->TryCloseBrowser();}
