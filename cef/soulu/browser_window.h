@@ -364,6 +364,7 @@ class BrowserWindow final : public CefBaseRefCounted {
   std::string settings_requested_section_;
   bool closing_ = false;
   bool importing_ = false;
+  bool credential_prompt_open_ = false;
   std::shared_ptr<ImportControl> import_control_;
   std::map<std::string, ImportSource> import_portable_;
   std::map<std::string, std::filesystem::path> import_files_;

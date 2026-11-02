@@ -25,6 +25,7 @@ set(SOULU_SRCS
   video_network.cc
   video_bridge.cc
   component_tests.cc
+  nestable_tasks.h
   chrome_tab_host.h
   chrome_tab_host.cc
   extension_service.h

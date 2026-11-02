@@ -1,3 +1,4 @@
+#include "examples/soulu/nestable_tasks.h"
 #include "examples/soulu/typography_native.h"
 #include "examples/soulu/typography_metrics.h"
 #include "include/cef_app.h"
@@ -178,7 +179,7 @@ int Show(Dialog& state){
   definition.dialog.style=WS_POPUP|WS_CAPTION|WS_SYSMENU|DS_MODALFRAME;
   definition.dialog.cx=300;definition.dialog.cy=140;
   activeDialogs.push_back(&state);
-  CefScopedSetNestableTasksAllowed allow_tasks;
+  NestableTasksScope allow_tasks;
   int result=static_cast<int>(DialogBoxIndirectParamW(GetModuleHandleW(nullptr),&definition.dialog,state.owner,Procedure,reinterpret_cast<LPARAM>(&state)));
   activeDialogs.erase(std::remove(activeDialogs.begin(),activeDialogs.end(),&state),activeDialogs.end());
   return result<0?IDCANCEL:result;

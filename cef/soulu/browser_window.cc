@@ -1,3 +1,4 @@
+#include "examples/soulu/nestable_tasks.h"
 #include "examples/soulu/vpn_helper.h"
 #include "examples/soulu/video_bridge.h"
 #include "examples/soulu/soulu_menu.h"
@@ -945,7 +946,7 @@ void BrowserWindow::OfferCredential(int id,CefRefPtr<CefFrame> frame,
                                    const std::string& username,std::string password,
                                    const std::string& submitted_url) {
   auto* tab=FindTab(id);
-  if(!hwnd_||closing_||!tab||!tab->browser||tab->incognito||!frame||!frame->IsMain()||importing_ ||
+  if(!hwnd_||closing_||credential_prompt_open_||!tab||!tab->browser||tab->incognito||!frame||!frame->IsMain()||importing_ ||
      WebOrigin(submitted_url).empty()||WebOrigin(submitted_url)!=WebOrigin(frame->GetURL())||
      username.size()>4096||password.size()>16384||password.empty()){
     if(!password.empty())SecureZeroMemory(password.data(),password.size());return;}
@@ -958,12 +959,14 @@ void BrowserWindow::OfferCredential(int id,CefRefPtr<CefFrame> frame,
       if(same){SecureZeroMemory(password.data(),password.size());return;}break;}}}
   const auto prompt=CefString(origin).ToWString()+L"\n"+
     (exists?L"Обновить сохранённый пароль после отправки формы входа?":L"Сохранить пароль после отправки формы входа?")+L"\nВход ещё может потребовать подтверждения на сайте.";
+  credential_prompt_open_=true;
   if(TypographyMessageBox(hwnd_,prompt.c_str(),L"Пароли Soulu",MB_YESNO|MB_ICONQUESTION|MB_DEFBUTTON2)==IDYES &&
      !vault.Put(origin,username,password,true))
     TypographyMessageBox(hwnd_,L"Не удалось сохранить пароль.",L"Soulu",MB_OK|MB_ICONERROR);
   if(auto* current=FindTab(id);current&&current==ActiveTab()&&current->browser)
     current->browser->GetHost()->SetFocus(true);
   SecureZeroMemory(password.data(),password.size());
+  credential_prompt_open_=false;
 }
 
 void BrowserWindow::ApplyWindowAppearance() {
@@ -3277,7 +3280,7 @@ LRESULT CALLBACK BrowserWindow::WindowProc(HWND hwnd, UINT message, WPARAM wpara
         // resize modal loop must continue processing renderer resize/paint.
         // Keep the owner alive if a close task runs in that loop.
         CefRefPtr<BrowserWindow> keep_alive(self);
-        CefScopedSetNestableTasksAllowed allow_tasks;
+        NestableTasksScope allow_tasks;
         return DefWindowProc(hwnd, message, wparam, lparam);
       }
       break;

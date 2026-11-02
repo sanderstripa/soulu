@@ -1,3 +1,4 @@
+#include "examples/soulu/nestable_tasks.h"
 #include "examples/soulu/soulu_menu.h"
 #include "examples/soulu/typography_native.h"
 #include "examples/soulu/typography_metrics.h"
@@ -212,7 +213,7 @@ int ShowSouluMenu(HWND owner,POINT anchor,MenuModel model,MenuAppearance appeara
     const int value=_wtoi(testDpi);if(value==96||value==120||value==144||value==168||value==192)s.dpi=static_cast<UINT>(value);
   }
   active=&s;if(!Open(s,s.model,anchor,nullptr)){active=nullptr;return 0;}
-  CefScopedSetNestableTasksAllowed allow_tasks;
+  NestableTasksScope allow_tasks;
   MSG message={};
   while(!s.done&&IsWindow(owner)){
     int received=GetMessageW(&message,nullptr,0,0);if(received<=0){if(received==0)PostQuitMessage(static_cast<int>(message.wParam));break;}

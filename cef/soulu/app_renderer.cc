@@ -73,6 +73,11 @@ class RendererApp final : public CefApp, public CefRenderProcessHandler {
   void OnContextCreated(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame,
                         CefRefPtr<CefV8Context> context) override {
     if(extension_surfaces_.count(browser->GetIdentifier()))return;
+    // Extension content scripts and DevTools have isolated worlds sharing this
+    // DOM. Soulu owns page hooks only in the main world: a second submit hook
+    // would offer the same credential twice and re-enter native consent.
+    auto main_context=frame->GetV8Context();
+    if(!main_context||!main_context->IsSame(context))return;
     router_->OnContextCreated(browser, frame, context);
     InstallVideoRuntime(browser,frame,context);
     CefURLParts parts;
@@ -80,7 +85,6 @@ class RendererApp final : public CefApp, public CefRenderProcessHandler {
     // Isolated DevTools/translation worlds share the DOM but have independent
     // globals. Installing a second blocked play listener there pauses media even
     // after the main world is activated. Own media lifecycle in the main world.
-    auto main_context=frame->GetV8Context();
     if(main_context&&main_context->IsSame(context)){
     context->GetGlobal()->SetValue("__souluMediaSend",CefV8Value::CreateFunction("media",new MediaSubmit()),V8_PROPERTY_ATTRIBUTE_NONE);
     if(frame->IsMain()&&!private_browsers_.count(browser->GetIdentifier()))
