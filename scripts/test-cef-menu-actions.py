@@ -56,5 +56,8 @@ with tempfile.TemporaryDirectory(prefix='soulu-menu-actions-',ignore_cleanup_err
         print(json.dumps(report),flush=True);output=pathlib.Path(sys.argv[2]);output.parent.mkdir(parents=True,exist_ok=True);output.write_text(json.dumps(report,indent=2),encoding='utf-8')
         page.close();shell.close();s.close_normally(process)
     finally:
+        print('MENU PROCESS EXIT',process.poll(),flush=True)
+        debug=pathlib.Path(profile)/'Soulu/User Data/Profiles/chrome_debug.log'
+        if debug.is_file():print(debug.read_text(encoding='utf-8',errors='replace')[-20000:],flush=True)
         if process.poll() is None:process.kill()
         server.shutdown()

@@ -65,7 +65,7 @@ def main():
         def call(method,payload=None):return s.evaluate(shell,'browserShell.'+method+'('+('' if payload is None else json.dumps(payload))+')')
         def new_content(method,payload=None):
             old={t['id'] for t in s.targets()};result=call(method,payload)
-            target=wait(lambda:next((t for t in s.targets() if t['id'] not in old and t.get('type')=='page'),None))
+            target=wait(lambda:next((t for t in s.targets() if t['id'] not in old and t.get('type')=='page' and not t.get('url','').startswith('chrome://') and '/ui/index.html' not in t.get('url','')),None))
             ws=socket(target);wait(lambda:s.evaluate(ws,"document.readyState==='complete'"));return ws,result
         def state():return call('getState')
         def query(ws,search='',begin=0,end=864e13,offset=0):return bridge(ws,'query',dict(search=search,begin=begin,end=end,offset=offset))

@@ -135,6 +135,13 @@ def main():
    report.parent.mkdir(parents=True,exist_ok=True);report.write_text(json.dumps({'passed':True,'checks':checks,'input':'Real Windows pointer and Unicode keyboard input; no programmatic Home focus.'},ensure_ascii=False,indent=2),encoding='utf-8')
   except Exception:
    print('PROCESS EXIT',process.poll(),flush=True)
+   try:
+    print('SHELL STATE',s.evaluate(shell,"JSON.stringify({state:browserShell.getState(),active:document.activeElement?.id,focus:document.hasFocus()})"),flush=True)
+    for target in s.targets():
+     if '/ui/home.html' in target.get('url',''):
+      diagnostic=link(target)
+      print('HOME DIAGNOSTIC',target['id'],s.evaluate(diagnostic,"JSON.stringify({value:document.querySelector('#query')?.value,active:document.activeElement?.id,focus:document.hasFocus(),ready:document.readyState})"),flush=True)
+   except Exception as diagnostic_error:print('DIAGNOSTIC ERROR',str(diagnostic_error),flush=True)
    from PIL import ImageGrab
    report.parent.mkdir(parents=True,exist_ok=True)
    ImageGrab.grab().save(report.with_suffix('.failure.png'))

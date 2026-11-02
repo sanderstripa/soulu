@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [frame, adaptive, menus, history, bookmarks-overview]
+        suite: [home, menus, history]
     env:
       PYTHONUTF8: 1
       SOULU_UI_TEST_PORT: '9223'
@@ -75,8 +75,9 @@ jobs:
             exit $LASTEXITCODE
           }
           $groups=@{
+            home=@('home-focus')
             adaptive=@('adaptive-toolbar')
-            menus=@('menu-system','menu-actions')
+            menus=@('menu-actions')
             history=@('history')
             'bookmarks-overview'=@('bookmarks-overview')
           }
