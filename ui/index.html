@@ -16,7 +16,7 @@
   <link rel="stylesheet" href="adaptive-toolbar.css">
 <link rel="stylesheet" href="page-glass.css">
 <link rel="stylesheet" href="motion.css"><link rel="preload" href="fonts/Onest-Regular.ttf" as="font" type="font/ttf" crossorigin><link rel="preload" href="fonts/Onest-Medium.ttf" as="font" type="font/ttf" crossorigin><link rel="preload" href="fonts/Onest-SemiBold.ttf" as="font" type="font/ttf" crossorigin><link rel="stylesheet" href="typography.css"><script src="typography.js" defer></script>  <link rel="stylesheet" href="translation-ui.css">
-</head>
+<link rel="stylesheet" href="extension-toolbar.css"></head>
 <body data-layout="compact" data-theme="system" data-matte="true" data-address-position="center" data-extensions-position="left">
   <div class="window-drag-strip" aria-hidden="true"></div>
 
@@ -29,7 +29,7 @@
 
 
       <div class="compact-center-cluster">
-        <button class="compact-control vpn-button" id="compactVpnButton" title="VPN" aria-pressed="false"><svg class="vpn-connect-glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6a8.5 8.5 0 1 0 0 12M12 12h8"/><circle cx="20.5" cy="12" r="1" fill="currentColor" stroke="none"/></svg></button>
+        <button class="compact-control vpn-button" id="compactVpnButton" title="VPN" aria-pressed="false"><svg class="vpn-connect-glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6a8.5 8.5 0 1 0 0 12M12 12h8"/><circle cx="20.5" cy="12" r="1" fill="currentColor" stroke="none"/></svg></button><div class="extension-toolbar" data-extension-toolbar="compact" aria-label="Расширения"></div>
 
 
         <div class="compact-tab-flow" id="compactTabFlow"><template id="compactTabsAnchor"></template></div>
@@ -68,7 +68,7 @@
 
       </div>
       <div class="classic-address-wrap">
-<button class="toolbar-button vpn-button" id="vpnButton" title="VPN" aria-pressed="false"><svg class="vpn-connect-glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6a8.5 8.5 0 1 0 0 12M12 12h8"/><circle cx="20.5" cy="12" r="1" fill="currentColor" stroke="none"/></svg></button>
+<button class="toolbar-button vpn-button" id="vpnButton" title="VPN" aria-pressed="false"><svg class="vpn-connect-glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6a8.5 8.5 0 1 0 0 12M12 12h8"/><circle cx="20.5" cy="12" r="1" fill="currentColor" stroke="none"/></svg></button><div class="extension-toolbar" data-extension-toolbar="classic" aria-label="Расширения"></div>
         <form class="classic-address-pill" id="classicAddressForm">
           <button class="address-menu-button" type="button" id="classicPageMenu" data-i18n-title="pageMenu"><svg viewBox="0 0 20 20"><path d="M4 5.5h12M4 10h12M4 14.5h7"/></svg></button>
           <input id="classicAddress" data-i18n-placeholder="addressPlaceholder" placeholder="Поиск или адрес" autocomplete="off" spellcheck="false">
@@ -115,7 +115,7 @@
 
 
   <script src="motion.js"></script><script src="cef-bridge.js"></script>
-  <script src="adaptive-toolbar.js"></script><script src="renderer.js"></script>
+  <script src="adaptive-toolbar.js"></script><script src="renderer.js"></script><script src="extension-toolbar.js"></script>
   <script src="cef-enhancements.js"></script>
   <script src="navigation.js"></script>
   <script src="caption-geometry.js"></script>

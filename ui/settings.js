@@ -105,6 +105,8 @@ for(const kind of ['startup','newTab','home']){const n=$('control-settings-'+kin
           help.append(el('p',t('Совместимость зависит от расширения. Функции, требующие панели Chrome, могут быть недоступны в оболочке Soulu.','Compatibility depends on the extension. Features requiring the Chrome toolbar may be unavailable in the Soulu shell.'),'note'));
           help.addEventListener('toggle',scheduleExtensions);n.append(controls,help);
           const host=el('div',undefined,'extensions-surface');host.id='extensionsSurface';n.append(host);
+          const pins=el('div',undefined,'extension-pin-list');pins.id='extensionPins';n.insertBefore(pins,host);
+          renderExtensionPins(pins);
           card.append(n);requestAnimationFrame(()=>placeExtensions());continue;
         }
         if(r.key==='defaultBrowser')text.append(el('small',t(state.capabilities?.defaultBrowser?'Soulu используется как браузер по умолчанию':'Soulu не является браузером по умолчанию',state.capabilities?.defaultBrowser?'Soulu is the default browser':'Soulu is not the default browser')));if(r.type==='vpnProfiles'){n.classList.add('long');const host=el('div',undefined,'vpn-profile-manager');n.append(host);window.souluVpnSettings.render(host);}else if(r.type==='components'){n.classList.add('long');const host=el('div',undefined,'component-manager');n.append(host);window.souluComponents.render(host);}else if(r.type==='action'){if(r.key==='versions'){const grid=el('div',undefined,'version-grid');for(const [name,value] of [['Soulu',state.update?.soulu],['CEF',state.update?.cef],['Chromium',state.update?.chromium]]){const cell=el('div');cell.append(el('span',name),el('strong',value||'—'));grid.append(cell);}n.classList.add('long');n.append(grid,el('p',t('Автоматическая проверка и установка обновлений пока недоступны.','Automatic update checks and installation are not available.'),'note'));}else n.append(button(r.key==='defaultBrowser'?t(state.capabilities?.defaultBrowser?'Настройки Windows':'Сделать основным',state.capabilities?.defaultBrowser?'Windows settings':'Make default'):t('Открыть','Open'),()=>runAction(r.key)));}
@@ -116,6 +118,25 @@ for(const kind of ['startup','newTab','home']){const n=$('control-settings-'+kin
     }if(state.capabilities?.matteAvailable===false){const row=$('control-settings-mattePanel');if(row){row.querySelector('input').disabled=!current.settings.mattePanel;row.querySelector('span').append(el('small',t('Эффект недоступен при текущих настройках прозрачности или контрастности Windows.','The effect is unavailable with the current Windows transparency or contrast settings.')));}}updateConditional();
   }
 
+  async function renderExtensionPins(host){
+    const profile=current.profile;
+    try{
+      const data=await window.browserShell.extensions('list',{profile});
+      if(!host.isConnected||current?.profile!==profile)return;
+      const signature=JSON.stringify((data.items||[]).map(e=>[e.id,e.enabled,e.pinned,e.version]));if(host.dataset.signature===signature)return;host.dataset.signature=signature;
+      host.replaceChildren();host.append(el('b',t('Значки на панели после VPN','Toolbar icons after VPN')));
+      for(const item of (data.items||[]).filter(e=>e.action)){
+        const row=el('label',undefined,'extension-pin-row');
+        if(/^data:image\//.test(item.icon||'')){const image=el('img');image.src=item.icon;image.alt='';row.append(image);}
+        row.append(el('span',item.name));const toggle=el('input');toggle.type='checkbox';toggle.checked=item.pinned;toggle.disabled=!item.enabled;toggle.dataset.extensionId=item.id;toggle.setAttribute('aria-label',t('Показывать на панели: ','Show in toolbar: ')+item.name);
+        toggle.onchange=async()=>{const wanted=toggle.checked;toggle.disabled=true;try{await window.browserShell.extensions('pin',{profile,id:item.id,pinned:wanted});}catch(error){toggle.checked=!wanted;report(error);}finally{toggle.disabled=!item.enabled;scheduleExtensions();}};
+        row.append(toggle);host.append(row);
+      }
+      if(!(data.items||[]).some(e=>e.action))host.append(el('small',t('Установите расширение с кнопкой действия, чтобы закрепить его значок.','Install an extension with a toolbar action to pin its icon.')));
+      scheduleExtensions();
+    }catch(error){if(host.isConnected){host.textContent=error.message;report(error);}}
+  }
+  setInterval(()=>{const host=$('extensionPins');if(current&&section==='extensions'&&host)renderExtensionPins(host);},3000);
   let extensionFrame=0;
   function placeExtensions(page){
     const host=$('extensionsSurface'),viewport=$('settingsContent');
@@ -178,7 +199,7 @@ for(const kind of ['startup','newTab','home']){const n=$('control-settings-'+kin
   $('settingsSearch').oninput=showSearch;$('clearSearch').onclick=()=>{$('settingsSearch').value='';showSearch();$('settingsSearch').focus();};$('closeSettings').onclick=requestClose;
   $('closeAction').onclick=()=>{$('actionDialog').close();$('actionContent').replaceChildren();};$('actionDialog').addEventListener('close',()=>{$('actionContent').replaceChildren();});
   document.addEventListener('keydown',e=>{if(e.altKey&&e.key==='ArrowLeft'&&section&&!document.querySelector('dialog[open]')){e.preventDefault();openSection('');}if(e.key==='Escape'&&!document.querySelector('dialog[open]')){e.preventDefault();requestClose();}if(e.target.closest('#sectionNav')&&['ArrowDown','ArrowUp','Home','End'].includes(e.key)){e.preventDefault();const buttons=[...$('sectionNav').children],i=buttons.indexOf(e.target);buttons[e.key==='Home'?0:e.key==='End'?buttons.length-1:(i+(e.key==='ArrowDown'?1:-1)+buttons.length)%buttons.length].focus();}});
-  window.addEventListener('focus',()=>{if(current)invoke('capabilities').then(capabilities=>{state.capabilities=capabilities;if(section==='general')renderSection();}).catch(()=>{});});
+  window.addEventListener('focus',()=>{if(section==='extensions'&&$('extensionPins'))renderExtensionPins($('extensionPins'));if(current)invoke('capabilities').then(capabilities=>{state.capabilities=capabilities;if(section==='general')renderSection();}).catch(()=>{});});
   document.addEventListener('keydown',e=>{
     if(e.ctrlKey&&e.key.toLowerCase()==='f'){e.preventDefault();$('settingsSearch').focus();}
     if(e.ctrlKey&&e.key.toLowerCase()==='w'){e.preventDefault();requestClose();}

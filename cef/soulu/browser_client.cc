@@ -516,7 +516,7 @@ bool BrowserClient::OnOpenURLFromTab(CefRefPtr<CefBrowser> browser,
     CefRefPtr<CefFrame>, const CefString& url, WindowOpenDisposition disposition,
     bool) {
   CEF_REQUIRE_UI_THREAD();
-  if (role_ == BrowserRole::kShell) return false;
+  if (role_ == BrowserRole::kShell || browser->GetHost()->GetRuntimeStyle()==CEF_RUNTIME_STYLE_CHROME) return false;
   if (owner_->IsSettingsUrl(url)) { owner_->GuardSettingsNavigation(tab_id_, url); return true; }
   if (role_ == BrowserRole::kSettings) { owner_->GuardSettingsNavigation(tab_id_, url); return true; }
   switch (disposition) {

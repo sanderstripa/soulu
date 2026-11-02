@@ -2,6 +2,8 @@
 
 #include <windows.h>
 #include "examples/soulu/extensions_panel.h"
+#include "examples/soulu/chrome_tab_host.h"
+#include "examples/soulu/extension_service.h"
 
 #include <string>
 #include <vector>
@@ -54,6 +56,7 @@ class BrowserWindow final : public CefBaseRefCounted {
   bool ValidatePagePatch(CefRefPtr<CefDictionaryValue> patch) const;
   void AttachShell(CefRefPtr<CefBrowser> browser);
   void AttachContent(int tab_id, CefRefPtr<CefBrowser> browser);
+  void AttachChromePopup(CefRefPtr<CefBrowser>,CefRefPtr<ChromeTabHost>);
   void BrowserClosed(CefRefPtr<CefBrowser> browser, int tab_id, bool shell);
   void UpdateTitle(int tab_id, const std::string& title);
   void UpdateAddress(int tab_id, const std::string& url);
@@ -74,6 +77,10 @@ class BrowserWindow final : public CefBaseRefCounted {
   void HandleBridge(const std::string& request,
                     CefRefPtr<CefMessageRouterBrowserSide::Callback> callback, bool settings_source = false);
 
+  bool HandleExtensionBridge(const std::string&,CefRefPtr<CefValue>,CefRefPtr<CefMessageRouterBrowserSide::Callback>,bool);
+  CefRefPtr<ExtensionService> ExtensionsForProfile(const std::string&);
+  std::map<std::string,CefRefPtr<ExtensionService>> extension_services_;
+  bool extension_services_closing_=false,extension_services_closed_=false;
   HWND hwnd() const { return hwnd_; }
   bool MenuDark() const;
   bool MenuEnglish() const;
@@ -135,6 +142,7 @@ class BrowserWindow final : public CefBaseRefCounted {
   struct Tab {
     int id = 0;
     CefRefPtr<CefBrowser> browser;
+    CefRefPtr<ChromeTabHost> chrome_host;
     std::string title = "New Tab";
     std::string url = "about:blank";
     std::string favicon;

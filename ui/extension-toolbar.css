@@ -1,0 +1,11 @@
+.extension-toolbar{display:flex;align-items:center;gap:0;flex:0 0 auto;-webkit-app-region:no-drag}
+.extension-action{width:32px!important;height:32px!important;min-width:32px;border-radius:50%;font-size:13px;font-weight:500;flex:none}
+.extension-action img{width:20px;height:20px;object-fit:contain;pointer-events:none}
+.classic-address-wrap>.extension-toolbar{position:absolute;right:calc(100% + 6px);top:0;bottom:0}
+.classic-address-wrap>.vpn-button{right:calc(100% + 6px + var(--extension-toolbar-width,0px))}
+body[data-address-position=left] .classic-address-wrap>.vpn-button{left:0;right:auto}
+body[data-address-position=left] .classic-address-wrap>.extension-toolbar{left:38px;right:auto}
+body[data-address-position=left][data-show-vpn=true] .classic-address-wrap{padding-left:calc(38px + var(--extension-toolbar-width,0px))}
+body[data-address-position=left][data-show-vpn=false] .classic-address-wrap{padding-left:var(--extension-toolbar-width,0px)}
+body[data-address-position=left][data-show-vpn=false] .classic-address-wrap>.extension-toolbar{left:0}
+.extension-pin-list{display:grid;gap:4px;width:100%}.extension-pin-row{display:flex;align-items:center;gap:10px;padding:8px 0}.extension-pin-row img{width:22px;height:22px;object-fit:contain}.extension-pin-row span{flex:1}.extension-pin-row input{flex:none}

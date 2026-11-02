@@ -108,6 +108,7 @@
     close: () => invoke("window.close"),
     dragStart: (clicks = 1) => invoke("window.beginDrag", clicks),
     toolbarMenu: () => invoke("window.toolbarMenu"),
+    extensions: (op,payload) => invoke("browser.extensions."+op,payload),
     getState: () => invoke("browser.state.get"),
     onState: callback => subscribe("state", callback),
     onAdaptiveGeometry: callback => subscribe("adaptiveGeometry", callback),

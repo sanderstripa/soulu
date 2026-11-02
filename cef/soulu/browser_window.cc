@@ -1173,7 +1173,7 @@ int BrowserWindow::PreparePopup(int source_id, const std::string& url,
   info.SetAsChild(hwnd_, CurrentGeometry().content);
   // Soulu owns the window and tab lifecycle. The default Chrome runtime
   // creates a Chrome Browser window even when a native parent is supplied.
-  info.runtime_style = CEF_RUNTIME_STYLE_ALLOY;
+  info.runtime_style = source->chrome_host?CEF_RUNTIME_STYLE_CHROME:CEF_RUNTIME_STYLE_ALLOY;
   // Keep the child hidden until AttachContent applies the selected tab's layout.
   info.style &= ~WS_VISIBLE;
   EmitState();
@@ -1226,11 +1226,11 @@ void BrowserWindow::NewTab(const std::string& url, bool incognito,
   // Resolve/create the private context and its copied policy before the client
   // captures that policy; function-argument evaluation order is unspecified.
   auto request_context=context?context:ContextForNewTab(incognito);
-  const bool created = CefBrowserHost::CreateBrowser(
-      info, new BrowserClient(this, role, id),
-      InternalUrl(tab.url), browser_settings,
-      [&](){auto extra=CefDictionaryValue::Create();extra->SetBool("souluIncognito",incognito);extra->SetBool("souluDeferMedia",!foreground);return extra;}(),
-      request_context);
+  auto extra=CefDictionaryValue::Create();extra->SetBool("souluIncognito",incognito);extra->SetBool("souluDeferMedia",!foreground);
+  auto chrome_host=CreateChromeTab(hwnd_,new BrowserClient(this,role,id),InternalUrl(tab.url),browser_settings,extra,request_context,[this](CefRefPtr<CefBrowser> browser,CefRefPtr<ChromeTabHost> host){AttachChromePopup(browser,host);});
+  const bool created=chrome_host!=nullptr;
+  if(auto* created_tab=FindTab(id))created_tab->chrome_host=chrome_host;
+  Layout();
   if (!created) {
     AbortPopup(id);
     active_tab_id_ = previous_active;
@@ -1240,6 +1240,11 @@ void BrowserWindow::NewTab(const std::string& url, bool incognito,
   }
   EmitState();
   if (foreground && tab.url == "about:blank") FocusAddress();
+}
+
+void BrowserWindow::AttachChromePopup(CefRefPtr<CefBrowser> browser,CefRefPtr<ChromeTabHost> host){
+  for(auto& tab:tabs_)if(tab.browser&&tab.browser->IsSame(browser)){tab.chrome_host=host;Layout();return;}
+  host->Close();
 }
 
 void BrowserWindow::AttachShell(CefRefPtr<CefBrowser> browser) {
@@ -1327,7 +1332,7 @@ void BrowserWindow::SwitchTab(int id) {
   ActivateMedia(id);
   if(tab->focus_home_on_load&&tab->browser&&!tab->browser->IsLoading())ContentPageLoaded(id);
   Layout();
-  if(tab->browser&&!settings_overlay_&&!overview_visible_&&!popover_visible_)tab->browser->GetHost()->SetFocus(true);
+  if(tab->browser&&!settings_overlay_&&!overview_visible_&&!popover_visible_){if(tab->chrome_host)tab->chrome_host->SetVisible(true,true);tab->browser->GetHost()->SetFocus(true);}
   EmitState();
 }
 
@@ -1898,6 +1903,7 @@ void BrowserWindow::Layout() {
     // The opaque shell overview covers the existing active view. Keeping that
     // view mapped lets an asynchronous compositor screenshot finish reliably.
     const bool visible = belongs && tab.id == active_tab_id_;
+    if(tab.chrome_host)tab.chrome_host->SetVisible(visible,false);
     positions.push_back({child, HWND_BOTTOM, g.content.x, g.content.y, g.content.width, g.content.height,
         flags | (visible ? SWP_SHOWWINDOW : SWP_HIDEWINDOW)});
   }
@@ -2328,6 +2334,7 @@ void BrowserWindow::HandleBridge(const std::string& request,
     POINT anchor={static_cast<LONG>(data->GetInt("x")*scale),static_cast<LONG>(data->GetInt("y")*scale)};ClientToScreen(hwnd_,&anchor);
     auto result=CefValue::Create();result->SetInt(ShowSouluMenu(hwnd_,anchor,std::move(model),{MenuDark()}));Reply(callback,result);return;
   }
+  if(action.rfind("browser.extensions.",0)==0){if(HandleExtensionBridge(action,payload,callback,settings_source))return;}
   if(action.rfind("browser.translate.",0)==0){if(settings_source){callback->Failure(403,"Unavailable from settings");return;}if(HandleTranslationBridge(action,payload,callback))return;}
   if (action == "browser.settings.siteSnapshot" || action == "browser.settings.clearSite") {
     auto data = payload && payload->GetType() == VTYPE_DICTIONARY ? payload->GetDictionary() : nullptr;
@@ -3069,6 +3076,14 @@ void BrowserWindow::CloseAll() {
   if (settings_overlay_) { settings_close_all_ = true; GuardSettingsClose(kSettingsSession, true); return; }
   if(importing_){close_after_import_=true;return;}
   if (closing_) return;
+  if(!extension_services_closed_&&!extension_services_.empty()){
+    if(extension_services_closing_)return;
+    extension_services_closing_=true;CefRefPtr<BrowserWindow> self=this;
+    auto remaining=std::make_shared<size_t>(extension_services_.size());
+    auto snapshot=extension_services_;
+    for(const auto& [profile,service]:snapshot)service->Close([self,remaining]{if(--*remaining==0){self->extension_services_.clear();self->extension_services_closed_=true;self->CloseAll();}});
+    return;
+  }
   SaveSession();
   SaveWindowPlacement();
   closing_ = true;
