@@ -19,6 +19,7 @@ ShellSurface::ShellSurface(HWND parent) : parent_(parent) {
 ShellSurface::~ShellSurface() {
   if (IsWindow(hwnd_)) DestroyWindow(hwnd_);
   ReleaseBitmap();
+  if(cursor_)DestroyCursor(cursor_);
 }
 void ShellSurface::ReleaseBitmap() {
   if (memory_ && original_) SelectObject(memory_, original_);
@@ -43,7 +44,13 @@ void ShellSurface::CommitResize() {
   }
 }
 void ShellSurface::Focus() { SetFocus(hwnd_); if (browser_) browser_->GetHost()->SetFocus(true); }
-void ShellSurface::Cursor(HCURSOR cursor) { cursor_ = cursor; SetCursor(cursor ? cursor : LoadCursor(nullptr, IDC_ARROW)); }
+void ShellSurface::Cursor(HCURSOR cursor) {
+  HCURSOR copy=cursor?CopyCursor(cursor):nullptr;
+  HCURSOR previous=cursor_;cursor_=copy;
+  POINT point={};GetCursorPos(&point);
+  if(WindowFromPoint(point)==hwnd_)SetCursor(cursor_?cursor_:LoadCursor(nullptr,IDC_ARROW));
+  if(previous)DestroyCursor(previous);
+}
 RECT ShellSurface::MaximizeBounds() const {
   return {static_cast<LONG>(std::round(maximize_rect_.x * scale_)),
       static_cast<LONG>(std::round(maximize_rect_.y * scale_)),

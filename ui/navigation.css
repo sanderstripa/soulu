@@ -7,7 +7,7 @@ body[data-bookmarks-bar=true][data-layout=classic] .classic-toolbar{height:calc(
 body[data-bookmarks-bar=true][data-layout=classic][data-bookmarks-position=below] .bookmarks-bar{top:var(--geometry-classic-toolbar)}
 body[data-bookmarks-bar=true][data-layout=classic] :is(.sidebar,.side-panel,.vpn-panel,.settings-panel){top:calc(var(--geometry-classic-toolbar) + var(--geometry-bookmarks))}
 body[data-bookmarks-bar=true][data-layout=compact] :is(.sidebar,.side-panel,.vpn-panel,.settings-panel){top:calc(var(--geometry-main-toolbar) + var(--geometry-bookmarks))}
-.bookmarks-menu{position:fixed;top:var(--chrome-height);left:0;bottom:0;width:276px;overflow:auto;z-index:90;padding:12px;background:var(--panel,var(--surface));color:var(--text);border-right:1px solid var(--line);border-radius:0;box-shadow:none}
+.bookmarks-menu{opacity:1;transform:translateX(0);transition:opacity 280ms cubic-bezier(.22,1,.36,1),transform 280ms cubic-bezier(.22,1,.36,1),display 280ms allow-discrete;position:fixed;top:var(--chrome-height);left:0;bottom:0;width:276px;overflow:auto;z-index:90;padding:12px;background:var(--panel,var(--surface));color:var(--text);border-right:1px solid var(--line);border-radius:0;box-shadow:none}
 .navigation-search{padding:9px 12px;width:100%;border:1px solid var(--line);border-radius:9px;color:var(--text);background:var(--field);outline-color:var(--blue)}
 .bookmark-tree{max-height:280px;overflow:auto;margin:8px 0}.bookmark-line{display:flex;align-items:center}.bookmark-line>.bookmark-item{flex:1;max-width:none}.bookmark-actions{display:grid;gap:2px;border-top:1px solid var(--line);padding-top:6px}.bookmark-options{display:grid;gap:8px;border-top:1px solid var(--line);padding-top:12px;margin-top:8px}.bookmark-options label{display:flex;align-items:center;justify-content:space-between;gap:8px}.bookmark-options select{color:var(--text);background:var(--field);border:1px solid var(--line);padding:4px;max-width:220px}
 .bookmark-context{position:fixed;z-index:12000;width:260px;padding:6px;display:grid;border-radius:10px;border:1px solid var(--line);background:var(--panel);box-shadow:0 10px 30px var(--shadow)}
@@ -54,3 +54,7 @@ body[data-layout=classic] .bookmarks-menu{top:var(--geometry-classic-toolbar)}bo
 
 .bookmarks-menu .bookmark-actions{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
 .bookmarks-menu .bookmark-actions .nav-action{font:var(--type-caption);padding:6px 7px;overflow-wrap:normal;min-width:0}
+
+.bookmarks-menu[hidden]{opacity:0;transform:translateX(-24px);pointer-events:none}
+@starting-style{.bookmarks-menu:not([hidden]){opacity:0;transform:translateX(-24px)}}
+@media(prefers-reduced-motion:reduce){.bookmarks-menu{transition:none}.bookmarks-menu[hidden]{transform:none}}

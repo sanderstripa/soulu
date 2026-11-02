@@ -1,5 +1,6 @@
 #include "examples/soulu/browser_window.h"
 #include "include/wrapper/cef_helpers.h"
+#include <algorithm>
 namespace soulu {
 CefRefPtr<ExtensionService> BrowserWindow::ExtensionsForProfile(const std::string& profile){
   if(extension_services_closing_||closing_||profile=="__incognito__")return nullptr;
@@ -29,12 +30,15 @@ bool BrowserWindow::HandleExtensionBridge(const std::string& action,CefRefPtr<Ce
   auto* tab=ActiveTab();
   if(settings_source||settings_overlay_||!tab||!tab->browser||tab->profile_id!=profile){callback->Failure(403,"Выберите обычную вкладку Soulu.");return true;}
   const int tab_id=tab->id;const auto browser=tab->browser;
-  service->List([self,service,id,profile,tab_id,browser,callback,reply](CefRefPtr<CefDictionaryValue> result,const std::string& error){
+  const auto rect=data->GetDictionary("anchor");
+  CefRect anchor(12,8,32,32);if(rect)anchor=CefRect(rect->GetInt("x"),rect->GetInt("y"),std::clamp(rect->GetInt("width"),1,256),std::clamp(rect->GetInt("height"),1,256));
+  service->List([self,service,id,profile,tab_id,browser,callback,reply,anchor](CefRefPtr<CefDictionaryValue> result,const std::string& error){
     auto* tab=self->ActiveTab();if(!tab||tab->id!=tab_id||tab->profile_id!=profile||!tab->browser||!tab->browser->IsSame(browser)){callback->Failure(409,"Активная вкладка изменилась.");return;}
     auto items=result?result->GetList("items"):nullptr;bool allowed=false;
     if(items)for(size_t i=0;i<items->GetSize();++i){auto item=items->GetDictionary(i);if(item&&item->GetString("id")==id&&item->GetBool("enabled")&&item->GetBool("pinned")&&item->GetBool("action"))allowed=true;}
     if(!error.empty()||!allowed){callback->Failure(403,error.empty()?"Расширение не закреплено или отключено.":error);return;}
     self->FocusContent(tab);
+    if(tab->chrome_host)tab->chrome_host->ArmActionPopup(anchor);
     service->Open(browser,id,reply);
   });return true;
 }

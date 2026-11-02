@@ -1,4 +1,4 @@
-:root{--motion-micro:140ms;--motion-surface:180ms;--motion-structural:260ms;--motion-sidebar-open:200ms;--motion-sidebar-close:180ms;--motion-sidebar-content:160ms;--motion-stagger:40ms;--motion-reduced:60ms;--motion-enter:cubic-bezier(.22,1,.36,1);--motion-exit:cubic-bezier(.4,0,.6,1)}
+:root{--motion-micro:140ms;--motion-surface:180ms;--motion-structural:300ms;--motion-sidebar-open:200ms;--motion-sidebar-close:180ms;--motion-sidebar-content:160ms;--motion-stagger:40ms;--motion-reduced:60ms;--motion-enter:cubic-bezier(.22,1,.36,1);--motion-exit:cubic-bezier(.4,0,.6,1)}
 .motion-shared{position:fixed;z-index:1000;pointer-events:none;overflow:hidden;box-sizing:border-box;display:flex;align-items:center;gap:18px;transform-origin:0 0;will-change:transform;contain:layout paint}
 .motion-shared svg{flex:none;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .motion-source-hidden{visibility:hidden!important}

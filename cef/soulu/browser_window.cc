@@ -769,6 +769,8 @@ void BrowserWindow::ApplyProxy(CefRefPtr<CefRequestContext> context) {
 void BrowserWindow::RequestContextInitialized(CefRefPtr<CefRequestContext> context) {
   CEF_REQUIRE_UI_THREAD();
   ApplyProxy(context);
+  const auto theme=EffectiveSettings()->GetString("theme").ToString();
+  context->SetChromeColorScheme(theme=="dark"?CEF_COLOR_VARIANT_DARK:theme=="light"?CEF_COLOR_VARIANT_LIGHT:CEF_COLOR_VARIANT_SYSTEM,0);
 }
 
 bool BrowserWindow::IsTrustedUi(const std::string& url) const {
@@ -1277,6 +1279,8 @@ void BrowserWindow::AttachContent(int tab_id, CefRefPtr<CefBrowser> browser) {
     return;
   }
   tab->browser = browser;
+  const auto theme=EffectiveSettings()->GetString("theme").ToString();
+  browser->GetHost()->GetRequestContext()->SetChromeColorScheme(theme=="dark"?CEF_COLOR_VARIANT_DARK:theme=="light"?CEF_COLOR_VARIANT_LIGHT:CEF_COLOR_VARIANT_SYSTEM,0);
   if(tab->focus_address_on_attach && active_tab_id_==tab_id){
     tab->focus_address_on_attach=false;FocusAddress();
   }
@@ -2012,11 +2016,17 @@ void BrowserWindow::Layout() {
 void BrowserWindow::PageScroll(int tab_id,double y) {
   if(!std::isfinite(y))return;
   auto* tab=FindTab(tab_id);if(!tab)return;
-  tab->scroll_y=std::clamp(y,0.0,10000000.0);
+  const double next=std::clamp(y,0.0,10000000.0);
+  if(std::abs(tab->scroll_y-next)<.5)return;
+  tab->scroll_y=next;
   if(tab_id==active_tab_id_&&EffectiveSettings()->GetBool("mattePanel"))Layout();
 }
 
 void BrowserWindow::ApplyContentTheme() {
+  const auto theme=EffectiveSettings()->GetString("theme").ToString();
+  const auto variant=theme=="dark"?CEF_COLOR_VARIANT_DARK:theme=="light"?CEF_COLOR_VARIANT_LIGHT:CEF_COLOR_VARIANT_SYSTEM;
+  for(const auto& profile:profiles_)if(profile.context)profile.context->SetChromeColorScheme(variant,0);
+  if(incognito_context_)incognito_context_->SetChromeColorScheme(variant,0);
   const bool dark = EffectiveSettings()->GetString("theme") == "dark" ||
       (EffectiveSettings()->GetString("theme") == "system" && IsWindowsDarkMode());
   for (auto& tab : tabs_) {
@@ -2726,7 +2736,7 @@ void BrowserWindow::HandleBridge(const std::string& request,
       sidebar_visible_ = show_bookmarks;
       if (!closing_tabs) bookmarks_sidebar_ = true;
     }
-    if (tab_toggle || closing_tabs) {
+    { // Both bookmark and tab sidebars retain their host for the exit fade.
       sidebar_motion_ = true; const auto generation = ++sidebar_motion_generation_;
       if (shell_) shell_->GetHost()->SetWindowlessFrameRate(motion::kShellMotionFrameRate);
       CefRefPtr<BrowserWindow> self = this;
@@ -2772,7 +2782,11 @@ void BrowserWindow::HandleBridge(const std::string& request,
   else if (action == "browser.overview") {
     const bool show = payload->GetBool();
     if (show && !overview_visible_) CaptureThumbnail();
-    overview_visible_ = show; Layout(); EmitState();
+    overview_visible_ = show;
+    if(shell_)shell_->GetHost()->SetWindowlessFrameRate(motion::kShellMotionFrameRate);
+    CefRefPtr<BrowserWindow> self=this;
+    CefPostDelayedTask(TID_UI,new FunctionTask([self]{if(self->shell_&&!self->sidebar_motion_&&!self->adaptive_running_)self->shell_->GetHost()->SetWindowlessFrameRate(motion::kShellIdleFrameRate);}),360);
+    Layout(); EmitState();
   }
   else if (action == "browser.bookmarks.auto") {
     bookmarks_auto_visible_ = payload->GetBool(); Layout(); EmitState();

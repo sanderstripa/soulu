@@ -1,10 +1,11 @@
-# Soulu 1.0.75
+# Soulu Beta 1.0.76
 
-- В «Настройки → Расширения» добавлено закрепление и скрытие значков на панели сразу после VPN.
-- Нажатие на значок вызывает штатное действие Chrome: расширение открывает собственный popup вместо новой вкладки.
-- Обычные вкладки используют Chrome runtime CEF для работы service worker, сообщений, скриптов страниц и API расширений.
-- Установка, закрепление и хранилище расширений привязаны к профилю браузера и сохраняются после перезапуска.
-- Обработчики Soulu отделены от изолированных контекстов расширений; устранено повторное открытие диалогов сохранения пароля.
-- В Windows-проверки включены popup, фоновый worker, выбор активной вкладки, заполнение и сохранение тестовых данных, перезапуск, изоляция профилей, а также интерфейс Bitwarden из официального магазина.
+- Stabilize Chrome Views page bounds and skip redundant visibility/layout changes introduced with extension support.
+- Keep nested page scrolling from moving the native page viewport.
+- Anchor Chromium extension action popups to their Soulu toolbar button, cap them at 800×600 DIP, and dismiss on outside click, Escape, tab switch or application deactivation.
+- Preserve extension toolbar buttons when the installed extension list has not changed.
+- Retain a private native toolbar cursor and apply cursor changes only while the pointer is over that toolbar.
+- Forward light/dark/system appearance to Chromium profiles so supported sites receive the browser color scheme.
+- Smooth settings, tab overview and bookmark sidebar transitions; retain the shell surface for bookmark exit animations.
 
-Авторизация в личном хранилище Bitwarden и операции с реальными паролями не выполнялись. Автозаполнение и сохранение проверяются на изолированном MV3-расширении с тестовыми данными; полная совместимость со всеми расширениями и API Chrome не заявляется.
+Windows build and automated checks run in GitHub Actions. Physical YouTube playback, GPU/DPI and real Bitwarden account use require desktop verification; they are not claimed as manually verified here.

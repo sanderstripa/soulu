@@ -30,7 +30,7 @@ bool SettingsOverlay::Create() {
   SetFrostedBackdropOpacity(hwnd_, 0);
   BOOL animate = TRUE;
   if (SystemParametersInfoW(SPI_GETCLIENTAREAANIMATION, 0, &animate, 0)) reduced_ = !animate;
-  duration_ = reduced_ ? motion::kReducedOverlayMs : 240;
+  duration_ = reduced_ ? motion::kReducedOverlayMs : 320;
   Layout();
   // The invisible panel starts above the clipping bounds. Showing the host now
   // blocks input immediately and allows Chromium to prepare its first frame.
@@ -114,7 +114,7 @@ void SettingsOverlay::PlacePanel() {
 }
 void SettingsOverlay::Tick() {
   const float fraction = std::min(1.f, static_cast<float>(GetTickCount64()-start_) / duration_);
-  const float eased = fraction >= 1 ? 1 : .5f-.5f*std::cos(fraction*3.14159265f);
+  const float eased = fraction >= 1 ? 1 : motion::EaseOut(fraction);
   progress_ = state_ == State::Closing ? close_start_ * (1-eased) : eased;
   ++ticks_;
   SetFrostedBackdropOpacity(hwnd_, progress_);

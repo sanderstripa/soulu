@@ -141,7 +141,7 @@ class RendererApp final : public CefApp, public CefRenderProcessHandler {
       context->Eval(R"JS((()=>{const send=window.__souluPageScroll;delete window.__souluPageScroll;const raf=requestAnimationFrame.bind(window);let pending=false,y=0;
         const report=()=>{pending=false;send(y)};
         addEventListener('scroll',event=>{const node=event.target;let value=scrollY;
-          if(node instanceof Element){const r=node.getBoundingClientRect();if(r.top<=64&&r.height>=innerHeight*.65)value=node.scrollTop;}
+          if(node instanceof Element){const r=node.getBoundingClientRect();if(r.top<=64&&r.height>=innerHeight*.65)value=node.scrollTop;else return;}
           y=Math.max(0,value);if(!pending){pending=true;raf(report)}
         },{capture:true,passive:true});addEventListener('pageshow',()=>{y=Math.max(0,scrollY);report()});
       })())JS",frame->GetURL(),0,result,error);

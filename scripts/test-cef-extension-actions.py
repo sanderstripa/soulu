@@ -4,11 +4,12 @@ Uses the native folder chooser and synthetic credentials, never a user vault.
 import base64,ctypes,http.server,importlib.util,json,os,subprocess,sys,tempfile,threading,time
 from pathlib import Path
 from PIL import Image,ImageGrab
+from pywinauto import mouse
 from pywinauto.controls.win32_controls import EditWrapper,ButtonWrapper
 
 def module(name,file):
  spec=importlib.util.spec_from_file_location(name,Path(__file__).with_name(file));m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m);return m
-s=module('storage','test-cef-storage.py');p=module('platform','test-cef-platform.py')
+s=module('storage','test-cef-storage.py');p=module('platform','test-cef-platform.py');o=module('overlay','test-cef-settings-overlay.py')
 s.DEBUG_PORT=s.free_port();s.BASE=f'http://127.0.0.1:{s.DEBUG_PORT}'
 os.environ['NO_PROXY']='localhost,127.0.0.1,::1';os.environ['SOULU_REGRESSION_SKIP_FIRST_RUN']='1'
 def wait(fn,timeout=40):
@@ -98,11 +99,20 @@ chrome.runtime.onMessage.addListener((m,sender,reply)=>{(async()=>{
    state=wait(lambda:s.evaluate(popup,"document.querySelector('#state')?.textContent"));state=json.loads(state)
    check(not state.get('error') and state['tab']['url']==url,'Popup messages reach the worker and resolve the active Soulu page')
    check(len(call(shell,'getState')['tabs'])==before,'Action opens its native popup without creating a Soulu tab')
+   # The real native bubble must follow the visible shell icon, not the
+   # hidden Chrome toolbar or the center of the tab host.
+   anchor=s.evaluate(shell,"(()=>{const r=[...document.querySelectorAll('[data-extension-id="+json.dumps(ident)+"]')].find(b=>b.getClientRects().length).getBoundingClientRect();return {x:r.x,y:r.y,bottom:r.bottom,scale:devicePixelRatio}})()")
+   geometry=wait(lambda:s.evaluate(popup,'({x:screenX,y:screenY,width:outerWidth,height:outerHeight})'))
+   report['popupGeometry']=geometry;report['popupAnchor']=anchor
+   check(geometry['width']<=800 and geometry['height']<=600,'Native action popup respects Chromium action size limits')
+   host=wait(lambda:next(iter(o.windows(process.pid,'SouluBrowserWindow')),None));client=o.client_rect(host)
+   check(abs(geometry['y']-(client[1]/anchor['scale']+anchor['bottom']+6))<24,'Native action popup opens at its visible toolbar button')
    ImageGrab.grab().save(output.parent/'extension-popup.png')
    s.evaluate(popup,"document.querySelector('#fill').click()")
    wait(lambda:s.evaluate(content,"username.value==='fixture-user'&&password.value==='fixture-password'"));check(True,'Worker uses chrome.scripting to autofill the active login form')
    wait(lambda:s.evaluate(popup,"!!JSON.parse(document.querySelector('#result').textContent||'{}').filled"))
-   s.sequence+=1;popup.send(json.dumps({'id':s.sequence,'method':'Runtime.evaluate','params':{'expression':'window.close();true'}}))
+   mouse.press(coords=(client[2]-40,client[3]-40));time.sleep(.1);mouse.release(coords=(client[2]-40,client[3]-40))
+   check(True,'Outside native page press dismisses the extension popup')
    wait(lambda:not any('chrome-extension://'+ident+'/popup.html' in t.get('url','') for t in s.targets()))
    time.sleep(.5)
    check(len(call(shell,'getState')['tabs'])==before,'Closing the native popup preserves all Soulu tabs')

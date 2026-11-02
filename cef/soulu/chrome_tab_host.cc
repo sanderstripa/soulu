@@ -1,5 +1,6 @@
 #include "examples/soulu/chrome_tab_host.h"
 #include <algorithm>
+#include <set>
 #include "include/cef_cookie.h"
 #include "include/cef_task.h"
 #include "include/base/cef_logging.h"
@@ -70,18 +71,82 @@ class Host final:public ChromeTabHost,public CefWindowDelegate,public CefBrowser
     return true;
   }
   void SetVisible(bool visible,bool activate) override {
-    CEF_REQUIRE_UI_THREAD();visible_=visible;if(!window_)return;
+    CEF_REQUIRE_UI_THREAD();const bool changed=visible_!=visible;visible_=visible;if(!window_)return;
+    if(!changed&&visibility_applied_){if(visible&&activate&&!focusing_)FocusNativeContent();return;}
+    visibility_applied_=true;
     // Keep Chromium's content view visibility in sync with the Win32 child.
     // Hiding the native container alone leaves the BrowserView logically shown.
     if(view_&&view_->IsVisible()!=visible)view_->SetVisible(visible);
     if(visible){if(!window_->IsVisible())window_->Show();if(activate&&!focusing_)FocusNativeContent();}
-    else window_->Hide();Resize();
+    else {DismissActionPopup();window_->Hide();}
     // A Chrome widget can raise itself when shown. Content must stay below
     // the custom toolbar, page glass and the owner's native resize border.
     SetWindowPos(window_->GetWindowHandle(),HWND_BOTTOM,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE);
   }
-  void Close() override{closing_=true;if(view_&&view_->GetBrowser())view_->GetBrowser()->GetHost()->CloseBrowser(true);else if(window_)window_->Close();}
+  void ArmActionPopup(const CefRect& anchor) override {
+    DismissActionPopup();anchor_=anchor;existing_popups_.clear();
+    EnumThreadWindows(GetCurrentThreadId(),SnapshotPopup,reinterpret_cast<LPARAM>(this));
+    popup_deadline_=GetTickCount64()+5000;mouse_down_=MouseDown();
+    const auto generation=++popup_generation_;WatchActionPopup(generation);
+  }
+  void Close() override{DismissActionPopup();closing_=true;if(view_&&view_->GetBrowser())view_->GetBrowser()->GetHost()->CloseBrowser(true);else if(window_)window_->Close();}
  private:
+  static bool MouseDown(){return (GetAsyncKeyState(VK_LBUTTON)|GetAsyncKeyState(VK_RBUTTON)|GetAsyncKeyState(VK_MBUTTON))&0x8000;}
+  static BOOL CALLBACK SnapshotPopup(HWND hwnd,LPARAM data){
+    if(IsWindowVisible(hwnd))reinterpret_cast<Host*>(data)->existing_popups_.insert(hwnd);return TRUE;
+  }
+  static BOOL CALLBACK FindActionPopup(HWND hwnd,LPARAM data){
+    auto* self=reinterpret_cast<Host*>(data);
+    if(!IsWindowVisible(hwnd)||self->existing_popups_.count(hwnd)||!(GetWindowLongPtrW(hwnd,GWL_STYLE)&WS_POPUP))return TRUE;
+    wchar_t name[64]={};GetClassNameW(hwnd,name,64);
+    if(wcsncmp(name,L"Chrome_WidgetWin_",17)!=0)return TRUE;
+    const auto host=self->window_->GetWindowHandle();
+    for(HWND owner=GetWindow(hwnd,GW_OWNER);owner;owner=GetWindow(owner,GW_OWNER)){
+      if(owner==host||owner==self->parent_){self->action_popup_=hwnd;return FALSE;}
+    }
+    return TRUE;
+  }
+  void DismissActionPopup(){
+    ++popup_generation_;
+    if(action_popup_&&IsWindow(action_popup_))PostMessageW(action_popup_,WM_CLOSE,0,0);
+    action_popup_=nullptr;
+  }
+  void WatchActionPopup(unsigned generation){
+    if(generation!=popup_generation_||closing_||!window_)return;
+    if(!action_popup_){
+      EnumThreadWindows(GetCurrentThreadId(),FindActionPopup,reinterpret_cast<LPARAM>(this));
+      if(!action_popup_){if(GetTickCount64()>=popup_deadline_)return;}
+      else {popup_started_=GetTickCount64();}
+    }else if(!IsWindow(action_popup_)||!IsWindowVisible(action_popup_)){action_popup_=nullptr;return;}
+    if(action_popup_){
+      RECT bounds={};GetWindowRect(action_popup_,&bounds);
+      POINT anchor={anchor_.x+anchor_.width,anchor_.y+anchor_.height};
+      ClientToScreen(parent_,&anchor);
+      MONITORINFO monitor={sizeof(monitor)};GetMonitorInfoW(MonitorFromPoint(anchor,MONITOR_DEFAULTTONEAREST),&monitor);
+      const auto& work=monitor.rcWork;const int scale=GetDpiForWindow(parent_);
+      // Chromium computes the extension's preferred size. Only cap it at the
+      // same 800x600 DIP action limits; never stretch it to the tab viewport.
+      const int width=std::min<int>({static_cast<int>(bounds.right-bounds.left),MulDiv(800,scale,96),static_cast<int>(work.right-work.left)});
+      const int height=std::min<int>({static_cast<int>(bounds.bottom-bounds.top),MulDiv(600,scale,96),static_cast<int>(work.bottom-work.top)});
+      const int x=std::clamp<int>(anchor.x-width,work.left,work.right-width);
+      const int y=std::clamp<int>(anchor.y+MulDiv(6,scale,96),work.top,work.bottom-height);
+      if(bounds.left!=x||bounds.top!=y||bounds.right-bounds.left!=width||bounds.bottom-bounds.top!=height)
+        SetWindowPos(action_popup_,HWND_TOP,x,y,width,height,SWP_NOACTIVATE);
+      const bool down=MouseDown();POINT mouse={};GetCursorPos(&mouse);GetWindowRect(action_popup_,&bounds);
+      const auto foreground=GetForegroundWindow();
+      // Child Chrome widgets do not receive normal top-level deactivation
+      // when the user clicks the shell. Dismiss on outside press as well.
+      if((down&&!mouse_down_&&!PtInRect(&bounds,mouse))||(GetAsyncKeyState(VK_ESCAPE)&0x8000)||
+          (GetTickCount64()-popup_started_>250&&foreground!=parent_&&foreground!=action_popup_&&
+           !IsChild(action_popup_,foreground)&&GetAncestor(foreground,GA_ROOTOWNER)!=parent_)){
+        DismissActionPopup();return;
+      }
+      mouse_down_=down;
+    }
+    CefRefPtr<Host> self=this;CefPostDelayedTask(TID_UI,new Task([self,generation]{self->WatchActionPopup(generation);}),30);
+  }
+  CefRect anchor_;std::set<HWND> existing_popups_;HWND action_popup_=nullptr;
+  unsigned popup_generation_=0;ULONGLONG popup_deadline_=0,popup_started_=0;bool mouse_down_=false;
   struct NativeFocusTarget {HWND window=nullptr;LONGLONG area=0;};
   static BOOL CALLBACK FindRenderer(HWND window,LPARAM data){
     wchar_t name[64]={};GetClassNameW(window,name,64);
@@ -106,15 +171,17 @@ class Host final:public ChromeTabHost,public CefWindowDelegate,public CefBrowser
     focusing_=false;
   }
   void Resize(){
-    if(!window_||!view_)return;const auto size=window_->GetSize();
+    if(!window_||!view_||resizing_)return;const auto size=window_->GetSize();
     // Clip the native toolbar above the child viewport while preserving its
     // Chrome-owned parent, layout, action models and popup anchoring.
-    const int toolbar_height=toolbar_?std::max(toolbar_->GetBounds().height,toolbar_->GetPreferredSize().height):0;
-    view_->SetBounds(CefRect(0,-toolbar_height,std::max(1,size.width),std::max(1,size.height)+toolbar_height));
+    if(!toolbar_height_&&toolbar_)toolbar_height_=std::max(toolbar_->GetBounds().height,toolbar_->GetPreferredSize().height);
+    const CefRect bounds(0,-toolbar_height_,std::max(1,size.width),std::max(1,size.height)+toolbar_height_);
+    if(view_->GetBounds()==bounds)return;
+    resizing_=true;view_->SetBounds(bounds);resizing_=false;
   }
   std::function<void(CefRefPtr<CefBrowser>,CefRefPtr<ChromeTabHost>)> popup_ready_;
   std::function<void()> failed_;
-  HWND parent_;bool visible_=false,closing_=false,focusing_=false;CefRefPtr<CefWindow> window_;
+  HWND parent_;bool visible_=false,closing_=false,focusing_=false,visibility_applied_=false,resizing_=false;int toolbar_height_=0;CefRefPtr<CefWindow> window_;
   CefRefPtr<CefBrowserView> view_;CefRefPtr<CefView> toolbar_;
   IMPLEMENT_REFCOUNTING(Host);
 };
