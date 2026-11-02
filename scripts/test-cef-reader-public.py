@@ -80,7 +80,7 @@ with tempfile.TemporaryDirectory(prefix='soulu-reader-public-',ignore_cleanup_er
    s.evaluate(shell,'browserShell.navigate('+json.dumps('https://'+host)+')')
    print('NAVIGATE PUBLIC',host,flush=True)
    try:
-    wait(lambda:document_ready(host,10) and s.evaluate(shell,'browserShell.getCurrentSite().then(s=>s.url.includes('+json.dumps(host)+'))')))
+    wait(lambda:document_ready(host,10) and s.evaluate(shell,'browserShell.getCurrentSite().then(s=>s.url.includes('+json.dumps(host)+'))'))
    except Exception:
     print('PUBLIC NAVIGATION FAILURE',json.dumps({'host':host,'shell':s.evaluate(shell,'browserShell.getState()'),'document':s.evaluate(page,"({url:location.href,title:document.title,ready:document.readyState})")},ensure_ascii=False),flush=True)
     raise
