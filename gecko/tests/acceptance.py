@@ -98,7 +98,7 @@ try:
   stop(proc,m,log);proc=m=log=None
   proc,m,log=start(via_launcher=True)
   location=m.execute_script('return {profile:PathUtils.profileDir,id:Soulu.config.profile,sandbox:Services.prefs.getIntPref("security.sandbox.content.level")}')
-  check('portable_launcher_isolation_and_job_lifetime',location.get('id')=='launcher-check' and 'SouluGecko' in location.get('profile','') and location.get('sandbox',0)>0 and proc.poll() is None,location)
+  check('portable_launcher_and_isolated_profile',location.get('id')=='launcher-check' and 'SouluGecko' in location.get('profile','') and location.get('sandbox',0)>0 and proc.poll() is None,location)
  result['passed']=True
 finally:
  if proc:stop(proc,m,log)

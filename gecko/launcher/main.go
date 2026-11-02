@@ -46,11 +46,5 @@ func main() {
 	if e = cmd.Start(); e != nil {
 		fail(e.Error())
 	}
-	closeJob, e := track(cmd)
-	if e != nil {
-		cmd.Process.Kill()
-		fail("Cannot isolate the browser process tree: " + e.Error())
-	}
-	defer closeJob()
 	cmd.Wait()
 }
