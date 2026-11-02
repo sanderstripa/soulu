@@ -145,7 +145,10 @@ class Host final:public ChromeTabHost,public CefWindowDelegate,public CefBrowser
       const auto bounds=self->ActionBounds((pos->flags&SWP_NOSIZE)?current.right-current.left:pos->cx,
         (pos->flags&SWP_NOSIZE)?current.bottom-current.top:pos->cy);
       pos->x=bounds.x;pos->y=bounds.y;pos->cx=bounds.width;pos->cy=bounds.height;
-      pos->flags&=~(SWP_NOMOVE|SWP_NOSIZE);
+      if(bounds.x==current.left&&bounds.y==current.top)pos->flags|=SWP_NOMOVE;
+      else pos->flags&=~SWP_NOMOVE;
+      if(bounds.width==current.right-current.left&&bounds.height==current.bottom-current.top)pos->flags|=SWP_NOSIZE;
+      else pos->flags&=~SWP_NOSIZE;
     }
     if(message==WM_NCDESTROY)self->UnhookActionPopup();
     return DefSubclassProc(hwnd,message,wp,lp);
