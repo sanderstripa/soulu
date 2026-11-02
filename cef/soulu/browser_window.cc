@@ -837,8 +837,10 @@ bool BrowserWindow::AllowSite(int id,const std::string& origin,const std::string
 }
 void BrowserWindow::ApplySiteSound() {
   for(auto& tab:tabs_)if(tab.browser){auto policy=PolicyForTab(tab.id);
-    tab.browser->GetHost()->SetAudioMuted(tab.muted||(policy&&policy->Rule(tab.url,"sound")==2));
     SyncSitePolicy(tab.id,tab.url);
+    // Chrome's content-setting observer can change WebContents mute state.
+    // Apply the explicit tab choice after synchronizing the site's rules.
+    tab.browser->GetHost()->SetAudioMuted(tab.muted||(policy&&policy->Rule(tab.url,"sound")==2));
     auto client=static_cast<BrowserClient*>(tab.browser->GetHost()->GetClient().get());
     if(client)client->RefreshAdBlock(tab.browser);}
 }
@@ -856,7 +858,10 @@ void BrowserWindow::SyncSitePolicy(int id,const std::string& url) {
   for(const auto& [name,type]:types){int rule=policy->Rule(url,name);
     auto value=rule==0?CEF_CONTENT_SETTING_VALUE_ALLOW:rule==2?CEF_CONTENT_SETTING_VALUE_BLOCK:CEF_CONTENT_SETTING_VALUE_ASK;
     if(std::string(name)=="sound"&&rule==1)value=CEF_CONTENT_SETTING_VALUE_ALLOW;
-    context->SetContentSetting(WebOrigin(url),WebOrigin(url),type,value);
+    // Rewriting an unchanged SOUND rule makes Chrome reapply its site-wide
+    // mute decision, which would erase the independent tab mute choice.
+    if(std::string(name)!="sound"||context->GetContentSetting(WebOrigin(url),WebOrigin(url),type)!=value)
+      context->SetContentSetting(WebOrigin(url),WebOrigin(url),type,value);
   }
   // Chromium 154 stores approximate/precise geolocation as a website-setting
   // dictionary. The legacy integer setting alone leaves permission at Ask.
@@ -1575,10 +1580,11 @@ void BrowserWindow::CancelHomeFocus(){
   if(auto* tab=ActiveTab()){tab->focus_home_on_load=false;tab->pending_home_input.clear();tab->pending_home_submit=false;}
 }
 void BrowserWindow::DismissAddressSuggestions(){
-  if(!suggestions_height_||!shell_)return;
-  suggestions_height_=0;
+  if(!shell_)return;
+  const bool resized=suggestions_height_!=0;suggestions_height_=0;
+  // Cancel a pending query too, even before its popup has acquired a height.
   shell_->GetMainFrame()->ExecuteJavaScript("window.dispatchEvent(new Event('soulu-dismiss-address'))",shell_->GetMainFrame()->GetURL(),0);
-  Layout();
+  if(resized)Layout();
 }
 void BrowserWindow::UpdateLoading(int id, bool loading, bool can_go_back) {
   if (auto* tab = FindTab(id)) {
