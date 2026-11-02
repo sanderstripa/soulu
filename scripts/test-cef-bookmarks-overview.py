@@ -178,6 +178,28 @@ with tempfile.TemporaryDirectory(prefix='soulu-navigation-', ignore_cleanup_erro
         s.evaluate(shell,"window.browserShell.setSettings({bookmarksBarPosition:'hidden'})")
         assert not s.evaluate(shell,'window.browserShell.getState()')['bookmarksBarVisible'], 'Hidden position did not hide bar'
         s.evaluate(shell,"window.browserShell.setSettings({bookmarksBarMode:'always',bookmarksBarPosition:'above'})")
+        user=ctypes.windll.user32
+        # Viewport thumbnails sample the visible native compositor. Acquire
+        # the foreground as a real user opening the overview would do.
+        user.GetForegroundWindow.restype=ctypes.c_void_p
+        user.GetWindowThreadProcessId.argtypes=[ctypes.c_void_p,ctypes.POINTER(ctypes.c_ulong)]
+        for method in [user.BringWindowToTop,user.SetForegroundWindow]:
+            method.argtypes=[ctypes.c_void_p]
+        user.ShowWindow.argtypes=[ctypes.c_void_p,ctypes.c_int]
+        user.GetAncestor.argtypes=[ctypes.c_void_p,ctypes.c_uint];user.GetAncestor.restype=ctypes.c_void_p
+        def window_class(window):
+            name=ctypes.create_unicode_buffer(128);user.GetClassNameW(window,name,128);return name.value
+        main_window=next(h for h in windows(process.pid) if window_class(h)=='SouluBrowserWindow')
+        foreground=user.GetForegroundWindow()
+        current=ctypes.windll.kernel32.GetCurrentThreadId();attached=[]
+        try:
+            for thread in {user.GetWindowThreadProcessId(foreground,None) if foreground else 0,user.GetWindowThreadProcessId(main_window,None)}:
+                if thread and thread!=current and user.AttachThreadInput(current,thread,True):attached.append(thread)
+            user.ShowWindow(main_window,9);user.BringWindowToTop(main_window);user.SetForegroundWindow(main_window)
+        finally:
+            for thread in attached:user.AttachThreadInput(current,thread,False)
+        time.sleep(.2)
+        assert user.GetAncestor(user.GetForegroundWindow(),2)==main_window, 'Overview fixture did not acquire the native desktop foreground'
         before=windows(process.pid)
         assert s.evaluate(shell,"document.querySelector('.classic-toolbar .navigation-toolbar-button').parentElement.classList.contains('window-controls')")
         s.evaluate(shell,"document.querySelector('.compact-toolbar .navigation-toolbar-button').click()")
