@@ -1,4 +1,5 @@
 #include "examples/soulu/extension_service.h"
+#include "examples/soulu/extension_pipe.h"
 #include "include/cef_client.h"
 #include "include/cef_parser.h"
 #include "include/cef_task.h"
@@ -139,7 +140,7 @@ class Service final:public ExtensionService,public CefClient,public CefLifeSpanH
     if(index>=targets->GetSize()){done(nullptr,"Active Soulu tab was not found in Chromium");return;}
     const auto target=targets->GetDictionary(index)->GetString("targetId");auto params=CefDictionaryValue::Create();params->SetString("targetId",target);
     Run(browser,"Browser.getWindowForTarget",params,[browser,id,window,targets,index,target,done](CefRefPtr<CefDictionaryValue> info,const std::string& error){
-      if(error.empty()&&info&&info->GetInt("windowId")==window){auto params=CefDictionaryValue::Create();params->SetString("id",id);params->SetString("targetId",target);Run(browser,"Extensions.triggerAction",params,done);}
+      if(error.empty()&&info&&info->GetInt("windowId")==window){TriggerExtensionAction(id,target,done);}
       else FindTarget(browser,id,window,targets,index+1,done);
     });
   }

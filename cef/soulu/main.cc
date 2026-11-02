@@ -8,6 +8,7 @@
 #include "examples/soulu/adblock_bridge.h"
 
 #include "examples/soulu/app_factory.h"
+#include "examples/soulu/extension_pipe.h"
 #include "examples/soulu/profile_data.h"
 #include "examples/soulu/home_system.h"
 #include "include/cef_command_line.h"
@@ -117,6 +118,7 @@ int APIENTRY wWinMain(HINSTANCE instance, HINSTANCE, wchar_t*, int) {
   CefRunMessageLoop();
   soulu::ShutdownVpnHelper();
   const auto deletions=soulu::PendingProfileDeletions();
+  soulu::StopExtensionPipe();
   CefShutdown();
   soulu::CleanupDeletedProfiles(deletions);
   return 0;

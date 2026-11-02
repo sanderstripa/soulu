@@ -28,7 +28,8 @@ class Host final:public ChromeTabHost,public CefWindowDelegate,public CefBrowser
     SetWindowLongPtrW(hwnd,GWL_STYLE,(GetWindowLongPtrW(hwnd,GWL_STYLE)&~(WS_POPUP|WS_CAPTION|WS_THICKFRAME))|WS_CHILD|WS_CLIPCHILDREN);
     SetParent(hwnd,parent_);window->AddChildView(view_);
     toolbar_=view_->GetChromeToolbar();
-    if(toolbar_)window->AddChildView(toolbar_);
+    // The Chrome toolbar is already owned by BrowserView. Reparenting it
+    // detaches Chromium's browser model; retain it in its original hierarchy.
     Resize();if(visible_)window->Show();else window->Hide();
   }
   void OnWindowBoundsChanged(CefRefPtr<CefWindow>,const CefRect&) override{Resize();}
@@ -54,10 +55,10 @@ class Host final:public ChromeTabHost,public CefWindowDelegate,public CefBrowser
  private:
   void Resize(){
     if(!window_||!view_)return;const auto size=window_->GetSize();
-    view_->SetBounds(CefRect(0,0,std::max(1,size.width),std::max(1,size.height)));
-    // Chrome owns action models and popup anchoring; Soulu draws the visible
-    // toolbar. Retain the real Chrome toolbar in the same Views hierarchy.
-    if(toolbar_)toolbar_->SetBounds(CefRect(0,-40,std::max(1,size.width),40));
+    // Clip the native toolbar above the child viewport while preserving its
+    // Chrome-owned parent, layout, action models and popup anchoring.
+    const int toolbar_height=toolbar_?std::max(toolbar_->GetBounds().height,toolbar_->GetPreferredSize().height):0;
+    view_->SetBounds(CefRect(0,-toolbar_height,std::max(1,size.width),std::max(1,size.height)+toolbar_height));
   }
   std::function<void(CefRefPtr<CefBrowser>,CefRefPtr<ChromeTabHost>)> popup_ready_;
   HWND parent_;bool visible_=false;CefRefPtr<CefWindow> window_;

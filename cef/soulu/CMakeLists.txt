@@ -28,6 +28,8 @@ set(SOULU_SRCS
   chrome_tab_host.h
   chrome_tab_host.cc
   extension_service.h
+  extension_pipe.cc
+  extension_pipe.h
   extension_service.cc
   extension_bridge.cc
   extensions_panel.h

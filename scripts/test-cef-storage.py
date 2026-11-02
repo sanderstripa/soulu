@@ -85,7 +85,7 @@ def page_socket():
     deadline = time.monotonic() + 30
     while time.monotonic() < deadline:
         for target in targets():
-            if target.get("type") == "page" and "/ui/index.html" not in target.get("url", ""):
+            if target.get("type") == "page" and "/ui/index.html" not in target.get("url", "") and not target.get("url", "").startswith("chrome://extensions/shortcuts"):
                 return websocket.create_connection(
                     target["webSocketDebuggerUrl"], timeout=30,
                     origin=f"http://127.0.0.1:{DEBUG_PORT}")
