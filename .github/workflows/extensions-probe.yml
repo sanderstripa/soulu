@@ -73,9 +73,10 @@ jobs:
         shell: pwsh
         run: |
           Get-WinEvent -FilterHashtable @{LogName='Application';StartTime=(Get-Date).AddMinutes(-25)} -ErrorAction SilentlyContinue | Where-Object { $_.Message -match 'Soulu.exe' } | Select-Object TimeCreated,Id,Message | Format-List | Out-File artifacts/native-events.txt
+          if (@(Get-ChildItem artifacts -Filter '*.dmp' -Recurse).Count) { choco install windbg -y --no-progress }
           $debugger = Get-ChildItem 'C:/Program Files (x86)/Windows Kits' -Filter cdb.exe -Recurse -ErrorAction SilentlyContinue | Where-Object FullName -match 'x64' | Select-Object -First 1
           if ($debugger) {
-            Get-ChildItem artifacts/dumps -Filter '*.dmp' | ForEach-Object { & $debugger.FullName -z $_.FullName -c '.ecxr;kv;q' 2>&1 | Out-File ($_.FullName+'.txt') }
+            Get-ChildItem artifacts -Filter '*.dmp' -Recurse | ForEach-Object { & $debugger.FullName -z $_.FullName -c '.ecxr;kv;lm;q' 2>&1 | Out-File ($_.FullName+'.txt') }
           }
       - uses: actions/upload-artifact@v4
         if: always()
