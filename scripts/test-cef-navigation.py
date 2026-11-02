@@ -35,7 +35,11 @@ def native_windows(process):
     def collect(hwnd, _):
         pid = ctypes.c_ulong()
         user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
-        if pid.value == process.pid and user32.IsWindowVisible(hwnd):
+        # Chromium's URL status bubble and tooltips are non-activating tool
+        # windows; they are ordinary browser feedback, not escaped tab hosts.
+        extended=user32.GetWindowLongW(hwnd,-20)
+        feedback=(extended & 0x08000080)==0x08000080
+        if pid.value == process.pid and user32.IsWindowVisible(hwnd) and not feedback:
             windows.append(hwnd)
         return True
 
