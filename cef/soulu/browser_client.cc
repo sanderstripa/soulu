@@ -5,6 +5,7 @@
 #include "examples/soulu/browser_client.h"
 #include "examples/soulu/adblock_bridge.h"
 #include "include/cef_process_message.h"
+#include "include/cef_task.h"
 #include <chrono>
 
 #include <string>
@@ -17,6 +18,19 @@
 #include "include/cef_parser.h"
 
 namespace soulu {
+namespace {
+class CredentialOfferTask final:public CefTask {
+ public:
+  CredentialOfferTask(CefRefPtr<BrowserWindow> owner,int id,CefRefPtr<CefFrame> frame,
+      std::string username,std::string password,std::string url)
+      :owner_(owner),id_(id),frame_(frame),username_(std::move(username)),password_(std::move(password)),url_(std::move(url)){}
+  ~CredentialOfferTask()override{if(!password_.empty())SecureZeroMemory(password_.data(),password_.size());}
+  void Execute()override{owner_->OfferCredential(id_,frame_,username_,std::move(password_),url_);}
+ private:
+  CefRefPtr<BrowserWindow> owner_;int id_;CefRefPtr<CefFrame> frame_;
+  std::string username_,password_,url_;IMPLEMENT_REFCOUNTING(CredentialOfferTask);
+};
+}
 void BrowserClient::OnGotFocus(CefRefPtr<CefBrowser>){if(role_==BrowserRole::kContent)owner_->DismissAddressSuggestions();}
 bool BrowserClient::OnTooltip(CefRefPtr<CefBrowser> browser,CefString&){
   const std::string url=browser->GetMainFrame()->GetURL();
@@ -489,7 +503,9 @@ bool BrowserClient::OnProcessMessageReceived(CefRefPtr<CefBrowser> browser,
      message->GetName()=="soulu.credential.submit") {
     auto args=message->GetArgumentList();
     if(args->GetSize()==3 && args->GetType(0)==VTYPE_STRING&&args->GetType(1)==VTYPE_STRING&&args->GetType(2)==VTYPE_STRING)
-      owner_->OfferCredential(tab_id_,frame,args->GetString(0),args->GetString(1),args->GetString(2));
+      // Leave the renderer IPC dispatch before entering a native modal loop.
+      // Chrome's submission handlers must finish before nested UI work runs.
+      CefPostTask(TID_UI,new CredentialOfferTask(owner_,tab_id_,frame,args->GetString(0),args->GetString(1),args->GetString(2)));
     return true;
   }
   return router_ && router_->OnProcessMessageReceived(browser, frame, source_process, message);

@@ -945,7 +945,7 @@ void BrowserWindow::OfferCredential(int id,CefRefPtr<CefFrame> frame,
                                    const std::string& username,std::string password,
                                    const std::string& submitted_url) {
   auto* tab=FindTab(id);
-  if(!tab||!tab->browser||tab->incognito||!frame||!frame->IsMain()||importing_ ||
+  if(!hwnd_||closing_||!tab||!tab->browser||tab->incognito||!frame||!frame->IsMain()||importing_ ||
      WebOrigin(submitted_url).empty()||WebOrigin(submitted_url)!=WebOrigin(frame->GetURL())||
      username.size()>4096||password.size()>16384||password.empty()){
     if(!password.empty())SecureZeroMemory(password.data(),password.size());return;}
