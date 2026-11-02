@@ -22,14 +22,13 @@ SOCKS DNS is remote; direct fallback and WebRTC are disabled while VPN is on.
 A failed connection keeps proxy routing blocked until explicit Disconnect.
 
 Ad blocking: signed full uBlock Origin plus Firefox tracking protection. Firefox's
-native uBlock popup controls per-site ad exceptions. Network access is required
-for the first policy installation of uBlock. Its XPI is also bundled for offline
-installation through about:addons (Install Add-on From File).
+native uBlock popup controls per-site ad exceptions. Its signed XPI is bundled and installed locally on first launch. Filter-list
+updates use the network. The native extension popup provides per-site controls.
 
 Preview limitations: this is a customized official Firefox distribution rather
 than a source-built Firefox fork. Native permission prompts, history/bookmark and
-password managers keep Firefox UI. Some advanced Soulu controls are not ported;
-unsupported bridge operations report an error. Translation and Chrome extensions
+password managers keep Firefox UI. Advanced CEF-only controls are omitted; the existing section structure remains.
+Native Gecko managers back history, bookmark, password and site-data actions. Translation and Chrome extensions
 are not included. Use Firefox extensions from addons.mozilla.org. Windows runtime
 acceptance and VPN connection checks are recorded separately in acceptance.json;
 packaging alone does not prove those checks passed.

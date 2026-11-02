@@ -120,7 +120,7 @@ async function dispatch(action,payload,source){
  case 'settings.geckoTranslation':return open('about:preferences#general');
  case 'settings.geckoExtensions':return open('about:addons');
  case 'settings.geckoExtensionStore':return open('https://addons.mozilla.org/firefox/');
- case 'settings.geckoReader':ReaderParent.toggleReaderMode({target:gBrowser.selectedBrowser});return true;
+ case 'settings.geckoReader':document.getElementById('reader-mode-button')?.click();return true;
  case 'settings.openFolder':{const file=Services.dirsvc.get('DfltDwnld',Ci.nsIFile);file.launch();return true;}
  case 'settings.defaultBrowser':open('about:preferences#general');return true;
  case 'settings.chooseFolder':{const picker=Cc['@mozilla.org/filepicker;1'].createInstance(Ci.nsIFilePicker);picker.init(window.browsingContext,'Загрузки',Ci.nsIFilePicker.modeGetFolder);return new Promise(resolve=>picker.open(result=>resolve(result===Ci.nsIFilePicker.returnOK?picker.file.path:'')));}
