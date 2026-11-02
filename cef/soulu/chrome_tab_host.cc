@@ -44,7 +44,7 @@ class Host final:public ChromeTabHost,public CefWindowDelegate,public CefBrowser
     toolbar_=view_->GetChromeToolbar();
     // The Chrome toolbar is already owned by BrowserView. Reparenting it
     // detaches Chromium's browser model; retain it in its original hierarchy.
-    Resize();if(visible_)window->Show();else window->Hide();
+    Resize();SetVisible(visible_,false);
   }
   void OnWindowBoundsChanged(CefRefPtr<CefWindow>,const CefRect&) override{Resize();}
   bool CanClose(CefRefPtr<CefWindow>) override {
@@ -67,6 +67,9 @@ class Host final:public ChromeTabHost,public CefWindowDelegate,public CefBrowser
     if(view_&&view_->IsVisible()!=visible)view_->SetVisible(visible);
     if(visible){if(!window_->IsVisible())window_->Show();if(activate)window_->Activate();}
     else window_->Hide();Resize();
+    // A Chrome widget can raise itself when shown. Content must stay below
+    // the custom toolbar, page glass and the owner's native resize border.
+    SetWindowPos(window_->GetWindowHandle(),HWND_BOTTOM,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE);
   }
   void Close() override{closing_=true;if(view_&&view_->GetBrowser())view_->GetBrowser()->GetHost()->CloseBrowser(true);else if(window_)window_->Close();}
  private:
