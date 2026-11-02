@@ -15,9 +15,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [ui, bookmarks-overview]
+        suite: [window-states]
     env:
       PYTHONUTF8: 1
+      SOULU_UI_TEST_PORT: '9223'
       SOULU_REGRESSION_SKIP_FIRST_RUN: 1
       SOULU_TEST_DEFAULT_APPS: 1
       NO_PROXY: localhost,127.0.0.1,::1
@@ -30,9 +31,9 @@ jobs:
       - name: Restore exact compiled candidate
         uses: actions/download-artifact@v4
         with:
-          name: Soulu-cef-candidate-123c2fb4c5de970214a23c1682de199ed461b904
+          name: Soulu-cef-candidate-a64067e8150a498a02c2e052c191cedba2c2d321
           path: runtime
-          run-id: 41456821399
+          run-id: 41460257903
           github-token: ${{ github.token }}
       - name: Restore the approved CEF runtime
         shell: pwsh
@@ -61,19 +62,8 @@ jobs:
       - name: Exercise native browser regression
         shell: pwsh
         run: |
-          if ($env:SUITE -eq 'ui') {
-            $personalize='HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize'
-            New-Item $personalize -Force | Out-Null
-            Set-ItemProperty $personalize EnableTransparency 1 -Type DWord
-            $env:SOULU_UI_TEST_PORT='9223'
-            $app=Start-Process "$env:GITHUB_WORKSPACE/runtime/Soulu.exe" -PassThru
-            $env:SOULU_TEST_PROCESS_ID=[string]$app.Id
-            try { python scripts/test-cef-ui.py; $result=$LASTEXITCODE }
-            finally { Get-Process Soulu -ErrorAction SilentlyContinue | Stop-Process -Force }
-            exit $result
-          }
           switch ($env:SUITE) {
-            'bookmarks-overview' { python scripts/test-cef-bookmarks-overview.py runtime/Soulu.exe }
+            'window-states' { python scripts/test-cef-window-states.py runtime/Soulu.exe artifacts/window-states }
             'daily-use' { python scripts/test-cef-daily-use.py runtime/Soulu.exe artifacts/daily-use }
             'polish' { python scripts/test-cef-polish-performance.py runtime/Soulu.exe artifacts/polish }
             'navigation' { python scripts/test-cef-navigation.py runtime/Soulu.exe }
