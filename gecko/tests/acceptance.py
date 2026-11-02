@@ -16,13 +16,19 @@ server=http.server.ThreadingHTTPServer(('127.0.0.1',0),Page);threading.Thread(ta
 def check(name,condition,detail=None):
  result['checks'][name]={'passed':bool(condition),'detail':detail};print(name,condition,detail or '',flush=True)
  if not condition:raise AssertionError(name+': '+str(detail))
-def start():
+def start(via_launcher=False):
  with socket.socket() as s:s.bind(('127.0.0.1',0));port=s.getsockname()[1]
- (profile/'user.js').write_text('user_pref("marionette.port", '+str(port)+');\n')
+ active_profile=(root/'launcher-data/SouluGecko/Profiles/launcher-check') if via_launcher else profile
+ active_profile.mkdir(parents=True,exist_ok=True)
+ (active_profile/'user.js').write_text('user_pref("marionette.port", '+str(port)+');\n')
  env=dict(os.environ,MOZ_REMOTE_ALLOW_SYSTEM_ACCESS='1')
  if os.name!='nt':env['MOZ_DISABLE_CONTENT_SANDBOX']='1'
  log=open(out/'runtime.log','a')
- proc=subprocess.Popen([str(binary),'-headless','-no-remote','-profile',str(profile),'-marionette'],stdout=log,stderr=log,env=env)
+ if via_launcher:
+  env['LOCALAPPDATA']=str(root/'launcher-data')
+  command=[str(binary.parent.parent/'Soulu Gecko Preview 1.exe'),'--profile','launcher-check','-headless','-marionette']
+ else:command=[str(binary),'-headless','-no-remote','-profile',str(profile),'-marionette']
+ proc=subprocess.Popen(command,stdout=log,stderr=log,env=env)
  deadline=time.time()+60
  while time.time()<deadline:
   try:
@@ -54,6 +60,9 @@ try:
  check('signed_full_ublock_active',isinstance(addon,dict) and addon.get('active') and addon.get('signed',0)>0,addon)
  saved=run(m,"const c=await Soulu.dispatch('settings.begin');c.settings.theme='dark';c.settings.showHome=true;c.rules.defaults.camera=2;const r=await Soulu.dispatch('settings.save',c);return {ok:r.ok,error:r.error,theme:document.documentElement.hasAttribute('soulu-dark'),camera:Services.prefs.getIntPref('permissions.default.camera')};")
  check('settings_apply_and_permission_policy',saved.get('ok') and saved.get('theme') and saved.get('camera')==2,saved)
+ blocked=run(m,"const {AddonManager}=ChromeUtils.importESModule('resource://gre/modules/AddonManager.sys.mjs');let c=await Soulu.dispatch('settings.begin');c.rules.blocking.enabled=false;let r=await Soulu.dispatch('settings.save',c);if(!r.ok)return r;const disabled=(await AddonManager.getAddonByID('uBlock0@raymondhill.net')).userDisabled;c=await Soulu.dispatch('settings.begin');c.rules.blocking.enabled=true;r=await Soulu.dispatch('settings.save',c);return {ok:r.ok,disabled,enabled:!(await AddonManager.getAddonByID('uBlock0@raymondhill.net')).userDisabled};")
+ check('adblock_toggle_controls_real_engine',blocked.get('ok') and blocked.get('disabled') and blocked.get('enabled'),blocked)
+
  if os.name=='nt':
   native=run(m,"const rows=[];for(const component of ['xray','sudoku'])rows.push(await Soulu.dispatch('browser.components.manage',{component,operation:'status'}));return rows;")
   check('bundled_vpn_helper_native_pipe',isinstance(native,list) and len(native)==2 and all(x.get('installed') for x in native),native)
@@ -84,6 +93,12 @@ try:
  proc,m,log=start()
  check('settings_persist_after_restart',m.execute_script('return Soulu.config.settings.theme==="dark" && Soulu.config.settings.showHome && Soulu.config.rules.defaults.camera===2 && Services.prefs.getIntPref("permissions.default.camera")===2'))
  check('bookmarks_persist_after_restart',run(m,"return (await Soulu.dispatch('browser.bookmarks.get')).some(r=>r.title==='Gecko bookmark');") is True)
+
+ if os.name=='nt':
+  stop(proc,m,log);proc=m=log=None
+  proc,m,log=start(via_launcher=True)
+  location=m.execute_script('return {profile:PathUtils.profileDir,id:Soulu.config.profile,sandbox:Services.prefs.getIntPref("security.sandbox.content.level")}')
+  check('portable_launcher_isolation_and_job_lifetime',location.get('id')=='launcher-check' and 'SouluGecko' in location.get('profile','') and location.get('sandbox',0)>0 and proc.poll() is None,location)
  result['passed']=True
 finally:
  if proc:stop(proc,m,log)

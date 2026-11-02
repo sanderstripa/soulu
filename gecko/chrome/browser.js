@@ -14,12 +14,14 @@ const defaults={settings:{language:'ru',theme:'system',layout:'adaptive',mattePa
 const {state:shared}=ChromeUtils.importESModule('chrome://soulu/content/shared.sys.mjs');
 if(!shared.config)shared.config=structuredClone(defaults);
 const windows=()=>[...Services.wm.getEnumerator('navigator:browser')];
-const pref=(key,value)=>{if(typeof value==='boolean')Services.prefs.setBoolPref(key,value);else if(typeof value==='number')Services.prefs.setIntPref(key,value);else Services.prefs.setStringPref(key,String(value));};
+const pref=(key,value)=>{if(typeof value==='boolean'){if(Services.prefs.getBoolPref(key,!value)!==value)Services.prefs.setBoolPref(key,value);}else if(typeof value==='number'){if(Services.prefs.getIntPref(key,-999)!==value)Services.prefs.setIntPref(key,value);}else if(Services.prefs.getStringPref(key,'')!==String(value))Services.prefs.setStringPref(key,String(value));};
 function emit(name,value){for(const win of windows())win.Soulu?._emit(name,value);}
 const builtin={geo:'geolocation',camera:'camera',microphone:'microphone','desktop-notification':'notifications',popup:'popups'};
 async function blocking(){const {AddonManager}=ChromeUtils.importESModule('resource://gre/modules/AddonManager.sys.mjs');const addon=await AddonManager.getAddonByID('uBlock0@raymondhill.net');if(addon){if(shared.config.rules.blocking.enabled&&addon.userDisabled)await addon.enable();else if(!shared.config.rules.blocking.enabled&&!addon.userDisabled)await addon.disable();}}
 async function save(){await IOUtils.writeJSON(settingsFile,shared.config,{tmpPath:settingsFile+'.tmp'});await IOUtils.setPermissions(settingsFile,0o600);}
+function layout(){const s=shared.config.settings,root=document.documentElement;root.toggleAttribute('soulu-single',gBrowser.visibleTabs.length<2);root.toggleAttribute('soulu-dark',s.theme==='dark'||s.theme==='system'&&matchMedia('(prefers-color-scheme:dark)').matches);}
 function apply(){
+ layout();
  const s=shared.config.settings,root=document.documentElement;
  root.toggleAttribute('soulu-dark',s.theme==='dark'||s.theme==='system'&&matchMedia('(prefers-color-scheme:dark)').matches);
  root.toggleAttribute('soulu-single',gBrowser.visibleTabs.length<2);
@@ -28,7 +30,7 @@ function apply(){
  const bar=document.getElementById('PersonalToolbar');if(bar)bar.collapsed=s.bookmarksBarMode==='never'||s.bookmarksBarPosition==='hidden';
  pref('browser.startup.page',s.startupMode==='continue'?3:1);
  pref('browser.startup.homepage',s.homeMode==='custom'?s.homeUrl||'about:blank':'about:blank');
- const {AboutNewTab}=ChromeUtils.importESModule('resource:///modules/AboutNewTab.sys.mjs');AboutNewTab.newTabURL=s.newTabMode==='custom'?s.newTabUrl||'about:blank':'about:blank';
+ const {AboutNewTab}=ChromeUtils.importESModule('resource:///modules/AboutNewTab.sys.mjs');const newTab=s.newTabMode==='custom'?s.newTabUrl||'about:blank':'about:blank';if(AboutNewTab.newTabURL!==newTab)AboutNewTab.newTabURL=newTab;
  pref('browser.download.useDownloadDir',!s.askDownloadLocation);if(s.downloadPath){pref('browser.download.dir',s.downloadPath);pref('browser.download.folderList',2);}
  const star=document.getElementById('star-button-box');if(star)star.hidden=s.showFavorites===false;
  root.toggleAttribute('soulu-address-left',s.addressPosition==='left');
@@ -165,8 +167,8 @@ async function initialize(){
  document.getElementById('urlbar-input-container')?.append(document.getElementById('stop-reload-button'));
  const caption=document.querySelector('#TabsToolbar .titlebar-buttonbox-container');if(caption){caption.id='soulu-caption';document.getElementById('nav-bar').append(caption);}
  document.getElementById('navigator-toolbox').addEventListener('contextmenu',event=>{if(event.target.closest('#urlbar'))return;event.preventDefault();settings();});
- for(const event of ['TabOpen','TabClose','TabSelect','TabPinned','TabUnpinned'])gBrowser.tabContainer.addEventListener(event,()=>requestAnimationFrame(apply));
- matchMedia('(prefers-color-scheme:dark)').addEventListener('change',apply);
+ for(const event of ['TabOpen','TabClose','TabSelect','TabPinned','TabUnpinned'])gBrowser.tabContainer.addEventListener(event,()=>requestAnimationFrame(layout));
+ matchMedia('(prefers-color-scheme:dark)').addEventListener('change',layout);
  // Never retain a proxy pointing to a core from an earlier process.
  apply();
  const {BrowserWindowTracker}=ChromeUtils.importESModule('resource:///modules/BrowserWindowTracker.sys.mjs');
