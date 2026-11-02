@@ -1253,8 +1253,13 @@ void BrowserWindow::NewTab(const std::string& url, bool incognito,
 }
 
 void BrowserWindow::AttachChromePopup(CefRefPtr<CefBrowser> browser,CefRefPtr<ChromeTabHost> host){
-  for(auto& tab:tabs_)if(tab.browser&&tab.browser->IsSame(browser)){tab.chrome_host=host;Layout();return;}
-  host->Close();
+  // Chrome notifies the opener's Views delegate before OnAfterCreated().
+  // Bind by the prepared client tab ID; tab.browser is still null here.
+  auto* client=static_cast<BrowserClient*>(browser->GetHost()->GetClient().get());
+  auto* tab=client?FindTab(client->tab_id()):nullptr;
+  if(!tab||(tab->browser&&!tab->browser->IsSame(browser))){host->Close();return;}
+  tab->chrome_host=host;
+  if(tab->browser)Layout();
 }
 
 void BrowserWindow::AttachShell(CefRefPtr<CefBrowser> browser) {

@@ -30,6 +30,8 @@ class BrowserClient final : public CefClient,
  public:
   BrowserClient(CefRefPtr<BrowserWindow> owner, BrowserRole role, int tab_id = 0);
 
+  int tab_id() const { return tab_id_; }
+
   CefRefPtr<CefDisplayHandler> GetDisplayHandler() override { return this; }
   CefRefPtr<CefDownloadHandler> GetDownloadHandler() override { return this; }
   CefRefPtr<CefLifeSpanHandler> GetLifeSpanHandler() override { return this; }
