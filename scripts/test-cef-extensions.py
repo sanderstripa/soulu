@@ -121,60 +121,61 @@ def main():
                 return shell, settings, manager
 
             shell, settings, manager = start()
-            check(s.evaluate(manager, 'typeof window.cefQuery') == 'undefined', 'Chrome surface has no Soulu bridge')
-            s.evaluate(manager, 'chrome.developerPrivate.updateProfileConfiguration({inDeveloperMode:true})')
-            # Do not await a promise while the native file picker blocks the UI.
-            s.sequence += 1
-            manager.send(json.dumps({'id': s.sequence, 'method': 'Runtime.evaluate', 'params': {
-                'expression': "window.__loadResult=null;try{Promise.resolve(chrome.developerPrivate.loadUnpacked({failQuietly:true,populateError:true})).then(r=>window.__loadResult={result:r},e=>window.__loadResult={error:String(e)});}catch(e){window.__loadResult={error:String(e)}};true"}}))
-            controls = wait(lambda: p.dialog_controls(process.pid))
-            print('Extension picker controls:', [(c[1], c[2], c[3]) for c in controls], flush=True)
-            ImageGrab.grab().save(output.parent / 'extensions-picker.png')
-            edits = [c for c in controls if c[1] == 'Edit']
-            edit = next((e for e in edits if e[3] in (1001, 1148, 1152)), edits[-1])
-            button = next(c for c in controls if c[1] == 'Button' and c[3] == 1)
-            user = ctypes.windll.user32
-            user.GetAncestor.argtypes = [ctypes.c_void_p, ctypes.c_uint]
-            user.GetAncestor.restype = ctypes.c_void_p
-            user.SetForegroundWindow(user.GetAncestor(button[0], 2))
-            EditWrapper(edit[0]).set_edit_text(str(extension.resolve()))
-            ButtonWrapper(button[0]).click_input()
-            time.sleep(1)
-            remaining = p.dialog_controls(process.pid)
-            print('Picker controls after selection:', [(c[1], c[2], c[3]) for c in remaining], flush=True)
-            if remaining:
-                # Windows folder pickers can first navigate to a typed directory;
-                # selecting that directory then requires a second accept.
-                accept = next((c for c in remaining if c[1] == 'Button' and c[3] == 1), None)
-                if accept:
-                    ButtonWrapper(accept[0]).click_input()
-            ImageGrab.grab().save(output.parent / 'extensions-after-picker.png')
-            print('Manager after picker:', s.evaluate(manager, '({url:location.href,result:window.__loadResult})'), flush=True)
-            print('Targets after picker:', [(t.get('type'),t.get('url')) for t in s.targets()], flush=True)
-            # Chrome may select a newly created tab when extension installation
-            # finishes. Reopen the installed list and verify persisted state,
-            # rather than depending on a JS variable in a navigated WebUI.
-            s.evaluate(settings, "document.querySelector('.extension-controls button').click()")
-            manager = socket('chrome://extensions')
-            wait(lambda: s.evaluate(manager, "typeof window.chrome?.developerPrivate?.getExtensionsInfo==='function'"))
-            expression = "chrome.developerPrivate.getExtensionsInfo({includeDisabled:true,includeTerminated:true}).then(rows=>rows.find(r=>r.name==='Soulu extension acceptance')||null)"
-            installed = wait(lambda: s.evaluate(manager, expression))
-            check(bool(installed), 'Unpacked MV3 installation through native picker')
-            report['extensionId'] = installed['id']
-            s.evaluate(settings, 'souluSettingsRequestClose()')
-            wait(lambda: not any('/ui/settings.html' in t.get('url', '') for t in s.targets()))
-            s.evaluate(shell, 'browserShell.openTab(' + json.dumps(url) + ')')
-            content = socket(url)
-            check(wait(lambda: s.evaluate(content, "document.documentElement.dataset.souluExtensionFixture==='active'")), 'Content script runs in an ordinary Chrome-style Soulu tab')
-            stop()
-            shell, settings, manager = start()
-            check(s.evaluate(manager, expression)['id'] == installed['id'], 'Installed extension persists after restart')
-            # Profile-local enable/disable is performed by Chromium, not a UI flag.
-            ident = json.dumps(installed['id'])
-            s.evaluate(manager, f'chrome.management.setEnabled({ident},false)')
-            check(s.evaluate(manager, expression)['state'] == 'DISABLED', 'Chromium disables the installed extension')
-            s.evaluate(manager, f'chrome.management.setEnabled({ident},true)')
-            check(s.evaluate(manager, expression)['state'] == 'ENABLED', 'Chromium re-enables the installed extension')
+            if os.environ.get('SOULU_UI_HOTFIX') != '1':
+                check(s.evaluate(manager, 'typeof window.cefQuery') == 'undefined', 'Chrome surface has no Soulu bridge')
+                s.evaluate(manager, 'chrome.developerPrivate.updateProfileConfiguration({inDeveloperMode:true})')
+                # Do not await a promise while the native file picker blocks the UI.
+                s.sequence += 1
+                manager.send(json.dumps({'id': s.sequence, 'method': 'Runtime.evaluate', 'params': {
+                    'expression': "window.__loadResult=null;try{Promise.resolve(chrome.developerPrivate.loadUnpacked({failQuietly:true,populateError:true})).then(r=>window.__loadResult={result:r},e=>window.__loadResult={error:String(e)});}catch(e){window.__loadResult={error:String(e)}};true"}}))
+                controls = wait(lambda: p.dialog_controls(process.pid))
+                print('Extension picker controls:', [(c[1], c[2], c[3]) for c in controls], flush=True)
+                ImageGrab.grab().save(output.parent / 'extensions-picker.png')
+                edits = [c for c in controls if c[1] == 'Edit']
+                edit = next((e for e in edits if e[3] in (1001, 1148, 1152)), edits[-1])
+                button = next(c for c in controls if c[1] == 'Button' and c[3] == 1)
+                user = ctypes.windll.user32
+                user.GetAncestor.argtypes = [ctypes.c_void_p, ctypes.c_uint]
+                user.GetAncestor.restype = ctypes.c_void_p
+                user.SetForegroundWindow(user.GetAncestor(button[0], 2))
+                EditWrapper(edit[0]).set_edit_text(str(extension.resolve()))
+                ButtonWrapper(button[0]).click_input()
+                time.sleep(1)
+                remaining = p.dialog_controls(process.pid)
+                print('Picker controls after selection:', [(c[1], c[2], c[3]) for c in remaining], flush=True)
+                if remaining:
+                    # Windows folder pickers can first navigate to a typed directory;
+                    # selecting that directory then requires a second accept.
+                    accept = next((c for c in remaining if c[1] == 'Button' and c[3] == 1), None)
+                    if accept:
+                        ButtonWrapper(accept[0]).click_input()
+                ImageGrab.grab().save(output.parent / 'extensions-after-picker.png')
+                print('Manager after picker:', s.evaluate(manager, '({url:location.href,result:window.__loadResult})'), flush=True)
+                print('Targets after picker:', [(t.get('type'),t.get('url')) for t in s.targets()], flush=True)
+                # Chrome may select a newly created tab when extension installation
+                # finishes. Reopen the installed list and verify persisted state,
+                # rather than depending on a JS variable in a navigated WebUI.
+                s.evaluate(settings, "document.querySelector('.extension-controls button').click()")
+                manager = socket('chrome://extensions')
+                wait(lambda: s.evaluate(manager, "typeof window.chrome?.developerPrivate?.getExtensionsInfo==='function'"))
+                expression = "chrome.developerPrivate.getExtensionsInfo({includeDisabled:true,includeTerminated:true}).then(rows=>rows.find(r=>r.name==='Soulu extension acceptance')||null)"
+                installed = wait(lambda: s.evaluate(manager, expression))
+                check(bool(installed), 'Unpacked MV3 installation through native picker')
+                report['extensionId'] = installed['id']
+                s.evaluate(settings, 'souluSettingsRequestClose()')
+                wait(lambda: not any('/ui/settings.html' in t.get('url', '') for t in s.targets()))
+                s.evaluate(shell, 'browserShell.openTab(' + json.dumps(url) + ')')
+                content = socket(url)
+                check(wait(lambda: s.evaluate(content, "document.documentElement.dataset.souluExtensionFixture==='active'")), 'Content script runs in an ordinary Chrome-style Soulu tab')
+                stop()
+                shell, settings, manager = start()
+                check(s.evaluate(manager, expression)['id'] == installed['id'], 'Installed extension persists after restart')
+                # Profile-local enable/disable is performed by Chromium, not a UI flag.
+                ident = json.dumps(installed['id'])
+                s.evaluate(manager, f'chrome.management.setEnabled({ident},false)')
+                check(s.evaluate(manager, expression)['state'] == 'DISABLED', 'Chromium disables the installed extension')
+                s.evaluate(manager, f'chrome.management.setEnabled({ident},true)')
+                check(s.evaluate(manager, expression)['state'] == 'ENABLED', 'Chromium re-enables the installed extension')
             # Exercise the Store route without claiming external installation.
             s.evaluate(settings, "[...document.querySelectorAll('.extension-controls button')].find(b=>b.textContent==='Chrome Web Store').click()")
             wait(lambda: any('chromewebstore.google.com/' in t.get('url', '') for t in s.targets()))

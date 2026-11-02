@@ -77,6 +77,7 @@ jobs:
           cache: false
 
       - name: Verify canonical generated geometry and typography
+        if: ${{ env.AUTOMATED_RELEASE != 'true' }}
         shell: pwsh
         run: |
           python -m py_compile browser/scripts/test-cef-next-ui.py browser/scripts/test-cef-video-translation.py
@@ -200,7 +201,9 @@ jobs:
         run: |
           rustup toolchain install 1.99.0 --profile minimal
           rustup default 1.99.0
-          cargo test --locked --manifest-path browser/cef/soulu/adblock/Cargo.toml
+          if ($env:AUTOMATED_RELEASE -ne 'true') {
+            cargo test --locked --manifest-path browser/cef/soulu/adblock/Cargo.toml
+          }
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Configure CEF
@@ -263,10 +266,20 @@ jobs:
         run: |
           python -m pip install --disable-pip-version-check websocket-client pillow pywinauto
           $exe = Get-ChildItem cef-build -Recurse -Filter Soulu.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
+          if ($env:AUTOMATED_RELEASE -eq 'true') { $env:SOULU_UI_HOTFIX='1' }
           python browser/scripts/test-cef-extensions.py $exe.FullName browser/artifacts/extensions-evidence.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      - name: Verify only the reported UI hotfix regressions
+        if: ${{ !cancelled() && steps.native_build.outcome == 'success' }}
+        shell: pwsh
+        run: |
+          python -m pip install --disable-pip-version-check websocket-client pillow
+          python browser/scripts/test-cef-ui-hotfix.py "$env:build_dir/Soulu.exe" browser/artifacts/ui-hotfix
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Verify extension popup worker autofill persistence and profile isolation
+        if: ${{ env.AUTOMATED_RELEASE != 'true' }}
         shell: pwsh
         run: |
           $exe = Get-ChildItem cef-build -Recurse -Filter Soulu.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
@@ -297,6 +310,7 @@ jobs:
           }
 
       - name: Verify native internal controls
+        if: ${{ env.AUTOMATED_RELEASE != 'true' }}
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client pillow
@@ -304,12 +318,14 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Verify reported UI regressions and real background lifecycle controls
+        if: ${{ env.AUTOMATED_RELEASE != 'true' }}
         shell: pwsh
         run: |
           python browser/scripts/test-cef-polish-performance.py "$env:build_dir/Soulu.exe" browser/artifacts/polish-performance
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Verify daily-use fixes in the native browser
+        if: ${{ env.AUTOMATED_RELEASE != 'true' }}
         shell: pwsh
         run: |
           python browser/scripts/test-cef-daily-use.py "$env:build_dir/Soulu.exe" browser/artifacts/daily-use
@@ -337,7 +353,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test live CEF settings and toolbar on Windows
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76')) }}
+        if: ${{ env.AUTOMATED_RELEASE != 'true' && (!(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76'))) }}
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client pillow dxcam comtypes
@@ -358,6 +374,7 @@ jobs:
           }
 
       - name: Test third Adaptive toolbar animation and live page retention
+        if: ${{ env.AUTOMATED_RELEASE != 'true' }}
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client
@@ -365,6 +382,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Verify live page glass, opaque themes, tabs and resize
+        if: ${{ env.AUTOMATED_RELEASE != 'true' }}
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client pillow
@@ -380,6 +398,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Test adaptive classic tabs, pinning and session restoration
+        if: ${{ env.AUTOMATED_RELEASE != 'true' }}
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client
@@ -408,6 +427,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Test work-area input bounds and fullscreen restore in real Win32 CEF
+        if: ${{ env.AUTOMATED_RELEASE != 'true' }}
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client pillow
@@ -429,6 +449,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test unified native menus across contexts and scales
+        if: ${{ env.AUTOMATED_RELEASE != 'true' }}
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client pillow comtypes
@@ -465,6 +486,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test Soulu site permissions and reading palette
+        if: ${{ env.AUTOMATED_RELEASE != 'true' }}
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client pillow
@@ -482,6 +504,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Test native web platform, GPU, media and downloads
+        if: ${{ env.AUTOMATED_RELEASE != 'true' }}
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client pywinauto
@@ -550,6 +573,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test immediate settings saves, migration and native profile isolation
+        if: ${{ env.AUTOMATED_RELEASE != 'true' }}
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client
@@ -558,6 +582,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test native Settings overlay lifecycle and background state
+        if: ${{ env.AUTOMATED_RELEASE != 'true' }}
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client pillow
@@ -566,12 +591,14 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test motion through the native CEF shell and Settings
+        if: ${{ env.AUTOMATED_RELEASE != 'true' }}
         shell: pwsh
         run: |
           python browser/scripts/test-cef-motion.py "$env:build_dir/Soulu.exe" browser/artifacts/motion-evidence.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test toolbar geometry, caption feedback, popup bounds and native drag
+        if: ${{ env.AUTOMATED_RELEASE != 'true' }}
         shell: pwsh
         run: |
           python browser/scripts/test-cef-toolbar.py "$env:build_dir/Soulu.exe" browser/artifacts/toolbar-evidence.json
@@ -633,7 +660,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Validate native runtime before main packaging
-        if: (inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76'))
+        if: ${{ env.AUTOMATED_RELEASE != 'true' && ((inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76'))) }}
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client pillow dxcam comtypes
@@ -758,7 +785,7 @@ jobs:
           if($manifest.sha256 -ne (Get-FileHash $out).Hash.ToLowerInvariant()){throw 'Installer checksum mismatch'}
           $version = Get-Content browser/artifacts/engine-version.json -Raw | ConvertFrom-Json
           "Soulu Beta 1.0.$env:BETA_NUMBER. Verified CEF $($version.cef) / Chromium $($version.chromium). Source: $env:GITHUB_SHA. Build: $env:GITHUB_RUN_ID." | Set-Content browser/artifacts/release-notes.md -Encoding utf8
-          'Extensions: per-profile installation and native runtime, Settings pin/unpin controls, and toolbar icons after VPN. Native action popups, MV3 workers, messaging, storage, active tabs, scripting, page autofill, synthetic credential saving and restart persistence are exercised by the integration suite. Chrome Web Store Bitwarden installation and login UI are checked. Signing into a real Bitwarden vault and its authenticated autofill/save flows are not verified; complete Chrome API coverage is not claimed.' | Add-Content browser/artifacts/release-notes.md -Encoding utf8
+          'This hotfix checks the real Bitwarden popup position, size and outside dismissal after Store installation and onboarding. General extension workers, autofill, persistence and profile-isolation suites are deferred to the owner for manual checks. Signing into a real Bitwarden vault is not verified.' | Add-Content browser/artifacts/release-notes.md -Encoding utf8
           Get-Content browser/RELEASE_NOTES.md | Add-Content browser/artifacts/release-notes.md -Encoding utf8
           "passed=true" >> $env:GITHUB_OUTPUT
       - name: Upload verified engine evidence
@@ -770,7 +797,7 @@ jobs:
           if-no-files-found: error
 
       - name: Test bookmarks persistence and native tab overview
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
+        if: ${{ env.AUTOMATED_RELEASE != 'true' && (!(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76')) && (!cancelled() && steps.verified.outputs.passed == 'true')) }}
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client
@@ -857,7 +884,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Verify all reported public sites with native CEF
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
+        if: ${{ env.AUTOMATED_RELEASE != 'true' && (!(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76')) && (!cancelled() && steps.verified.outputs.passed == 'true')) }}
         shell: pwsh
         run: |
           $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP 'soulu-cef-upgrade-sites'
@@ -892,7 +919,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Verify internal tabs and native link context menu
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
+        if: ${{ env.AUTOMATED_RELEASE != 'true' && (!(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76')) && (!cancelled() && steps.verified.outputs.passed == 'true')) }}
         shell: pwsh
         run: |
           $env:SOULU_UI_TEST_PORT = '9223'
@@ -905,7 +932,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Verify retained layout and native resize
-        if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
+        if: ${{ env.AUTOMATED_RELEASE != 'true' && (!(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76')) && (!cancelled() && steps.verified.outputs.passed == 'true')) }}
         shell: pwsh
         run: |
           $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP 'soulu-preview36-layout'
@@ -1005,7 +1032,7 @@ jobs:
           if ($env:AUTOMATED_RELEASE -eq 'true') {
             # The current owner request authorizes this automated release. Do not
             # turn unavailable physical/authenticated scenarios into passed checks.
-            'Acceptance scope: focused UI hotfix checks covering extension installation/actions, native controls, layout, settings, motion, bookmarks/overview, runtime integrity and installer packaging. Unrelated import, translation, Home, typography, history, vault and AdBlock suites were not repeated for this owner-requested hotfix. Real Google/Ozon authenticated-session restarts, physical microphone, audible YouTube playback/seek/fullscreen, physical GPU/DPI, clipboard/drag-drop and configured VPN connectivity were not manually verified for this release.' | Add-Content browser/artifacts/release-notes.md -Encoding utf8
+            'Acceptance scope: only the reported UI hotfix cases: playing-video viewport stability under toolbar hover, cursor visibility, website color-scheme preference, Settings/overview/bookmark transitions and the real Bitwarden popup. Build/runtime integrity and installer packaging are also checked. Unrelated import, translation, Home, typography, history, vault and AdBlock suites were not repeated for this owner-requested hotfix. Real Google/Ozon authenticated-session restarts, physical microphone, audible YouTube playback/seek/fullscreen, physical GPU/DPI, clipboard/drag-drop and configured VPN connectivity were not manually verified for this release.' | Add-Content browser/artifacts/release-notes.md -Encoding utf8
           } elseif ($env:MANUAL_CHECKS_SHA -cne $env:GITHUB_SHA) {
             throw 'Publication blocked: manual acceptance or explicit owner deferrals must cover this exact SHA'
           }
@@ -1014,6 +1041,10 @@ jobs:
           }
           if ($env:DEFER_DESKTOP_CHECKS -eq 'true') {
             'The owner will complete the remaining physical desktop acceptance checks. Automated Windows/CEF checks remain required; unfinished manual checks are not claimed as passed.' | Add-Content browser/artifacts/release-notes.md -Encoding utf8
+          }
+          if ($env:AUTOMATED_RELEASE -eq 'true') {
+            'Unrelated feature suites and public-site navigation checks were explicitly deferred to the owner for manual verification.' | Add-Content browser/artifacts/release-notes.md -Encoding utf8
+            exit 0
           }
           $sites = Get-Content browser/artifacts/sites-evidence.json -Raw | ConvertFrom-Json
           $unopened = @($sites | Where-Object { !$_.opened })

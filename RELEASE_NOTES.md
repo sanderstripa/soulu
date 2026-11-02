@@ -8,4 +8,4 @@
 - Forward light/dark/system appearance to Chromium profiles so supported sites receive the browser color scheme.
 - Smooth settings, tab overview and bookmark sidebar transitions; retain the shell surface for bookmark exit animations.
 
-Windows build and focused UI/extension, layout, motion and installer checks run in GitHub Actions. Unrelated feature suites are not repeated for this hotfix, as requested. Physical YouTube playback, GPU/DPI and real Bitwarden account use require desktop verification; they are not claimed as manually verified here.
+Windows build and only the reported UI and Bitwarden regressions plus build/installer integrity checks run in GitHub Actions. Unrelated feature suites are not repeated for this hotfix, as requested. Physical YouTube playback, GPU/DPI and real Bitwarden account use require desktop verification; they are not claimed as manually verified here.
