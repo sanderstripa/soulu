@@ -73,7 +73,10 @@ class Host final:public ChromeTabHost,public CefWindowDelegate,public CefBrowser
   }
   void SetVisible(bool visible,bool activate) override {
     CEF_REQUIRE_UI_THREAD();const bool changed=visible_!=visible;visible_=visible;if(!window_)return;
-    if(!changed&&visibility_applied_){if(visible&&activate&&!focusing_)FocusNativeContent();return;}
+    if(!changed&&visibility_applied_){
+      if(visible&&activate&&!focusing_)FocusNativeContent();
+      KeepBelowShell();return;
+    }
     visibility_applied_=true;
     // Keep Chromium's content view visibility in sync with the Win32 child.
     // Hiding the native container alone leaves the BrowserView logically shown.
@@ -82,7 +85,7 @@ class Host final:public ChromeTabHost,public CefWindowDelegate,public CefBrowser
     else {DismissActionPopup();window_->Hide();}
     // A Chrome widget can raise itself when shown. Content must stay below
     // the custom toolbar, page glass and the owner's native resize border.
-    SetWindowPos(window_->GetWindowHandle(),HWND_BOTTOM,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE);
+    KeepBelowShell();
   }
   void ArmActionPopup(const CefRect& anchor) override {
     DismissActionPopup();anchor_=anchor;existing_popups_.clear();
@@ -92,6 +95,14 @@ class Host final:public ChromeTabHost,public CefWindowDelegate,public CefBrowser
   }
   void Close() override{DismissActionPopup();closing_=true;if(view_&&view_->GetBrowser())view_->GetBrowser()->GetHost()->CloseBrowser(true);else if(window_)window_->Close();}
  private:
+  void KeepBelowShell(){
+    if(!window_||!visible_)return;
+    const auto hwnd=window_->GetWindowHandle();
+    // Chrome can raise its native child on activation. Restore only Z-order,
+    // never its size, so the shell and native resize ring keep pointer input.
+    if(GetWindow(hwnd,GW_HWNDNEXT))
+      SetWindowPos(hwnd,HWND_BOTTOM,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE);
+  }
   static bool MouseDown(){return (GetAsyncKeyState(VK_LBUTTON)|GetAsyncKeyState(VK_RBUTTON)|GetAsyncKeyState(VK_MBUTTON))&0x8000;}
   static BOOL CALLBACK SnapshotPopup(HWND hwnd,LPARAM data){
     if(IsWindowVisible(hwnd))reinterpret_cast<Host*>(data)->existing_popups_.insert(hwnd);return TRUE;
@@ -169,7 +180,7 @@ class Host final:public ChromeTabHost,public CefWindowDelegate,public CefBrowser
     NativeFocusTarget target;
     EnumChildWindows(window_->GetWindowHandle(),FindRenderer,reinterpret_cast<LPARAM>(&target));
     if(target.window&&::GetFocus()!=target.window)::SetFocus(target.window);
-    focusing_=false;
+    focusing_=false;KeepBelowShell();
   }
   void Resize(){
     if(!window_||!view_||resizing_)return;const auto size=window_->GetSize();
