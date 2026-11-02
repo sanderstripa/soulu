@@ -272,6 +272,8 @@ def main():
                     report['bitwardenGeometry']=geometry;report['bitwardenAnchor']=anchor
                     return abs(geometry['y']-(client[1]/anchor['scale']+anchor['bottom']+6))<24 and geometry['width']<=800 and geometry['height']<=600
                 check(wait(anchored,5),'Real Bitwarden popup is sized and anchored below its Soulu button after onboarding')
+                time.sleep(.25)
+                check(anchored(),'Bitwarden retains its anchored position after the native compositor settles')
                 ImageGrab.grab().save(output.parent / 'bitwarden-popup.png')
                 mouse.press(coords=(client[2]-40,client[3]-40));time.sleep(.1);mouse.release(coords=(client[2]-40,client[3]-40))
                 wait(lambda:not any('chrome-extension://'+bitwarden+'/popup/' in t.get('url','') for t in s.targets()))
