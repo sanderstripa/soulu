@@ -71,7 +71,12 @@ with tempfile.TemporaryDirectory(prefix='soulu-reader-public-',ignore_cleanup_er
   # Reported sites continue to navigate in the same CEF content target.
   for host in ('youtube.com','facebook.com','sanderstripa.com','apps.sanderstripa.com','google.com','ozon.ru'):
    s.evaluate(shell,'browserShell.navigate('+json.dumps('https://'+host)+')')
-   wait(lambda:s.evaluate(shell,'browserShell.getState().then(s=>!s.page.loading&&s.page.url.includes('+json.dumps(host)+'))'))
+   print('NAVIGATE PUBLIC',host,flush=True)
+   try:
+    wait(lambda:s.evaluate(shell,'browserShell.getState().then(s=>!s.page.loading&&s.page.url.includes('+json.dumps(host)+'))'))
+   except Exception:
+    print('PUBLIC NAVIGATION FAILURE',json.dumps({'host':host,'shell':s.evaluate(shell,'browserShell.getState()'),'document':s.evaluate(page,"({url:location.href,title:document.title,ready:document.readyState})")},ensure_ascii=False),flush=True)
+    raise
    loaded=s.evaluate(page,'({url:location.href,title:document.title})')
    assert host in loaded['url'] and not loaded['url'].startswith('chrome-error:'),loaded
    availability='site_error_page' if host=='ozon.ru' and 'нет соединения' in loaded['title'].lower() else 'loaded'

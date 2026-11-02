@@ -30,7 +30,12 @@ def invoke(shell,method,payload=None):
 def new_page(shell,method,payload=None):
     old={t['id'] for t in s.targets()}
     result=invoke(shell,method,payload)
-    target=wait(lambda:next((t for t in s.targets() if t['id'] not in old and t.get('type')=='page'),None))
+    if method=='createProfile':
+        def profile_ready():
+            s.targets()
+            return invoke(shell,'getSettings')['onboarding']['status'] in ('skipped','completed')
+        wait(profile_ready)
+    target=wait(lambda:next((t for t in s.targets() if t['id'] not in old and t.get('type')=='page' and not t.get('url','').startswith('chrome://') and '/ui/index.html' not in t.get('url','') and t.get('url') not in ('','about:blank')),None))
     return socket_for(target),result
 
 def answer_native_dialog(process,title,yes=True):
