@@ -1,0 +1,115 @@
+name: Preflight native Chrome browser regressions
+on:
+  push:
+    branches: [codex/extensions-public-final]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: soulu-extension-public-final
+  cancel-in-progress: true
+jobs:
+  regression:
+    runs-on: windows-2025
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [public]
+    env:
+      PYTHONUTF8: 1
+      SOULU_UI_TEST_PORT: '9223'
+      SOULU_REGRESSION_SKIP_FIRST_RUN: 1
+      SOULU_TEST_DEFAULT_APPS: 1
+      NO_PROXY: localhost,127.0.0.1,::1
+      SUITE: ${{ matrix.suite }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Restore exact compiled candidate
+        uses: actions/download-artifact@v4
+        with:
+          name: Soulu-cef-candidate-25c323d57f026d56520fc9c0f8c4981f8c1e98c3
+          path: runtime
+          run-id: 41496931715
+          github-token: ${{ github.token }}
+      - name: Restore the approved CEF runtime
+        shell: pwsh
+        run: |
+          $index = Invoke-RestMethod 'https://cef-builds.spotifycdn.com/index.json'
+          $version = @($index.windows64.versions | Where-Object cef_version -eq '156.0.14+g4fa4ab5+chromium-156.0.8078.48')
+          if ($version.Count -ne 1) { throw 'Approved engine missing' }
+          $archive = @($version[0].files | Where-Object type -eq 'standard')
+          if ($archive.Count -ne 1 -or $archive[0].sha1 -ne '7a1049f0facf3b6ce9efc4d683cf1bac72691ba6') { throw 'Engine checksum changed' }
+          Invoke-WebRequest ('https://cef-builds.spotifycdn.com/' + $archive[0].name) -OutFile cef.tar.bz2
+          if ((Get-FileHash cef.tar.bz2 -Algorithm SHA1).Hash -ne $archive[0].sha1) { throw 'Corrupt engine archive' }
+          New-Item -ItemType Directory -Force cef | Out-Null
+          tar -xjf cef.tar.bz2 -C cef
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $dist = Get-ChildItem cef -Directory | Select-Object -First 1
+          Copy-Item -Recurse -Force "$($dist.FullName)/Release/*" runtime/
+          Copy-Item -Recurse -Force "$($dist.FullName)/Resources/*" runtime/
+      - name: Prepare isolated regression fixtures
+        shell: pwsh
+        run: |
+          Copy-Item ui/extension-toolbar.css runtime/ui/extension-toolbar.css -Force
+          python -m pip install --disable-pip-version-check websocket-client pillow pywinauto dxcam comtypes fonttools psutil
+          New-Item -ItemType Directory -Force artifacts | Out-Null
+          "LOCALAPPDATA=$env:RUNNER_TEMP/soulu-preflight-$env:SUITE" | Out-File $env:GITHUB_ENV -Append
+          "APPDATA=$env:RUNNER_TEMP/soulu-preflight-$env:SUITE-roaming" | Out-File $env:GITHUB_ENV -Append
+      - uses: actions/setup-go@v5
+        if: matrix.suite == 'settings'
+        with:
+          go-version: '1.25'
+      - name: Restore VPN components for Settings validation
+        if: matrix.suite == 'settings'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force runtime/vpn | Out-Null
+          Copy-Item -Recurse -Force vpn/* runtime/vpn/
+          ./scripts/prepare-vpn-components.ps1 -Destination "$env:GITHUB_WORKSPACE/runtime/vpn/native-host"
+      - name: Exercise native browser regression
+        shell: pwsh
+        run: |
+          $personalize='HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize'
+          New-Item $personalize -Force | Out-Null
+          Set-ItemProperty $personalize EnableTransparency 1 -Type DWord
+          if ($env:SUITE -eq 'frame') {
+            $app=Start-Process "$env:GITHUB_WORKSPACE/runtime/Soulu.exe" -PassThru
+            $env:SOULU_TEST_PROCESS_ID=[string]$app.Id
+            try { python scripts/test-cef-ui.py; $result=$LASTEXITCODE }
+            finally { Get-Process Soulu -ErrorAction SilentlyContinue | Stop-Process -Force }
+            if ($result -ne 0) { exit $result }
+            python scripts/test-cef-window-states.py runtime/Soulu.exe artifacts/window-states
+            exit $LASTEXITCODE
+          }
+          $groups=@{
+            public=@('adblock-public')
+            translation=@('translation')
+            adblock=@('adblock','adblock-update','adblock-live-update','adblock-lifetime')
+            platform=@('platform')
+            typography=@('typography','native-typography')
+            settings=@('settings','settings-overlay','onboarding')
+            surfaces=@('site-surfaces','toolbar','motion')
+            navigation=@('default-links','navigation','link-menu','storage','profile-isolation','content-policy')
+            adaptive=@('adaptive-toolbar')
+            menus=@('menu-system','menu-actions')
+            history=@('history')
+            'bookmarks-overview'=@('bookmarks-overview')
+          }
+          $failed=@()
+          foreach ($suite in $groups[$env:SUITE]) {
+            Get-Process Soulu -ErrorAction SilentlyContinue | Stop-Process -Force
+            $env:LOCALAPPDATA=Join-Path $env:RUNNER_TEMP "soulu-acceptance-$suite"
+            $env:APPDATA=Join-Path $env:RUNNER_TEMP "soulu-acceptance-$suite-roaming"
+            python "scripts/test-cef-$suite.py" runtime/Soulu.exe "artifacts/$suite"
+            if ($LASTEXITCODE -ne 0) { $failed+=$suite }
+          }
+          if ($failed.Count) { Write-Host ($failed -join ','); exit 1 }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Soulu-native-regression-${{ matrix.suite }}-${{ github.sha }}
+          path: artifacts/
