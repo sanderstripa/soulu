@@ -120,6 +120,12 @@ chrome.runtime.onMessage.addListener((m,sender,reply)=>{(async()=>{
    popup=socket('chrome-extension://'+ident+'/popup.html');state=json.loads(wait(lambda:s.evaluate(popup,"document.querySelector('#state')?.textContent")))
    check(state['storage']['credentials']=={'username':'saved-user','password':'saved-password'},'Saved synthetic credentials survive worker and browser restart')
    call(shell,'createProfile','Extension isolation');other=call(shell,'getState')['activeProfileId'];check(not any(e['id']==ident for e in extension(shell,'list',other)['items']),'Second profile has an isolated extension registry')
+   # Finish first-run while the new profile is still active. The common
+   # discovery helper cannot finish a hidden onboarding page after switching.
+   def new_profile_ready():
+    s.targets()
+    return call(shell,'getState')['settings']['onboarding']['status'] in ('skipped','completed')
+   wait(new_profile_ready)
    call(shell,'switchProfile',profile);call(shell,'openSettingsWindow');settings=socket('/ui/settings.html');wait(lambda:s.evaluate(settings,"document.body?.classList.contains('ready')"));s.evaluate(settings,"souluSettings.openSection('extensions')")
    wait(lambda:s.evaluate(settings,"!!document.querySelector('#extensionPins input[data-extension-id="+json.dumps(ident)+"]')"));s.evaluate(settings,"(()=>{const t=document.querySelector('#extensionPins input[data-extension-id="+json.dumps(ident)+"]');t.checked=false;t.dispatchEvent(new Event('change',{bubbles:true}));return true})()")
    wait(lambda:not any(e['id']==ident and e['pinned'] for e in extension(shell,'list',profile)['items']));s.evaluate(settings,'souluSettingsRequestClose()');wait(lambda:s.evaluate(shell,"!document.querySelector('[data-extension-toolbar] [data-extension-id="+json.dumps(ident)+"]')"));check(True,'Unpin removes the icon without uninstalling the extension')

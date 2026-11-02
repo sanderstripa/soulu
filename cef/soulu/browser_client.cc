@@ -150,7 +150,10 @@ bool BrowserClient::OnPreKeyEvent(CefRefPtr<CefBrowser> browser,const CefKeyEven
     if(event.windows_key_code=='H'){owner_->OpenHistory();return true;}
     if(event.windows_key_code==VK_DELETE&&(event.modifiers&EVENTFLAG_SHIFT_DOWN)){owner_->OpenHistory(true);return true;}
   }
-  if(event.type==KEYEVENT_RAWKEYDOWN && owner_->HandlePageShortcut(tab_id_, event.windows_key_code,
+  // Leave Ctrl+Shift+L available for password-manager extension commands.
+  if(event.type==KEYEVENT_RAWKEYDOWN &&
+      !((event.modifiers&EVENTFLAG_CONTROL_DOWN)&&(event.modifiers&EVENTFLAG_SHIFT_DOWN)&&event.windows_key_code=='L') &&
+      owner_->HandlePageShortcut(tab_id_, event.windows_key_code,
       (event.modifiers&EVENTFLAG_CONTROL_DOWN)!=0, (event.modifiers&EVENTFLAG_ALT_DOWN)!=0)) return true;
   if(event.type==KEYEVENT_RAWKEYDOWN&&(event.modifiers&EVENTFLAG_CONTROL_DOWN)&&event.windows_key_code=='F') {
     owner_->RequestFind();return true;
