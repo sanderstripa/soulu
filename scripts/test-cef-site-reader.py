@@ -257,7 +257,7 @@ with tempfile.TemporaryDirectory(prefix='soulu-reader-', ignore_cleanup_errors=T
         before={t['id'] for t in s.targets()}
         second_state=s.evaluate(shell,'browserShell.createProfile("Reader second")')
         second_id=second_state['activeProfileId']
-        second_target=wait(lambda:next((t for t in s.targets() if t['id'] not in before and '/ui/index.html' not in t.get('url','')),None))
+        second_target=wait(lambda:next((t for t in s.targets() if t['id'] not in before and t.get('type')=='page' and not t.get('url','').startswith('chrome://') and '/ui/index.html' not in t.get('url','')),None))
         second_ws=s.websocket.create_connection(second_target['webSocketDebuggerUrl'],timeout=30,origin=s.BASE)
         s.navigate(second_ws,origin+'/empty');seed(second_ws)
         action('reader.preferences',{'preferences':{'size':18}})

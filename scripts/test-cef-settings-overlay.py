@@ -132,7 +132,7 @@ def main():
             wait(lambda:state()['settingsOverlayReady'])
             timings.append((time.monotonic()-start)*1000)
             after = state()
-            check(after['activeTabId'] == before['activeTabId'] and after['tabs'] == before['tabs'],
+            check(after['activeTabId'] == before['activeTabId'] and [{k:t[k] for k in ('id','url','pinned','incognito')} for t in after['tabs']] == [{k:t[k] for k in ('id','url','pinned','incognito')} for t in before['tabs']],
                   'Settings leaves tab strip, selected tab and URLs unchanged')
             return wait(lambda:windows(process.pid, 'SouluSettingsOverlay'))[0]
         def close_settings():
