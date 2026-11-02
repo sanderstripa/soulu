@@ -24,9 +24,9 @@ jobs:
       - name: Restore exact compiled candidate
         uses: actions/download-artifact@v4
         with:
-          name: Soulu-cef-candidate-00a0c1fa5f104fe2d33a686ed808132fd24ed9d5
+          name: Soulu-cef-candidate-74153201208e2ab1a413a24d94bebc93ec603e13
           path: runtime
-          run-id: 41413807305
+          run-id: 41418862395
           github-token: ${{ github.token }}
       - name: Restore the approved CEF runtime
         shell: pwsh
@@ -72,6 +72,7 @@ jobs:
         if: always()
         shell: pwsh
         run: |
+          Get-ChildItem artifacts -Filter evidence.json -Recurse | ForEach-Object { Get-Content $_.FullName -Raw | Write-Host }
           Get-WinEvent -FilterHashtable @{LogName='Application';StartTime=(Get-Date).AddMinutes(-25)} -ErrorAction SilentlyContinue | Where-Object { $_.Message -match 'Soulu.exe' } | Select-Object TimeCreated,Id,Message | Format-List | Out-File artifacts/native-events.txt
           if (@(Get-ChildItem artifacts -Filter '*.dmp' -Recurse).Count) { choco install windbg -y --no-progress }
           $debugger = Get-ChildItem 'C:/Program Files (x86)/Windows Kits' -Filter cdb.exe -Recurse -ErrorAction SilentlyContinue | Where-Object FullName -match 'x64' | Select-Object -First 1
