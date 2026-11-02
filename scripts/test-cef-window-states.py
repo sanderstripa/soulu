@@ -189,6 +189,23 @@ def foreground(hwnd):
 def page_focus_ready(page,hwnd):
     info=FocusInfo();info.size=C.sizeof(info)
     assert u.GetGUIThreadInfo(u.GetWindowThreadProcessId(hwnd,None),C.byref(info))
+    if info.focus==hwnd:
+        renderers=[]
+        @C.WINFUNCTYPE(W.BOOL,W.HWND,W.LPARAM)
+        def renderer(child,_):
+            name=C.create_unicode_buffer(100);u.GetClassNameW(child,name,100)
+            if name.value=='Chrome_RenderWidgetHostHWND' and u.IsWindowVisible(child):
+                bounds=W.RECT();u.GetClientRect(child,C.byref(bounds));renderers.append(((bounds.right-bounds.left)*(bounds.bottom-bounds.top),child))
+            return True
+        u.EnumChildWindows(hwnd,renderer,0)
+        if renderers:
+            target=max(renderers)[1];current=C.windll.kernel32.GetCurrentThreadId();thread=u.GetWindowThreadProcessId(hwnd,None)
+            attached=u.AttachThreadInput(current,thread,True)
+            try:u.SetFocus(target)
+            finally:
+                if attached:u.AttachThreadInput(current,thread,False)
+            u.GetGUIThreadInfo(thread,C.byref(info))
+            print('NATIVE RENDERER FOCUS FALLBACK',{'root':int(hwnd),'renderer':int(target),'focus':int(info.focus or 0)},flush=True)
     assert info.focus!=hwnd and u.GetAncestor(info.focus,2)==hwnd,('CEF native focus not yet restored',info.focus,hwnd)
     assert s.evaluate(page,'document.hasFocus()'),'CEF renderer focus not yet restored'
     return True
