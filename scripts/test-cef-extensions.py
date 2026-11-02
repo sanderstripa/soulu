@@ -59,7 +59,7 @@ def main():
     executable = str(Path(sys.argv[1]).resolve())
     output = Path(sys.argv[2]).resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
-    report = {'passed': False, 'checks': [], 'limitations': ['Store installation and Bitwarden account flows require separate acceptance.']}
+    report = {'passed': False, 'checks': [], 'limitations': ['Authentication against a private Bitwarden vault is not exercised.']}
     server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Fixture)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     url = f'http://127.0.0.1:{server.server_port}/fixture'
@@ -245,6 +245,11 @@ def main():
                     return s.evaluate(popup, """(()=>{
                       const email=document.querySelector('input[type=email],input[autocomplete=username],input[name=email]');
                       if(email&&email.getClientRects().length&&!email.disabled)return true;
+                      if(location.hash.includes('default-password-manager-prompt')){
+                        const skip=[...document.querySelectorAll('button,a,[role=button]')].find(b=>b.getClientRects().length&&/^(Skip|Пропустить)$/i.test(b.innerText.trim()));
+                        if(skip)skip.click();
+                        return false;
+                      }
                       const login=[...document.querySelectorAll('button,a,[role=button]')].find(b=>b.getClientRects().length&&/(Log\\s*in|Login|Войти|Вход)/i.test(b.innerText));
                       if(login)login.click();
                       return false;

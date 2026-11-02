@@ -24,9 +24,9 @@ jobs:
       - name: Restore exact compiled candidate
         uses: actions/download-artifact@v4
         with:
-          name: Soulu-cef-candidate-74153201208e2ab1a413a24d94bebc93ec603e13
+          name: Soulu-cef-candidate-ea32be0bad31462ee21425795b064126a19c48e6
           path: runtime
-          run-id: 41418862395
+          run-id: 41422669605
           github-token: ${{ github.token }}
       - name: Restore the approved CEF runtime
         shell: pwsh
@@ -59,7 +59,6 @@ jobs:
           'SOULU_EXTENSION_DUMP_TOOL='+"$env:GITHUB_WORKSPACE/tools/procdump64.exe" | Out-File $env:GITHUB_ENV -Append
           python -m pip install --disable-pip-version-check websocket-client pillow pywinauto
       - name: Verify real popup lifecycle and saved credentials
-        if: false
         shell: pwsh
         run: |
           python scripts/test-cef-extension-actions.py runtime/Soulu.exe artifacts/actions/evidence.json
