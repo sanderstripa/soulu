@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [polish]
+        suite: [daily-use, polish]
     env:
       PYTHONUTF8: 1
       SOULU_REGRESSION_SKIP_FIRST_RUN: 1
@@ -62,8 +62,9 @@ jobs:
         shell: pwsh
         run: |
           switch ($env:SUITE) {
-            'navigation' { python scripts/test-cef-navigation.py runtime/Soulu.exe }
+            'daily-use' { python scripts/test-cef-daily-use.py runtime/Soulu.exe artifacts/daily-use }
             'polish' { python scripts/test-cef-polish-performance.py runtime/Soulu.exe artifacts/polish }
+            'navigation' { python scripts/test-cef-navigation.py runtime/Soulu.exe }
             'layout' { python scripts/test-cef-layout.py runtime/Soulu.exe artifacts/layout }
             'profiles' { python scripts/test-cef-profile-isolation.py runtime/Soulu.exe }
             'typography' { python scripts/test-cef-typography.py runtime/Soulu.exe artifacts/typography-runtime.json }
