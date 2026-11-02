@@ -1,0 +1,80 @@
+name: Probe built extension runtime
+on:
+  push:
+    branches: [codex/extension-probe]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: soulu-extension-probe
+  cancel-in-progress: true
+jobs:
+  probe:
+    runs-on: windows-2025
+    timeout-minutes: 25
+    env:
+      PYTHONUTF8: 1
+      SOULU_TEST_STORE_INSTALL: 1
+      SOULU_REGRESSION_SKIP_FIRST_RUN: 1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Restore exact compiled candidate
+        uses: actions/download-artifact@v4
+        with:
+          name: Soulu-cef-candidate-00a0c1fa5f104fe2d33a686ed808132fd24ed9d5
+          path: runtime
+          run-id: 41413807305
+          github-token: ${{ github.token }}
+      - name: Restore the approved CEF runtime
+        shell: pwsh
+        run: |
+          $index = Invoke-RestMethod 'https://cef-builds.spotifycdn.com/index.json'
+          $version = @($index.windows64.versions | Where-Object cef_version -eq '156.0.14+g4fa4ab5+chromium-156.0.8078.48')
+          if ($version.Count -ne 1) { throw 'Approved engine missing' }
+          $archive = @($version[0].files | Where-Object type -eq 'standard')
+          if ($archive.Count -ne 1 -or $archive[0].sha1 -ne '7a1049f0facf3b6ce9efc4d683cf1bac72691ba6') { throw 'Engine checksum changed' }
+          Invoke-WebRequest ('https://cef-builds.spotifycdn.com/' + $archive[0].name) -OutFile cef.tar.bz2
+          if ((Get-FileHash cef.tar.bz2 -Algorithm SHA1).Hash -ne $archive[0].sha1) { throw 'Corrupt engine archive' }
+          New-Item -ItemType Directory -Force cef | Out-Null
+          tar -xjf cef.tar.bz2 -C cef
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $dist = Get-ChildItem cef -Directory | Select-Object -First 1
+          Copy-Item -Recurse -Force "$($dist.FullName)/Release/*" runtime/
+          Copy-Item -Recurse -Force "$($dist.FullName)/Resources/*" runtime/
+      - name: Enable isolated native crash diagnostics
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force artifacts/dumps | Out-Null
+          $key = 'HKLM:\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Soulu.exe'
+          New-Item -Force $key | Out-Null
+          New-ItemProperty -Path $key -Name DumpFolder -PropertyType ExpandString -Value "$env:GITHUB_WORKSPACE\artifacts\dumps" -Force | Out-Null
+          New-ItemProperty -Path $key -Name DumpType -PropertyType DWord -Value 1 -Force | Out-Null
+          New-ItemProperty -Path $key -Name DumpCount -PropertyType DWord -Value 3 -Force | Out-Null
+          python -m pip install --disable-pip-version-check websocket-client pillow pywinauto
+      - name: Verify real popup lifecycle and saved credentials
+        shell: pwsh
+        run: |
+          python scripts/test-cef-extension-actions.py runtime/Soulu.exe artifacts/actions/evidence.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify official Bitwarden popup
+        shell: pwsh
+        run: |
+          python scripts/test-cef-extensions.py runtime/Soulu.exe artifacts/bitwarden/evidence.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Collect native failure events
+        if: always()
+        shell: pwsh
+        run: |
+          Get-WinEvent -FilterHashtable @{LogName='Application';StartTime=(Get-Date).AddMinutes(-25)} -ErrorAction SilentlyContinue | Where-Object { $_.Message -match 'Soulu.exe' } | Select-Object TimeCreated,Id,Message | Format-List | Out-File artifacts/native-events.txt
+          $debugger = Get-ChildItem 'C:/Program Files (x86)/Windows Kits' -Filter cdb.exe -Recurse -ErrorAction SilentlyContinue | Where-Object FullName -match 'x64' | Select-Object -First 1
+          if ($debugger) {
+            Get-ChildItem artifacts/dumps -Filter '*.dmp' | ForEach-Object { & $debugger.FullName -z $_.FullName -c '.ecxr;kv;q' 2>&1 | Out-File ($_.FullName+'.txt') }
+          }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Soulu-extension-probe-${{ github.sha }}
+          path: artifacts/

@@ -98,6 +98,10 @@ chrome.runtime.onMessage.addListener((m,sender,reply)=>{(async()=>{
    ImageGrab.grab().save(output.parent/'extension-popup.png')
    s.evaluate(popup,"document.querySelector('#fill').click()")
    wait(lambda:s.evaluate(content,"username.value==='fixture-user'&&password.value==='fixture-password'"));check(True,'Worker uses chrome.scripting to autofill the active login form')
+   wait(lambda:s.evaluate(popup,"!!JSON.parse(document.querySelector('#result').textContent||'{}').filled"))
+   s.sequence+=1;popup.send(json.dumps({'id':s.sequence,'method':'Runtime.evaluate','params':{'expression':'window.close();true'}}))
+   wait(lambda:not any('chrome-extension://'+ident+'/popup.html' in t.get('url','') for t in s.targets()))
+   check(len(call(shell,'getState')['tabs'])==before,'Closing the native popup preserves all Soulu tabs')
    # A real submit also offers Soulu's own password save. Decline that
    # separate vault prompt so it cannot block the extension worker test.
    s.sequence+=1;content.send(json.dumps({'id':s.sequence,'method':'Runtime.evaluate','params':{'expression':"username.value='saved-user';password.value='saved-password';login.requestSubmit();true"}}))
@@ -116,6 +120,7 @@ chrome.runtime.onMessage.addListener((m,sender,reply)=>{(async()=>{
    stop();report['passed']=True
  finally:
   if process and not report['passed']:
+   report['processExitCode']=process.poll()
    try:
     ImageGrab.grab().save(output.parent/'failure.png')
     report['browserState']=call(shell,'getState')
