@@ -67,7 +67,7 @@ chrome.runtime.onMessage.addListener((m,sender,reply)=>{(async()=>{
     nonlocal process
     process=subprocess.Popen([exe,'--no-proxy-server','--enable-logging','--log-file='+str(output.parent/'cef.log')],env=env)
     if os.environ.get('SOULU_EXTENSION_DUMP_TOOL'):
-     dumpdir=output.parent/'dumps';dumpdir.mkdir(exist_ok=True);monitors.append(subprocess.Popen([os.environ['SOULU_EXTENSION_DUMP_TOOL'],'-accepteula','-e','1','-f','80000003','-mm','-o',str(process.pid),str(dumpdir)]))
+     dumpdir=output.parent/'dumps';dumpdir.mkdir(exist_ok=True);monitors.append(subprocess.Popen([os.environ['SOULU_EXTENSION_DUMP_TOOL'],'-accepteula','-b','-e','1','-f','*80000003*','-mm','-o',str(process.pid),str(dumpdir)]))
     shell=socket('/ui/index.html');wait(lambda:s.evaluate(shell,"typeof window.browserShell?.extensions==='function'"));return shell
    shell=start();call(shell,'openSettingsWindow');settings=socket('/ui/settings.html');wait(lambda:s.evaluate(settings,"document.body?.classList.contains('ready')"));s.evaluate(settings,"souluSettings.openSection('extensions')");manager=socket('chrome://extensions/')
    wait(lambda:s.evaluate(manager,"typeof window.chrome?.developerPrivate?.loadUnpacked==='function'"))
