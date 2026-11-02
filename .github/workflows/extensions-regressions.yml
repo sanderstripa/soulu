@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [translation, adblock, platform, typography, settings, surfaces, navigation]
+        suite: [home, menus]
     env:
       PYTHONUTF8: 1
       SOULU_UI_TEST_PORT: '9223'
@@ -31,9 +31,9 @@ jobs:
       - name: Restore exact compiled candidate
         uses: actions/download-artifact@v4
         with:
-          name: Soulu-cef-candidate-d7e9d0d923f488990d09a914da2d58702992455f
+          name: Soulu-cef-candidate-25c323d57f026d56520fc9c0f8c4981f8c1e98c3
           path: runtime
-          run-id: 41467024790
+          run-id: 41496931715
           github-token: ${{ github.token }}
       - name: Restore the approved CEF runtime
         shell: pwsh
@@ -93,8 +93,9 @@ jobs:
             settings=@('settings','settings-overlay','onboarding')
             surfaces=@('site-surfaces','toolbar','motion')
             navigation=@('default-links','navigation','link-menu','storage','profile-isolation','content-policy')
+            home=@('home-focus')
             adaptive=@('adaptive-toolbar')
-            menus=@('menu-system','menu-actions')
+            menus=@('menu-actions')
             history=@('history')
             'bookmarks-overview'=@('bookmarks-overview')
           }

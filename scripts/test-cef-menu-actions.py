@@ -44,7 +44,22 @@ with tempfile.TemporaryDirectory(prefix='soulu-menu-actions-',ignore_cleanup_err
             u.PostMessageW(hwnd,0x100,0x24,0)
             for _ in range(active.index(selected)):u.PostMessageW(hwnd,0x100,0x28,0)
             u.PostMessageW(hwnd,0x100,0x0D,0);wait(lambda:not menus());time.sleep(.15)
-        s.evaluate(page,'document.querySelector("#readonly").select()');choose('#readonly','Копировать');report['readonly_copy']='native command invoked'
+        u.OpenClipboard.argtypes=[ctypes.c_void_p]
+        u.GetClipboardData.argtypes=[ctypes.c_uint];u.GetClipboardData.restype=ctypes.c_void_p
+        k=ctypes.windll.kernel32
+        k.GlobalLock.argtypes=[ctypes.c_void_p];k.GlobalLock.restype=ctypes.c_void_p
+        k.GlobalUnlock.argtypes=[ctypes.c_void_p]
+        def clipboard_text():
+            if not u.OpenClipboard(None):return None
+            try:
+                handle=u.GetClipboardData(13)
+                if not handle:return None
+                pointer=k.GlobalLock(handle)
+                if not pointer:return None
+                try:return ctypes.wstring_at(pointer)
+                finally:k.GlobalUnlock(handle)
+            finally:u.CloseClipboard()
+        s.evaluate(page,'document.querySelector("#readonly").select()');choose('#readonly','Копировать');wait(lambda:clipboard_text()=='Read only fixture');report['readonly_copy']='actual selected text copied to native clipboard'
         choose('#edit','Выделить всё');assert s.evaluate(page,'edit.selectionStart===0&&edit.selectionEnd===edit.value.length');report['select_all']='passed'
         choose('#image','Копировать изображение');wait(lambda:u.IsClipboardFormatAvailable(8));report['copy_image']='CF_DIB available'
         choose('#media','Воспроизвести');wait(lambda:s.evaluate(page,'!media.paused&&media.currentTime>0'));report['media_play']='passed'
@@ -56,8 +71,5 @@ with tempfile.TemporaryDirectory(prefix='soulu-menu-actions-',ignore_cleanup_err
         print(json.dumps(report),flush=True);output=pathlib.Path(sys.argv[2]);output.parent.mkdir(parents=True,exist_ok=True);output.write_text(json.dumps(report,indent=2),encoding='utf-8')
         page.close();shell.close();s.close_normally(process)
     finally:
-        print('MENU PROCESS EXIT',process.poll(),flush=True)
-        debug=pathlib.Path(profile)/'Soulu/User Data/Profiles/chrome_debug.log'
-        if debug.is_file():print(debug.read_text(encoding='utf-8',errors='replace')[-20000:],flush=True)
         if process.poll() is None:process.kill()
         server.shutdown()
