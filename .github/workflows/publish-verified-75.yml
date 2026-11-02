@@ -1,0 +1,76 @@
+name: Publish verified Soulu 75 package
+on:
+  push:
+    branches: [codex/publish-verified-75]
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 64b080970e82a382eca045fae055b2ef3496683d
+      - name: Verify source and completed package acceptance
+        id: proof
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const source='64b080970e82a382eca045fae055b2ef3496683d';
+            const p={owner:context.repo.owner,repo:context.repo.repo};
+            const main=await github.rest.git.getRef({...p,ref:'heads/main'});
+            if(main.data.object.sha!==source)throw Error('Source is no longer current main');
+            const run=await github.rest.actions.getWorkflowRun({...p,run_id:41503087748});
+            if(run.data.head_sha!==source||run.data.head_branch!=='main')throw Error('Wrong source build');
+            const jobs=await github.request('GET /repos/{owner}/{repo}/actions/runs/{run_id}/attempts/{attempt_number}/jobs',{...p,run_id:41503087748,attempt_number:1,per_page:100});
+            const job=jobs.data.jobs.find(j=>j.name==='windows-cef');
+            const required=[19,21,23,24,25,26,27,28,29,30,31,32,33,35,36,38,39,40,41,42,43,44,46,48,49,51,53,54,55,56,57,61,62,65,66,68,69,70,72,73,75,76,77,81,82,83,84];
+            for(const n of required){const s=job?.steps.find(s=>s.number===n);if(s?.conclusion!=='success')throw Error('Required acceptance missing: '+n);}
+            const a=await github.rest.actions.getArtifact({...p,artifact_id:13171891374});
+            if(a.data.expired||a.data.workflow_run.head_sha!==source||a.data.workflow_run.id!==41503087748||a.data.name!=='Soulu-Beta-1.0.75-x64')throw Error('Wrong package artifact');
+            if(!/^sha256:[a-f0-9]{64}$/.test(a.data.digest))throw Error('No artifact digest');
+            core.setOutput('digest',a.data.digest.slice(7));
+            require('fs').writeFileSync('release-proof.json',JSON.stringify({source,build:41503087748,attempt:1,artifact:13171891374,digest:a.data.digest,checks:job.steps.filter(s=>required.includes(s.number)),disclosure:'Ozon network timeout is unresolved; this is not claimed as a passed check. The exact published installer passed version UI and package integrity in attempt 1.'},null,2));
+      - name: Download unchanged package and verify its digest
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_DIGEST: ${{ steps.proof.outputs.digest }}
+        run: |
+          gh api repos/sanderstripa/soulu/actions/artifacts/13171891374/zip > package.zip
+          echo "$EXPECTED_DIGEST  package.zip" | sha256sum --check --strict
+          mkdir package
+          unzip -q package.zip -d package
+          test -f package/Soulu-Beta-1.0.75-x64.exe
+          test -f package/Soulu-Beta-1.0.75-x64.zip
+          sha256sum package/Soulu-Beta-1.0.75-x64.exe package/Soulu-Beta-1.0.75-x64.zip > SHA256SUMS.txt
+      - name: Prepare accurate release notes
+        run: |
+          cp RELEASE_NOTES.md release-notes.md
+          cat >> release-notes.md <<'NOTES'
+
+          Проверенный пакет опубликован без пересборки из исходного артефакта 13171891374 сборки 41503087748, попытка 1. Исходный код: 64b080970e82a382eca045fae055b2ef3496683d. У этого пакета успешно проверены версия в реальном окне установщика, целостность ZIP и установщика, движок и функциональные проверки браузера и расширений.
+
+          Ограничения проверки: Ozon из Windows CI получил ERR_CONNECTION_TIMED_OUT; успешное открытие Ozon в этом прогоне не подтверждено. Этот сбой не объявляется успешной проверкой. При повторной сборке также не удалось подключить диагностический канал к WebView другого экземпляра установщика; опубликован исходный пакет, у которого эта проверка прошла. Вход в личные хранилища Bitwarden и реальные учётные записи не выполнялся. Проверки реальных микрофонов, физического GPU/DPI и настроенного VPN вручную не проводились.
+          NOTES
+      - name: Recheck current main before publication
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const r=await github.rest.git.getRef({owner:context.repo.owner,repo:context.repo.repo,ref:'heads/main'});
+            if(r.data.object.sha!=='64b080970e82a382eca045fae055b2ef3496683d')throw Error('Main changed before release');
+      - name: Publish existing verified package
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: beta-1.0.75
+          name: Soulu Beta 1.0.75
+          target_commitish: 64b080970e82a382eca045fae055b2ef3496683d
+          prerelease: false
+          body_path: release-notes.md
+          fail_on_unmatched_files: true
+          files: |
+            package/Soulu-Beta-1.0.75-x64.exe
+            package/Soulu-Beta-1.0.75-x64.zip
+            SHA256SUMS.txt
+            release-proof.json
