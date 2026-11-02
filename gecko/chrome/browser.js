@@ -19,12 +19,12 @@ function emit(name,value){for(const win of windows())win.Soulu?._emit(name,value
 const builtin={geo:'geolocation',camera:'camera',microphone:'microphone','desktop-notification':'notifications',popup:'popups'};
 async function blocking(){const {AddonManager}=ChromeUtils.importESModule('resource://gre/modules/AddonManager.sys.mjs');const addon=await AddonManager.getAddonByID('uBlock0@raymondhill.net');if(addon){if(shared.config.rules.blocking.enabled&&addon.userDisabled)await addon.enable();else if(!shared.config.rules.blocking.enabled&&!addon.userDisabled)await addon.disable();}}
 async function save(){await IOUtils.writeJSON(settingsFile,shared.config,{tmpPath:settingsFile+'.tmp'});await IOUtils.setPermissions(settingsFile,0o600);}
-function layout(){const s=shared.config.settings,root=document.documentElement;root.toggleAttribute('soulu-single',gBrowser.visibleTabs.length<2);root.toggleAttribute('soulu-dark',s.theme==='dark'||s.theme==='system'&&matchMedia('(prefers-color-scheme:dark)').matches);}
+function layout(){const s=shared.config.settings,root=document.documentElement;root.toggleAttribute('soulu-single',gBrowser.visibleTabs.filter(t=>!t.closing).length<2);root.toggleAttribute('soulu-dark',s.theme==='dark'||s.theme==='system'&&matchMedia('(prefers-color-scheme:dark)').matches);}
 function apply(){
  layout();
  const s=shared.config.settings,root=document.documentElement;
  root.toggleAttribute('soulu-dark',s.theme==='dark'||s.theme==='system'&&matchMedia('(prefers-color-scheme:dark)').matches);
- root.toggleAttribute('soulu-single',gBrowser.visibleTabs.length<2);
+ root.toggleAttribute('soulu-single',gBrowser.visibleTabs.filter(t=>!t.closing).length<2);
  root.setAttribute('soulu-version','Soulu Gecko Preview 1');
  for(const [id,key] of [['soulu-sidebar','showSidebar'],['back-button','showBack'],['home-button','showHome'],['soulu-newtab','showNewTab'],['downloads-button','showDownloads'],['soulu-vpn','vpnToolbarVisible']]){const el=document.getElementById(id);if(el)el.hidden=s[key]===false;}
  const bar=document.getElementById('PersonalToolbar');if(bar)bar.collapsed=s.bookmarksBarMode==='never'||s.bookmarksBarPosition==='hidden';
@@ -144,7 +144,7 @@ async function dispatch(action,payload,source){
  case 'browser.profile.delete':if(payload===shared.config.profile||!/^[\w-]{1,64}$/.test(payload))throw Error('Cannot delete active profile');await IOUtils.remove(PathUtils.join(PathUtils.parent(profile),payload),{recursive:true});return true;
  case 'vpn.send':return vpn(payload.action);
  case 'vpn.settings.get':return shared.config.vpn;
- case 'browser.components.manage':return helperRequest({action:'components',...payload});
+ case 'browser.components.manage':{if(!['xray','sudoku'].includes(payload?.component)||!['status','list','install','rollback'].includes(payload?.operation))throw Error('Invalid VPN component operation');return helperRequest({...payload,action:'components',name:payload.operation,proxy:shared.vpnState.connected});}
  case 'browser.extensions.list':{const {AddonManager}=ChromeUtils.importESModule('resource://gre/modules/AddonManager.sys.mjs');return {items:(await AddonManager.getAddonsByTypes(['extension'])).map(a=>({id:a.id,name:a.name,version:a.version,enabled:a.isActive,action:false}))};}
  case 'browser.extensions.manager':return open('about:addons');
  case 'browser.extensions.openStore':return open('https://addons.mozilla.org/firefox/');

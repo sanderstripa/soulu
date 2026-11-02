@@ -55,6 +55,10 @@ try:
  check('adaptive_single_tab',m.execute_script('return document.documentElement.hasAttribute("soulu-single")'))
  m.execute_script('BrowserCommands.openTab()');time.sleep(.3);m.switch_to_window(m.window_handles[-1]);m.set_context('chrome')
  check('adaptive_multiple_tabs',m.execute_script('return !document.documentElement.hasAttribute("soulu-single") && !document.getElementById("TabsToolbar").collapsed'))
+ m.execute_script('gBrowser.removeTab(gBrowser.selectedTab,{animate:true})');time.sleep(.6);m.switch_to_window(m.window_handles[0]);m.set_context('chrome')
+ check('adaptive_collapses_after_close',m.execute_script('return document.documentElement.hasAttribute("soulu-single")'))
+ m.execute_script('BrowserCommands.openTab()');time.sleep(.2);m.switch_to_window(m.window_handles[-1]);m.set_context('chrome')
+
  check('security_preferences',m.execute_script('return Services.prefs.getBoolPref("fission.autostart") && Services.prefs.getBoolPref("browser.safebrowsing.malware.enabled") && Services.prefs.getBoolPref("browser.safebrowsing.phishing.enabled") && Services.prefs.getIntPref("security.sandbox.content.level")>0'))
  addon=run(m,"const {AddonManager}=ChromeUtils.importESModule('resource://gre/modules/AddonManager.sys.mjs');for(let i=0;i<100;i++){const a=await AddonManager.getAddonByID('uBlock0@raymondhill.net');if(a?.isActive)return {active:a.isActive,signed:a.signedState,version:a.version};await new Promise(r=>setTimeout(r,100));}return null;")
  check('signed_full_ublock_active',isinstance(addon,dict) and addon.get('active') and addon.get('signed',0)>0,addon)
