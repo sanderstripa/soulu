@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [home, menus, history]
+        suite: [translation, adblock, platform, typography, settings, surfaces, navigation]
     env:
       PYTHONUTF8: 1
       SOULU_UI_TEST_PORT: '9223'
@@ -55,10 +55,21 @@ jobs:
         shell: pwsh
         run: |
           Copy-Item ui/extension-toolbar.css runtime/ui/extension-toolbar.css -Force
-          python -m pip install --disable-pip-version-check websocket-client pillow pywinauto dxcam comtypes fonttools
+          python -m pip install --disable-pip-version-check websocket-client pillow pywinauto dxcam comtypes fonttools psutil
           New-Item -ItemType Directory -Force artifacts | Out-Null
           "LOCALAPPDATA=$env:RUNNER_TEMP/soulu-preflight-$env:SUITE" | Out-File $env:GITHUB_ENV -Append
           "APPDATA=$env:RUNNER_TEMP/soulu-preflight-$env:SUITE-roaming" | Out-File $env:GITHUB_ENV -Append
+      - uses: actions/setup-go@v5
+        if: matrix.suite == 'settings'
+        with:
+          go-version: '1.25'
+      - name: Restore VPN components for Settings validation
+        if: matrix.suite == 'settings'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force runtime/vpn | Out-Null
+          Copy-Item -Recurse -Force vpn/* runtime/vpn/
+          ./scripts/prepare-vpn-components.ps1 -Destination "$env:GITHUB_WORKSPACE/runtime/vpn/native-host"
       - name: Exercise native browser regression
         shell: pwsh
         run: |
@@ -75,9 +86,15 @@ jobs:
             exit $LASTEXITCODE
           }
           $groups=@{
-            home=@('home-focus')
+            translation=@('translation')
+            adblock=@('adblock','adblock-update','adblock-live-update','adblock-lifetime')
+            platform=@('platform')
+            typography=@('typography','native-typography')
+            settings=@('settings','settings-overlay','onboarding')
+            surfaces=@('site-surfaces','toolbar','motion')
+            navigation=@('default-links','navigation','link-menu','storage','profile-isolation','content-policy')
             adaptive=@('adaptive-toolbar')
-            menus=@('menu-actions')
+            menus=@('menu-system','menu-actions')
             history=@('history')
             'bookmarks-overview'=@('bookmarks-overview')
           }
