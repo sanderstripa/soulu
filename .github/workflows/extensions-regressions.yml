@@ -30,9 +30,9 @@ jobs:
       - name: Restore exact compiled candidate
         uses: actions/download-artifact@v4
         with:
-          name: Soulu-cef-candidate-ea32be0bad31462ee21425795b064126a19c48e6
+          name: Soulu-cef-candidate-7c13ae30aba1d71d771fd2aad96570756ecde294
           path: runtime
-          run-id: 41422669605
+          run-id: 41447654689
           github-token: ${{ github.token }}
       - name: Restore the approved CEF runtime
         shell: pwsh
