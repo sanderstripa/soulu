@@ -34,7 +34,7 @@ def main():
  def socket(fragment):
   def find():
    for t in s.targets():
-    if fragment in t.get('url','') and 'soulu-worker=1' not in t.get('url',''):
+    if fragment in t.get('url','') and '/shortcuts' not in t.get('url',''):
      ws=s.websocket.create_connection(t['webSocketDebuggerUrl'],timeout=40,origin=s.BASE);connections.append(ws);return ws
   return wait(find)
  def call(shell,method,value=None):return s.evaluate(shell,'browserShell.'+method+'('+('' if value is None else json.dumps(value))+')')

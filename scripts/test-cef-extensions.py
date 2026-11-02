@@ -74,7 +74,7 @@ def main():
     def socket(fragment):
         def find():
             for target in s.targets():
-                if fragment in target.get('url', '') and 'soulu-worker=1' not in target.get('url',''):
+                if fragment in target.get('url', '') and '/shortcuts' not in target.get('url',''):
                     ws = s.websocket.create_connection(target['webSocketDebuggerUrl'], timeout=35, origin=s.BASE)
                     connections.append(ws)
                     return ws

@@ -24,13 +24,16 @@ class Call final:public CefDevToolsMessageObserver {
     if(!id_){Finish(nullptr,"Chromium did not accept the extension request");return;}
     CefRefPtr<Call> self=this;CefPostDelayedTask(TID_UI,new Task([self]{self->Finish(nullptr,"Extension request timed out");}),15000);
   }
-  void OnDevToolsAgentDetached() override {Finish(nullptr,"Extension browser closed");}
+  void OnDevToolsAgentDetached(CefRefPtr<CefBrowser>) override {Finish(nullptr,"Extension browser closed");}
   void OnDevToolsMethodResult(CefRefPtr<CefBrowser>,int id,bool ok,const void* bytes,size_t size) override {
     if(id!=id_||!done_)return;
     auto value=CefParseJSON(std::string(static_cast<const char*>(bytes),size),JSON_PARSER_RFC);
     auto data=value&&value->GetType()==VTYPE_DICTIONARY?value->GetDictionary():nullptr;
     std::string error;if(!ok)error=data&&data->HasKey("message")?data->GetString("message").ToString():"Chromium extension request failed";
-    if(data&&data->HasKey("exceptionDetails"))error="Extension management script failed";
+    if(data&&data->HasKey("exceptionDetails")){
+      auto details=data->GetDictionary("exceptionDetails"),exception=details?details->GetDictionary("exception"):nullptr;
+      error=exception?exception->GetString("description").ToString():"Extension management script failed";
+    }
     Finish(data,error);
   }
  private:
@@ -75,7 +78,7 @@ class Service final:public ExtensionService,public CefClient,public CefLifeSpanH
   bool Start(CefRefPtr<CefRequestContext> context){
     context_=context;
     CefBrowserSettings settings;auto extra=CefDictionaryValue::Create();extra->SetBool("souluExtensionsSurface",true);
-    view_=CefBrowserView::CreateBrowserView(this,"chrome://extensions/?soulu-worker=1",settings,extra,context,this);
+    view_=CefBrowserView::CreateBrowserView(this,"chrome://extensions/shortcuts?soulu-worker=1",settings,extra,context,this);
     if(view_)window_=CefWindow::CreateTopLevelWindow(this);return window_!=nullptr;
   }
   void OnWindowCreated(CefRefPtr<CefWindow> window)override{window_=window;window->SetToFillLayout();window->AddChildView(view_);}
@@ -84,7 +87,7 @@ class Service final:public ExtensionService,public CefClient,public CefLifeSpanH
   void OnAfterCreated(CefRefPtr<CefBrowser> browser)override{browser_=browser;if(closing_)browser->GetHost()->CloseBrowser(true);}
   void OnBeforeClose(CefRefPtr<CefBrowser>)override{browser_=nullptr;if(window_)window_->Close();CompleteClose();}
   void OnLoadEnd(CefRefPtr<CefBrowser>,CefRefPtr<CefFrame> frame,int status)override{
-    if(!frame->IsMain()||frame->GetURL()!="chrome://extensions/?soulu-worker=1"||status<200||status>=400||closing_)return;
+    if(!frame->IsMain()||frame->GetURL().ToString().rfind("chrome://extensions/",0)!=0||closing_)return;
     ready_=true;auto queued=std::move(queued_);queued_.clear();for(auto& task:queued)task();
   }
   void List(ExtensionReply done)override{
