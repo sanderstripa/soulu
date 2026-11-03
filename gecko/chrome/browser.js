@@ -43,8 +43,10 @@ function apply(){
  for(const entry of shared.managedPermissions||[])if(shared.config.rules.sites[entry.origin]?.[entry.key]===undefined)Services.perms.removeFromPrincipal(entry.principal,entry.type);
  shared.managedPermissions=[];
  for(const [origin,rules] of Object.entries(shared.config.rules.sites)){
-  let principal;try{principal=Services.scriptSecurityManager.createContentPrincipal(Services.io.newURI(origin.includes('://')?origin:'https://'+origin),{});}catch{continue;}
+  const targets=new Set(origin.includes('://')?[origin]:['http://'+origin,'https://'+origin]);for(const tab of gBrowser.tabs){try{const u=new URL(tab.linkedBrowser.currentURI.spec);if(u.hostname===origin)targets.add(u.origin);}catch{}}
+  for(const target of targets){let principal;try{principal=Services.scriptSecurityManager.createContentPrincipal(Services.io.newURI(target),{});}catch{continue;}
   for(const [type,key] of Object.entries(builtin)){if(rules[key]===undefined)continue;const v=Number(rules[key]);shared.managedPermissions.push({origin,key,principal,type});Services.perms.addFromPrincipal(principal,type,v===1?Services.perms.PROMPT_ACTION:v===2?Services.perms.DENY_ACTION:Services.perms.ALLOW_ACTION);}
+  }
  }
  pref('privacy.trackingprotection.enabled',shared.config.rules.blocking.enabled);
  pref('privacy.trackingprotection.pbmode.enabled',shared.config.rules.blocking.enabled);

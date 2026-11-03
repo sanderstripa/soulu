@@ -11,3 +11,5 @@
 #soulu-settings-shade{inset:0!important}
 #soulu-settings-frame{top:0!important;width:min(1020px,100vw)!important;max-height:100vh!important;border-radius:0 0 24px 24px!important}
 #browser{margin-inline-start:var(--soulu-left-panel,0px)!important}
+
+#tabbrowser-tabpanels,#appcontent,.browserStack,.browserContainer,.browserSidebarContainer{border:0!important;outline:none!important;box-shadow:none!important}

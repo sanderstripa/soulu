@@ -61,7 +61,13 @@ try:
   if multiple:cefcall('newTab');time.sleep(.5)
   if settings:
    cefcall('openSettingsWindow');setting=cefui.find_target('settings.html');wait(lambda:cefui.evaluate(setting,'!!window.souluSettings?.current'));time.sleep(.5);reference[name]=cefui.evaluate(setting,settingsMetric)
-  else:cefui.evaluate(home,'document.activeElement?.blur()');reference[name]=cefui.evaluate(shell,metric)
+  else:
+   for target in cefui.targets():
+    if 'home.html' in target.get('url','') and target.get('type')=='page':
+     ws=cefui.websocket.create_connection(target['webSocketDebuggerUrl'],timeout=8,origin=cefui.BASE)
+     try:cefui.evaluate(ws,'document.activeElement?.blur()')
+     finally:ws.close()
+   reference[name]=cefui.evaluate(shell,metric)
   time.sleep(.5);grab(hwnd,out/(name+'-cef.png'))
 finally:
  try:cefcall('close')

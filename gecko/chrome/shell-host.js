@@ -114,7 +114,7 @@ document.documentElement.setAttribute('chromemargin','0,0,0,0');
 frame=makeFrame('soulu-shell-frame',appURL+'index.html');
 const permissionAnchor=document.getElementById('notification-popup-box');if(permissionAnchor){document.documentElement.append(permissionAnchor);permissionAnchor.style.cssText='position:fixed;left:calc(50% - 285px);top:14px;width:22px;height:22px;opacity:.01;pointer-events:none;z-index:9999';}
 for(const event of ['TabOpen','TabClose','TabSelect','TabPinned','TabUnpinned','TabAttrModified'])gBrowser.tabContainer.addEventListener(event,notify);
-gBrowser.addTabsProgressListener({onLocationChange(_browser,progress){if(!progress||progress.isTopLevel)notify();},onStateChange(_browser,progress,_request,flags){if((!progress||progress.isTopLevel)&&(flags&(Ci.nsIWebProgressListener.STATE_START|Ci.nsIWebProgressListener.STATE_STOP)))notify();},onSecurityChange(_browser,progress){if(!progress||progress.isTopLevel)notify();}});
+gBrowser.addTabsProgressListener({onLocationChange(browser,progress){if(!progress||progress.isTopLevel){try{if(shared.config.rules.sites[browser.currentURI.host])apply();}catch{}notify();}},onStateChange(_browser,progress,_request,flags){if((!progress||progress.isTopLevel)&&(flags&(Ci.nsIWebProgressListener.STATE_START|Ci.nsIWebProgressListener.STATE_STOP)))notify();},onSecurityChange(_browser,progress){if(!progress||progress.isTopLevel)notify();}});
 window.addEventListener('resize',notify);window.addEventListener('sizemodechange',notify);window.addEventListener('keydown',key,true);
 gBrowser.addEventListener('mousedown',()=>{suggestions=0;popover=false;send('dismissSuggestions',null);geometry();},true);
 window.addEventListener('blur',()=>{suggestions=0;geometry();send('dismissSuggestions',null);});

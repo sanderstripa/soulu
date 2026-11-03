@@ -83,6 +83,10 @@ try:
  select_latest();ui('const i=document.getElementById("classicAddress");i.value='+json.dumps(url)+';document.getElementById("classicAddressForm").requestSubmit();return true;');m.set_context('content');wait(lambda:content('return !!document.getElementById("v") && document.getElementById("v").currentTime>.1'),30)
  check('address_form_performs_navigation',content('return location.href.startsWith("http://soulu-fixture.example.org:")'))
  check('website_has_no_application_bridge',content('return !window.cefQuery&&!window.browserShell&&!window.Soulu'))
+ call('browser.site.permission',{'permission':'geolocation','value':2})
+ check('site_permission_changes_native_gecko_decision',chrome('return Services.perms.testPermissionFromPrincipal(gBrowser.selectedBrowser.contentPrincipal,"geo")===Services.perms.DENY_ACTION'))
+ call('browser.site.reset',{})
+ check('site_permission_reset_clears_native_decision',chrome('return Services.perms.testPermissionFromPrincipal(gBrowser.selectedBrowser.contentPrincipal,"geo")===Services.perms.UNKNOWN_ACTION'))
  check('isolated_web_process',str(chrome('return gBrowser.selectedBrowser.remoteType')).startswith('webIsolated'))
  if not args.ui_only:
   status=chrome('return Soulu.adblock?.status(gBrowser.selectedBrowser.browsingContext.id)');check('own_rust_adblock_ready',status and status.get('ready') and status.get('networkRules',0)>10000,status)
