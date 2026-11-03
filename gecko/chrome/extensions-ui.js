@@ -10,12 +10,10 @@ function updateButton(b,item){
  let badge=b.querySelector('.gecko-extension-badge');if(!item.badge){badge?.remove();return;}if(!badge){badge=document.createElement('span');badge.className='gecko-extension-badge';b.append(badge);}if(badge.textContent!==item.badge)badge.textContent=item.badge;const rgba=a=>Array.isArray(a)&&a.length===4&&a.every(Number.isFinite)?`rgba(${a[0]},${a[1]},${a[2]},${a[3]/255})`:'';const background=rgba(item.badgeColor),color=rgba(item.badgeTextColor);if(badge.style.backgroundColor!==background)badge.style.backgroundColor=background;if(badge.style.color!==color)badge.style.color=color;
 }
 function draw(){
- const limit=slots(),eligible=items.filter(e=>e.enabled&&e.pinned&&e.action),overflow=eligible.length>limit,visible=overflow?eligible.slice(0,limit-1):eligible;const signature=JSON.stringify([state.activeProfileId,state.incognito,limit,items]);if(signature===last)return;last=signature;
- const host=document.querySelector('[data-extension-toolbar="classic"]');if(!host)return;const existing=new Map([...host.children].map(n=>[n.dataset.extensionId||'__overflow',n]));let index=0;
- const place=(key,node)=>{existing.delete(key);if(host.children[index]!==node)host.insertBefore(node,host.children[index]||null);index++;};
- for(const item of visible){const node=existing.get(item.id)||makeButton(item.id);updateButton(node,item);place(item.id,node);}
- if(overflow){let more=existing.get('__overflow');if(!more){more=document.createElement('button');more.type='button';more.className='toolbar-button extension-action';more.dataset.extensionOverflow='true';more.textContent='⋯';more.title='Другие расширения';more.setAttribute('aria-label',more.title);more.onclick=()=>invokeAction(more,'overflow');}place('__overflow',more);}
- for(const node of existing.values())node.remove();const width=host.children.length*32+'px';if(document.body.style.getPropertyValue('--extension-toolbar-width')!==width)document.body.style.setProperty('--extension-toolbar-width',width);
+ const controls=document.querySelector('.classic-navigation-right');if(!controls)return;
+ const host=document.querySelector('[data-extension-toolbar="classic"]');if(host)host.replaceChildren();document.body.style.setProperty('--extension-toolbar-width','0px');
+ let button=document.getElementById('soulu-extensions-menu');if(!button){button=document.createElement('button');button.id='soulu-extensions-menu';button.className='toolbar-button extension-action';button.dataset.extensionOverflow='true';button.title='Расширения';button.setAttribute('aria-label','Расширения');button.innerHTML='<svg viewBox="0 0 24 24"><path d="M9 4h6v4h4v6h-4v6H9v-6H4V8h5Z"/></svg>';button.onclick=()=>invokeAction(button,'overflow');controls.insertBefore(button,controls.querySelector('.window-controls'));}
+ button.hidden=state.settings?.showExtensions===false;
 }
 async function refresh(){const ticket=++request;try{const current=await api.getState();state=current;const value=await api.extensions('list',{profile:current.activeProfileId});if(ticket!==request)return;items=value.items||[];draw();}catch(error){console.error(error);}}
 api.onState(value=>{const changed=state.activeProfileId!==value.activeProfileId||state.incognito!==value.incognito||state.settings?.theme!==value.settings?.theme;state=value;if(changed)refresh();else draw();});

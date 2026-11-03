@@ -7,7 +7,7 @@ export class SouluAppChild extends JSWindowActorChild{
  }
  async receiveMessage(message){
   if(message.name==='extensionAnchor'){
-   const win=this.contentWindow,id=String(message.data),node=win.document.querySelector('[data-extension-toolbar="classic"] [data-extension-id="'+win.CSS.escape(id)+'"]');const target=node||win.document.querySelector('[data-extension-toolbar="classic"] [data-extension-overflow]');if(!target)return null;const r=target.getBoundingClientRect();return r.width&&r.height?{x:r.x,y:r.y,width:r.width,height:r.height}:null;
+   const win=this.contentWindow,id=String(message.data),node=win.document.querySelector('[data-extension-toolbar="classic"] [data-extension-id="'+win.CSS.escape(id)+'"]');const target=node||win.document.querySelector('#soulu-extensions-menu');if(!target)return null;const r=target.getBoundingClientRect();return r.width&&r.height?{x:r.x,y:r.y,width:r.width,height:r.height}:null;
   }
   if(message.name==='testing'){
    if(Services.env.get('SOULU_GECKO_TEST')!=='1')throw Error('Test harness is disabled');

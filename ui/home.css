@@ -24,3 +24,5 @@ body[data-theme=dark] svg[data-condition=snow],body[data-theme=dark] svg[data-co
 .favorite-copy strong,.favorite-copy small{display:block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .favorite-copy strong{font:var(--type-compactControl)}
 .favorite-copy small{font:var(--type-caption);color:var(--muted)}
+
+body:not(.home-ready)>main,body:not(.home-ready)>.top-right{visibility:hidden}
