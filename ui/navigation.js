@@ -22,8 +22,8 @@
   const bookmarkProfile=()=>state.incognito?'__incognito__':state.activeProfileId;
   async function persist(next,profile=bookmarkProfile()){if(busy)throw Error('Дождитесь сохранения');busy=true;try{const saved=await api.replaceBookmarks(next,profile);if(bookmarkProfile()===profile){rows=saved;render();}return saved;}finally{busy=false;}}
   const updatePopover=()=>{const open=Boolean(document.querySelector('.bookmark-context'));shield.hidden=!(open||editor);return api.setPopover(open,'bookmarks');};
-  const closeMenu=()=>{pane='list';menu.hidden=true;api.setBookmarksSidebar(false);document.querySelector('.bookmark-context')?.remove();updatePopover();api.setSuggestionsHeight(0);};
-  async function openMenu(id=0,editor=false){await api.setOverview(false);rows=await api.getBookmarks();parent=id;manage=editor;pane='list';query='';menuSearch.value='';menu.hidden=false;await api.setBookmarksSidebar(true);await updatePopover();renderMenu();menuSearch.focus();}
+  let menuEpoch=0;const closeMenu=async()=>{const epoch=++menuEpoch;if(!menu.hidden){const motion=menu.animate([{opacity:1,transform:'translateX(0)'},{opacity:0,transform:'translateX(-10px)'}],{duration:matchMedia('(prefers-reduced-motion:reduce)').matches?0:150,easing:'ease-out'});try{await motion.finished;}catch{}if(epoch!==menuEpoch)return;}pane='list';menu.hidden=true;api.setBookmarksSidebar(false);document.querySelector('.bookmark-context')?.remove();updatePopover();api.setSuggestionsHeight(0);};
+  async function openMenu(id=0,editor=false){++menuEpoch;await api.setOverview(false);rows=await api.getBookmarks();parent=id;manage=editor;pane='list';query='';menuSearch.value='';menu.hidden=false;menu.animate([{opacity:0,transform:'translateX(-10px)'},{opacity:1,transform:'translateX(0)'}],{duration:matchMedia('(prefers-reduced-motion:reduce)').matches?0:180,easing:'cubic-bezier(.22,1,.36,1)'});await api.setBookmarksSidebar(true);await updatePopover();renderMenu();menuSearch.focus();}
   function icon(row){
     const n=el('span','bookmark-icon',row.type==='folder'?'▱':(row.title||row.url||'•').trim().slice(0,1).toLocaleUpperCase());
     if(row.type==='folder')return n;

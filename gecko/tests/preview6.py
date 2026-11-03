@@ -17,6 +17,12 @@ try:
  call('browser.settings.set',{'showExtensions':False});check('extensions_toggle_applies',wait(lambda:ui('return document.getElementById("soulu-extensions-menu").hidden')))
  call('browser.openTab',{'url':url+'extra'});select_latest();call('browser.closeOtherTabs',call('browser.state.get')['activeTabId']);time.sleep(.5);check('single_tab_geometry_centered',ui('return document.body.style.getPropertyValue("--adaptive-progress")==="0"'))
  report['passed']=True
+except Exception as error:
+ report['error']=str(error)
+ try:
+  (out/'failure.png').write_bytes(base64.b64decode(m.screenshot()));report['console']=chrome('return Services.console.getMessageArray().map(x=>x.message).slice(-15)')
+ except Exception:pass
+ raise
 finally:
  try:stop()
  finally:(out/'preview6.json').write_text(json.dumps(report,indent=2),encoding='utf-8');log.close();server.shutdown()

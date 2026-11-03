@@ -1,4 +1,4 @@
-name: Check corrected Home and UI resources against Preview 5 Windows binaries
+name: Check Home, sidebar animation and UI resources against Preview 5 Windows binaries
 on:
   push:
     branches: [gecko-preview]
