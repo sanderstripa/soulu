@@ -66,6 +66,8 @@ jobs:
         with:
           path: gecko-cache/adblock/target
           key: gecko-blocker4-rust199-${{ hashFiles('cef/soulu/adblock/Cargo.lock', 'cef/soulu/adblock/src/lib.rs', 'gecko/adblock-adapter.rs') }}
+      - name: Verify atomic filter replacement and corrupt-update recovery
+        run: python gecko/tests/adblock-update.py gecko-out/runtime/soulu/adblock/soulu_adblock.dll gecko-out/adblock-update.json
       - name: Build launcher with original Soulu icon
         shell: pwsh
         run: |

@@ -14,14 +14,14 @@ function load(url,background=false){const tab=gBrowser.addTrustedTab(url,{inBack
 function rows(){return validTabs().map(tab=>({id:tabID(tab),active:tab===gBrowser.selectedTab,pinned:tab.pinned,title:tab.linkedBrowser.currentURI.spec===homeURL?'Soulu':tab.label,label:tab.label,url:currentURL(tab.linkedBrowser),favicon:tab.image||'',loading:tab.hasAttribute('busy'),canGoBack:tab.linkedBrowser.canGoBack,canGoForward:tab.linkedBrowser.canGoForward,microphoneActive:!!tab._sharingState?.microphone,cameraActive:!!tab._sharingState?.camera,audible:tab.hasAttribute('soundplaying'),muted:tab.hasAttribute('muted'),generation:tab.linkedBrowser.browsingContext.currentWindowGlobal?.innerWindowId||0,incognito:isPrivate}));}
 function barVisible(){const s=shared.config.settings;if(s.bookmarksBarPosition==='hidden'||s.bookmarksBarMode==='never')return false;return s.bookmarksBarMode==='always'||s.bookmarksBarMode==='auto'&&barAuto||['newTab','home'].includes(s.bookmarksBarMode)&&currentURL(selected())==='soulu://home';}
 function geometry(){
- const full=popover||side||bookmarksSide||overview||rightPanel>0||suggestions>0;
+ const full=popover||side||bookmarksSide||overview||rightPanel>0||suggestions>0;if(!full&&frame)frame.style.clipPath='none';
  const height=(validTabs().length>1?88:68)+(barVisible()?28:0),root=document.documentElement;
  if(height!==targetHeight){targetHeight=height;const from=toolbarHeight,start=performance.now(),token=++geometryToken,duration=matchMedia('(prefers-reduced-motion:reduce)').matches?60:320;
   const tick=now=>{if(token!==geometryToken)return;const p=Math.min(1,(now-start)/duration),e=1-Math.pow(1-p,3);toolbarHeight=from+(height-from)*e;root.style.setProperty('--soulu-toolbar-height',toolbarHeight+'px');if(!popover&&!side&&!bookmarksSide&&!overview&&!rightPanel&&!suggestions)root.style.setProperty('--soulu-surface-height',toolbarHeight+'px');send('adaptiveGeometry',{expanded:validTabs().length>1,progress:Math.max(0,Math.min(1,(toolbarHeight-68-(barVisible()?28:0))/20)),height:toolbarHeight-(barVisible()?28:0),active:p<1});if(p===1)notify();if(p<1)requestAnimationFrame(tick);};requestAnimationFrame(tick);
  }
  root.style.setProperty('--soulu-surface-height',(full?innerHeight:toolbarHeight)+'px');root.style.setProperty('--soulu-right-panel',rightPanel+'px');root.style.setProperty('--soulu-left-panel',bookmarksSide?'276px':'0px');root.toggleAttribute('soulu-fullscreen',fullScreen);
 }
-function snapshot(){const list=rows(),page=list.find(t=>t.active);return {tabs:list,page,activeTabId:page?.id,update:{soulu:'Gecko Preview 4',gecko:Services.appinfo.platformVersion,firefox:Services.appinfo.version,xray:Soulu.components?.xray?.version||'—',sudoku:Soulu.components?.sudoku?.version||'—',adblock:'adblock-rust 0.13.3'},settings:{...shared.config.settings,layout:'adaptive'},incognito:isPrivate,fullscreen:fullScreen,maximized:windowState===STATE_MAXIMIZED,sidebarVisible:side,bookmarksSidebarVisible:bookmarksSide,overviewVisible:overview,bookmarksBarVisible:barVisible(),bookmarks:marks,clientHeight:innerHeight,clientWidth:innerWidth,activeProfileId:shared.config.profile,adaptiveToolbar:{expanded:list.length>1,progress:Math.max(0,Math.min(1,(toolbarHeight-(barVisible()?28:0)-68)/20)),height:toolbarHeight-(barVisible()?28:0),active:toolbarHeight!==targetHeight},pageGlassReady:false,settingsOverlayOpen:!!settingsFrame&&!settingsFrame.hidden,settingsOverlayReady:settingsReady};}
+function snapshot(){const list=rows(),page=list.find(t=>t.active);return {tabs:list,page,activeTabId:page?.id,update:{soulu:'Gecko Preview 4',gecko:Services.appinfo.platformVersion,firefox:Services.appinfo.version,xray:Soulu.components?.xray?.version||'—',sudoku:Soulu.components?.sudoku?.version||'—',adblock:'adblock-rust 0.13.3'},settings:{...shared.config.settings,layout:'adaptive'},incognito:isPrivate,fullscreen:fullScreen,maximized:windowState===STATE_MAXIMIZED,sidebarVisible:side,bookmarksSidebarVisible:bookmarksSide,overviewVisible:overview,bookmarksBarVisible:barVisible(),bookmarks:marks,clientHeight:innerHeight,clientWidth:innerWidth,activeProfileId:shared.config.profile,adaptiveToolbar:{expanded:list.length>1,progress:Math.max(0,Math.min(1,(toolbarHeight-(barVisible()?28:0)-68)/20)),height:toolbarHeight-(barVisible()?28:0),active:toolbarHeight!==targetHeight},pageGlassReady:false,surfaceExpanded:!!(popover||side||bookmarksSide||overview||rightPanel||suggestions),settingsOverlayOpen:!!settingsFrame&&!settingsFrame.hidden,settingsOverlayReady:settingsReady};}
 function actorSend(browser,name,data){try{browser?.browsingContext?.currentWindowGlobal?.getActor('SouluApp').sendAsyncMessage(name,data);}catch{}}
 function send(name,value){actorSend(frame,'emit',{name,value});if(settingsFrame&&!settingsFrame.hidden)actorSend(settingsFrame,'emit',{name,value});}
 function emitTo(browser,value){actorSend(browser,'home',value);}
@@ -78,6 +78,14 @@ async function dispatch(action,payload,source){
  case 'browser.bookmarks.auto':barAuto=!!payload;notify();return snapshot();
  case 'browser.setRightPanel':rightPanel=Math.max(0,Math.min(400,Number(payload)||0));geometry();return true;
  case 'browser.setSuggestionsHeight':suggestions=Number(payload)||0;geometry();return true;
+ case 'browser.surfaceRegions':{
+  if(!source?.appURI?.endsWith('/index.html'))throw Error('Trusted shell required');
+  if(!(popover||side||bookmarksSide||overview||rightPanel||suggestions))return true;
+  if(!Array.isArray(payload)||payload.length>24)throw Error('Invalid regions');
+  let path=`M0 0H${innerWidth}V${toolbarHeight}H0Z`;
+  for(const rect of payload){if(!Array.isArray(rect)||rect.length!==4||rect.some(n=>!Number.isFinite(n)))throw Error('Invalid rectangle');const [x,y,w,h]=rect,left=Math.max(0,x),top=Math.max(0,y),right=Math.min(innerWidth,x+w),bottom=Math.min(innerHeight,y+h);if(right>left&&bottom>top)path+=` M${left} ${top}H${right}V${bottom}H${left}Z`;}
+  frame.style.clipPath=`path('${path}')`;return true;
+ }
  case 'browser.popover':popover=!!payload;geometry();return true;
  case 'browser.pageMenu':send('requestSiteMenu',null);return true;
  case 'browser.site.get':return site();

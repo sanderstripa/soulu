@@ -15,14 +15,18 @@ async function importFile(kind,path){
 }
 // Parent-only entry point for native fixture tests; no web-content action accepts file paths.
 Soulu.importFile=importFile;
-function readerPrefs(){const r=shared.config.reader;Services.prefs.setStringPref('reader.font_type',r.font==='serif'?'serif':'sans-serif');Services.prefs.setIntPref('reader.font_size',Math.max(1,Math.min(9,Math.round((Number(r.size)||18)/2)-4)));Services.prefs.setStringPref('reader.color_scheme',['light','dark','sepia','auto'].includes(r.theme)?r.theme:'auto');if(r.width)Services.prefs.setIntPref('reader.content_width',Math.max(1,Math.min(9,Math.round(Number(r.width)/100))));Services.prefs.setIntPref('reader.line_height',Math.max(1,Math.min(9,Math.round((Number(r.spacing)||1.5)*4)-3)));}
+function readerPrefs(){const r=shared.config.reader;Services.prefs.setStringPref('reader.font_type',r.font==='serif'?'serif':'sans-serif');Services.prefs.setIntPref('reader.font_size',Math.max(1,Math.min(9,Math.round((Number(r.size)||18)/2)-4)));Services.prefs.setStringPref('reader.color_scheme',['light','dark','sepia','auto'].includes(r.theme)?r.theme:'auto');Services.prefs.setIntPref('reader.content_width',[3,6,9][Math.max(0,Math.min(2,Math.round(Number(r.width)||0)))]);Services.prefs.setIntPref('reader.line_height',[3,5,7][Math.max(0,Math.min(2,Math.round(Number(r.spacing)||0)))]);}
 const refresh=Soulu.refresh;Soulu.refresh=()=>{refresh();readerPrefs();};readerPrefs();
 Soulu.dispatch=async(action,payload,source)=>{
  if(action.startsWith('browser.site.'))action='site.'+action.slice(13);
  const browser=selected();
+ if(action.startsWith('site.')&&payload?.tabId!==undefined&&(payload.tabId!==tabID(gBrowser.selectedTab)||payload.url!==browser.currentURI.spec||payload.generation!==undefined&&payload.generation!==(browser.browsingContext.currentWindowGlobal?.innerWindowId||0)))throw Error('Страница изменилась. Откройте меню заново.');
  switch(action){
  case 'browser.adblock.status':return Soulu.adblock?.status()||{ready:false};
  case 'browser.adblock.update':return Soulu.adblock.update();
+ case 'site.find':send('requestFind',null);return true;
+ case 'site.reader.preferences':{const values=payload.preferences||{};for(const [key,value] of Object.entries(values)){if(!['theme','font','size','width','spacing'].includes(key))throw Error('Параметр недоступен в режиме чтения Firefox.');if(key==='theme'&&!['light','dark','sepia','auto'].includes(value)||key==='font'&&!['system','sans','serif'].includes(value)||['size','width','spacing'].includes(key)&&!Number.isFinite(Number(value)))throw Error('Invalid reader preference');}Object.assign(shared.config.reader,values);await save();readerPrefs();return Soulu.dispatch('browser.site.get');}
+ case 'browser.shareMenu':{const url=browser.currentURI.spec;if(!/^https?:/.test(url))throw Error('Откройте веб-страницу.');const command=await base('browser.menu.show',{items:[{command:1,label:'Копировать ссылку'},{command:2,label:'QR-код страницы'}],x:innerWidth/2,y:50},source);if(command===1)Cc['@mozilla.org/widget/clipboardhelper;1'].getService(Ci.nsIClipboardHelper).copyString(url);if(command===2)send('geckoQR',url);return true;}
  case 'browser.restoreTab':{const tab=SessionStore.undoCloseTab(window,0,window);Soulu.notify();return tab?tabID(tab):null;}
  case 'browser.duplicateTab':{const tab=SessionStore.duplicateTab(window,checkedTab(payload));gBrowser.selectedTab=tab;Soulu.notify();return tabID(tab);}
  case 'browser.reloadTab':checkedTab(payload).linkedBrowser.reload();return true;
@@ -50,5 +54,6 @@ async function key(event){if(event.defaultPrevented)return;const k=event.key.toL
 Soulu.integrationKey=key;window.addEventListener('keydown',e=>key(e).catch(console.error),true);
 let bookmarkTimer;const bookmarkChanged=()=>{clearTimeout(bookmarkTimer);bookmarkTimer=setTimeout(async()=>{try{await Soulu.bookmarks('invalidate');await Soulu.dispatch('browser.bookmarks.get');}catch(e){console.error(e);}},80);};
 const events=['bookmark-added','bookmark-removed','bookmark-moved','bookmark-title-changed','bookmark-url-changed'];PlacesUtils.observers.addListener(events,bookmarkChanged);gBrowser.tabContainer.addEventListener('TabMove',Soulu.notify);window.addEventListener('unload',()=>{clearTimeout(bookmarkTimer);PlacesUtils.observers.removeListener(events,bookmarkChanged);},{once:true});
+let checkingVPN=false;const failedRequest={observe(){if(!shared.vpnState.connected||checkingVPN)return;checkingVPN=true;Soulu.dispatch('vpn.send',{action:'status'}).catch(console.error).finally(()=>checkingVPN=false);}};Services.obs.addObserver(failedRequest,'http-on-failed-opening-request');window.addEventListener('unload',()=>Services.obs.removeObserver(failedRequest,'http-on-failed-opening-request'),{once:true});
 Services.scriptloader.loadSubScript('chrome://soulu/content/downloads.js',window);
 })();

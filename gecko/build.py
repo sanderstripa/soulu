@@ -85,7 +85,7 @@ policy={'policies':{'DisableTelemetry':True,'DisableFirefoxStudies':True,'DontCh
 # Remote Settings/model downloads are not broken by our own Preferences policy.
 (runtime/'distribution/policies.json').write_text(json.dumps({'policies':{}}))
 defaults=dict(policy['policies']['Preferences'])
-defaults.update({'toolkit.telemetry.enabled':False,'app.shield.optoutstudies.enabled':False,'browser.newtabpage.activity-stream.feeds.telemetry':False,'browser.translations.automaticallyPopup':False,'browser.translations.enable':True,'browser.startup.homepage_override.mstone':'ignore'})
+defaults.update({'termsofuse.bypassNotification':True,'datareporting.policy.dataSubmissionPolicyBypassNotification':True,'datareporting.healthreport.uploadEnabled':False,'datareporting.usage.uploadEnabled':False,'browser.preonboarding.enabled':False,'toolkit.telemetry.enabled':False,'app.shield.optoutstudies.enabled':False,'browser.newtabpage.activity-stream.feeds.telemetry':False,'browser.translations.automaticallyPopup':False,'browser.translations.enable':True,'browser.startup.homepage_override.mstone':'ignore'})
 with (runtime/'defaults/pref/autoconfig.js').open('a',encoding='utf-8') as f:
  for key,value in defaults.items():f.write('\n'+'pref('+json.dumps(key)+','+json.dumps(value)+');')
 
