@@ -3,12 +3,13 @@ import json,os,pathlib,socket,subprocess,sys,tempfile,time,zipfile
 from marionette_driver.marionette import Marionette
 archive=pathlib.Path(sys.argv[1]);out=pathlib.Path(sys.argv[2]);result={'passed':False}
 with tempfile.TemporaryDirectory(prefix='Soulu ZIP extraction ') as tmp:
- root=pathlib.Path(tmp);package=root/'Soulu Gecko Preview 4';package.mkdir()
+ root=pathlib.Path(tmp);package=root/'Soulu Portable Browser';package.mkdir()
  with zipfile.ZipFile(archive) as z:z.extractall(package)
  profile=root/'userdata/SouluGecko/Profiles/default';profile.mkdir(parents=True)
  with socket.socket() as sock:sock.bind(('127.0.0.1',0));port=sock.getsockname()[1]
  (profile/'user.js').write_text('user_pref("remote.prefs.recommended",false);user_pref("marionette.port",'+str(port)+');',encoding='utf-8')
- process=subprocess.Popen([str(package/'Soulu Gecko Preview 4.exe'),'-marionette'],env=dict(os.environ,LOCALAPPDATA=str(root/'userdata'),MOZ_REMOTE_ALLOW_SYSTEM_ACCESS='1',SOULU_GECKO_TEST='1'))
+ launcher=package/'Soulu.exe' if (package/'Soulu.exe').exists() else package/'Soulu Gecko Preview 4.exe'
+ process=subprocess.Popen([str(launcher),'-marionette'],env=dict(os.environ,LOCALAPPDATA=str(root/'userdata'),MOZ_REMOTE_ALLOW_SYSTEM_ACCESS='1',SOULU_GECKO_TEST='1',PATH=os.path.join(os.environ['SystemRoot'],'System32')))
  m=None
  try:
   deadline=time.time()+60

@@ -9,12 +9,16 @@ function handle(win){const raw=win.docShell.treeOwner.QueryInterface(Ci.nsIInter
 let iconHandles;
 export function brand(win){
  if(Services.appinfo.OS!=='WINNT')return;
- const abi=(ctypes.winapi_abi||ctypes.default_abi),user=library('user32.dll'),hwnd=handle(win),path=Services.dirsvc.get('GreD',Ci.nsIFile);for(const part of ['soulu','chrome','ui','soulu-app-icon.ico'])path.append(part);
- const load=user.declare('LoadImageW',abi,ctypes.uintptr_t,ctypes.uintptr_t,(ctypes.char16_t||ctypes.jschar).ptr,ctypes.uint32_t,ctypes.int,ctypes.int,ctypes.uint32_t);
- const send=user.declare('SendMessageW',abi,ctypes.intptr_t,ctypes.uintptr_t,ctypes.uint32_t,ctypes.uintptr_t,ctypes.intptr_t);
- iconHandles??=[load(0,path.path,1,16,16,0x10),load(0,path.path,1,32,32,0x10)];for(let i=0;i<2;i++)send(hwnd,0x80,i,ctypes.cast(iconHandles[i],ctypes.intptr_t));
- try{Cc['@mozilla.org/windows-taskbar;1'].getService(Ci.nsIWinTaskbar).setGroupIdForWindow(win,'Soulu.Gecko.Preview');}catch{}
- try{library('shell32.dll').declare('SetCurrentProcessExplicitAppUserModelID',abi,ctypes.long,(ctypes.char16_t||ctypes.jschar).ptr)('Soulu.Gecko.Preview');}catch{}
+ const result=win.__souluBrand={group:false,icons:false};
+ try{Cc['@mozilla.org/windows-taskbar;1'].getService(Ci.nsIWinTaskbar).setGroupIdForWindow(win,'Soulu.Gecko.Preview');result.group=true;}catch(error){result.groupError=String(error);}
+ try{
+  const abi=(ctypes.winapi_abi||ctypes.default_abi),user=library('user32.dll'),hwnd=handle(win),path=Services.dirsvc.get('GreD',Ci.nsIFile);for(const part of ['soulu','chrome','ui','soulu-app-icon.ico'])path.append(part);
+  const load=user.declare('LoadImageW',abi,ctypes.voidptr_t,ctypes.uintptr_t,(ctypes.char16_t||ctypes.jschar).ptr,ctypes.uint32_t,ctypes.int,ctypes.int,ctypes.uint32_t);
+  const send=user.declare('SendMessageW',abi,ctypes.intptr_t,ctypes.uintptr_t,ctypes.uint32_t,ctypes.uintptr_t,ctypes.voidptr_t);
+  iconHandles??=[load(0,path.path,1,16,16,0x10),load(0,path.path,1,32,32,0x10)];if(iconHandles.some(h=>h.isNull()))throw Error('Cannot load Soulu icons');for(let i=0;i<2;i++)send(hwnd,0x80,i,iconHandles[i]);result.icons=true;
+ }catch(error){result.iconError=String(error);}
+ try{library('shell32.dll').declare('SetCurrentProcessExplicitAppUserModelID',(ctypes.winapi_abi||ctypes.default_abi),ctypes.long,(ctypes.char16_t||ctypes.jschar).ptr)('Soulu.Gecko.Preview');}catch(error){result.processError=String(error);}
+ return result;
 }
 export function material(win,enabled){
  if(Services.appinfo.OS!=='WINNT')return {enabled:false,native:false};
@@ -24,8 +28,7 @@ export function material(win,enabled){
  const available=win.matchMedia('(-moz-windows-mica)').matches;
  win.document.documentElement.toggleAttribute('windowsmica',!!enabled&&available);
  win.document.documentElement.toggleAttribute('soulu-matte',!!enabled&&available);
- const dwm=library('dwmapi.dll'),dark=ctypes.int(win.document.documentElement.hasAttribute('soulu-dark')?1:0);
- dwm.declare('DwmSetWindowAttribute',(ctypes.winapi_abi||ctypes.default_abi),ctypes.long,ctypes.uintptr_t,ctypes.uint32_t,ctypes.voidptr_t,ctypes.uint32_t)(handle(win),20,dark.address(),ctypes.int.size);
+ try{const dwm=library('dwmapi.dll'),dark=ctypes.int(win.document.documentElement.hasAttribute('soulu-dark')?1:0);dwm.declare('DwmSetWindowAttribute',(ctypes.winapi_abi||ctypes.default_abi),ctypes.long,ctypes.uintptr_t,ctypes.uint32_t,ctypes.voidptr_t,ctypes.uint32_t)(handle(win),20,dark.address(),ctypes.int.size);}catch(error){console.debug('Soulu DWM dark hint',String(error));}
  return {enabled:!!enabled&&available,native:available};
 }
 

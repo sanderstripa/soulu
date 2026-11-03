@@ -76,6 +76,7 @@ finally:
  except:proc.kill();proc.wait()
 with socket.socket() as sock:sock.bind(('127.0.0.1',0));port=sock.getsockname()[1]
 profile=temp/'gecko-data/Profiles/default';profile.mkdir(parents=True);(profile/'user.js').write_text('user_pref("marionette.port",'+str(port)+');')
+(profile/'soulu-settings.json').write_text(json.dumps({'onboarding':{'done':True}}),encoding='utf-8')
 env=dict(os.environ,SOULU_GECKO_TEST='1',MOZ_REMOTE_ALLOW_SYSTEM_ACCESS='1');log=open(out/'visual-runtime.log','w');proc=subprocess.Popen([str(binary),'-no-remote','-profile',str(profile),'-marionette'],env=env,stdout=log,stderr=log)
 try:
  def ready():

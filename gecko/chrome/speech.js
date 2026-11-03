@@ -18,7 +18,7 @@ Soulu.dispatch=async(action,payload,source)=>{
  const phase=(async()=>{while(true){const line=await job.stderr.readString();if(!line)break;try{browser.browsingContext.currentWindowGlobal?.getActor('SouluApp').sendAsyncMessage('emit',{name:'voicePhase',value:line.includes('processing')?'processing':'listening'});}catch{}}})();
  let text='';while(true){const chunk=await job.stdout.readString();if(!chunk)break;text+=chunk;if(text.length>8192){cancel();break;}}
  await job.wait();await phase.catch(()=>{});if(shared.speechJob!==job||gBrowser.selectedBrowser!==browser||browser.browsingContext.currentWindowGlobal?.innerWindowId!==generation)return {status:'cancelled'};
- shared.speechJob=null;const [status,...lines]=text.split('\n');return {status,text:status==='recognized'?lines.join('\n').trim():''};
+ shared.speechJob=null;const [status,...lines]=text.split(/\r?\n/);return {status,text:status==='recognized'?lines.join('\n').trim():''};
 };
 gBrowser.tabContainer.addEventListener('TabSelect',cancel);gBrowser.addTabsProgressListener({onLocationChange(browser){if(browser===gBrowser.selectedBrowser)cancel();}});window.addEventListener('unload',cancel,{once:true});
 })();

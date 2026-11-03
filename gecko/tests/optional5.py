@@ -21,6 +21,7 @@ try:
  yt=content('const v=document.querySelector("video");return {url:location.href,title:document.title,text:document.body.innerText.slice(0,1800),ready:v?.readyState||0,time:v?.currentTime||0,paused:v?.paused??true};');(out/'youtube-vot-diagnostic.json').write_text(json.dumps(yt,ensure_ascii=False,indent=2),encoding='utf-8')
  report['limitations'].append('VOT installs/enables with native Firefox signature checks. End-to-end Russian YouTube voice-over is not certified by installation alone; see youtube-vot-diagnostic.json and manual playback requirement.')
  if os.name=='nt':
+  brand=chrome('return ChromeUtils.importESModule("chrome://soulu/content/window-controls.sys.mjs").brand(window)');check('native_window_icon_is_soulu',brand['icons'],brand)
   group=chrome('return Cc["@mozilla.org/windows-taskbar;1"].getService(Ci.nsIWinTaskbar).getGroupIdForWindow(window)');check('native_taskbar_group_is_soulu',group=='Soulu.Gecko.Preview',group)
   exe=binary.parent.parent/'Soulu.exe';env=dict(os.environ,LOCALAPPDATA=str(root/'environment'))
   count=len(call('browser.state.get')['tabs']);subprocess.run([str(exe),'--url',url+'launcher-url'],env=env,timeout=20,check=True);check('launcher_external_link_reuses_profile',wait(lambda:len(call('browser.state.get')['tabs'])==count+1))

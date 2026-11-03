@@ -21,6 +21,7 @@ try:
  ui('document.querySelector("#classicSuggestions").classList.remove("visible");return true;');call('browser.setSuggestionsHeight',0)
  call('browser.settings.openWindow');wait(lambda:call('browser.state.get')['settingsOverlayReady']);check('settings_preserves_12_sections',ui('return document.querySelectorAll("#homeCards button").length===12','settings'))
  ui('souluSettings.openSection("about");return true;','settings');check('preview5_version',ui('return document.querySelector("#sectionContent").textContent.includes("Gecko Preview 5")','settings'))
+ wait(lambda:ui('return !!document.getElementById("gecko-update-check")','settings'));ui('document.getElementById("gecko-update-check").click();return true;','settings');check('about_button_checks_real_github_releases',wait(lambda:ui('const text=document.getElementById("gecko-update-status").textContent;return text.includes("Более новых")||text.includes("Доступна gecko-preview-")','settings'),30))
  chrome('Soulu.closeSettings()');time.sleep(.3)
  bounds=chrome('const a=document.getElementById("browser").getBoundingClientRect(),b=gBrowser.selectedBrowser.getBoundingClientRect();return {left:b.left-a.left,right:a.right-b.right,bottom:a.bottom-b.bottom};');check('native_content_fills_browser_bounds',all(abs(v)<=1 for v in bounds.values()),bounds)
  call('browser.settings.set',{'startupMode':'continue'});stop();start();rows=call('browser.bookmarks.get');check('places_edit_survives_restart',any(r['id']==mark['id'] and r['title']=='Renamed bookmark' and r['parentId']==folder for r in rows));check('home_favorite_survives_restart',mark['id'] in call('browser.state.get')['settings']['homeFavoriteIds'])
@@ -49,8 +50,28 @@ try:
  # Screenshots compare Onest and Windows system type without changing web content.
  call('browser.settings.openWindow');wait(lambda:call('browser.state.get')['settingsOverlayReady']);ui('souluSettings.openSection("about");return true;','settings')
  for font in ['Onest','Segoe UI']:
-  ui('document.documentElement.style.setProperty("--font-ui",'+json.dumps(font)+');return true;','settings');time.sleep(.2);m.set_context('chrome');(out/('typography-'+font.replace(' ','-')+'.png')).write_bytes(base64.b64decode(m.screenshot()))
- ui('document.documentElement.style.removeProperty("--font-ui");return true;','settings');chrome('Soulu.closeSettings()');time.sleep(.3)
+  for target in ['shell','settings']:ui('document.documentElement.style.setProperty("--font-ui",'+json.dumps(font)+');return true;',target)
+  ui('document.querySelector("#classicAddress").value="Y/y · Приватность · yandex.ru";return true;');time.sleep(.2);m.set_context('chrome');(out/('typography-'+font.replace(' ','-')+'.png')).write_bytes(base64.b64decode(m.screenshot()))
+ for target in ['shell','settings']:ui('document.documentElement.style.removeProperty("--font-ui");return true;',target)
+ chrome('Soulu.closeSettings()');time.sleep(.3)
+ # Event-driven tooltips must not change a playing page's viewport.
+ call('browser.navigate',url+'hover-video');select_latest();wait(lambda:content('return !!document.getElementById("v")'))
+ before=content('const v=document.querySelector("video");return {h:innerHeight,w:innerWidth,y:v.getBoundingClientRect().y,t:v.currentTime,id:document.documentElement.dataset.identity};');samples=[]
+ for x in [22,54,180,220,500,180]:
+  m.set_context('chrome');m._send_message('WebDriver:PerformActions',{'actions':[{'type':'pointer','id':'smooth-pointer','parameters':{'pointerType':'mouse'},'actions':[{'type':'pointerMove','origin':'viewport','x':x,'y':24,'duration':80}]}]});time.sleep(.5)
+  samples.append(content('const v=document.querySelector("video");return {h:innerHeight,w:innerWidth,y:v.getBoundingClientRect().y,t:v.currentTime,id:document.documentElement.dataset.identity};'))
+ check('video_viewport_stable_during_real_pointer_hover',all(all(abs(v[k]-before[k])<1 for k in ['h','w','y']) and v['id']==before['id'] for v in samples),samples)
+ check('video_keeps_playing_during_pointer_hover',samples[-1]['t']>before['t']+.5)
+ # Gecko scale emulation complements, rather than certifies, physical Windows DPI.
+ scaling=[]
+ for scale in ['1','1.25','1.5','2']:
+  chrome('Services.prefs.setStringPref("layout.css.devPixelsPerPx",'+json.dumps(scale)+');');time.sleep(.2)
+  for width,height in [(940,640),(1200,800)]:
+   chrome('window.resizeTo('+str(width)+','+str(height)+');');time.sleep(.2)
+   r=chrome('const a=document.getElementById("browser").getBoundingClientRect(),b=gBrowser.selectedBrowser.getBoundingClientRect();return {width:innerWidth,height:innerHeight,left:b.left-a.left,right:a.right-b.right,bottom:a.bottom-b.bottom};');scaling.append({'scale':scale,**r})
+ chrome('Services.prefs.clearUserPref("layout.css.devPixelsPerPx");window.resizeTo(1000,760);');time.sleep(.2)
+ check('content_edges_stable_under_gecko_scale_emulation',all(all(abs(r[k])<=1 for k in ['left','right','bottom']) for r in scaling),scaling)
+ report['limitations'].append('Scale checks use Gecko devPixelsPerPx=1/1.25/1.5/2; physical Windows DPI, GPU drivers and microphone hardware still require device testing.')
  report['passed']=True
 except Exception as e:
  report['error']=str(e)
