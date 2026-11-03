@@ -28,3 +28,8 @@
  :root[soulu-ui-ready][soulu-dark]{background:#08090b!important}
  :root[soulu-ui-ready][soulu-matte]{background:transparent!important}
 }
+
+@-moz-document url("chrome://browser/content/browser.xhtml") {
+ #browser,#tabbrowser-tabbox,#tabbrowser-tabpanels,.browserStack,.browserContainer,.browserSidebarContainer{background-color:#f6f6f8!important}
+ :root[soulu-dark] :is(#browser,#tabbrowser-tabbox,#tabbrowser-tabpanels,.browserStack,.browserContainer,.browserSidebarContainer){background-color:#08090b!important}
+}

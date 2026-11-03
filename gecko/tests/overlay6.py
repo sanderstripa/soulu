@@ -8,10 +8,10 @@ for name in changed:
  if name.startswith('ui/'):
   p=root/name;target=runtime/name
   original=subprocess.check_output(['git','show',base+':'+name]).decode();updated=p.read_text(encoding='utf-8');text=target.read_text(encoding='utf-8')
-  for op,a,b,c,d in reversed(difflib.SequenceMatcher(None,original,updated,autojunk=False).get_opcodes()):
-   if op=='equal':continue
-   lo=max(0,a-24);hi=min(len(original),b+24);old=original[lo:hi];new=original[lo:a]+updated[c:d]+original[b:hi]
-   assert text.count(old)==1,(name,op,old)
+  groups=list(difflib.SequenceMatcher(None,original,updated,autojunk=False).get_grouped_opcodes(24))
+  for group in reversed(groups):
+   a,b=group[0][1],group[-1][2];c,d=group[0][3],group[-1][4];old=original[a:b];new=updated[c:d]
+   assert text.count(old)==1,(name,old)
    text=text.replace(old,new,1)
   target.write_text(text,encoding='utf-8')
 for p in (root/'gecko/chrome').iterdir():

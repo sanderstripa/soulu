@@ -12,7 +12,7 @@ function updateButton(b,item){
 function draw(){
  const controls=document.querySelector('.classic-navigation-right');if(!controls)return;
  const host=document.querySelector('[data-extension-toolbar="classic"]');if(host)host.replaceChildren();document.body.style.setProperty('--extension-toolbar-width','0px');
- let button=document.getElementById('soulu-extensions-menu');if(!button){button=document.createElement('button');button.id='soulu-extensions-menu';button.className='toolbar-button extension-action';button.dataset.extensionOverflow='true';button.title='Расширения';button.setAttribute('aria-label','Расширения');button.innerHTML='<svg viewBox="0 0 24 24"><path d="M9 4h6v4h4v6h-4v6H9v-6H4V8h5Z"/></svg>';button.onclick=()=>invokeAction(button,'overflow');controls.insertBefore(button,controls.querySelector('.window-controls'));}
+ let button=document.getElementById('soulu-extensions-menu');if(!button){button=document.createElement('button');button.id='soulu-extensions-menu';button.className='toolbar-button extension-action';button.dataset.extensionOverflow='true';button.title='Расширения';button.setAttribute('aria-label','Расширения');button.innerHTML='<svg viewBox="0 0 24 24"><path d="M9 4h6v4h4v6h-4v6H9v-6H4V8h5Z"/></svg>';button.onclick=()=>invokeAction(button,'overflow');const caption=controls.querySelector('.window-controls');caption.insertBefore(button,caption.querySelector('#windowMinimize'));}
  button.hidden=state.settings?.showExtensions===false;
 }
 async function refresh(){const ticket=++request;try{const current=await api.getState();state=current;const value=await api.extensions('list',{profile:current.activeProfileId});if(ticket!==request)return;items=value.items||[];draw();}catch(error){console.error(error);}}

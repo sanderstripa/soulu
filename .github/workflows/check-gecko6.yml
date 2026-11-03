@@ -1,4 +1,4 @@
-name: Check Home and UI corrections against Preview 5 Windows binaries
+name: Check corrected Home and UI resources against Preview 5 Windows binaries
 on:
   push:
     branches: [gecko-preview]
