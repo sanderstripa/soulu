@@ -2,7 +2,7 @@
 import hashlib,json,pathlib,subprocess,shutil,os
 root=pathlib.Path(__file__).resolve().parents[2];out=root/'gecko-out';base='a7624f9fbf951c81d9d72ed23244d7a8c1b892d7'
 changed=subprocess.check_output(['git','diff','--name-only',base,'HEAD'],text=True).splitlines()
-assert all(p.startswith(('gecko/chrome/','gecko/tests/','gecko/docs/')) or p in ['gecko/soulu.cfg','gecko/README.md','.github/workflows/finalize-gecko5.yml'] for p in changed),changed
+assert all(p.startswith(('gecko/chrome/','gecko/tests/','gecko/docs/')) or p in ['gecko/soulu.cfg','gecko/README.md','.github/workflows/finalize-gecko5.yml','.github/workflows/package-gecko5.yml'] for p in changed),changed
 build=json.loads((out/'BUILD.json').read_text());assert build['soulu_source']==base and build['name']=='Soulu Gecko Preview 5' and build['platform']=='win64'
 original=root/'base-evidence'
 for name,count in [('gecko5-checks/preview5.json',20),('gecko5-extensions/extensions.json',36)]:

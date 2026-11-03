@@ -8,7 +8,7 @@
  #tabbrowser-tabbox,#tabbrowser-tabpanels,#appcontent,.browserStack,.browserContainer,.browserSidebarContainer{min-height:0!important;border:0!important;outline:none!important;box-shadow:none!important;background:transparent!important;border-radius:0!important}
 }
 /* Retain native permission/password/migration logic; apply the Soulu palette. */
-@-moz-document url-prefix("chrome://browser/content/"),url("about:addons"),url("about:preferences") {
+@-moz-document url-prefix("chrome://browser/content/"),url("chrome://global/content/commonDialog.xhtml"),url("about:addons"),url("about:preferences") {
  :root{--color-accent-primary:#0879e6!important;--color-accent-primary-hover:#066bce!important;--color-accent-primary-active:#055aac!important;--button-background-color-primary:#0879e6!important;--button-background-color-primary-hover:#066bce!important;--button-text-color-primary:#fff!important;--in-content-primary-button-background:#0879e6!important;--in-content-primary-button-background-hover:#066bce!important;--focus-outline-color:#0879e6!important;--border-radius-medium:10px!important;--arrowpanel-border-radius:14px!important;--font-size-root:13px!important}
  @font-face{font-family:Onest;src:url("chrome://soulu/content/ui/fonts/Onest-Regular.ttf");font-weight:400}
  .popup-notification-body,.popup-notification-footer{font-family:Onest,"Segoe UI",sans-serif!important;font-size:12px!important}
@@ -21,4 +21,10 @@
  migration-wizard::part(header){font-size:18px!important;line-height:1.35!important}
  migration-wizard::part(profile-selector){border-color:light-dark(#d7d9df,#454850)!important;border-radius:12px!important}
  migration-wizard::part(import-primary),migration-wizard::part(continue-primary){background:#0879e6!important;color:white!important;border-color:transparent!important;border-radius:10px!important}
+}
+/* The early USER sheet must release its opaque startup paint once Soulu is ready. */
+@-moz-document url("chrome://browser/content/browser.xhtml") {
+ :root[soulu-ui-ready]{background:#f6f6f8!important}
+ :root[soulu-ui-ready][soulu-dark]{background:#08090b!important}
+ :root[soulu-ui-ready][soulu-matte]{background:transparent!important}
 }
