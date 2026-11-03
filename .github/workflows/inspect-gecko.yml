@@ -19,7 +19,7 @@ jobs:
           python - <<'PY'
           import json,os,time,urllib.request
           for _ in range(150):
-            request=urllib.request.Request('https://api.github.com/repos/sanderstripa/soulu/actions/runs/41579688361',headers={'Authorization':'Bearer '+os.environ['GH_TOKEN']})
+            request=urllib.request.Request('https://api.github.com/repos/sanderstripa/soulu/actions/runs/41580835204',headers={'Authorization':'Bearer '+os.environ['GH_TOKEN']})
             run=json.load(urllib.request.urlopen(request))
             if run['status']=='completed':
               print('WINDOWS_CONCLUSION',run['conclusion']);break
@@ -27,7 +27,7 @@ jobs:
           else:raise SystemExit('Windows run still active')
           PY
       - name: Download isolated test evidence
-        run: gh run download 41579688361 -n gecko-acceptance -D evidence
+        run: gh run download 41580835204 -n gecko-acceptance -D evidence
       - name: Display reports and screenshot data for review
         run: |
           python - <<'PY'
