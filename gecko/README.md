@@ -34,8 +34,8 @@ Matte transparency uses the Soulu frosted surface and Windows Mica where
 available. This is a native compositor material, not CEF page-glass capture.
 
 Known unavailable/limited features: YouTube voice-over translation;
-Chrome CRX installation; voice search; CEF-specific background-tab suspension;
- Unsupported controls report their
+Chrome CRX installation; voice search; CEF-specific background-tab suspension.
+Unsupported controls report their
 availability explicitly. Firefox extensions use the native Firefox manager.
 The native Gecko permission prompt may differ from the CEF prompt. Desktop
 backdrop material depends on the OS compositor. None of these limitations is
@@ -48,3 +48,5 @@ the unmodified Firefox runtime (`about:license`). Rust notices are in
 Preview 4 uses native SessionStore for restore/duplicate/reorder/session persistence, Places for folders and HTML import/export, NSS LoginManager for GUID-based password editing and CSV import, the Firefox migration wizard, native Downloads for file operations and permission preflight, and native Reader View. Filter files download through Gecko (including its VPN policy), then compile and install atomically in a Rust worker; failures retain the previous engine/cache. Soulu does not run ETP URL classification alongside the same Rust EasyPrivacy lists; native cookie partitioning, Safe Browsing and process isolation remain enabled.
 
 Each profile has its own VPN working directory and dynamically allocated SOCKS port. Firefox's native profile-removal service refuses removal of a locked profile. No system proxy change is needed. Page text translation remains local; voice-over YouTube translation is deferred. Portable default-browser registration and Soulu automatic updates are unavailable. Native reader styling uses compatible Firefox settings; CEF-only image hiding/custom fonts are not promised. Import availability depends on the source browser and operating-system protection; exported CSV files contain plaintext secrets and should be removed after import.
+
+Switching the VPN resets Gecko's existing network connections and DNS cache so already-open direct sockets are not retained across the route change. Active transfers may need retry after that explicit switch. Component updates also remain behind SOCKS when a VPN core has failed; only explicit disconnect returns to direct networking. Mozilla onboarding/reporting notifications are disabled alongside telemetry in this portable Soulu distribution; no user acceptance date is forged. Firefox component licenses remain available at about:license.

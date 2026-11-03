@@ -74,14 +74,14 @@ async function helperRequest(request){
  const promise=shared.helperQueue.then(operation);shared.helperQueue=promise.catch(()=>{});return promise;
 }
 function proxy(enabled){
- if(shared.proxyEnabled!==enabled){Soulu.adblock?.abortUpdate?.();shared.proxyEnabled=enabled;}
+ const changed=shared.proxyEnabled!==enabled,previous=shared.proxyEnabled;if(changed){Soulu.adblock?.abortUpdate?.();shared.proxyEnabled=enabled;}
  // SOCKS DNS and no direct fallback: core failure leaves browser traffic blocked.
  pref('network.proxy.socks','127.0.0.1');pref('network.proxy.socks_port',enabled?socksPort():(shared.socksPort||17890));pref('network.proxy.socks_version',5);
  pref('network.proxy.socks_remote_dns',true);pref('network.proxy.failover_direct',false);
  pref('network.proxy.no_proxies_on',shared.config.vpn.directDomains.split(/[\s,]+/).filter(Boolean).join(','));
  if(enabled)shared.networkBeforeVPN??={trr:Services.prefs.getIntPref('network.trr.mode',0),rtc:Services.prefs.getBoolPref('media.peerconnection.enabled',true)};
  pref('network.trr.mode',enabled?5:(shared.networkBeforeVPN?.trr??Services.prefs.getIntPref('network.trr.mode',0)));pref('media.peerconnection.ice.proxy_only_if_behind_proxy',true);
- pref('media.peerconnection.enabled',enabled?false:(shared.networkBeforeVPN?.rtc??Services.prefs.getBoolPref('media.peerconnection.enabled',true)));pref('network.proxy.type',enabled?1:0);if(!enabled)shared.networkBeforeVPN=null;
+ pref('media.peerconnection.enabled',enabled?false:(shared.networkBeforeVPN?.rtc??Services.prefs.getBoolPref('media.peerconnection.enabled',true)));pref('network.proxy.type',enabled?1:0);if(!enabled)shared.networkBeforeVPN=null;if(changed&&previous!==undefined){Services.obs.notifyObservers(null,'net:cancel-all-connections');Services.dns.clearCache(true);if(!Services.io.offline){Services.io.offline=true;Services.io.offline=false;}}
 }
 async function vpn(action){
  if(isPrivate)throw Error('Изменение VPN доступно из обычного окна профиля.');
@@ -152,7 +152,7 @@ async function dispatch(action,payload,source){
  case 'browser.profile.delete':if(payload===shared.config.profile||!/^[\w-]{1,64}$/.test(payload))throw Error('Cannot delete active profile');await IOUtils.remove(PathUtils.join(PathUtils.parent(profile),payload),{recursive:true});return true;
  case 'vpn.send':return vpn(payload.action);
  case 'vpn.settings.get':return shared.config.vpn;
- case 'browser.components.manage':{if(!['xray','sudoku'].includes(payload?.component)||!['status','list','install','rollback'].includes(payload?.operation))throw Error('Invalid VPN component operation');return helperRequest({...payload,action:'components',name:payload.operation,proxy:shared.vpnState.connected});}
+ case 'browser.components.manage':{if(!['xray','sudoku'].includes(payload?.component)||!['status','list','install','rollback'].includes(payload?.operation))throw Error('Invalid VPN component operation');return helperRequest({...payload,action:'components',name:payload.operation,proxy:shared.proxyEnabled===true});}
  case 'browser.extensions.list':{const {AddonManager}=ChromeUtils.importESModule('resource://gre/modules/AddonManager.sys.mjs');return {items:(await AddonManager.getAddonsByTypes(['extension'])).map(a=>({id:a.id,name:a.name,version:a.version,enabled:a.isActive,action:false}))};}
  case 'browser.extensions.manager':return open('about:addons');
  case 'browser.extensions.openStore':return open('https://addons.mozilla.org/firefox/');

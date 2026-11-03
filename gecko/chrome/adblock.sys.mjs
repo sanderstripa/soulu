@@ -1,5 +1,5 @@
 /* The same narrow Rust C ABI and bundled subscriptions as Soulu CEF. */
-const {setTimeout}=ChromeUtils.importESModule('resource://gre/modules/Timer.sys.mjs');
+const {setTimeout,clearTimeout}=ChromeUtils.importESModule('resource://gre/modules/Timer.sys.mjs');
 const {ctypes}=ChromeUtils.importESModule('resource://gre/modules/ctypes.sys.mjs');
 const state={ready:false,library:null,config:null,counts:new Map(),error:''};
 const kinds=new Map([[Ci.nsIContentPolicy.TYPE_SCRIPT,'script'],[Ci.nsIContentPolicy.TYPE_IMAGE,'image'],[Ci.nsIContentPolicy.TYPE_STYLESHEET,'stylesheet'],[Ci.nsIContentPolicy.TYPE_FONT,'font'],[Ci.nsIContentPolicy.TYPE_MEDIA,'media'],[Ci.nsIContentPolicy.TYPE_XMLHTTPREQUEST,'xmlhttprequest'],[Ci.nsIContentPolicy.TYPE_SUBDOCUMENT,'subdocument'],[Ci.nsIContentPolicy.TYPE_WEBSOCKET,'websocket']]);
@@ -15,17 +15,17 @@ export const adblock={
  refresh(){function visit(bc){try{bc.currentWindowGlobal?.getActor('SouluCosmetic').sendAsyncMessage('refresh');}catch{}for(const child of bc.children)visit(child);}for(const win of Services.wm.getEnumerator('navigator:browser'))for(const tab of win.gBrowser.tabs)visit(tab.linkedBrowser.browsingContext);},
  status(id=0){return {...(state.ready?json(state.stats):{ready:false}),blockedRequests:state.counts.get(id)||0,updating:!!state.fetching||!!state.installing,...(state.updateError?{lastUpdateError:state.updateError}:{}),source:'Soulu CEF Rust engine',active:state.config?.config.rules.blocking.enabled||false};},
  abortUpdate(){state.abort?.abort();},
- scheduleUpdate(){if(state.fetching||state.installing)return;const status=this.status();if(status.lastSuccessfulUpdate&&Date.now()/1000-status.lastSuccessfulUpdate<86400)return;this.update().catch(console.error);},
+ scheduleUpdate(){if(state.updateTimer)return;const status=this.status(),now=Date.now();let due=Math.max((status.lastSuccessfulUpdate||0)*1000+86400000,state.retryAt||0);if(state.fetching||state.installing)due=Math.max(due,now+60000);state.updateTimer=setTimeout(()=>{state.updateTimer=null;this.update().catch(console.error).finally(()=>this.scheduleUpdate());},Math.max(1000,due-now));},
  async update(){
   if(!state.ready)throw Error('Blocker unavailable');if(state.fetching||state.installing)return this.status();
   const win=Services.wm.getMostRecentWindow('navigator:browser');if(!win)throw Error('Browser closed');
-  state.fetching=true;state.updateError='';state.abort=new win.AbortController();
+  if(state.updateTimer){clearTimeout(state.updateTimer);state.updateTimer=null;}state.fetching=true;state.updateError='';state.abort=new win.AbortController();
   const directory=PathUtils.join(state.profile,'soulu-filter-update-'+Services.uuid.generateUUID().toString().replace(/[{}]/g,''));
   try{await IOUtils.makeDirectory(directory,{permissions:0o700});const urls=['https://easylist.to/easylist/easylist.txt','https://easylist.to/easylist/easyprivacy.txt','https://easylist-downloads.adblockplus.org/ruadlist.txt'];
    for(let i=0;i<urls.length;i++){const response=await win.fetch(urls[i],{credentials:'omit',referrerPolicy:'no-referrer',redirect:'error',signal:win.AbortSignal.any([state.abort.signal,win.AbortSignal.timeout(30000)])});if(!response.ok||!response.headers.get('content-type')?.startsWith('text/plain'))throw Error('Некорректный ответ сервера фильтров.');const reader=response.body.getReader(),chunks=[];let size=0;for(;;){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>16*1024*1024){await reader.cancel();throw Error('Список фильтров превышает 16 МБ.');}chunks.push(value);}const bytes=new Uint8Array(size);let offset=0;for(const part of chunks){bytes.set(part,offset);offset+=part.length;}await IOUtils.write(PathUtils.join(directory,i+'.txt'),bytes);}
    if(!state.install(directory,PathUtils.join(state.profile,'soulu-adblock-cache.json')))throw Error('Filter compiler busy');state.fetching=false;state.installing=true;
-   while(state.updating())await new Promise(r=>setTimeout(r,200));state.installing=false;state.abort=null;this.refresh();return this.status();
-  }catch(error){state.updateError=String(error);state.fetching=false;state.installing=false;state.abort=null;await IOUtils.remove(directory,{recursive:true,ignoreAbsent:true});throw error;}
+   while(state.updating())await new Promise(r=>setTimeout(r,200));state.installing=false;state.abort=null;state.retryAt=0;this.refresh();this.scheduleUpdate();return this.status();
+  }catch(error){state.updateError=String(error);state.retryAt=Date.now()+1800000;state.fetching=false;state.installing=false;state.abort=null;await IOUtils.remove(directory,{recursive:true,ignoreAbsent:true});this.scheduleUpdate();throw error;}
  },
  cosmetic(url,tokens){return state.ready&&active(url)?json(state.cosmetic,url,JSON.stringify(tokens)):[];},
  test(url,source,type='script'){if(!state.ready)throw Error('Blocker unavailable');return json(state.check,url,source,type,'GET');}

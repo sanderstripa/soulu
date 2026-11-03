@@ -4,6 +4,30 @@ source=Path(__file__).with_name('preview2.py').read_text(encoding='utf-8').split
 source=source.replace("profile=root/'Profiles/default'","profile=root/'environment/SouluGecko/Profiles/default'").replace(' headless=[]', ' env["LOCALAPPDATA"]=str(root/"environment");env["MOZ_MARIONETTE"]="1"'+chr(10)+' headless=[]')
 source=source.replace('user_pref("marionette.port",','user_pref("remote.prefs.recommended",false);'+chr(92)+'nuser_pref("marionette.port",')
 exec(compile(source,str(Path(__file__).with_name('preview2.py')),'exec'),globals())
+# This harness attaches to an external process. Marionette.quit() requires a
+# driver-owned instance and would otherwise throw without shutting down Gecko.
+def quit_attached(driver):
+ port=driver.port
+ try:driver._request_in_app_shutdown()
+ except OSError:pass
+ try:driver.delete_session(send_request=False)
+ except Exception:pass
+ deadline=time.monotonic()+20
+ while time.monotonic()<deadline:
+  try:
+   with socket.create_connection(('127.0.0.1',port),timeout=.2):pass
+  except OSError:break
+  time.sleep(.1)
+def stop():
+ global proc,m
+ if m:
+  try:quit_attached(m)
+  except Exception:pass
+  m=None
+ if proc:
+  try:proc.wait(timeout=20)
+  except subprocess.TimeoutExpired:proc.kill();proc.wait()
+  proc=None
 original_get=Site.do_GET
 def extended_get(self):
  if self.path.startswith('/download'):
@@ -124,7 +148,7 @@ try:
  before=content('return {h:innerHeight,w:innerWidth,y:scrollY,time:document.getElementById("v").currentTime,identity:document.documentElement.dataset.identity}')
  samples=[]
  import psutil
- tree=[psutil.Process(proc.pid),*psutil.Process(proc.pid).children(recursive=True)]
+ tree=([psutil.Process(chrome('return Services.appinfo.processID')),*psutil.Process(chrome('return Services.appinfo.processID')).children(recursive=True)] if os.name=='nt' else [])
  cpu_before=sum(p.cpu_times().user+p.cpu_times().system for p in tree if p.is_running());sample_start=time.monotonic()
  for x in [60,140,260,410,600,800,1040,250]:
   if os.name=='nt':
@@ -133,7 +157,7 @@ try:
   time.sleep(.08);samples.append(content('return {h:innerHeight,w:innerWidth,y:scrollY,time:document.getElementById("v").currentTime,identity:document.documentElement.dataset.identity}'))
  check('video_geometry_stable_during_toolbar_interaction',all(all(abs(v[k]-before[k])<1 for k in ['h','w','y']) and v['identity']==before['identity'] for v in samples))
  check('video_advances_during_toolbar_interaction',samples[-1]['time']>before['time'])
- tree=[psutil.Process(proc.pid),*psutil.Process(proc.pid).children(recursive=True)]
+ tree=([psutil.Process(chrome('return Services.appinfo.processID')),*psutil.Process(chrome('return Services.appinfo.processID')).children(recursive=True)] if os.name=='nt' else [])
  report['resourceSample']={'processes':len(tree),'rssBytes':sum(p.memory_info().rss for p in tree if p.is_running()),'cpuSecondsDuringSample':sum(p.cpu_times().user+p.cpu_times().system for p in tree if p.is_running())-cpu_before,'sampleSeconds':time.monotonic()-sample_start,'note':'CI resource sample, not a physical GPU benchmark.'}
  for width,height in [(780,600),(1000,740),(1120,780)]:
   chrome(f'window.resizeTo({width},{height})');time.sleep(.15)

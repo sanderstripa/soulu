@@ -1,7 +1,7 @@
 """Open a second real portable profile through Soulu UI and check native isolation."""
 pid=call('browser.profile.create','Independent browser fixture')['id'];directory=profile.parent/pid
 with socket.socket() as sock:sock.bind(('127.0.0.1',0));profile_port=sock.getsockname()[1]
-(directory/'user.js').write_text('user_pref("remote.prefs.recommended",false);user_pref("marionette.port",'+str(profile_port)+');',encoding='utf-8')
+(directory/'user.js').write_text('user_pref("remote.prefs.recommended",false);user_pref("network.dns.localDomains","soulu-fixture.example.org");user_pref("marionette.port",'+str(profile_port)+');',encoding='utf-8')
 call('browser.profile.switch',pid)
 child=None
 try:
@@ -27,7 +27,7 @@ try:
  check('running_profile_cannot_be_deleted',locked and directory.exists())
 finally:
  if child:
-  try:child.quit()
+  try:quit_attached(child)
   except Exception:pass
  def delete_closed_profile():
   try:call('browser.profile.delete',pid);return True

@@ -26,7 +26,7 @@ with tempfile.TemporaryDirectory(prefix='Soulu ZIP extraction ') as tmp:
   assert result['runtime'].startswith(str(package)) and result['profile']==str(profile)
  finally:
   if m:
-   try:m.quit()
+   try:m._request_in_app_shutdown()
    except Exception:pass
   try:process.wait(timeout=20)
   except subprocess.TimeoutExpired:process.kill();process.wait()
