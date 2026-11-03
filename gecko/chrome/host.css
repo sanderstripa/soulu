@@ -1,0 +1,13 @@
+/* Layout integration only. All visible controls come from the original Soulu UI. */
+#navigator-toolbox,#sidebar-main,#sidebar-box,#sidebar-splitter,#statuspanel{visibility:collapse!important;min-height:0!important;height:0!important}
+#browser{margin-top:var(--soulu-toolbar-height,68px)!important;margin-inline-end:var(--soulu-right-panel,0px)!important;border:0!important}
+#tabbrowser-tabbox{outline:none!important;border:0!important;box-shadow:none!important}
+#soulu-shell-frame{position:fixed;inset:0 0 auto 0;width:100%;height:var(--soulu-surface-height,68px);border:0;z-index:10000;background:transparent;}
+#soulu-settings-shade{position:fixed;inset:var(--soulu-toolbar-height,68px) 0 0;z-index:11000;background:#0004;backdrop-filter:blur(7px)}
+#soulu-settings-frame{position:fixed;top:calc(var(--soulu-toolbar-height,68px) + 18px);left:50%;transform:translateX(-50%);width:min(1080px,calc(100vw - 48px));height:min(720px,calc(100vh - var(--soulu-toolbar-height,68px) - 36px));border:0;border-radius:22px;z-index:11001;background:transparent;box-shadow:0 20px 70px #0005}
+#soulu-shell-frame[hidden],#soulu-settings-frame[hidden],#soulu-settings-shade[hidden]{display:none!important}
+:root[soulu-fullscreen] #soulu-shell-frame{display:none!important}
+/* Native CEF SettingsOverlay::Layout: width <=1020, top edge flush, bottom corners 24. */
+#soulu-settings-shade{inset:0!important}
+#soulu-settings-frame{top:0!important;width:min(1020px,100vw)!important;max-height:100vh!important;border-radius:0 0 24px 24px!important}
+#browser{margin-inline-start:var(--soulu-left-panel,0px)!important}

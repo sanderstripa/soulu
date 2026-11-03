@@ -34,31 +34,28 @@ shutil.copy(ROOT/'gecko/chrome.manifest',runtime/'soulu/chrome.manifest')
 shutil.copy(ROOT/'gecko/soulu.cfg',runtime/'soulu.cfg')
 (runtime/'defaults/pref').mkdir(parents=True,exist_ok=True)
 shutil.copy(ROOT/'gecko/defaults/pref/autoconfig.js',runtime/'defaults/pref/autoconfig.js')
-# Reuse the exact current Soulu settings DOM/CSS and substitute only its backend.
-settings=runtime/'soulu/chrome/ui/settings.html'
-s=settings.read_text(encoding='utf-8');s=s.replace('<script src="motion.js">','<script src="../bridge.js"></script><script src="motion.js">');settings.write_text(s,encoding='utf-8')
-js=runtime/'soulu/chrome/ui/settings.js';s=js.read_text(encoding='utf-8');s=s.replace("opt('adaptive','Основная','Main'),opt('compact','Компактная','Compact')","opt('adaptive','Основная','Main')")
-s=s.replace("['CEF',state.update?.cef],['Chromium',state.update?.chromium]","['Gecko',state.update?.gecko],['Firefox',state.update?.firefox]")
-s=s.replace("chromewebstore.google.com","addons.mozilla.org/firefox")
-# Native Firefox managers provide these actions without extracting passwords into the Soulu page.
-s=s.replace("if(key==='history'||key==='clearData')", "if(key==='passwords')return window.browserShell.openTab('about:logins');if(key==='import')return window.browserShell.openTab('about:preferences#general');if(key==='siteData')return window.browserShell.openTab('about:preferences#privacy');if(key==='history'||key==='clearData')")
-# Extensions run in Firefox's native, sandboxed manager rather than the CEF embedded frame.
-s=s.replace("const extensions={", "const extensions={")
-js.write_text(s,encoding='utf-8')
-import importlib.util
-spec=importlib.util.spec_from_file_location('adapt',ROOT/'gecko/adapt-settings.py');adapter=importlib.util.module_from_spec(spec);spec.loader.exec_module(adapter);adapter.adapt(js)
+shutil.copy(ROOT/'gecko/chrome/bridge.js',runtime/'soulu/chrome/ui/gecko-bridge.js')
+# Install the bridge before the unchanged frontend scripts run.
+for page in ['index.html','settings.html','home.html','history.html']:
+ path=runtime/'soulu/chrome/ui'/page
+ content=path.read_text(encoding='utf-8')
+ if page=='index.html':
+  import re
+  content=re.sub(r'<script src="(?:third_party/bergamot-runtime.js|third_party/tinyld.js|translation-models.js|translation-service.js|translation-ui.js)"></script>','',content)
+ content=content.replace('<head>','<head><script src="gecko-bridge.js"></script>',1)
+ path.write_text(content,encoding='utf-8')
+js=runtime/'soulu/chrome/ui/settings.js';text=js.read_text(encoding='utf-8')
+text=text.replace("opt('adaptive','Основная','Main'),opt('compact','Компактная','Compact')","opt('adaptive','Основная','Main')")
+text=text.replace("['CEF',state.update?.cef],['Chromium',state.update?.chromium]","['Gecko',state.update?.gecko],['Firefox',state.update?.firefox]")
+js.write_text(text,encoding='utf-8')
+renderer=runtime/'soulu/chrome/ui/renderer.js';text=renderer.read_text(encoding='utf-8').replace('function renderTabs(){renderClassicTabs();renderCompactTabs();}','function renderTabs(){renderClassicTabs();}');renderer.write_text(text,encoding='utf-8')
+# Optional engine-specific features keep their sections and report availability explicitly.
+shutil.copy(ROOT/'gecko/chrome/settings-support.js',runtime/'soulu/chrome/ui/settings-support.js')
+path=runtime/'soulu/chrome/ui/settings.html';text=path.read_text(encoding='utf-8').replace('</body>','<script src="settings-support.js"></script></body>');path.write_text(text,encoding='utf-8')
 (runtime/'distribution').mkdir(exist_ok=True)
-# Signed full uBlock Origin, not the Chromium MV3 lite variant.
-addon=fetch(pin['ublock']['url'],cache/'ublock-origin.xpi')
-if hashlib.sha256(addon.read_bytes()).hexdigest()!=pin['ublock']['sha256']:raise RuntimeError('uBlock integrity mismatch')
-with zipfile.ZipFile(addon) as z:
- manifest=json.loads(z.read('manifest.json'));assert manifest.get('browser_specific_settings',manifest.get('applications',{}))['gecko']['id']=='uBlock0@raymondhill.net'
-shutil.copy(addon,runtime/'soulu/ublock-origin.xpi')
-(runtime/'distribution/extensions').mkdir(exist_ok=True)
-shutil.copy(addon,runtime/'distribution/extensions/uBlock0@raymondhill.net.xpi')
-policy={'policies':{'DisableTelemetry':True,'DisableFirefoxStudies':True,'DisablePocket':True,'DontCheckDefaultBrowser':True,'NoDefaultBookmarks':True,'OverrideFirstRunPage':'','OverridePostUpdatePage':'','Preferences':{'browser.shell.checkDefaultBrowser':False,'browser.startup.homepage':'about:blank','browser.newtabpage.enabled':False,'browser.tabs.warnOnClose':False,'browser.aboutwelcome.enabled':False,'datareporting.policy.dataSubmissionEnabled':False,'privacy.globalprivacycontrol.enabled':True,'network.proxy.failover_direct':False,'fission.autostart':True,'browser.safebrowsing.malware.enabled':True,'browser.safebrowsing.phishing.enabled':True},'ExtensionSettings':{'uBlock0@raymondhill.net':{'installation_mode':'normal_installed','install_url':'https://addons.mozilla.org/firefox/downloads/latest/ublock-origin/latest.xpi'}}}}
+policy={'policies':{'DisableTelemetry':True,'DisableFirefoxStudies':True,'DontCheckDefaultBrowser':True,'NoDefaultBookmarks':True,'OverrideFirstRunPage':'','OverridePostUpdatePage':'','Preferences':{'browser.shell.checkDefaultBrowser':False,'browser.newtabpage.enabled':False,'browser.tabs.warnOnClose':False,'browser.aboutwelcome.enabled':False,'datareporting.policy.dataSubmissionEnabled':False,'privacy.globalprivacycontrol.enabled':True,'network.proxy.failover_direct':False,'fission.autostart':True,'browser.safebrowsing.malware.enabled':True,'browser.safebrowsing.phishing.enabled':True,'browser.startup.preXulSkeletonUI':False}}}
 (runtime/'distribution/policies.json').write_text(json.dumps(policy,indent=2))
-provenance={'name':'Soulu Gecko Preview 1','firefox':version,'platform':platform,'mozilla_archive':base+'/'+rel,'mozilla_sha256':digest,'ublock_version':manifest['version'],'ublock_sha256':hashlib.sha256(addon.read_bytes()).hexdigest(),'soulu_source':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip()}
+provenance={'name':'Soulu Gecko Preview 2','firefox':version,'platform':platform,'mozilla_archive':base+'/'+rel,'mozilla_sha256':digest,'adblock':'Same Rust source and bundled filters as Soulu CEF','soulu_source':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip()}
 (out/'BUILD.json').write_text(json.dumps(provenance,indent=2))
 shutil.copy(ROOT/'gecko/README.md',out/'README.md')
 print('Prepared',out,flush=True)

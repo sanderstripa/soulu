@@ -1,12 +1,8 @@
-/* This file is packaged ONLY in a non-content-accessible chrome resource. */
+/* Unprivileged application document. The actor accepts only four installed file URLs. */
 (() => {
-  const host = window.opener?.Soulu;
-  if (!host || location.protocol !== 'chrome:') throw Error('Soulu trusted settings host required');
-  window.cefQuery = ({request,onSuccess,onFailure}) => {
-    Promise.resolve().then(() => {
-      const {action,payload} = JSON.parse(request);
-      return host.dispatch(action,payload,window);
-    }).then(result=>onSuccess(JSON.stringify(result??null)),error=>onFailure(1,error.message));
-  };
-  window.addEventListener('load',()=>document.documentElement.classList.add('gecko-runtime'),{once:true});
+ if(location.protocol!=='file:')throw Error('Soulu local UI required');
+ let serial=0;const pending=new Map();
+ window.cefQuery=({request,onSuccess,onFailure})=>{const id=++serial;pending.set(id,{onSuccess,onFailure});window.dispatchEvent(new CustomEvent('SouluRequest',{bubbles:true,detail:JSON.stringify({id,request})}));};
+ window.addEventListener('SouluResponse',event=>{const {id,value,error}=JSON.parse(event.detail);const call=pending.get(id);if(!call)return;pending.delete(id);error?call.onFailure(1,error):call.onSuccess(JSON.stringify(value??null));});
+ window.addEventListener('SouluEmit',event=>{const {name,value}=JSON.parse(event.detail);if(name==='dismissSuggestions')document.querySelectorAll('.suggestions.visible').forEach(n=>n.classList.remove('visible'));window.__souluEmit?.(name,value);if(name==='home')window.souluHomeApply?.(value);});
 })();

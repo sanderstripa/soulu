@@ -10,32 +10,31 @@ const {PlacesUtils}=ChromeUtils.importESModule('resource://gre/modules/PlacesUti
 const {PrivateBrowsingUtils}=ChromeUtils.importESModule('resource://gre/modules/PrivateBrowsingUtils.sys.mjs');
 const profile=PathUtils.profileDir, settingsFile=PathUtils.join(profile,'soulu-settings.json');
 const isPrivate=PrivateBrowsingUtils.isWindowPrivate(window);
-const defaults={settings:{language:'ru',theme:'system',layout:'adaptive',mattePanel:true,showSidebar:true,showBack:true,showHome:false,showFavorites:true,showNewTab:true,showDownloads:true,vpnToolbarVisible:true,addressPosition:'center',bookmarksBarMode:'never',bookmarksBarPosition:'hidden',startupMode:'continue',newTabMode:'blank',homeMode:'blank',searchEngine:'google',openStartPageAfterLastTab:true,performanceMode:'balanced',backgroundTabTimeout:'300'},rules:{defaults:{geolocation:1,camera:1,microphone:1,notifications:1,sound:0,popups:2,downloads:1},sites:{},blocking:{enabled:true,sites:{}}},vpn:{profiles:[],defaultProfileId:'',directDomains:''},reader:{theme:'light',font:'sans',size:18,width:0,spacing:1.5},profile:PathUtils.filename(profile)};
+const defaults={settings:{language:'ru',theme:'system',layout:'adaptive',mattePanel:true,showSidebar:true,showBack:true,showHome:false,showFavorites:true,showNewTab:true,showDownloads:true,vpnToolbarVisible:true,addressPosition:'center',bookmarksBarMode:'never',bookmarksBarPosition:'hidden',startupMode:'soulu',newTabMode:'soulu',homeMode:'soulu',homeProvider:'google',homeFavoriteIds:[],saveHistory:true,historyGroupDays:true,readerTheme:'light',askDownloadLocation:false,freezeBackgroundTabs:false,memorySaver:false,searchEngine:'google',openStartPageAfterLastTab:true,performanceMode:'balanced',backgroundTabTimeout:'300'},rules:{defaults:{geolocation:1,camera:1,microphone:1,notifications:1,sound:0,popups:2,downloads:1},sites:{},blocking:{enabled:true,sites:{}}},vpn:{profiles:[],defaultProfileId:'',directDomains:''},reader:{theme:'light',font:'sans',size:18,width:0,spacing:1.5},profile:PathUtils.filename(profile)};
 const {state:shared}=ChromeUtils.importESModule('chrome://soulu/content/shared.sys.mjs');
 if(!shared.config)shared.config=structuredClone(defaults);
 const windows=()=>[...Services.wm.getEnumerator('navigator:browser')];
 const pref=(key,value)=>{if(typeof value==='boolean'){if(Services.prefs.getBoolPref(key,!value)!==value)Services.prefs.setBoolPref(key,value);}else if(typeof value==='number'){if(Services.prefs.getIntPref(key,-999)!==value)Services.prefs.setIntPref(key,value);}else if(Services.prefs.getStringPref(key,'')!==String(value))Services.prefs.setStringPref(key,String(value));};
 function emit(name,value){for(const win of windows())win.Soulu?._emit(name,value);}
 const builtin={geo:'geolocation',camera:'camera',microphone:'microphone','desktop-notification':'notifications',popup:'popups'};
-async function blocking(){const {AddonManager}=ChromeUtils.importESModule('resource://gre/modules/AddonManager.sys.mjs');const addon=await AddonManager.getAddonByID('uBlock0@raymondhill.net');if(addon){if(shared.config.rules.blocking.enabled&&addon.userDisabled)await addon.enable();else if(!shared.config.rules.blocking.enabled&&!addon.userDisabled)await addon.disable();}}
-async function save(){await IOUtils.writeJSON(settingsFile,shared.config,{tmpPath:settingsFile+'.tmp'});await IOUtils.setPermissions(settingsFile,0o600);}
+async function save(){const write=async()=>{const disk=structuredClone(shared.config);const sdr=Cc['@mozilla.org/security/sdr;1'].getService(Ci.nsISecretDecoderRing);disk.vpn={protected:sdr.encryptString(JSON.stringify(disk.vpn))};await IOUtils.writeJSON(settingsFile,disk,{tmpPath:settingsFile+'.tmp'});await IOUtils.setPermissions(settingsFile,0o600);};const operation=(shared.saveQueue||Promise.resolve()).then(write);shared.saveQueue=operation.catch(()=>{});return operation;}
 function layout(){const s=shared.config.settings,root=document.documentElement;root.toggleAttribute('soulu-single',gBrowser.visibleTabs.filter(t=>!t.closing).length<2);root.toggleAttribute('soulu-dark',s.theme==='dark'||s.theme==='system'&&matchMedia('(prefers-color-scheme:dark)').matches);}
 function apply(){
  layout();
  const s=shared.config.settings,root=document.documentElement;
  root.toggleAttribute('soulu-dark',s.theme==='dark'||s.theme==='system'&&matchMedia('(prefers-color-scheme:dark)').matches);
  root.toggleAttribute('soulu-single',gBrowser.visibleTabs.filter(t=>!t.closing).length<2);
- root.setAttribute('soulu-version','Soulu Gecko Preview 1');
+ root.setAttribute('soulu-version','Soulu Gecko Preview 2');
  for(const [id,key] of [['soulu-sidebar','showSidebar'],['back-button','showBack'],['home-button','showHome'],['soulu-newtab','showNewTab'],['downloads-button','showDownloads'],['soulu-vpn','vpnToolbarVisible']]){const el=document.getElementById(id);if(el)el.hidden=s[key]===false;}
  const bar=document.getElementById('PersonalToolbar');if(bar)bar.collapsed=s.bookmarksBarMode==='never'||s.bookmarksBarPosition==='hidden';
  pref('browser.startup.page',s.startupMode==='continue'?3:1);
- pref('browser.startup.homepage',s.homeMode==='custom'?s.homeUrl||'about:blank':'about:blank');
- const {AboutNewTab}=ChromeUtils.importESModule('resource:///modules/AboutNewTab.sys.mjs');const newTab=s.newTabMode==='custom'?s.newTabUrl||'about:blank':'about:blank';if(AboutNewTab.newTabURL!==newTab)AboutNewTab.newTabURL=newTab;
+ pref('browser.startup.homepage',s.homeMode==='custom'?s.homeUrl||'about:blank':s.homeMode==='blank'?'about:blank':ChromeUtils.importESModule('chrome://soulu/content/AppParent.sys.mjs').appRoot()+'home.html');
+ const {AboutNewTab}=ChromeUtils.importESModule('resource:///modules/AboutNewTab.sys.mjs');const newTab=s.newTabMode==='custom'?s.newTabUrl||'about:blank':s.newTabMode==='blank'?'about:blank':ChromeUtils.importESModule('chrome://soulu/content/AppParent.sys.mjs').appRoot()+'home.html';if(AboutNewTab.newTabURL!==newTab)AboutNewTab.newTabURL=newTab;
  pref('browser.download.useDownloadDir',!s.askDownloadLocation);if(s.downloadPath){pref('browser.download.dir',s.downloadPath);pref('browser.download.folderList',2);}
  const star=document.getElementById('star-button-box');if(star)star.hidden=s.showFavorites===false;
  root.toggleAttribute('soulu-address-left',s.addressPosition==='left');
  pref('browser.tabs.closeWindowWithLastTab',!s.openStartPageAfterLastTab);
- pref('browser.tabs.unloadOnLowMemory',s.performanceMode!=='performance');
+ pref('browser.tabs.unloadOnLowMemory',s.performanceMode!=='performance');pref('places.history.enabled',s.saveHistory!==false);
  pref('browser.bookmarks.showMobileBookmarks',false);
  document.getElementById('PersonalToolbar')?.toggleAttribute('soulu-icons-only',!!s.bookmarksIconsOnly);
  for(const [type,key] of Object.entries(builtin))pref('permissions.default.'+type,({0:1,1:0,2:2})[Number(shared.config.rules.defaults[key]??1)]);
@@ -48,7 +47,7 @@ function apply(){
  pref('privacy.trackingprotection.enabled',shared.config.rules.blocking.enabled);
  pref('privacy.trackingprotection.pbmode.enabled',shared.config.rules.blocking.enabled);
  
- document.title='Soulu Gecko Preview 1';
+ pref('layout.css.prefers-color-scheme.content-override',s.theme==='dark'?0:s.theme==='light'?1:2);Soulu.notify?.();
 }
 async function helperRequest(request){
  const operation=async()=>{
@@ -97,7 +96,7 @@ function open(url){
 function settings(){if(shared.settingsWindow&&!shared.settingsWindow.closed){shared.settingsWindow.focus();return;}shared.settingsWindow=window.openDialog('chrome://soulu/content/ui/settings.html','soulu-settings','chrome,dialog=no,resizable,centerscreen,width=1060,height=760');}
 function tabRows(){return gBrowser.tabs.map((t,id)=>({id,title:t.label,url:t.linkedBrowser.currentURI.spec,incognito:isPrivate}));}
 async function bookmarks(){const rows=[];const tree=await PlacesUtils.promiseBookmarksTree(PlacesUtils.bookmarks.rootGuid);function walk(node){for(const n of node.children||[]){if(n.uri)rows.push({id:n.guid,title:n.title||n.uri,url:n.uri});walk(n);}}walk(tree);return rows;}
-async function state(){const dirs=await IOUtils.getChildren(PathUtils.parent(profile));const profiles=[];for(const path of dirs){if((await IOUtils.stat(path)).type!=='directory')continue;let name=PathUtils.filename(path);try{name=(await IOUtils.readJSON(PathUtils.join(path,'soulu-profile.json'))).name;}catch{}profiles.push({id:PathUtils.filename(path),name,active:path===profile});}return {settings:shared.config.settings,profiles,activeProfileId:shared.config.profile,tabs:tabRows(),capabilities:{matteAvailable:false},update:{soulu:'Gecko Preview 1',gecko:Services.appinfo.platformVersion,firefox:Services.appinfo.version}};}
+async function state(){const dirs=await IOUtils.getChildren(PathUtils.parent(profile));const profiles=[];for(const path of dirs){if((await IOUtils.stat(path)).type!=='directory')continue;let name=PathUtils.filename(path);try{name=(await IOUtils.readJSON(PathUtils.join(path,'soulu-profile.json'))).name;}catch{}profiles.push({id:PathUtils.filename(path),name,active:path===profile});}return {settings:shared.config.settings,profiles,activeProfileId:shared.config.profile,tabs:tabRows(),capabilities:{matteAvailable:false},update:{soulu:'Gecko Preview 2',gecko:Services.appinfo.platformVersion,firefox:Services.appinfo.version}};}
 function validate(next){
  if(next.profile!==shared.config.profile)throw Error('Profile changed');
  if(!['system','light','dark'].includes(next.settings.theme))throw Error('Invalid theme');
@@ -111,7 +110,7 @@ async function dispatch(action,payload,source){
  case 'settings.begin':return structuredClone(shared.config);
  case 'settings.capabilities':return {matteAvailable:false,defaultBrowser:false};
  case 'settings.ready':return true;
- case 'settings.save':{const next=validate(payload),old=shared.config;shared.config=next;try{await blocking();
+ case 'settings.save':{const next=validate({...payload,bookmarkIds:shared.config.bookmarkIds||{}}),old=shared.config;shared.config=next;try{
  if(next.settings.searchEngine!==old.settings.searchEngine){await Services.search.init();const names={google:'Google',yandex:'Яндекс',bing:'Bing',duckduckgo:'DuckDuckGo'};const engines=await Services.search.getVisibleEngines();const engine=engines.find(e=>e.name.toLowerCase().includes(names[next.settings.searchEngine]?.toLowerCase()));if(!engine)throw Error('Поисковая система недоступна в этой локализации Firefox.');await Services.search.setDefault(engine,Services.search.CHANGE_REASON_USER);}await save();for(const w of windows())w.Soulu?.refresh();if(shared.vpnState.connected)proxy(true);emit('settings',shared.config.settings);return {ok:true,persisted:structuredClone(shared.config)};}catch(error){shared.config=old;return {ok:false,error:error.message,persisted:structuredClone(shared.config)};}}
  case 'settings.close':source?.close();return true;
  case 'settings.resize':case 'settings.extensions':return true;
@@ -139,7 +138,7 @@ async function dispatch(action,payload,source){
  case 'browser.profile.create':{const id=Services.uuid.generateUUID().toString().replace(/[{}]/g,'');const path=PathUtils.join(PathUtils.parent(profile),id);await IOUtils.makeDirectory(path,{permissions:0o700});await IOUtils.writeJSON(PathUtils.join(path,'soulu-profile.json'),{name:String(payload).slice(0,160)});return {id};}
  case 'browser.profile.switch':{
   if(!/^[\w-]{1,64}$/.test(payload))throw Error('Invalid profile');
-  const base=Services.dirsvc.get('GreD',Ci.nsIFile).parent;base.append('Soulu Gecko Preview 1.exe');
+  const base=Services.dirsvc.get('GreD',Ci.nsIFile).parent;base.append('Soulu Gecko Preview 2.exe');
   const proc=Cc['@mozilla.org/process/util;1'].createInstance(Ci.nsIProcess);proc.init(base);proc.runw(false,['--profile',payload],2);return true;}
  case 'browser.profile.delete':if(payload===shared.config.profile||!/^[\w-]{1,64}$/.test(payload))throw Error('Cannot delete active profile');await IOUtils.remove(PathUtils.join(PathUtils.parent(profile),payload),{recursive:true});return true;
  case 'vpn.send':return vpn(payload.action);
@@ -157,22 +156,13 @@ async function dispatch(action,payload,source){
 window.Soulu={dispatch,settings,refresh:apply,get config(){return shared.config;},get vpnState(){return shared.vpnState;},_emit(name,value){if(shared.settingsWindow&&!shared.settingsWindow.closed)shared.settingsWindow.__souluEmit?.(name,value);},ready:false};
 function button(id,label,command){const b=document.createXULElement('toolbarbutton');b.id=id;b.className='toolbarbutton-1 chromeclass-toolbar-additional';b.setAttribute('label',label);b.setAttribute('tooltiptext',label);b.addEventListener('command',command);return b;}
 async function initialize(){
- if(!shared.initialized){try{const stored=await IOUtils.readJSON(settingsFile);shared.config={...defaults,...stored,settings:{...defaults.settings,...stored.settings},rules:{...defaults.rules,...stored.rules},vpn:{...defaults.vpn,...stored.vpn}};}catch(error){if(await IOUtils.exists(settingsFile))console.error('Soulu settings:',error);}proxy(false);shared.initialized=true;}
- const css=document.createProcessingInstruction('xml-stylesheet','href="chrome://soulu/content/browser.css" type="text/css"');document.insertBefore(css,document.documentElement);
- const nav=document.getElementById('nav-bar-customization-target'),url=document.getElementById('urlbar-container');
- nav.insertBefore(button('soulu-sidebar','Закладки',()=>SidebarController.toggle('viewBookmarksSidebar')),nav.firstChild);
- nav.insertBefore(button('soulu-vpn','VPN',async()=>{try{if(!shared.config.vpn.profiles.length){settings();return;}await vpn(shared.vpnState.state!=='disconnected'?'disconnect':'connect');}catch(error){Services.prompt.alert(window,'Soulu VPN',error.message);}}),url);
- url.after(button('soulu-newtab','Новая вкладка',()=>BrowserCommands.openTab()));
- nav.append(button('soulu-settings','Настройки',settings));
- document.getElementById('urlbar-input-container')?.append(document.getElementById('stop-reload-button'));
- const caption=document.querySelector('#TabsToolbar .titlebar-buttonbox-container');if(caption){caption.id='soulu-caption';document.getElementById('nav-bar').append(caption);}
- document.getElementById('navigator-toolbox').addEventListener('contextmenu',event=>{if(event.target.closest('#urlbar'))return;event.preventDefault();settings();});
- for(const event of ['TabOpen','TabClose','TabSelect','TabPinned','TabUnpinned'])gBrowser.tabContainer.addEventListener(event,()=>requestAnimationFrame(layout));
- matchMedia('(prefers-color-scheme:dark)').addEventListener('change',layout);
- // Never retain a proxy pointing to a core from an earlier process.
- apply();
- const {BrowserWindowTracker}=ChromeUtils.importESModule('resource:///modules/BrowserWindowTracker.sys.mjs');
- window.addEventListener('unload',()=>{if(shared.settingsWindow?.opener===window)shared.settingsWindow.close();if(windows().filter(w=>w!==window&&!w.closed).length===0&&shared.helper){shared.helper.stdin.close();shared.helper=null;}},{once:true});
+ if(!shared.initialized){try{const stored=await IOUtils.readJSON(settingsFile);if(stored.vpn?.protected)stored.vpn=JSON.parse(Cc['@mozilla.org/security/sdr;1'].getService(Ci.nsISecretDecoderRing).decryptString(stored.vpn.protected));shared.config={...defaults,...stored,settings:{...defaults.settings,...stored.settings},rules:{...defaults.rules,...stored.rules},vpn:{...defaults.vpn,...stored.vpn}};}catch(error){if(await IOUtils.exists(settingsFile))console.error('Soulu settings:',error);}proxy(false);shared.initialized=true;}
+ Soulu.backend={shared,Services,IOUtils,PathUtils,PlacesUtils,profile,isPrivate,save,apply};
+ Services.scriptloader.loadSubScript('chrome://soulu/content/storage.js',window);
+ Services.scriptloader.loadSubScript('chrome://soulu/content/shell-host.js',window);
+ try{const {adblock}=ChromeUtils.importESModule('chrome://soulu/content/adblock.sys.mjs');await adblock.initialize(shared,profile);Soulu.adblock=adblock;}catch(error){Soulu.blockerError=String(error);console.error(error);}
+ window.addEventListener('unload',()=>{if(windows().filter(w=>w!==window&&!w.closed).length===0&&shared.helper){shared.helper.stdin.close();shared.helper=null;}},{once:true});
+ await save();apply();
  window.Soulu.ready=true;
 }
 if(gBrowserInit.delayedStartupFinished)initialize().catch(console.error);else{const observer=(subject)=>{if(subject!==window)return;Services.obs.removeObserver(observer,'browser-delayed-startup-finished');initialize().catch(console.error);};Services.obs.addObserver(observer,'browser-delayed-startup-finished');}
