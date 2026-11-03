@@ -56,4 +56,5 @@ let bookmarkTimer;const bookmarkChanged=()=>{clearTimeout(bookmarkTimer);bookmar
 const events=['bookmark-added','bookmark-removed','bookmark-moved','bookmark-title-changed','bookmark-url-changed'];PlacesUtils.observers.addListener(events,bookmarkChanged);gBrowser.tabContainer.addEventListener('TabMove',Soulu.notify);window.addEventListener('unload',()=>{clearTimeout(bookmarkTimer);PlacesUtils.observers.removeListener(events,bookmarkChanged);},{once:true});
 let checkingVPN=false;const failedRequest={observe(){if(!shared.vpnState.connected||checkingVPN)return;checkingVPN=true;Soulu.dispatch('vpn.send',{action:'status'}).catch(console.error).finally(()=>checkingVPN=false);}};Services.obs.addObserver(failedRequest,'http-on-failed-opening-request');window.addEventListener('unload',()=>Services.obs.removeObserver(failedRequest,'http-on-failed-opening-request'),{once:true});
 Services.scriptloader.loadSubScript('chrome://soulu/content/downloads.js',window);
+Services.scriptloader.loadSubScript('chrome://soulu/content/extensions.js',window);
 })();

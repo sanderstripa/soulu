@@ -40,6 +40,7 @@ shutil.copy(ROOT/'gecko/defaults/pref/autoconfig.js',runtime/'defaults/pref/auto
 shutil.copy(ROOT/'gecko/chrome/bridge.js',runtime/'soulu/chrome/ui/gecko-bridge.js')
 shutil.copy(ROOT/'gecko/chrome/translation-gecko-ui.js',runtime/'soulu/chrome/ui/translation-gecko-ui.js')
 shutil.copy(ROOT/'gecko/chrome/frontend.css',runtime/'soulu/chrome/ui/gecko-frontend.css')
+shutil.copy(ROOT/'gecko/chrome/extensions-ui.js',runtime/'soulu/chrome/ui/extension-toolbar.js')
 shutil.copy(ROOT/'gecko/chrome/integration-ui.js',runtime/'soulu/chrome/ui/integration-ui.js')
 # Install the bridge before the unchanged frontend scripts run.
 for page in ['index.html','settings.html','home.html','history.html']:
@@ -60,7 +61,8 @@ text=text.replace("['Firefox',state.update?.firefox]","['Firefox',state.update?.
 # Avoid rebuilding an embedded Chrome page; use Firefox's actual manager/store.
 start=text.index("          n.classList.add('long');n.replaceChildren();card.querySelector('h3')?.remove();")
 end=text.index("        if(r.key==='defaultBrowser')",start)
-text=text[:start]+"          n.classList.add('long');n.replaceChildren();const controls=el('div',undefined,'extension-controls');controls.append(button(t('Установленные расширения Firefox','Installed Firefox extensions'),()=>browserShell.openTab('about:addons')),button('Firefox Add-ons',()=>browserShell.openTab('https://addons.mozilla.org/firefox/')));n.append(controls,el('p',t('Расширения устанавливаются из Firefox Add-ons. Локальные подписанные XPI можно установить через менеджер Firefox.','Install extensions from Firefox Add-ons. Local signed XPI packages can be installed in the Firefox manager.'),'note'));card.append(n);continue;\n        }\n"+text[end:]
+text=text[:start]+"          n.classList.add('long');n.replaceChildren();const controls=el('div',undefined,'extension-controls');controls.append(button(t('Установленные расширения Firefox','Installed Firefox extensions'),()=>browserShell.openTab('about:addons')),button('Firefox Add-ons',()=>browserShell.openTab('https://addons.mozilla.org/firefox/')));n.append(controls,el('p',t('Расширения устанавливаются из Firefox Add-ons. Локальные подписанные XPI можно установить через менеджер Firefox.','Install extensions from Firefox Add-ons. Local signed XPI packages can be installed in the Firefox manager.'),'note'));const pins=el('div',undefined,'extension-pin-list');pins.id='extensionPins';n.append(pins);renderExtensionPins(pins);card.append(n);continue;\n        }\n"+text[end:]
+text=text.replace("setInterval(()=>{const host=$('extensionPins');if(current&&section==='extensions'&&host)renderExtensionPins(host);},3000);","window.addEventListener('SouluExtensionsChanged',()=>{const host=$('extensionPins');if(current&&section==='extensions'&&host)renderExtensionPins(host);});")
 text=text.replace("search.focus();","search.blur();")
 text=text.replace("[{opacity:0,transform:reduced?'none':'translateY(5px)'},{opacity:1,transform:'none'}]","[{opacity:.94},{opacity:1}]").replace("duration:reduced?90:320,delay:reduced?0:45","duration:reduced?60:140,delay:0")
 text=text.replace("...(id?[document.querySelector('aside')]:[])","...[]")
