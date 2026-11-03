@@ -39,7 +39,7 @@ function site(){const browser=selected(),url=currentURL(browser);let origin='',d
 async function siteAction(action,payload){const browser=selected();if(payload?.tabId!==undefined&&(payload.tabId!==tabID(gBrowser.selectedTab)||payload.url!==currentURL(browser)))throw Error('Страница изменилась. Откройте меню заново.');
  if(action==='permission'){shared.config.rules.sites[site().domain]??={};if(Number(payload.value)<0)delete shared.config.rules.sites[site().domain][payload.permission];else shared.config.rules.sites[site().domain][payload.permission]=Number(payload.value);await save();apply();}
  else if(action==='blocking'){shared.config.rules.blocking.sites[site().domain]=payload.value===undefined?!!payload.enabled:!!Number(payload.value);await save();browser.reload();}
- else if(action==='reset'){delete shared.config.rules.sites[site().domain];delete shared.config.rules.blocking.sites[site().domain];Services.perms.removeAllForPrincipal(browser.contentPrincipal);await save();apply();}
+ else if(action==='reset'){delete shared.config.rules.sites[site().domain];delete shared.config.rules.blocking.sites[site().domain];for(const permission of Services.perms.getAllForPrincipal(browser.contentPrincipal))Services.perms.removeFromPrincipal(browser.contentPrincipal,permission.type);await save();apply();}
  else if(action==='zoom'){browser.fullZoom=payload.command==='reset'?1:Math.max(.3,Math.min(3,browser.fullZoom+(payload.command==='in'?.1:-.1)));}
  else if(action==='find'){browser.finder.fastFind(payload.text||'',false,false);}
  else if(action==='probe'||action==='reader.probe')return site();
