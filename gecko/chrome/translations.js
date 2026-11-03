@@ -6,7 +6,18 @@
   const op=action.slice('browser.translate.'.length),browser=gBrowser.selectedBrowser;
   if(!/^https?:/.test(browser.currentURI.spec))throw Error('Перевод доступен для веб-страниц.');
   if(payload?.url&&payload.url!==browser.currentURI.spec)throw Error('Страница изменилась.');
-  const actor=browser.browsingContext.currentWindowGlobal.getActor('Translations');
+  Services.prefs.setBoolPref('browser.translations.enable',true);
+  let actor;
+  try{actor=browser.browsingContext.currentWindowGlobal.getActor('Translations');}
+  catch(error){
+   // A file Home tab can retain a non-browsers message-manager group when it
+   // becomes a web tab. Register the stock actors for isolated web documents,
+   // without the legacy message-manager group restriction. No custom DOM bridge.
+   if(!String(error).includes('No such JSWindowActor'))throw error;
+   ChromeUtils.unregisterWindowActor('Translations');
+   ChromeUtils.registerWindowActor('Translations',{parent:{esModuleURI:'resource://gre/actors/TranslationsParent.sys.mjs'},child:{esModuleURI:'resource://gre/actors/TranslationsChild.sys.mjs'},matches:['http://*/*','https://*/*'],allFrames:true,safeForUntrustedWebProcess:true});
+   actor=browser.browsingContext.currentWindowGlobal.getActor('Translations');
+  }
   if(op==='probe'||op==='status'){
    const languages=await actor.getLangTags(),state=actor.languageState;
    return {lang:languages?.docLangTag?.language||languages?.docLangTag||languages?.htmlLangAttribute||'',translated:!!state?.requestedLanguagePair,visible:!!state?.hasVisibleChange,error:state?.error?.message||null};

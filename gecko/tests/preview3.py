@@ -24,6 +24,7 @@ try:
  ui('document.querySelector("input[name=settings-layout][value=adaptive]").click();await souluSettings.flush();return true;','settings');time.sleep(.4)
  call('browser.settings.set',{'mattePanel':False});time.sleep(.1);opaque=ui('return getComputedStyle(document.querySelector(".classic-toolbar")).backgroundImage')
  call('browser.settings.set',{'mattePanel':True});time.sleep(.1);matte=ui('return getComputedStyle(document.querySelector(".classic-toolbar")).backgroundImage')
+ if os.name=='nt':check('windows_native_backdrop_is_enabled',chrome('return !!Soulu.material?.native'),chrome('return Soulu.material'))
  check('matte_toggle_changes_actual_material',opaque!=matte,{'opaque':opaque,'matte':matte,'native':chrome('return Soulu.material')})
  chrome('Soulu.closeSettings()');check('settings_exit_is_animated',chrome('return !document.getElementById("soulu-settings-frame").hidden&&document.getElementById("soulu-settings-frame").getAnimations().length>0'));time.sleep(.3)
  check('settings_hide_after_animation_finishes',chrome('return document.getElementById("soulu-settings-frame").hidden'))
@@ -52,5 +53,14 @@ try:
  for theme in ['light','dark']:
   call('browser.settings.set',{'theme':theme});time.sleep(.25);(out/(theme+'-preview3.png')).write_bytes(base64.b64decode(m.screenshot()))
  report['passed']=True
+except Exception as error:
+ report['error']=str(error)
+ try:
+  report['diagnostic']=chrome('return {url:gBrowser.selectedBrowser.currentURI.spec,pref:Services.prefs.getBoolPref("browser.translations.enable",false),group:gBrowser.selectedBrowser.getAttribute("messagemanagergroup"),errors:Services.console.getMessageArray().map(x=>x.message).filter(x=>/soulu|ranslat|Error/.test(x)).slice(-20)}')
+  print('FAILURE_DIAGNOSTIC',json.dumps(report['diagnostic']),flush=True)
+  (out/'failure.png').write_bytes(base64.b64decode(m.screenshot()))
+  print('TRANSLATION_UI_STATUS',ui('return document.getElementById("gecko-translation-status")?.textContent||"";'),flush=True)
+ except Exception as diagnostic_error:print('DIAGNOSTIC_ERROR',str(diagnostic_error),flush=True)
+ raise
 finally:
  stop();server.shutdown();log.close();(out/'preview3.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
