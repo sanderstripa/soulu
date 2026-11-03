@@ -15,3 +15,10 @@
  :is(button,toolbarbutton).primary{background-color:#0879e6!important;color:#fff!important}
  #tabbrowser-tabbox,#tabbrowser-tabpanels{padding:0!important;margin:0!important;border-radius:0!important}
 }
+
+@-moz-document url-prefix("chrome://browser/content/migration/") {
+ body{font:13px/1.45 Onest,"Segoe UI",sans-serif!important;background:light-dark(#f6f6f8,#08090b)!important;color:light-dark(#191a1e,#eeeeef)!important;padding:16px!important}
+ migration-wizard::part(header){font-size:18px!important;line-height:1.35!important}
+ migration-wizard::part(profile-selector){border-color:light-dark(#d7d9df,#454850)!important;border-radius:12px!important}
+ migration-wizard::part(import-primary),migration-wizard::part(continue-primary){background:#0879e6!important;color:white!important;border-color:transparent!important;border-radius:10px!important}
+}
