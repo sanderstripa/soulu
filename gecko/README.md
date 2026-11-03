@@ -1,4 +1,4 @@
-# Soulu Gecko Preview 4
+# Soulu Gecko Preview 4 Update 1
 
 Extract the complete ZIP and run `Soulu Gecko Preview 4.exe` (Windows x64).
 
@@ -50,3 +50,5 @@ Preview 4 uses native SessionStore for restore/duplicate/reorder/session persist
 Each profile has its own VPN working directory and dynamically allocated SOCKS port. Firefox's native profile-removal service refuses removal of a locked profile. No system proxy change is needed. Page text translation remains local; voice-over YouTube translation is deferred. Portable default-browser registration and Soulu automatic updates are unavailable. Native reader styling uses compatible Firefox settings; CEF-only image hiding/custom fonts are not promised. Import availability depends on the source browser and operating-system protection; exported CSV files contain plaintext secrets and should be removed after import.
 
 Switching the VPN resets Gecko's existing network connections and DNS cache so already-open direct sockets are not retained across the route change. Active transfers may need retry after that explicit switch. Component updates also remain behind SOCKS when a VPN core has failed; only explicit disconnect returns to direct networking. Mozilla onboarding/reporting notifications are disabled alongside telemetry in this portable Soulu distribution; no user acceptance date is forged. Firefox component licenses remain available at about:license.
+
+Update 1 connects original Soulu extension action slots and pin controls to native Firefox BrowserAction, CustomizableUI and PanelPopup. Popups remain in the isolated extension process. Icons and badges update from native events, without the old periodic UI polling. Private-window access requires Firefox's explicit per-extension permission. Native file-scheme guards protect Soulu's application HTML even against extensions granted file access; content scripts on local files are therefore unavailable in this build. HTTP/HTTPS extension access remains governed by native permissions. Page-action URL-bar buttons and background-initiated action.openPopup are outside the verified integration scope.

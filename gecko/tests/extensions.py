@@ -61,6 +61,26 @@ try:
  call('browser.extensions.pin',{'profile':'default','id':fixture_id,'pinned':True})
  for id in [fixture_id,click_id]:run('const {AddonManager}=ChromeUtils.importESModule("resource://gre/modules/AddonManager.sys.mjs");await (await AddonManager.getAddonByID('+json.dumps(id)+')).uninstall();return true;')
  check('uninstall_removes_action_and_observers',wait(lambda:not any(i['id'] in [fixture_id,click_id] for i in action_items())) and wait(lambda:ui('return !document.querySelector("[data-extension-id]")')))
+ # A file-enabled add-on must still be unable to inject into Soulu UI.
+ guarded='soulu-file-fixture@example.test';guardpath=root/'guarded.xpi'
+ manifest={'manifest_version':2,'name':'File injection fixture','version':'1.0','applications':{'gecko':{'id':guarded}},'permissions':['<all_urls>','tabs','activeTab'],'browser_action':{'default_title':'File guard probe'},'background':{'scripts':['guard-background.js']},'content_scripts':[{'matches':['<all_urls>'],'js':['guard-content.js'],'all_frames':True,'run_at':'document_start'}]}
+ background='browser.browserAction.onClicked.addListener(async tab=>{try{await browser.tabs.executeScript(tab.id,{code:"document.documentElement.dataset.souluDynamicInjection=1"});await browser.browserAction.setBadgeText({text:"UNSAFE"});}catch(error){await browser.browserAction.setBadgeText({text:"DENIED"});}});'
+ with zipfile.ZipFile(guardpath,'w') as z:
+  z.writestr('manifest.json',json.dumps(manifest));z.writestr('guard-background.js',background);z.writestr('guard-content.js','document.documentElement.dataset.souluStaticInjection="yes";')
+ run('const {ExtensionPermissions}=ChromeUtils.importESModule("resource://gre/modules/ExtensionPermissions.sys.mjs");await ExtensionPermissions.add('+json.dumps(guarded)+',{permissions:["internal:fileSchemeAllowed"],origins:[]});return true;')
+ install(guardpath);wait(lambda:any(i['id']==guarded and i['action'] for i in action_items()))
+ protected=chrome('const p=WebExtensionPolicy.getByID('+json.dumps(guarded)+');const {appRoot}=ChromeUtils.importESModule("chrome://soulu/content/AppParent.sys.mjs");return {fileAllowed:p.fileSchemeAllowed,guard:p.checkGuarded(Services.io.newURI(appRoot()+"home.html"))};')
+ check('native_guard_survives_explicit_file_permission',protected['fileAllowed'] and protected['guard'] is not None,protected)
+ call('browser.navigate',url+'extension-positive-control');wait(lambda:content('return document.documentElement.dataset.souluStaticInjection==="yes"'))
+ check('extension_content_scripts_still_work_on_websites',True)
+ call('browser.home');wait(lambda:ui('return !!window.souluHomeApply','page'))
+ check('static_extension_script_cannot_reach_app_document',ui('return !document.documentElement.dataset.souluStaticInjection','page'))
+ call('browser.extensions.pin',{'profile':'default','id':guarded,'pinned':True});guardselector='[data-extension-toolbar="classic"] [data-extension-id="'+guarded+'"]';wait(lambda:ui('return !!document.querySelector('+json.dumps(guardselector)+')'));real_click(guardselector)
+ check('dynamic_extension_injection_into_app_document_denied',wait(lambda:next(i for i in action_items() if i['id']==guarded)['badge']=='DENIED'))
+ check('app_bridge_not_escalated_by_extension',ui('return !document.documentElement.dataset.souluDynamicInjection','page'))
+ run('const {AddonManager}=ChromeUtils.importESModule("resource://gre/modules/AddonManager.sys.mjs");await (await AddonManager.getAddonByID('+json.dumps(guarded)+')).uninstall();return true;')
+ if os.name=='nt':
+  exec(compile(Path(__file__).with_name('extensions-signed.py').read_text(encoding='utf-8'),str(Path(__file__).with_name('extensions-signed.py')),'exec'),globals())
  report['passed']=True
 except Exception as error:
  report['error']=str(error)

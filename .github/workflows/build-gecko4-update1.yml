@@ -1,0 +1,85 @@
+name: Soulu Gecko Preview 4 Update 1
+on:
+  push:
+    branches: [gecko-preview]
+    paths: ['gecko/**', '.github/workflows/build-gecko4-update1.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: soulu-gecko4-update1
+  cancel-in-progress: true
+jobs:
+  windows:
+    runs-on: windows-2025
+    timeout-minutes: 35
+    env:
+      PYTHONUTF8: 1
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: sanderstripa/soulu
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Assemble the same checksum-pinned Firefox with updated Soulu resources
+        run: python gecko/build.py --platform win64 --output gecko-out
+      - name: Reuse byte-identical accepted VPN, Rust DLL and icon-bearing launcher
+        shell: pwsh
+        run: |
+          gh release download gecko-preview-4 -p Soulu-Gecko-Preview-4-win64.zip -D base
+          if ((Get-FileHash base/Soulu-Gecko-Preview-4-win64.zip -Algorithm SHA256).Hash.ToLowerInvariant() -cne '94331ff8ebe85fe059bb7bbf2ca0525dd491883e9e3d8f49478baa68a75989d1') { throw 'Base release checksum mismatch' }
+          Expand-Archive base/Soulu-Gecko-Preview-4-win64.zip base/expanded
+          Copy-Item base/expanded/runtime/soulu/vpn gecko-out/runtime/soulu/vpn -Recurse
+          Copy-Item base/expanded/runtime/soulu/adblock gecko-out/runtime/soulu/adblock -Recurse
+          Copy-Item 'base/expanded/Soulu Gecko Preview 4.exe' gecko-out/
+      - name: Test real extension actions, permissions, signed restart and file guards
+        shell: pwsh
+        run: |
+          python -m pip install marionette_driver pillow psutil websocket-client
+          python gecko/tests/extensions.py gecko-out/runtime/firefox.exe gecko4-update1
+          if ($LASTEXITCODE -ne 0) { throw 'Native extension tests failed' }
+      - name: Final browser core regression on the assembled Windows build
+        shell: pwsh
+        run: |
+          python gecko/tests/preview4.py gecko-out/runtime/firefox.exe gecko4-core
+          if ($LASTEXITCODE -ne 0) { throw 'Core regression failed' }
+          Copy-Item gecko4-core/preview4.json gecko-out/
+      - name: Verify retained settings, weather, translation and icon
+        shell: pwsh
+        run: |
+          python gecko/tests/final4.py gecko-out/runtime/firefox.exe gecko4-final
+          if ($LASTEXITCODE -ne 0) { throw 'Retained feature checks failed' }
+          Copy-Item gecko4-final/final4.json gecko-out/
+      - name: Compare actual CEF and Gecko at equal client sizes
+        shell: pwsh
+        run: |
+          python gecko/tests/visual-cef.py gecko-out/runtime/firefox.exe gecko4-update1
+          if ($LASTEXITCODE -ne 0) { throw 'CEF visual comparison failed' }
+          Copy-Item gecko4-update1/visual-comparison.json gecko-out/
+      - name: Package and verify actual extracted launcher
+        shell: pwsh
+        run: |
+          Copy-Item gecko/docs gecko-out/docs -Recurse
+          Copy-Item gecko4-update1/extensions.json gecko-out/
+          New-Item -ItemType Directory -Force gecko-out/visual-evidence | Out-Null
+          Copy-Item gecko4-update1/*.png gecko-out/visual-evidence/
+          Compress-Archive -Path gecko-out/* -DestinationPath Soulu-Gecko-Preview-4-Update-1-win64.zip -CompressionLevel Optimal
+          python gecko/tests/zip_smoke.py Soulu-Gecko-Preview-4-Update-1-win64.zip gecko4-update1
+          if ($LASTEXITCODE -ne 0) { throw 'Extracted launcher smoke failed' }
+          (Get-FileHash Soulu-Gecko-Preview-4-Update-1-win64.zip -Algorithm SHA256).Hash.ToLowerInvariant() + '  Soulu-Gecko-Preview-4-Update-1-win64.zip' | Set-Content SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gecko4-update1-evidence
+          path: |
+            gecko4-update1/
+            gecko4-core/
+            gecko4-final/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Soulu-Gecko-Preview-4-Update-1
+          path: |
+            Soulu-Gecko-Preview-4-Update-1-win64.zip
+            SHA256SUMS.txt
