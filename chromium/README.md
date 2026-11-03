@@ -1,8 +1,8 @@
 # Soulu Chromium Preview 1 — port preparation
 
-**Status: not implemented, not built, not accepted for release.**
-This directory is preparation for a Chromium source port. It does not contain
-a working alternative browser. There is no Chromium Preview 1 binary to download.
+**Status: native source port started; not compiled or accepted for release.**
+The source overlay embeds the original Soulu shell in Chromium's own Webium
+WebUI browser. This directory does not yet contain a working alternative browser. There is no Chromium Preview 1 binary to download.
 Neither the existing CEF package nor the Gecko package qualifies as this build.
 
 ## Inspected baseline
@@ -34,27 +34,43 @@ these files into a standalone Chromium executable does not remove that dependenc
 Renaming the CEF executable or launching stock Chromium in app mode does not
 implement this port.
 
-## Preparation tools
+## Implemented in source, awaiting native compilation
 
-`python chromium/prepare_ui.py --output <new-directory>` copies the original
-UI byte-for-byte and creates SHA-256 provenance. It deliberately does not modify
-the design or claim that assets alone implement browser functions. The output
-still contains the CEF bridge until a native Chromium replacement is implemented.
+* Chromium 156.0.8078.48 and depot_tools pinned to immutable Git commits.
+* Original Soulu resources registered in Chromium's trusted WebUI resource build;
+  the adaptive panel is selected by the backend. Upstream `ui/` is unchanged.
+* Native tab model snapshots and handlers for new/close/select/pin, back/reload,
+  HTTP(S) navigation, basic Google search, incognito windows and window controls.
+* Chromium's native tab content surfaces remain attached when toolbar state
+  updates; the adapter does not capture video or rebuild content per hover.
+* `soulu.settings` profile preference stores validated theme/language choices.
+* Default local and roaming data paths use `SouluChromium/User Data`.
+* Unsupported commands return errors; capabilities explicitly mark missing ports.
 
-`python chromium/preflight.py` checks the local Windows build prerequisites.
-This is an environment check, not a browser acceptance test. A successful check
-would not mean the port exists.
+These are source changes, **not verified runtime features**. Webium itself is an
+upstream experimental UI. Compatibility, native permission/menu anchoring,
+fullscreen, animations and smoothness require Windows compilation and testing.
+History is handled by Chromium's existing engine but is not integrated with Soulu's
+history page. Home, full settings sessions, bookmarks, profile management UI,
+VPN, the own ad blocker, translation and extensions toolbar remain unported.
 
-## Build blocker observed in this session
+## Reproducible remote build
 
-The available host is Linux, with approximately 58 GiB free disk and no Windows
-runtime. The official Windows source-build instructions require Windows 10 or
-newer and at least 100 GB free on NTFS, plus the applicable Visual Studio/SDK:
-https://chromium.googlesource.com/chromium/src/+/main/docs/windows_build_instructions.md
+See [BUILDING.md](BUILDING.md) for Windows prerequisites, separate runner setup,
+repository variables and exact commands. The workflow in
+`.github/workflows/chromium-preview.yml` runs only on `chromium-preview`.
 
-A suitable Windows source-build and interactive test machine is needed. Its
-availability alone does not complete the missing native Chromium integration.
-No cloud runner, paid infrastructure or remote Windows desktop was provisioned.
+The standard hosted Windows job checks source preparation and transport and
+records its actual machine prerequisites. Native compilation is a separate job
+which is skipped until an existing capable runner is configured. No paid runner
+has been purchased or enabled. No runtime acceptance or release is implied by
+passing source checks.
+
+`prepare_source.py` verifies six pinned upstream file digests and all replacement
+anchors before writing the source overlay. A manifest records generated hashes
+and the original reference asset hashes. Reruns permit only unchanged previously
+generated files and refuse to overwrite user modifications. `prepare_ui.py` from
+the earlier preparation remains available for byte-for-byte reference export.
 
 ## Non-negotiable implementation constraints
 
@@ -63,8 +79,8 @@ No cloud runner, paid infrastructure or remote Windows desktop was provisioned.
 * Use the Chromium compositor; do not copy video frames through the UI process.
 * Privileged bridge available only to explicitly registered local trusted WebUI;
   never to ordinary tabs, frames or arbitrary navigations.
-* Proposed product root: `%LOCALAPPDATA%\SouluChromium\User Data`, distinct from
-  Soulu CEF, Chromium and Google Chrome. This path is a requirement, not yet code.
+* Source-enforced default product root: `%LOCALAPPDATA%\SouluChromium\User Data`, distinct from
+  Soulu CEF, Chromium and Google Chrome. Custom command-line data roots remain subject to Chromium's normal behavior.
 * Do not resize WebContents when only toolbar hover, suggestions or popovers change.
 * Unsupported actions must report errors rather than simulated success.
 

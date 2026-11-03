@@ -1,0 +1,21 @@
+{
+  "chromium": {
+    "url": "https://chromium.googlesource.com/chromium/src.git",
+    "version": "156.0.8078.48",
+    "revision": "d0c02bfad08ec92a6ffcf989e53cd995e6381a4c"
+  },
+  "depot_tools": {
+    "url": "https://chromium.googlesource.com/chromium/tools/depot_tools.git",
+    "revision": "816da11f80777dcf8c10bdaa84df18450dcba12a"
+  },
+  "reference_soulu": "f3a4ae3fc1f15487c95811de8010524ab95b311b",
+  "windows_toolchain": {
+    "visual_studio_major": 18,
+    "sdk_version": "10.0.28000.0",
+    "sdk_installer_version": "10.0.28000.2270",
+    "minimum_free_gb": 100,
+    "recommended_free_gb": 300,
+    "minimum_ram_gb": 16,
+    "recommended_ram_gb": 64
+  }
+}

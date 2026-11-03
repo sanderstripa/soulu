@@ -1,0 +1,8 @@
+{
+  "chrome/browser/ui/webui_browser/BUILD.gn": "22fb5740ce133047ca13628ee012bbdd88e87442f435487e1802116769821fcf",
+  "chrome/browser/ui/webui_browser/webui_browser_ui.cc": "b8e1da8faf3a67220d344d15e494b1364bb64141fac83dc0be24e644871d68b9",
+  "chrome/browser/resources/webui_browser/BUILD.gn": "24e7566c1f5f77e82d721697dd158410fa5c6b9cfff24b7f0ad3bf1367f4d3c3",
+  "chrome/common/chrome_paths_win.cc": "57eecc656df508e138a278080fdb70816f8d13ab34e411f87adbaa8c3e0949bf",
+  "chrome/common/chrome_features.cc": "5188e4d026750404b1bc5b58b86e088c2d7a9a6d7577b001a7ad241c7333fb62",
+  "chrome/browser/prefs/browser_prefs.cc": "758e5727c98e59e423e8903527db456d44a10914c671f58ddc94b30667698078"
+}

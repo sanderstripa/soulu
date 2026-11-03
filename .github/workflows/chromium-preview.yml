@@ -1,0 +1,81 @@
+name: Soulu Chromium source port
+on:
+  push:
+    branches: [chromium-preview]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+concurrency:
+  group: soulu-chromium-preview
+  cancel-in-progress: false
+
+jobs:
+  source-windows:
+    name: Windows source preparation checks (not a browser build)
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Check transport and source overlay against pinned Chromium
+        shell: pwsh
+        run: |
+          python -m unittest discover -s chromium/tests -p 'test_*.py' -v
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --test chromium/tests/native-bridge.test.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python chromium/tests/check_upstream.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          [void][scriptblock]::Create((Get-Content chromium/build-windows.ps1 -Raw))
+      - name: Measure the standard Windows builder
+        if: always()
+        env:
+          SOULU_RUNNER_CONFIG: ${{ vars.SOULU_CHROMIUM_RUNNER }}
+        shell: pwsh
+        run: |
+          python chromium/check_builder.py --work-root C:\soulu-build --output chromium-environment.json --report-only
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          '### Chromium development status' >> $env:GITHUB_STEP_SUMMARY
+          'These are source/transport checks. No browser compilation or runtime acceptance is implied.' >> $env:GITHUB_STEP_SUMMARY
+          if ([string]::IsNullOrWhiteSpace($env:SOULU_RUNNER_CONFIG)) {
+            'Full build skipped: configure SOULU_CHROMIUM_RUNNER with an available Windows build runner. See chromium/BUILDING.md.' >> $env:GITHUB_STEP_SUMMARY
+          }
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: chromium-source-checks-${{ github.sha }}
+          path: |
+            chromium-environment.json
+            chromium-source-check.json
+          retention-days: 7
+
+  native-build:
+    name: Compile Chromium on the configured Windows builder
+    needs: source-windows
+    # No default label: never silently purchase a larger runner or queue on an
+    # unknown self-hosted machine. Owner config selects an existing builder.
+    if: ${{ github.ref == 'refs/heads/chromium-preview' && vars.SOULU_CHROMIUM_RUNNER != '' }}
+    runs-on: ${{ fromJSON(vars.SOULU_CHROMIUM_RUNNER || '["self-hosted","Windows","X64","soulu-chromium"]') }}
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: chromium-preview
+          persist-credentials: false
+      - name: Verify exact source commit
+        shell: pwsh
+        run: |
+          if ((git rev-parse HEAD).Trim() -cne $env:GITHUB_SHA) { throw 'Branch advanced; build the matching commit only' }
+      - name: Fetch locked source, apply Soulu, compile native chrome target
+        shell: pwsh
+        env:
+          SOULU_BUILD_ROOT: ${{ vars.SOULU_CHROMIUM_WORK_ROOT || 'C:\soulu-build' }}
+        run: ./chromium/build-windows.ps1 -WorkRoot $env:SOULU_BUILD_ROOT -Jobs 8
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: chromium-native-build-report-${{ github.sha }}
+          path: |
+            chromium-environment.json
+            chromium-build-result.json
+          retention-days: 14
