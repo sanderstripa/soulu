@@ -16,6 +16,14 @@ try:
  check('single_extensions_button',ui('return !!document.getElementById("soulu-extensions-menu")&&!document.querySelector("[data-extension-toolbar] [data-extension-id]")'))
  call('browser.settings.set',{'showExtensions':False});check('extensions_toggle_applies',wait(lambda:ui('return document.getElementById("soulu-extensions-menu").hidden')))
  call('browser.openTab',{'url':url+'extra'});select_latest();call('browser.closeOtherTabs',call('browser.state.get')['activeTabId']);time.sleep(.5);check('single_tab_geometry_centered',ui('return document.body.style.getPropertyValue("--adaptive-progress")==="0"'))
+ for maximize in [False,True]:
+  chrome('window.'+('maximize' if maximize else 'restore')+'()');time.sleep(.3)
+  rect=ui('const a=document.querySelector("#classicAddress").getBoundingClientRect(),b=document.querySelector(".classic-toolbar").getBoundingClientRect();return {address:(a.top+a.bottom)/2,bar:(b.top+b.bottom)/2};')
+  check('single_address_centered_'+str(maximize),abs(rect['address']-rect['bar'])<2,rect)
+ call('browser.settings.set',{'theme':'dark'});check('dark_fallback_surface',chrome('return getComputedStyle(document.getElementById("browser")).backgroundColor==="rgb(8, 9, 11)"'))
+ call('browser.settings.set',{'theme':'light'});check('light_fallback_surface',chrome('return getComputedStyle(document.getElementById("browser")).backgroundColor==="rgb(246, 246, 248)"'))
+ call('browser.bookmarks.sidebar',True);wait(lambda:ui('return !document.querySelector(".bookmarks-menu").hidden'))
+ ui('document.querySelector(".bookmarks-menu [data-bookmark-id]").click();return true;');wait(lambda:content('return !!document.getElementById("v")'));check('sidebar_remains_open_after_bookmark_click',call('browser.state.get')['bookmarksSidebarVisible'])
  report['passed']=True
 except Exception as error:
  report['error']=str(error)

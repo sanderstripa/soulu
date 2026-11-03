@@ -10,7 +10,7 @@ body[data-layout=adaptive] .classic-toolbar {
   display:block;position:relative;height:var(--chrome-height);padding:0;
 }
 body[data-layout=adaptive] .classic-main-row {
-  height:48px;
+  height:calc(68px - 20px * var(--adaptive-progress));
   grid-template-columns:minmax(210px,1fr) minmax(0,640px) minmax(210px,1fr);
 }
 body[data-layout=adaptive] .classic-toolbar .tabs-zone {
