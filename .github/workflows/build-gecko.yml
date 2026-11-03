@@ -63,6 +63,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Gecko acceptance failed' }
           Copy-Item gecko-acceptance/acceptance.json gecko-out/acceptance.json
       - name: Compare against the actual published Soulu CEF at equal client sizes
+        if: ${{ !cancelled() }}
         shell: pwsh
         run: |
           python gecko/tests/visual-cef.py gecko-out/runtime/firefox.exe gecko-acceptance

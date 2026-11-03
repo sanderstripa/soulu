@@ -121,10 +121,24 @@ try:
   call('browser.navigate','https://www.youtube.com/watch?v=aqz-KE-bpKQ');select_latest();m.set_context('content')
   def youtube_playing():
    return m.execute_async_script('const done=arguments[0],v=document.querySelector("video");if(!v){done(false);return;}v.muted=true;v.play().catch(()=>{});setTimeout(()=>done(v.readyState>=2&&v.currentTime>.1),1000)')
-  check('youtube_public_video_playback',wait(youtube_playing,120))
-  a=content('return {time:document.querySelector("video").currentTime,h:innerHeight,w:innerWidth}');time.sleep(2);b=content('return {time:document.querySelector("video").currentTime,h:innerHeight,w:innerWidth}');check('youtube_advances_with_stable_viewport',b['time']>a['time'] and a['h']==b['h'] and a['w']==b['w'],{'before':a,'after':b})
+  try:
+   played=wait(youtube_playing,120)
+  except Exception as e:
+   played=False
+   diagnostic={'error':str(e),'browser':chrome('return {url:gBrowser.selectedBrowser.currentURI.spec,remoteType:gBrowser.selectedBrowser.remoteType,loading:gBrowser.selectedBrowser.webProgress.isLoadingDocument}')}
+   try:diagnostic['document']=content('return {url:location.href,title:document.title,text:document.body?.innerText?.slice(0,2500),video:[...document.querySelectorAll("video")].map(v=>({src:v.currentSrc,time:v.currentTime,ready:v.readyState,error:v.error?.message}))}')
+   except Exception as error:diagnostic['documentError']=str(error)
+   print('YOUTUBE_DIAGNOSTIC',json.dumps(diagnostic),flush=True)
+   (out/'youtube-diagnostic.json').write_text(json.dumps(diagnostic,indent=2),encoding='utf-8')
+   try:(out/'youtube.png').write_bytes(base64.b64decode(m.screenshot()))
+   except:pass
+  report['checks']['youtube_public_video_playback']={'passed':bool(played)};print('youtube_public_video_playback',bool(played),flush=True)
+  if played:
+   a=content('return {time:document.querySelector("video").currentTime,h:innerHeight,w:innerWidth}');time.sleep(2);b=content('return {time:document.querySelector("video").currentTime,h:innerHeight,w:innerWidth}');check('youtube_advances_with_stable_viewport',b['time']>a['time'] and a['h']==b['h'] and a['w']==b['w'],{'before':a,'after':b})
  stop();start();check('settings_and_encrypted_vpn_survive_restart',chrome('return Soulu.config.settings.theme==="dark" && Soulu.config.vpn.profiles[0].link.startsWith("vless://")'))
  if os.name=='nt':stop();start(True);check('portable_launcher_uses_isolated_data',chrome('return Soulu.config.profile==="launch-test"&&PathUtils.profileDir.includes("SouluGecko")'))
- report['passed']=True
+ report['passed']=all(row['passed'] for row in report['checks'].values())
 finally:
  stop();server.shutdown();log.close();(out/'acceptance.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
+
+if not report['passed']:raise SystemExit('Mandatory acceptance checks failed; see acceptance.json')
