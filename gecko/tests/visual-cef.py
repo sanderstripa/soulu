@@ -32,6 +32,8 @@ def size(hwnd):
  u.ShowWindow(hwnd,9);r=W.RECT();c=W.RECT();u.GetWindowRect(hwnd,C.byref(r));u.GetClientRect(hwnd,C.byref(c));u.MoveWindow(hwnd,40,30,width+(r.right-r.left)-(c.right-c.left),height+(r.bottom-r.top)-(c.bottom-c.top),True);u.SetForegroundWindow(hwnd);time.sleep(.5)
  c=W.RECT();u.GetClientRect(hwnd,C.byref(c));assert [c.right,c.bottom]==[width,height],[c.right,c.bottom]
 def grab(hwnd,path):
+ # Collapse Windows notification banners from previous application launches.
+ u.keybd_event(0x5B,0,0,0);u.keybd_event(0x4E,0,0,0);u.keybd_event(0x4E,0,2,0);u.keybd_event(0x5B,0,2,0);time.sleep(.3);u.keybd_event(0x1B,0,0,0);u.keybd_event(0x1B,0,2,0)
  u.SetForegroundWindow(hwnd);u.SetCursorPos(0,0);time.sleep(.5);p=W.POINT(0,0);u.ClientToScreen(hwnd,C.byref(p));ImageGrab.grab().crop((p.x,p.y,p.x+width,p.y+height)).save(path)
 metric="""(async()=>{await document.fonts.ready;document.activeElement?.blur();return Object.fromEntries(['.classic-toolbar','.classic-main-row','#classicAddressForm','#sidebarButton','#vpnButton','#newTabButton','#windowMinimize','#windowMaximize','#windowClose','.tabs-zone'].map(s=>{const n=document.querySelector(s),r=n.getBoundingClientRect();return [s,{x:r.x,y:r.y,width:r.width,height:r.height}]}))})()"""
 settingsMetric="""(async()=>{await document.fonts.ready;document.activeElement?.blur();return Object.fromEntries(['.settings-shell','#settingsTitle','#settingsSearch','#closeSettings','#homeCards'].map(s=>{const r=document.querySelector(s).getBoundingClientRect();return [s,{x:r.x,y:r.y,width:r.width,height:r.height}]}))})()"""
