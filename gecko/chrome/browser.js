@@ -117,7 +117,7 @@ function validate(next){
 async function dispatch(action,payload,source){
  switch(action){
  case 'settings.begin':return structuredClone(shared.config);
- case 'settings.capabilities':return {matteAvailable:true,defaultBrowser:false};
+ case 'settings.capabilities':return {matteAvailable:true,defaultBrowser:ChromeUtils.importESModule('chrome://soulu/content/window-controls.sys.mjs').isDefault()};
  case 'settings.ready':return true;
  case 'settings.save':{const next=validate({...payload,bookmarkIds:shared.config.bookmarkIds||{}}),old=shared.config;shared.config=next;try{
  if(next.settings.searchEngine!==old.settings.searchEngine){await Services.search.init();const names={google:'Google',yandex:'Яндекс',bing:'Bing',duckduckgo:'DuckDuckGo'};const engines=await Services.search.getVisibleEngines();const engine=engines.find(e=>e.name.toLowerCase().includes(names[next.settings.searchEngine]?.toLowerCase()));if(!engine)throw Error('Поисковая система недоступна в этой локализации Firefox.');await Services.search.setDefault(engine,Services.search.CHANGE_REASON_USER);}await save();for(const w of windows())w.Soulu?.refresh();if(shared.vpnState.connected)proxy(true);emit('settings',shared.config.settings);return {ok:true,persisted:structuredClone(shared.config)};}catch(error){shared.config=old;return {ok:false,error:error.message,persisted:structuredClone(shared.config)};}}
@@ -130,7 +130,7 @@ async function dispatch(action,payload,source){
  case 'settings.geckoExtensionStore':return open('https://addons.mozilla.org/firefox/');
  case 'settings.geckoReader':document.getElementById('reader-mode-button')?.click();return true;
  case 'settings.openFolder':{const file=Services.dirsvc.get('DfltDwnld',Ci.nsIFile);file.launch();return true;}
- case 'settings.defaultBrowser':open('about:preferences#general');return true;
+ case 'settings.defaultBrowser':{if(Services.appinfo.OS!=='WINNT')throw Error('Требуется Windows.');if(!source?.gesture||Date.now()-source.gesture.at>2000)throw Error('Нажмите кнопку назначения браузера.');const command=PathUtils.join(Services.dirsvc.get('GreD',Ci.nsIFile).parent.path,'Soulu.exe');const task=await Subprocess.call({command,arguments:['--register-default'],stdout:'pipe',stderr:'pipe'});const result=await task.wait();if(result.exitCode)throw Error('Не удалось зарегистрировать Soulu.');return {ok:true};}
  case 'settings.chooseFolder':{const picker=Cc['@mozilla.org/filepicker;1'].createInstance(Ci.nsIFilePicker);picker.init(window.browsingContext,'Загрузки',Ci.nsIFilePicker.modeGetFolder);return new Promise(resolve=>picker.open(result=>resolve(result===Ci.nsIFilePicker.returnOK?picker.file.path:'')));}
  case 'browser.state.get':return state();
  case 'browser.settings.get':return shared.config.settings;
@@ -166,7 +166,7 @@ async function dispatch(action,payload,source){
 window.Soulu={dispatch,settings,refresh:apply,get config(){return shared.config;},get vpnState(){return shared.vpnState;},_emit(name,value){if(shared.settingsWindow&&!shared.settingsWindow.closed)shared.settingsWindow.__souluEmit?.(name,value);},ready:false};
 function button(id,label,command){const b=document.createXULElement('toolbarbutton');b.id=id;b.className='toolbarbutton-1 chromeclass-toolbar-additional';b.setAttribute('label',label);b.setAttribute('tooltiptext',label);b.addEventListener('command',command);return b;}
 async function initialize(){
- if(!shared.initialized){try{const stored=await IOUtils.readJSON(settingsFile);if(stored.vpn?.protected)stored.vpn=JSON.parse(Cc['@mozilla.org/security/sdr;1'].getService(Ci.nsISecretDecoderRing).decryptString(stored.vpn.protected));shared.config={...defaults,...stored,settings:{...defaults.settings,...stored.settings},rules:{...defaults.rules,...stored.rules},vpn:{...defaults.vpn,...stored.vpn}};}catch(error){if(await IOUtils.exists(settingsFile)){shared.storageError=String(error);console.error('Soulu settings preserved:',error);}}try{shared.networkBeforeVPN=await IOUtils.readJSON(PathUtils.join(profile,'soulu-network-before-vpn.json'));}catch{}proxy(false);await IOUtils.remove(PathUtils.join(profile,'soulu-network-before-vpn.json'),{ignoreAbsent:true});shared.initialized=true;}
+ if(!shared.initialized){shared.isNewProfile=!(await IOUtils.exists(settingsFile));try{const stored=await IOUtils.readJSON(settingsFile);if(stored.vpn?.protected)stored.vpn=JSON.parse(Cc['@mozilla.org/security/sdr;1'].getService(Ci.nsISecretDecoderRing).decryptString(stored.vpn.protected));shared.config={...defaults,...stored,settings:{...defaults.settings,...stored.settings},rules:{...defaults.rules,...stored.rules},vpn:{...defaults.vpn,...stored.vpn}};}catch(error){if(await IOUtils.exists(settingsFile)){shared.storageError=String(error);console.error('Soulu settings preserved:',error);}}try{shared.networkBeforeVPN=await IOUtils.readJSON(PathUtils.join(profile,'soulu-network-before-vpn.json'));}catch{}proxy(false);await IOUtils.remove(PathUtils.join(profile,'soulu-network-before-vpn.json'),{ignoreAbsent:true});shared.initialized=true;}
  shared.config.settings.layout='adaptive';
  Soulu.backend={shared,Services,IOUtils,PathUtils,PlacesUtils,profile,isPrivate,save,apply};
  Services.scriptloader.loadSubScript('chrome://soulu/content/storage.js',window);

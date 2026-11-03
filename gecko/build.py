@@ -43,8 +43,11 @@ shutil.copy(ROOT/'gecko/chrome/frontend.css',runtime/'soulu/chrome/ui/gecko-fron
 shutil.copy(ROOT/'gecko/chrome/extensions-ui.js',runtime/'soulu/chrome/ui/extension-toolbar.js')
 shutil.copy(ROOT/'gecko/chrome/integration-ui.js',runtime/'soulu/chrome/ui/integration-ui.js')
 shutil.copy(ROOT/'gecko/chrome/tab-preview-ui.js',runtime/'soulu/chrome/ui/tab-preview-ui.js')
+shutil.copy(ROOT/'gecko/chrome/vot-ui.js',runtime/'soulu/chrome/ui/vot-ui.js')
+shutil.copy(ROOT/'gecko/chrome/updates-ui.js',runtime/'soulu/chrome/ui/updates-ui.js')
+shutil.copy(ROOT/'gecko/chrome/onboarding-ui.js',runtime/'soulu/chrome/ui/onboarding.js')
 # Install the bridge before the unchanged frontend scripts run.
-for page in ['index.html','settings.html','home.html','history.html']:
+for page in ['index.html','settings.html','home.html','history.html','onboarding.html']:
  path=runtime/'soulu/chrome/ui'/page
  content=path.read_text(encoding='utf-8')
  if page=='index.html':
@@ -77,10 +80,10 @@ text=text.replace("n.append(text,actionButton('Открыть'","n.dataset.profi
 text=text.replace('let rows=await api.getPasswords()', 'let editing=null;let rows=await api.getPasswords()').replace('origin.n.value=item.origin;', 'editing=item.id;origin.n.value=item.origin;').replace('api.addPassword({origin:', 'api.addPassword({id:editing,origin:').replace("secret.n.value='';draw();message","editing=null;secret.n.value='';draw();message")
 data.write_text(text,encoding='utf-8')
 navigation=runtime/'soulu/chrome/ui/navigation.js';text=navigation.read_text(encoding='utf-8').replace('renderOverview();search.focus();','renderOverview();search.blur();overview.tabIndex=-1;overview.focus({preventScroll:true});');navigation.write_text(text,encoding='utf-8')
-home=runtime/'soulu/chrome/ui/home.js';text=home.read_text(encoding='utf-8').replace("invoke('home.weather')","invoke('home.weather',{interactive:force})").replace('12000))','25000))').replace("el('p',t('unavailable'),'weather-note')","el('p',weather.error||t('unavailable'),'weather-note')");home.write_text(text,encoding='utf-8')
+home=runtime/'soulu/chrome/ui/home.js';text=home.read_text(encoding='utf-8').replace("invoke('home.weather')","invoke('home.weather',{interactive:force})").replace('12000))','25000))').replace("el('p',t('unavailable'),'weather-note')","el('p',weather.error||t('unavailable'),'weather-note')");text=text.replace('await navigate(result.text);', "$('query').focus();");text+="\nwindow.souluHomeVoicePhase=phase=>{document.getElementById('status').textContent=phase==='processing'?'Распознавание на этом компьютере…':'Говорите… Нажмите микрофон ещё раз для отмены.';};\n";home.write_text(text,encoding='utf-8')
 # Optional engine-specific features keep their sections and report availability explicitly.
 shutil.copy(ROOT/'gecko/chrome/settings-support.js',runtime/'soulu/chrome/ui/settings-support.js')
-path=runtime/'soulu/chrome/ui/settings.html';text=path.read_text(encoding='utf-8').replace('</body>','<script src="settings-support.js"></script><script src="integration-ui.js"></script></body>');path.write_text(text,encoding='utf-8')
+path=runtime/'soulu/chrome/ui/settings.html';text=path.read_text(encoding='utf-8').replace('</body>','<script src="settings-support.js"></script><script src="integration-ui.js"></script><script src="vot-ui.js"></script><script src="updates-ui.js"></script></body>');path.write_text(text,encoding='utf-8')
 (runtime/'distribution').mkdir(exist_ok=True)
 policy={'policies':{'DisableTelemetry':True,'DisableFirefoxStudies':True,'DontCheckDefaultBrowser':True,'NoDefaultBookmarks':True,'OverrideFirstRunPage':'','OverridePostUpdatePage':'','Preferences':{'browser.shell.checkDefaultBrowser':False,'browser.newtabpage.enabled':False,'browser.tabs.warnOnClose':False,'browser.aboutwelcome.enabled':False,'datareporting.policy.dataSubmissionEnabled':False,'privacy.globalprivacycontrol.enabled':True,'network.proxy.failover_direct':False,'fission.autostart':True,'browser.safebrowsing.malware.enabled':True,'browser.safebrowsing.phishing.enabled':True,'browser.startup.preXulSkeletonUI':False,'widget.windows.overlay-scrollbars.enabled':False,'browser.shell.defaultBrowserCheckCount':9999,'browser.newtabpage.activity-stream.asrouter.providers.onboarding':json.dumps({'id':'onboarding','type':'local','localProvider':'OnboardingMessageProvider','enabled':False}),'browser.newtabpage.activity-stream.asrouter.providers.messaging-experiments':json.dumps({'id':'messaging-experiments','type':'remote-experiments','enabled':False})}}}
 # Firefox 159 ServiceRequest assumes active policies are an array, while its
@@ -92,7 +95,7 @@ defaults.update({'termsofuse.bypassNotification':True,'datareporting.policy.data
 with (runtime/'defaults/pref/autoconfig.js').open('a',encoding='utf-8') as f:
  for key,value in defaults.items():f.write('\n'+'pref('+json.dumps(key)+','+json.dumps(value)+');')
 
-provenance={'name':'Soulu Gecko Preview 5','firefox':version,'platform':platform,'mozilla_archive':base+'/'+rel,'mozilla_sha256':digest,'adblock':'Same Rust source and bundled filters as Soulu CEF','soulu_source':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip()}
+provenance={'channel':'gecko-preview','name':'Soulu Gecko Preview 5','firefox':version,'platform':platform,'mozilla_archive':base+'/'+rel,'mozilla_sha256':digest,'adblock':'Same Rust source and bundled filters as Soulu CEF','soulu_source':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip()}
 (out/'BUILD.json').write_text(json.dumps(provenance,indent=2))
 shutil.copy(ROOT/'gecko/README.md',out/'README.md')
 print('Prepared',out,flush=True)

@@ -1,0 +1,16 @@
+/* Profile-scoped, token authenticated loopback remoting. No HTTP or web bridge. */
+(()=>{
+const {shared,IOUtils,PathUtils,profile}=Soulu.backend;
+if(shared.remote)return;
+const socket=Cc['@mozilla.org/network/server-socket;1'].createInstance(Ci.nsIServerSocket);socket.init(-1,true,8);
+const token=Array.from(crypto.getRandomValues(new Uint8Array(32)),n=>n.toString(16).padStart(2,'0')).join(''),file=PathUtils.join(profile,'soulu-remote.json');
+shared.remote={socket,token};const connections=new Set();
+socket.asyncListen({onSocketAccepted(_server,transport){
+ if(connections.size>=8){transport.close(Cr.NS_ERROR_ABORT);return;}connections.add(transport);let data='',finished=false;const timer=setTimeout(()=>finish(false),3000),input=transport.openInputStream(0,0,0),output=transport.openOutputStream(0,0,0);
+ function finish(ok){if(finished)return;finished=true;clearTimeout(timer);try{const text=ok?'ok\n':'denied\n';output.write(text,text.length);output.close();input.close();}catch{}connections.delete(transport);}
+ const pump=Cc['@mozilla.org/network/input-stream-pump;1'].createInstance(Ci.nsIInputStreamPump);pump.init(input,0,0,true);
+ pump.asyncRead({onStartRequest(){},onDataAvailable(_request,stream,_offset,count){if(finished)return;const reader=Cc['@mozilla.org/scriptableinputstream;1'].createInstance(Ci.nsIScriptableInputStream);reader.init(stream);data+=reader.read(count);if(data.length>20000){finish(false);return;}if(!data.includes('\n'))return;try{const request=JSON.parse(new TextDecoder().decode(Uint8Array.from(data.trim(),c=>c.charCodeAt(0))));if(request.token!==token||typeof request.url!=='string'||request.url.length>8192)throw Error('Denied');const win=[...Services.wm.getEnumerator('navigator:browser')].filter(w=>w.Soulu&&!w.Soulu.backend.isPrivate).at(-1);if(!win)throw Error('No normal window');if(request.url){const u=new URL(request.url);if(!['http:','https:'].includes(u.protocol)||u.username||u.password)throw Error('Invalid URL');win.Soulu.native.load(u.href);}if(win.windowState===win.STATE_MINIMIZED)win.restore();win.focus();finish(true);}catch{finish(false);}},onStopRequest(){finish(false);}});
+ },onStopListening(){}});
+IOUtils.writeJSON(file,{port:socket.port,token},{tmpPath:file+'.tmp'}).then(()=>IOUtils.setPermissions(file,0o600)).catch(console.error);
+const observer={observe(){socket.close();for(const t of connections)t.close(Cr.NS_ERROR_ABORT);IOUtils.remove(file,{ignoreAbsent:true}).catch(()=>{});Services.obs.removeObserver(observer,'quit-application-granted');}};Services.obs.addObserver(observer,'quit-application-granted');
+})();

@@ -33,7 +33,7 @@ def capture_popup(name):
  else:(out/name).write_bytes(base64.b64decode(m.screenshot()))
 def popup_state():return chrome('const panel=document.querySelector("panel[data-soulu-extension]");return panel?{id:panel.dataset.souluExtension,state:panel.state,url:panel.querySelector("browser")?.currentURI.spec,remote:panel.querySelector("browser")?.remoteType,rect:(()=>{const r=panel.getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height}})()}:null')
 try:
- start();print('NATIVE_GUARD',chrome('return {guard:typeof ExtensionGuardSet,api:typeof WebExtensionPolicy.getActiveExtensions}'),flush=True);check('native_extension_module_loaded',chrome('return !!Soulu.extensions'))
+ (profile/'soulu-settings.json').write_text(json.dumps({'onboarding':{'done':True}}));start();print('NATIVE_GUARD',chrome('return {guard:typeof ExtensionGuardSet,api:typeof WebExtensionPolicy.getActiveExtensions}'),flush=True);check('native_extension_module_loaded',chrome('return !!Soulu.extensions'))
  check('signature_enforcement_retained',chrome('return Services.prefs.getBoolPref("xpinstall.signatures.required",true)'))
  call('browser.navigate',url);wait(lambda:content('return !!document.getElementById("v")'))
  path=root/'popup.xpi';fixture(path,fixture_id);check('temporary_native_fixture_installed',install(path)==fixture_id)

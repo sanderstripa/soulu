@@ -99,7 +99,7 @@ async function dispatch(action,payload,source){
  case 'settings.close':closeSettings();return true;
  case 'settings.resize':{if(settingsFrame){settingsFrame.style.height=Math.min(Number(payload.height)||720,innerHeight)+'px';}return true;}
  case 'settings.ready':settingsReady=true;if(settingsFrame&&Soulu.settingsRequested)animateSettings(true);if(pendingSection)actorSend(settingsFrame,'openSection',pendingSection);notify();return true;
- case 'settings.capabilities':return {matteAvailable:true,defaultBrowser:false};
+ case 'settings.capabilities':return {matteAvailable:true,defaultBrowser:ChromeUtils.importESModule('chrome://soulu/content/window-controls.sys.mjs').isDefault()};
  case 'window.frontendReady':if(source?.appURI?.endsWith('/index.html')){document.documentElement.setAttribute('soulu-ui-ready','true');notify();}return true;
  case 'browser.bookmarks.get':marks=await Soulu.bookmarks('get');notify();return marks;
  case 'browser.bookmarks.add':marks=await Soulu.bookmarks('add',{url:currentURL(selected()),title:gBrowser.selectedTab.label});notify();return marks;
@@ -130,5 +130,5 @@ gBrowser.addTabsProgressListener({onLocationChange(browser,progress){if(!progres
 window.addEventListener('resize',()=>{geometry();if(settingsFrame&&!settingsFrame.hidden)settingsFrame.style.maxHeight=innerHeight+'px';notify();});window.addEventListener('sizemodechange',notify);window.addEventListener('keydown',key,true);
 gBrowser.addEventListener('mousedown',()=>{suggestions=0;popover=false;send('dismissSuggestions',null);geometry();},true);
 window.addEventListener('blur',()=>{suggestions=0;geometry();send('dismissSuggestions',null);});
-(async()=>{await Soulu.storageReady;marks=await Soulu.bookmarks('get');if(shared.config.settings.startupMode==='continue'){const {SessionStore}=ChromeUtils.importESModule('moz-src:///browser/components/sessionstore/SessionStore.sys.mjs');await SessionStore.promiseAllWindowsRestored;}if(shared.config.settings.startupMode!=='continue'&&validTabs().every(t=>['about:blank','about:newtab','about:home'].includes(t.linkedBrowser.currentURI.spec)))selected().loadURI(Services.io.newURI(internalURL('startup')),{triggeringPrincipal:Services.scriptSecurityManager.getSystemPrincipal()});notify();})().catch(console.error);
+Soulu.startupReady=(async()=>{await Soulu.storageReady;marks=await Soulu.bookmarks('get');if(shared.config.settings.startupMode==='continue'){const {SessionStore}=ChromeUtils.importESModule('moz-src:///browser/components/sessionstore/SessionStore.sys.mjs');await SessionStore.promiseAllWindowsRestored;}if(shared.config.settings.startupMode!=='continue'&&validTabs().every(t=>['about:blank','about:newtab','about:home'].includes(t.linkedBrowser.currentURI.spec)))selected().loadURI(Services.io.newURI(internalURL('startup')),{triggeringPrincipal:Services.scriptSecurityManager.getSystemPrincipal()});notify();})().catch(console.error);
 })();

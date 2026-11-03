@@ -20,5 +20,11 @@ export function material(win,enabled){
  if(Services.appinfo.OS!=='WINNT')return {enabled,native:false};
  const dwm=library('dwmapi.dll'),set=dwm.declare('DwmSetWindowAttribute',(ctypes.winapi_abi||ctypes.default_abi),ctypes.long,ctypes.uintptr_t,ctypes.uint32_t,ctypes.voidptr_t,ctypes.uint32_t),hwnd=handle(win),value=ctypes.int(enabled?2:1),dark=ctypes.int(win.document.documentElement.hasAttribute('soulu-dark')?1:0);
  set(hwnd,20,dark.address(),ctypes.int.size);const result=set(hwnd,38,value.address(),ctypes.int.size);
+ const Margins=ctypes.StructType('SouluMargins',[{left:ctypes.int},{right:ctypes.int},{top:ctypes.int},{bottom:ctypes.int}]),margins=Margins(enabled?-1:0,enabled?-1:0,enabled?-1:0,enabled?-1:0);const extend=dwm.declare('DwmExtendFrameIntoClientArea',(ctypes.winapi_abi||ctypes.default_abi),ctypes.long,ctypes.uintptr_t,Margins.ptr);extend(hwnd,margins.address());
  const code=Number(result.value??result);return {enabled,native:code===0,result:code};
+}
+
+export function isDefault(){
+ if(Services.appinfo.OS!=='WINNT')return false;
+ return ['http','https'].every(scheme=>{let key;try{key=Cc['@mozilla.org/windows-registry-key;1'].createInstance(Ci.nsIWindowsRegKey);key.open(Ci.nsIWindowsRegKey.ROOT_KEY_CURRENT_USER,'Software\\Microsoft\\Windows\\Shell\\Associations\\UrlAssociations\\'+scheme+'\\UserChoice',Ci.nsIWindowsRegKey.ACCESS_READ);return key.readStringValue('ProgId')==='Soulu.Gecko.URL';}catch{return false;}finally{key?.close();}});
 }

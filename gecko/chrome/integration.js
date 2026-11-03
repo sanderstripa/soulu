@@ -58,4 +58,9 @@ let checkingVPN=false;const failedRequest={observe(){if(!shared.vpnState.connect
 Services.scriptloader.loadSubScript('chrome://soulu/content/downloads.js',window);
 Services.scriptloader.loadSubScript('chrome://soulu/content/extensions.js',window);
 Services.scriptloader.loadSubScript('chrome://soulu/content/thumbnails.js',window);
+Services.scriptloader.loadSubScript('chrome://soulu/content/remote.js',window);
+Services.scriptloader.loadSubScript('chrome://soulu/content/speech.js',window);
+Services.scriptloader.loadSubScript('chrome://soulu/content/vot.js',window);
+Services.scriptloader.loadSubScript('chrome://soulu/content/onboarding.js',window);
+Services.scriptloader.loadSubScript('chrome://soulu/content/updates.js',window);
 })();
