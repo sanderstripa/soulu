@@ -1,12 +1,13 @@
 /* Gecko's Places and NSS stores; the frontend receives no privileged objects. */
 (() => {
 const {shared,Services,IOUtils,PathUtils,PlacesUtils,profile,isPrivate,save}=Soulu.backend;
-let cache=null,queue=Promise.resolve();
-const guidToId=guid=>{const map=shared.config.bookmarkIds??={};if(!map[guid])map[guid]=Math.max(0,...Object.values(map))+1;return map[guid];};
+let cache=null,queue=Promise.resolve();shared.bookmarkSerial??=Math.max(0,...Object.values(shared.config.bookmarkIds||{}));
+const guidToId=guid=>{const map=shared.config.bookmarkIds??={};if(!map[guid])map[guid]=++shared.bookmarkSerial;return map[guid];};
 const idToGuid=id=>Object.keys(shared.config.bookmarkIds||{}).find(g=>shared.config.bookmarkIds[g]===Number(id));
 async function read(){const root=await PlacesUtils.promiseBookmarksTree(PlacesUtils.bookmarks.rootGuid);const output=[];function walk(nodes,parentId=0){for(const node of nodes||[]){const id=guidToId(node.guid);output.push({id,guid:node.guid,type:node.type===PlacesUtils.TYPE_X_MOZ_PLACE_CONTAINER?'folder':node.uri?'url':'folder',title:node.title||node.uri||'',url:node.uri||'',parentId,order:node.index||0,favicon:node.iconuri||'',createdAt:node.dateAdded/1000||Date.now()});walk(node.children,id);}}for(const nativeRoot of root.children||[])walk(nativeRoot.children);await save();return output;}
 Soulu.bookmarks=async(operation,payload)=>{
  const task=async()=>{
+  if(operation==='invalidate'){cache=null;return true;}
   if(operation==='get'){if(!cache)cache=await read();return structuredClone(cache);}
   if(operation==='add'){const u=new URL(payload.url);if(!['http:','https:'].includes(u.protocol))throw Error('Закладки доступны для HTTP/HTTPS-страниц.');await PlacesUtils.bookmarks.insert({parentGuid:PlacesUtils.bookmarks.toolbarGuid,url:u.href,title:payload.title||u.hostname});}
   else if(operation==='remove'){const guid=idToGuid(payload);if(guid)await PlacesUtils.bookmarks.remove(guid);}
@@ -49,7 +50,7 @@ Soulu.dispatch=async(action,payload,source)=>{
   if(op==='reveal'){if(!login)throw Error('Запись не найдена.');return login.password;}
   if(op==='copy'){if(!login)throw Error('Запись не найдена.');const value=payload.field==='password'?login.password:login.username;Cc['@mozilla.org/widget/clipboardhelper;1'].getService(Ci.nsIClipboardHelper).copyString(value);return true;}
   if(op==='remove'){if(login)Services.logins.removeLogin(login);return Soulu.dispatch('browser.passwords.get');}
-  if(op==='add'){if(isPrivate)throw Error('Пароли не сохраняются в инкогнито.');const u=new URL(payload.origin);if(!['http:','https:'].includes(u.protocol)||!payload.password)throw Error('Invalid password record');const record=Cc['@mozilla.org/login-manager/loginInfo;1'].createInstance(Ci.nsILoginInfo);record.init(u.origin,u.origin,null,payload.username,payload.password,'','');const prior=all.find(l=>l.hostname===u.origin&&l.username===payload.username);if(prior)Services.logins.modifyLogin(prior,record);else await Services.logins.addLoginAsync(record);return Soulu.dispatch('browser.passwords.get');}
+  if(op==='add'){if(isPrivate)throw Error('Пароли не сохраняются в инкогнито.');const u=new URL(payload.origin);if(!['http:','https:'].includes(u.protocol)||!payload.password)throw Error('Invalid password record');const record=Cc['@mozilla.org/login-manager/loginInfo;1'].createInstance(Ci.nsILoginInfo);record.init(u.origin,u.origin,null,payload.username,payload.password,'','');const prior=payload.id?all.find(l=>l.guid===payload.id):all.find(l=>l.hostname===u.origin&&l.username===payload.username);if(payload.id&&!prior)throw Error('Запись изменилась.');if(prior)await Services.logins.modifyLogin(prior,record);else await Services.logins.addLoginAsync(record);return Soulu.dispatch('browser.passwords.get');}
  }
  return base(action,payload,source);
 };

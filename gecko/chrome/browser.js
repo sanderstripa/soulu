@@ -25,7 +25,7 @@ function apply(){
  const s=shared.config.settings,root=document.documentElement;
  root.toggleAttribute('soulu-dark',s.theme==='dark'||s.theme==='system'&&matchMedia('(prefers-color-scheme:dark)').matches);
  root.toggleAttribute('soulu-single',gBrowser.visibleTabs.filter(t=>!t.closing).length<2);
- root.setAttribute('soulu-version','Soulu Gecko Preview 3');
+ root.setAttribute('soulu-version','Soulu Gecko Preview 4');
  for(const [id,key] of [['soulu-sidebar','showSidebar'],['back-button','showBack'],['home-button','showHome'],['soulu-newtab','showNewTab'],['downloads-button','showDownloads'],['soulu-vpn','vpnToolbarVisible']]){const el=document.getElementById(id);if(el)el.hidden=s[key]===false;}
  const bar=document.getElementById('PersonalToolbar');if(bar)bar.collapsed=s.bookmarksBarMode==='never'||s.bookmarksBarPosition==='hidden';
  pref('browser.startup.page',s.startupMode==='continue'?3:1);
@@ -49,8 +49,8 @@ function apply(){
   for(const [type,key] of Object.entries(builtin)){if(rules[key]===undefined)continue;const v=Number(rules[key]);shared.managedPermissions.push({origin,key,principal,type});Services.perms.addFromPrincipal(principal,type,v===1?Services.perms.PROMPT_ACTION:v===2?Services.perms.DENY_ACTION:Services.perms.ALLOW_ACTION);}
   }
  }
- pref('privacy.trackingprotection.enabled',shared.config.rules.blocking.enabled);
- pref('privacy.trackingprotection.pbmode.enabled',shared.config.rules.blocking.enabled);
+ pref('privacy.trackingprotection.enabled',false);
+ pref('privacy.trackingprotection.pbmode.enabled',false);
  
  pref('layout.css.prefers-color-scheme.content-override',s.theme==='dark'?0:s.theme==='light'?1:2);Soulu.notify?.();
 }
@@ -101,11 +101,11 @@ function open(url){
 function settings(){if(shared.settingsWindow&&!shared.settingsWindow.closed){shared.settingsWindow.focus();return;}shared.settingsWindow=window.openDialog('chrome://soulu/content/ui/settings.html','soulu-settings','chrome,dialog=no,resizable,centerscreen,width=1060,height=760');}
 function tabRows(){return gBrowser.tabs.map((t,id)=>({id,title:t.label,url:t.linkedBrowser.currentURI.spec,incognito:isPrivate}));}
 async function bookmarks(){const rows=[];const tree=await PlacesUtils.promiseBookmarksTree(PlacesUtils.bookmarks.rootGuid);function walk(node){for(const n of node.children||[]){if(n.uri)rows.push({id:n.guid,title:n.title||n.uri,url:n.uri});walk(n);}}walk(tree);return rows;}
-async function state(){const dirs=await IOUtils.getChildren(PathUtils.parent(profile));const profiles=[];for(const path of dirs){if((await IOUtils.stat(path)).type!=='directory')continue;let name=PathUtils.filename(path);try{name=(await IOUtils.readJSON(PathUtils.join(path,'soulu-profile.json'))).name;}catch{}profiles.push({id:PathUtils.filename(path),name,active:path===profile});}return {settings:shared.config.settings,profiles,activeProfileId:shared.config.profile,tabs:tabRows(),capabilities:{matteAvailable:true},update:{soulu:'Gecko Preview 3',gecko:Services.appinfo.platformVersion,firefox:Services.appinfo.version,xray:Soulu.components?.xray?.version||'—',sudoku:Soulu.components?.sudoku?.version||'—',adblock:'adblock-rust 0.13.3'}};}
+async function state(){const dirs=await IOUtils.getChildren(PathUtils.parent(profile));const profiles=[];for(const path of dirs){if((await IOUtils.stat(path)).type!=='directory')continue;let name=PathUtils.filename(path);try{name=(await IOUtils.readJSON(PathUtils.join(path,'soulu-profile.json'))).name;}catch{}profiles.push({id:PathUtils.filename(path),name,active:path===profile});}return {settings:shared.config.settings,profiles,activeProfileId:shared.config.profile,tabs:tabRows(),capabilities:{matteAvailable:true},update:{soulu:'Gecko Preview 4',gecko:Services.appinfo.platformVersion,firefox:Services.appinfo.version,xray:Soulu.components?.xray?.version||'—',sudoku:Soulu.components?.sudoku?.version||'—',adblock:'adblock-rust 0.13.3'}};}
 function validate(next){
  if(next.profile!==shared.config.profile)throw Error('Profile changed');
  if(!['system','light','dark'].includes(next.settings.theme))throw Error('Invalid theme');
- if(!['adaptive','compact'].includes(next.settings.layout))throw Error('Invalid toolbar layout');
+ next.settings.layout='adaptive';
  for(const key of ['startupUrl','newTabUrl','homeUrl'])if(next.settings[key]){const u=new URL(next.settings[key]);if(!['http:','https:'].includes(u.protocol))throw Error('Only HTTP/HTTPS page addresses are supported');}
  for(const row of next.vpn.profiles||[])if(typeof row.link!=='string'||row.link.length>16384||!/^vless:\/\/|^sudoku:\/\//.test(row.link))throw Error('Invalid VPN key');
  if(JSON.stringify(next).length>1048576)throw Error('Settings too large');return structuredClone(next);
@@ -143,7 +143,7 @@ async function dispatch(action,payload,source){
  case 'browser.profile.create':{const id=Services.uuid.generateUUID().toString().replace(/[{}]/g,'');const path=PathUtils.join(PathUtils.parent(profile),id);await IOUtils.makeDirectory(path,{permissions:0o700});await IOUtils.writeJSON(PathUtils.join(path,'soulu-profile.json'),{name:String(payload).slice(0,160)});return {id};}
  case 'browser.profile.switch':{
   if(!/^[\w-]{1,64}$/.test(payload))throw Error('Invalid profile');
-  const base=Services.dirsvc.get('GreD',Ci.nsIFile).parent;base.append('Soulu Gecko Preview 3.exe');
+  const base=Services.dirsvc.get('GreD',Ci.nsIFile).parent;base.append('Soulu Gecko Preview 4.exe');
   const proc=Cc['@mozilla.org/process/util;1'].createInstance(Ci.nsIProcess);proc.init(base);proc.runw(false,['--profile',payload],2);return true;}
  case 'browser.profile.delete':if(payload===shared.config.profile||!/^[\w-]{1,64}$/.test(payload))throw Error('Cannot delete active profile');await IOUtils.remove(PathUtils.join(PathUtils.parent(profile),payload),{recursive:true});return true;
  case 'vpn.send':return vpn(payload.action);
@@ -156,7 +156,7 @@ async function dispatch(action,payload,source){
  case 'browser.passwords.get':open('about:logins');throw Error('Пароли открыты в защищённом менеджере Firefox.');
  case 'browser.import.native':{const {MigrationUtils}=ChromeUtils.importESModule('resource:///modules/MigrationUtils.sys.mjs');MigrationUtils.showMigrationWizard(window);return true;}
  case 'browser.import.sources':case 'browser.import.browsers':open('about:preferences#general');throw Error('Импорт доступен в разделе Firefox «Импорт данных».');
- default:throw Error('Эта функция ещё не перенесена в Gecko Preview 3: '+action);
+ default:throw Error('Эта функция ещё не перенесена в Gecko Preview 4: '+action);
  }
 }
 window.Soulu={dispatch,settings,refresh:apply,get config(){return shared.config;},get vpnState(){return shared.vpnState;},_emit(name,value){if(shared.settingsWindow&&!shared.settingsWindow.closed)shared.settingsWindow.__souluEmit?.(name,value);},ready:false};
@@ -173,6 +173,7 @@ async function initialize(){
  Services.scriptloader.loadSubScript('chrome://soulu/content/translations.js',window);
  const nativeWindow=ChromeUtils.importESModule('chrome://soulu/content/window-controls.sys.mjs');try{nativeWindow.brand(window);}catch(error){console.error(error);}
  await save();apply();
+ Services.scriptloader.loadSubScript('chrome://soulu/content/integration.js',window);
  window.Soulu.ready=true;
 }
 if(gBrowserInit.delayedStartupFinished)initialize().catch(console.error);else{const observer=(subject)=>{if(subject!==window)return;Services.obs.removeObserver(observer,'browser-delayed-startup-finished');initialize().catch(console.error);};Services.obs.addObserver(observer,'browser-delayed-startup-finished');}

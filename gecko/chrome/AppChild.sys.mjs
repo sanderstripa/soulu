@@ -1,7 +1,7 @@
 export class SouluAppChild extends JSWindowActorChild{
  handleEvent(event){
   if(event.type==='mousedown'){if(event.isTrusted)this.pointer={screenX:event.screenX,screenY:event.screenY,clientX:event.clientX,clientY:event.clientY};return;}
-  if(event.type==='keydown'){if(event.isTrusted&&event.ctrlKey&&['l','t','w','h'].includes(event.key.toLowerCase())){event.preventDefault();this.sendAsyncMessage('accelerator',{key:event.key,ctrlKey:true,shiftKey:event.shiftKey});}return;}
+  if(event.type==='keydown'){if(event.isTrusted&&!event.defaultPrevented&&(event.ctrlKey&&(['l','t','w','h','f','r','+','=','-','0'].includes(event.key.toLowerCase())||event.shiftKey&&event.key==='Delete')||['F5','F9'].includes(event.key)||event.altKey&&['ArrowLeft','ArrowRight'].includes(event.key))){event.preventDefault();this.sendAsyncMessage('accelerator',{key:event.key,ctrlKey:event.ctrlKey,shiftKey:event.shiftKey,altKey:event.altKey,metaKey:event.metaKey});}return;}
   if(event.type!=='SouluRequest'||typeof event.detail!=='string')return;let input;try{input=JSON.parse(event.detail);}catch{return;}if(!Number.isSafeInteger(input.id)||typeof input.request!=='string')return;
   this.sendQuery('dispatch',{...input,pointer:this.pointer}).then(value=>this.respond({id:input.id,value}),error=>this.respond({id:input.id,error:String(error.message||error)}));
  }

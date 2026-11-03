@@ -11,3 +11,7 @@ body[data-layout=adaptive][data-adaptive-expanded=false] .tabs-zone{visibility:h
 .overview-close svg{width:18px;height:18px;display:block;fill:none;stroke:currentColor;stroke-width:1.6}
 
 .tab-overview:focus{outline:none}
+.gecko-tab-dragging{opacity:.6!important;cursor:grabbing!important}
+.gecko-download-actions{display:flex;gap:4px;flex-wrap:wrap;margin:5px 0}
+.gecko-download-actions button{font:inherit;font-size:11px;padding:3px 7px;border-radius:7px;color:inherit;background:var(--surface);border:1px solid var(--border);cursor:pointer}
+.download-row:has(.gecko-download-actions){flex-wrap:wrap}

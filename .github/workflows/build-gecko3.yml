@@ -1,8 +1,5 @@
 name: Soulu Gecko Preview 3
 on:
-  push:
-    branches: [gecko-preview]
-    paths: ['gecko/**', '.github/workflows/build-gecko3.yml']
   workflow_dispatch:
 permissions:
   contents: write

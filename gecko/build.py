@@ -40,6 +40,7 @@ shutil.copy(ROOT/'gecko/defaults/pref/autoconfig.js',runtime/'defaults/pref/auto
 shutil.copy(ROOT/'gecko/chrome/bridge.js',runtime/'soulu/chrome/ui/gecko-bridge.js')
 shutil.copy(ROOT/'gecko/chrome/translation-gecko-ui.js',runtime/'soulu/chrome/ui/translation-gecko-ui.js')
 shutil.copy(ROOT/'gecko/chrome/frontend.css',runtime/'soulu/chrome/ui/gecko-frontend.css')
+shutil.copy(ROOT/'gecko/chrome/integration-ui.js',runtime/'soulu/chrome/ui/integration-ui.js')
 # Install the bridge before the unchanged frontend scripts run.
 for page in ['index.html','settings.html','home.html','history.html']:
  path=runtime/'soulu/chrome/ui'/page
@@ -47,12 +48,13 @@ for page in ['index.html','settings.html','home.html','history.html']:
  if page=='index.html':
   import re
   content=re.sub(r'<script src="(?:third_party/bergamot-runtime.js|third_party/tinyld.js|translation-models.js|translation-service.js|translation-ui.js)"></script>','',content)
- if page=='index.html':content=content.replace('</body>','<script src="translation-gecko-ui.js"></script></body>')
+ if page=='index.html':content=content.replace('</body>','<script src="translation-gecko-ui.js"></script><script src="integration-ui.js"></script></body>')
  content=content.replace('<head>','<head><link rel="stylesheet" href="gecko-frontend.css"><script src="gecko-bridge.js"></script>',1)
  path.write_text(content,encoding='utf-8')
 js=runtime/'soulu/chrome/ui/settings.js';text=js.read_text(encoding='utf-8')
 text=text.replace('Автоматическое определение использует разрешённую геолокацию Windows.','Автоматическое определение использует разрешённую геолокацию браузера.')
-# Both original Soulu toolbar layouts are supported.
+# Only the adaptive Soulu toolbar is exposed.
+text=text.replace(",opt('compact','Компактная','Compact')",'')
 text=text.replace("['CEF',state.update?.cef],['Chromium',state.update?.chromium]","['Gecko',state.update?.gecko],['Firefox',state.update?.firefox]")
 text=text.replace("['Firefox',state.update?.firefox]","['Firefox',state.update?.firefox],['Xray',state.update?.xray],['Sudoku',state.update?.sudoku],['Adblock',state.update?.adblock]")
 # Avoid rebuilding an embedded Chrome page; use Firefox's actual manager/store.
@@ -68,12 +70,14 @@ renderer=runtime/'soulu/chrome/ui/renderer.js';text=renderer.read_text(encoding=
 data=runtime/'soulu/chrome/ui/settings-data.js';text=data.read_text(encoding='utf-8')
 text=text.replace('Пароли активного профиля защищены учётной записью Windows.','Пароли активного профиля защищены хранилищем NSS Firefox.').replace('Passwords for the active profile are protected by your Windows account.','Passwords for the active profile are protected by the Firefox NSS store.')
 text=text.replace('Пароль скопирован. Пока Soulu запущен, буфер очистится через 30 секунд, если его содержимое не изменится.','Пароль скопирован.').replace('Password copied. While Soulu runs, the clipboard clears after 30 seconds if its content stays unchanged.','Password copied.')
+text=text.replace("n.append(text,actionButton('Открыть'","n.dataset.profileId=p.id;n.append(text,actionButton('Открыть'")
+text=text.replace('let rows=await api.getPasswords()', 'let editing=null;let rows=await api.getPasswords()').replace('origin.n.value=item.origin;', 'editing=item.id;origin.n.value=item.origin;').replace('api.addPassword({origin:', 'api.addPassword({id:editing,origin:').replace("secret.n.value='';draw();message","editing=null;secret.n.value='';draw();message")
 data.write_text(text,encoding='utf-8')
 navigation=runtime/'soulu/chrome/ui/navigation.js';text=navigation.read_text(encoding='utf-8').replace('renderOverview();search.focus();','renderOverview();search.blur();overview.tabIndex=-1;overview.focus({preventScroll:true});');navigation.write_text(text,encoding='utf-8')
 home=runtime/'soulu/chrome/ui/home.js';text=home.read_text(encoding='utf-8').replace("invoke('home.weather')","invoke('home.weather',{interactive:force})").replace('12000))','25000))').replace("el('p',t('unavailable'),'weather-note')","el('p',weather.error||t('unavailable'),'weather-note')");home.write_text(text,encoding='utf-8')
 # Optional engine-specific features keep their sections and report availability explicitly.
 shutil.copy(ROOT/'gecko/chrome/settings-support.js',runtime/'soulu/chrome/ui/settings-support.js')
-path=runtime/'soulu/chrome/ui/settings.html';text=path.read_text(encoding='utf-8').replace('</body>','<script src="settings-support.js"></script></body>');path.write_text(text,encoding='utf-8')
+path=runtime/'soulu/chrome/ui/settings.html';text=path.read_text(encoding='utf-8').replace('</body>','<script src="settings-support.js"></script><script src="integration-ui.js"></script></body>');path.write_text(text,encoding='utf-8')
 (runtime/'distribution').mkdir(exist_ok=True)
 policy={'policies':{'DisableTelemetry':True,'DisableFirefoxStudies':True,'DontCheckDefaultBrowser':True,'NoDefaultBookmarks':True,'OverrideFirstRunPage':'','OverridePostUpdatePage':'','Preferences':{'browser.shell.checkDefaultBrowser':False,'browser.newtabpage.enabled':False,'browser.tabs.warnOnClose':False,'browser.aboutwelcome.enabled':False,'datareporting.policy.dataSubmissionEnabled':False,'privacy.globalprivacycontrol.enabled':True,'network.proxy.failover_direct':False,'fission.autostart':True,'browser.safebrowsing.malware.enabled':True,'browser.safebrowsing.phishing.enabled':True,'browser.startup.preXulSkeletonUI':False,'widget.windows.overlay-scrollbars.enabled':False,'browser.shell.defaultBrowserCheckCount':9999,'browser.newtabpage.activity-stream.asrouter.providers.onboarding':json.dumps({'id':'onboarding','type':'local','localProvider':'OnboardingMessageProvider','enabled':False}),'browser.newtabpage.activity-stream.asrouter.providers.messaging-experiments':json.dumps({'id':'messaging-experiments','type':'remote-experiments','enabled':False})}}}
 # Firefox 159 ServiceRequest assumes active policies are an array, while its
@@ -85,7 +89,7 @@ defaults.update({'toolkit.telemetry.enabled':False,'app.shield.optoutstudies.ena
 with (runtime/'defaults/pref/autoconfig.js').open('a',encoding='utf-8') as f:
  for key,value in defaults.items():f.write('\n'+'pref('+json.dumps(key)+','+json.dumps(value)+');')
 
-provenance={'name':'Soulu Gecko Preview 3','firefox':version,'platform':platform,'mozilla_archive':base+'/'+rel,'mozilla_sha256':digest,'adblock':'Same Rust source and bundled filters as Soulu CEF','soulu_source':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip()}
+provenance={'name':'Soulu Gecko Preview 4','firefox':version,'platform':platform,'mozilla_archive':base+'/'+rel,'mozilla_sha256':digest,'adblock':'Same Rust source and bundled filters as Soulu CEF','soulu_source':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip()}
 (out/'BUILD.json').write_text(json.dumps(provenance,indent=2))
 shutil.copy(ROOT/'gecko/README.md',out/'README.md')
 print('Prepared',out,flush=True)
