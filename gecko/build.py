@@ -30,6 +30,9 @@ else:
  (out/'firefox').rename(runtime)
 shutil.copytree(ROOT/'gecko/chrome',runtime/'soulu/chrome')
 shutil.copytree(ROOT/'ui',runtime/'soulu/chrome/ui')
+if platform=='win64':
+ for icons in [runtime/'chrome/icons/default',runtime/'browser/chrome/icons/default']:
+  icons.mkdir(parents=True,exist_ok=True);shutil.copy(ROOT/'ui/soulu-app-icon.ico',icons/'main-window.ico')
 shutil.copy(ROOT/'gecko/chrome.manifest',runtime/'soulu/chrome.manifest')
 shutil.copy(ROOT/'gecko/soulu.cfg',runtime/'soulu.cfg')
 (runtime/'defaults/pref').mkdir(parents=True,exist_ok=True)
@@ -49,6 +52,10 @@ text=text.replace("opt('adaptive','Основная','Main'),opt('compact','Ко
 text=text.replace("['CEF',state.update?.cef],['Chromium',state.update?.chromium]","['Gecko',state.update?.gecko],['Firefox',state.update?.firefox]")
 js.write_text(text,encoding='utf-8')
 renderer=runtime/'soulu/chrome/ui/renderer.js';text=renderer.read_text(encoding='utf-8').replace('function renderTabs(){renderClassicTabs();renderCompactTabs();}','function renderTabs(){renderClassicTabs();}');renderer.write_text(text,encoding='utf-8')
+data=runtime/'soulu/chrome/ui/settings-data.js';text=data.read_text(encoding='utf-8')
+text=text.replace('Пароли активного профиля защищены учётной записью Windows.','Пароли активного профиля защищены хранилищем NSS Firefox.').replace('Passwords for the active profile are protected by your Windows account.','Passwords for the active profile are protected by the Firefox NSS store.')
+text=text.replace('Пароль скопирован. Пока Soulu запущен, буфер очистится через 30 секунд, если его содержимое не изменится.','Пароль скопирован.').replace('Password copied. While Soulu runs, the clipboard clears after 30 seconds if its content stays unchanged.','Password copied.')
+data.write_text(text,encoding='utf-8')
 # Optional engine-specific features keep their sections and report availability explicitly.
 shutil.copy(ROOT/'gecko/chrome/settings-support.js',runtime/'soulu/chrome/ui/settings-support.js')
 path=runtime/'soulu/chrome/ui/settings.html';text=path.read_text(encoding='utf-8').replace('</body>','<script src="settings-support.js"></script></body>');path.write_text(text,encoding='utf-8')

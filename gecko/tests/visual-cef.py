@@ -44,7 +44,8 @@ digest=hashlib.sha256(archive.read_bytes()).hexdigest();assert asset.get('digest
 with zipfile.ZipFile(archive) as z:
  assert all('..' not in pathlib.PurePosixPath(n).parts for n in z.namelist());z.extractall(refroot/'expanded')
 cef=next(p for p in (refroot/'expanded').rglob('*.exe') if p.name.lower() in ['soulu.exe','soulucef.exe']);report['referenceBinary']=cef.name
-spec=importlib.util.spec_from_file_location('cefui',root/'scripts/test-cef-ui.py');cefui=importlib.util.module_from_spec(spec);spec.loader.exec_module(cefui)
+import types
+cefui=types.ModuleType('cefui');helper=(root/'scripts/test-cef-ui.py').read_text(encoding='utf-8');exec(compile(helper.split('\nshell = find_target(',1)[0],str(root/'scripts/test-cef-ui.py'),'exec'),cefui.__dict__)
 with socket.socket() as sock:sock.bind(('127.0.0.1',0));port=sock.getsockname()[1]
 cefui.PORT=port;cefui.BASE=f'http://127.0.0.1:{port}'
 env=dict(os.environ,LOCALAPPDATA=str(temp/'cef-data'),SOULU_UI_TEST_PORT=str(port),SOULU_REGRESSION_SKIP_FIRST_RUN='1',NO_PROXY='localhost,127.0.0.1,::1');proc=subprocess.Popen([str(cef),'--no-proxy-server'],env=env)
