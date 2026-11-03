@@ -71,9 +71,14 @@ jobs:
           Copy-Item gecko-acceptance/visual-comparison.json gecko-out/visual-comparison.json
           New-Item -ItemType Directory -Force gecko-out/visual-evidence | Out-Null
           Copy-Item gecko-acceptance/*comparison.png gecko-out/visual-evidence/
-      - name: Package Preview 2
+      - name: Package Preview 2 with explicit verification status
+        if: ${{ !cancelled() }}
         shell: pwsh
         run: |
+          python -c "import json,pathlib; p=pathlib.Path('gecko-acceptance'); a=json.loads((p/'acceptance.json').read_text()); v=json.loads((p/'visual-comparison.json').read_text()); failures=[k for k,r in a['checks'].items() if not r['passed']]; assert v['passed'], 'Visual comparison must pass'; assert failures in [[],['youtube_public_video_playback']], failures; assert len(a['checks'])>=28, 'Acceptance incomplete'; d=json.loads((p/'youtube-diagnostic.json').read_text()) if failures else {}; assert not failures or ('бот' in d.get('document',{}).get('text','') or 'bot' in d.get('document',{}).get('text','').lower()), 'Unclassified playback failure'; pathlib.Path('gecko-out/VERIFICATION-STATUS.txt').write_text('NOT FULLY VERIFIED: YouTube requires sign-in to confirm not a bot on the Windows CI IP. Actual YouTube playback is unverified. Task remains incomplete. See acceptance.json and youtube-diagnostic.json.' if failures else 'Windows acceptance and visual checks passed.',encoding='utf-8')"
+          if ($LASTEXITCODE -ne 0) { throw 'Packaging verification gate failed' }
+          Copy-Item gecko-acceptance/acceptance.json gecko-out/acceptance.json
+          if (Test-Path gecko-acceptance/youtube-diagnostic.json) { Copy-Item gecko-acceptance/youtube-diagnostic.json gecko-out/ }
           $meta = Get-Content gecko-out/BUILD.json -Raw | ConvertFrom-Json
           $meta | Add-Member -NotePropertyName source_commit -NotePropertyValue $env:GITHUB_SHA -Force
           $meta | ConvertTo-Json -Depth 10 | Set-Content gecko-out/BUILD.json -Encoding utf8NoBOM
@@ -85,6 +90,7 @@ jobs:
           name: gecko-acceptance
           path: gecko-acceptance/
       - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && hashFiles('Soulu-Gecko-Preview-2-win64.zip') != '' }}
         with:
           name: Soulu-Gecko-Preview-2-win64
           path: |
