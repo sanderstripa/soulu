@@ -1,0 +1,70 @@
+name: Publish verified Soulu Gecko Preview 4 Update 1
+on:
+  push:
+    branches: [gecko-preview]
+    paths: ['.github/workflows/publish-gecko4-update1.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: soulu-gecko-update1-publish
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: sanderstripa/soulu
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify final Windows run and download exact tested archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(gh api repos/sanderstripa/soulu/actions/runs/41665431997 --jq .conclusion)" = success
+          test "$(gh api repos/sanderstripa/soulu/actions/runs/41665431997 --jq .head_sha)" = 1359f0ca2599e9572ccde0af4fd457bae9780c7b
+          gh run download 41665431997 -n Soulu-Gecko-Preview-4-Update-1-final -D package
+          gh run download 41665431997 -n gecko4-update1-final-evidence -D evidence
+          python - <<'PY'
+          import hashlib,json,pathlib,subprocess,zipfile
+          root=pathlib.Path('package');archive=root/'Soulu-Gecko-Preview-4-Update-1-win64.zip'
+          expected=(root/'SHA256SUMS.txt').read_text(encoding='utf-8-sig').split()[0]
+          assert hashlib.sha256(archive.read_bytes()).hexdigest()==expected
+          source='1359f0ca2599e9572ccde0af4fd457bae9780c7b'
+          changed=subprocess.check_output(['git','diff','--name-only',source,'HEAD'],text=True).splitlines()
+          assert changed==['.github/workflows/publish-gecko4-update1.yml'],changed
+          with zipfile.ZipFile(archive) as z:
+              build=json.loads(z.read('BUILD.json'));assert build['soulu_source']==source
+              assert build['base_source']=='23a4542a84f2c53772c7a3400e89a354c4138da3'
+              for name,count in [('preview4.json',68),('final4.json',14),('extensions.json',36)]:
+                  data=z.read(name);report=json.loads(data)
+                  assert report['passed'] and len(report['checks'])>=count and all(c['passed'] for c in report['checks'].values()),name
+                  (root/name).write_bytes(data)
+              for name in ['BUILD.json','adblock-update.json']:(root/name).write_bytes(z.read(name))
+          for name in ['extensions.json','visual-comparison.json','zip-smoke.json']:
+              data=(pathlib.Path('evidence')/name).read_bytes();assert json.loads(data)['passed'],name
+              if name=='extensions.json':assert data==(root/name).read_bytes()
+              (root/name).write_bytes(data)
+          with zipfile.ZipFile(root/'gecko4-update1-evidence.zip','w',zipfile.ZIP_DEFLATED) as z:
+              for p in pathlib.Path('evidence').rglob('*'):
+                  if p.is_file():z.write(p,p.relative_to('evidence'))
+          PY
+      - name: Publish new immutable preview release
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view gecko-preview-4-update-1 >/dev/null 2>&1; then
+            echo 'Release exists; refusing overwrite'; exit 1
+          fi
+          cp gecko/docs/UPDATE1-RESULTS.md package/release-notes.md
+          cat >> package/release-notes.md <<'EOF'
+
+          Итоговая целевая проверка Windows: 36/36 проверок расширений, визуальное сравнение и запуск из распакованного ZIP прошли. Прогон: https://github.com/sanderstripa/soulu/actions/runs/41665431997
+
+          Исходники проверенного архива: 1359f0ca2599e9572ccde0af4fd457bae9780c7b. Коммит тега дополнительно содержит только сценарий публикации; содержимое проверенного ZIP не пересобиралось и не изменялось.
+          EOF
+          gh release create gecko-preview-4-update-1 package/Soulu-Gecko-Preview-4-Update-1-win64.zip package/SHA256SUMS.txt package/BUILD.json package/preview4.json package/final4.json package/adblock-update.json package/extensions.json package/visual-comparison.json package/zip-smoke.json package/gecko4-update1-evidence.zip --target "$GITHUB_SHA" --title 'Soulu Gecko Preview 4 Update 1' --prerelease --notes-file package/release-notes.md
