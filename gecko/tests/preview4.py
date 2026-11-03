@@ -1,6 +1,7 @@
 """Real actions against the assembled Firefox runtime and production Soulu dispatch."""
 from pathlib import Path
 source=Path(__file__).with_name('preview2.py').read_text(encoding='utf-8').split('\ntry:\n start()',1)[0].replace('Soulu Gecko Preview 2.exe','Soulu Gecko Preview 4.exe').replace('soulu-gecko2-','soulu-gecko4-').replace('.length===1','.length>=1')
+source=source.replace("profile=root/'Profiles/default'","profile=root/'environment/SouluGecko/Profiles/default'").replace(' headless=[]', ' env["LOCALAPPDATA"]=str(root/"environment");env["MOZ_MARIONETTE"]="1"'+chr(10)+' headless=[]')
 source=source.replace('user_pref("marionette.port",','user_pref("remote.prefs.recommended",false);'+chr(92)+'nuser_pref("marionette.port",')
 exec(compile(source,str(Path(__file__).with_name('preview2.py')),'exec'),globals())
 original_get=Site.do_GET
@@ -44,6 +45,11 @@ try:
  pid=call('browser.profile.create','Fixture profile')['id'];call('browser.profile.rename',{'id':pid,'name':'Renamed fixture'})
  check('profile_rename',any(r['id']==pid and r['name']=='Renamed fixture' for r in call('browser.state.get')['profiles']))
  call('browser.profile.delete',pid);check('profile_delete',not any(r['id']==pid for r in call('browser.state.get')['profiles']))
+ # The transparent area outside an open menu must not intercept webpage input.
+ ui('await browserShell.pageMenu();return true;');wait(lambda:ui('return !document.querySelector(".site-popover").hidden&&innerHeight>200'))
+ wait(lambda:chrome('return getComputedStyle(document.getElementById("soulu-shell-frame")).clipPath!=="none"'))
+ check('menu_does_not_cover_webpage_input',chrome('return document.elementFromPoint(innerWidth-10,innerHeight-10)!==document.getElementById("soulu-shell-frame")'))
+ ui('document.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true}));return true;');wait(lambda:ui('return document.querySelector(".site-popover").hidden'))
  # Real native download with actual network IO and permission preflight.
  call('browser.site.permission',{'permission':'downloads','value':0})
  destination=str(root/'downloads/fixture.bin')
@@ -93,6 +99,7 @@ try:
  check('hidden_native_firefox_chrome',chrome('return ["navigator-toolbox","titlebar","sidebar-main"].every(id=>!document.getElementById(id)||getComputedStyle(document.getElementById(id)).display==="none")'))
  security=chrome('return {fission:Services.prefs.getBoolPref("fission.autostart"),sandbox:Services.prefs.getIntPref("security.sandbox.content.level"),safe:Services.prefs.getBoolPref("browser.safebrowsing.malware.enabled"),accelerationDisabled:Services.prefs.getBoolPref("layers.acceleration.disabled",false)}')
  check('security_defaults',security['fission'] and security['sandbox']>0 and security['safe'] and not security['accelerationDisabled'],security)
+ if os.name=='nt':exec(compile(Path(__file__).with_name('profile-browser.py').read_text(encoding='utf-8'),str(Path(__file__).with_name('profile-browser.py')),'exec'),globals())
  if os.name=='nt':exec(compile(Path(__file__).with_name('vpn-browser.py').read_text(encoding='utf-8'),str(Path(__file__).with_name('vpn-browser.py')),'exec'),globals())
  if not args.ui_only:
   check('rust_ready',chrome('return Soulu.adblock.status().ready'))
@@ -113,8 +120,29 @@ try:
    (out/'youtube-diagnostic.json').write_text(json.dumps(diagnostic,ensure_ascii=False,indent=2),encoding='utf-8')
    report['limitations'].append('Public YouTube playback was not confirmed on CI; see youtube-diagnostic.json. Requires manual playback verification, not counted as a pass.')
   call('browser.navigate',url);wait(lambda:content('return !!document.getElementById("v")&&location.href==='+json.dumps(url)))
+ # Page geometry and playback must survive actual toolbar interactions.
+ before=content('return {h:innerHeight,w:innerWidth,y:scrollY,time:document.getElementById("v").currentTime,identity:document.documentElement.dataset.identity}')
+ samples=[]
+ import psutil
+ tree=[psutil.Process(proc.pid),*psutil.Process(proc.pid).children(recursive=True)]
+ cpu_before=sum(p.cpu_times().user+p.cpu_times().system for p in tree if p.is_running());sample_start=time.monotonic()
+ for x in [60,140,260,410,600,800,1040,250]:
+  if os.name=='nt':
+   import ctypes
+   left,top=chrome('return [window.mozInnerScreenX,window.mozInnerScreenY]');ctypes.windll.user32.SetCursorPos(round(left+x),round(top+24))
+  time.sleep(.08);samples.append(content('return {h:innerHeight,w:innerWidth,y:scrollY,time:document.getElementById("v").currentTime,identity:document.documentElement.dataset.identity}'))
+ check('video_geometry_stable_during_toolbar_interaction',all(all(abs(v[k]-before[k])<1 for k in ['h','w','y']) and v['identity']==before['identity'] for v in samples))
+ check('video_advances_during_toolbar_interaction',samples[-1]['time']>before['time'])
+ tree=[psutil.Process(proc.pid),*psutil.Process(proc.pid).children(recursive=True)]
+ report['resourceSample']={'processes':len(tree),'rssBytes':sum(p.memory_info().rss for p in tree if p.is_running()),'cpuSecondsDuringSample':sum(p.cpu_times().user+p.cpu_times().system for p in tree if p.is_running())-cpu_before,'sampleSeconds':time.monotonic()-sample_start,'note':'CI resource sample, not a physical GPU benchmark.'}
+ for width,height in [(780,600),(1000,740),(1120,780)]:
+  chrome(f'window.resizeTo({width},{height})');time.sleep(.15)
+  check('firefox_chrome_hidden_resize_'+str(width),chrome('return ["navigator-toolbox","titlebar","sidebar-main"].every(id=>!document.getElementById(id)||getComputedStyle(document.getElementById(id)).display==="none")'))
  (out/'preview4.png').write_bytes(base64.b64decode(m.screenshot()))
+ call('browser.openTab',{'url':url+'session-active'});select_latest();wait(lambda:content('return location.pathname==="/session-active"&&!!document.getElementById("v")'))
  stop();start()
+ check('native_session_active_tab_restored',wait(lambda:call('browser.state.get')['page']['url']==url+'session-active'))
+ check('native_session_multiple_tabs_restored',len(call('browser.state.get')['tabs'])==2)
  check('persisted_settings_after_restart',call('browser.settings.get')['theme']=='dark')
  check('persisted_places_after_restart',any(r['url']==url for r in call('browser.bookmarks.get')))
  check('persisted_nss_after_restart',any(r['username']=='renamed' for r in call('browser.passwords.get')))

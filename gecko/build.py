@@ -66,7 +66,7 @@ text=text.replace("[{opacity:0,transform:reduced?'none':'translateY(5px)'},{opac
 text=text.replace("...(id?[document.querySelector('aside')]:[])","...[]")
 text=text.replace("$('settingsSearch').focus();","$('settingsSearch').blur();")
 js.write_text(text,encoding='utf-8')
-renderer=runtime/'soulu/chrome/ui/renderer.js';text=renderer.read_text(encoding='utf-8').replace('function renderTabs(){renderClassicTabs();renderCompactTabs();}', 'function renderTabs(){if(state.settings.layout==="compact")renderCompactTabs();else renderClassicTabs();}');renderer.write_text(text,encoding='utf-8')
+renderer=runtime/'soulu/chrome/ui/renderer.js';text=renderer.read_text(encoding='utf-8').replace('const disconnect=vpnState==="connected"','const disconnect=vpnState==="connected"||vpnState==="error"').replace('function renderTabs(){renderClassicTabs();renderCompactTabs();}', 'function renderTabs(){if(state.settings.layout==="compact")renderCompactTabs();else renderClassicTabs();}');renderer.write_text(text,encoding='utf-8')
 data=runtime/'soulu/chrome/ui/settings-data.js';text=data.read_text(encoding='utf-8')
 text=text.replace('Пароли активного профиля защищены учётной записью Windows.','Пароли активного профиля защищены хранилищем NSS Firefox.').replace('Passwords for the active profile are protected by your Windows account.','Passwords for the active profile are protected by the Firefox NSS store.')
 text=text.replace('Пароль скопирован. Пока Soulu запущен, буфер очистится через 30 секунд, если его содержимое не изменится.','Пароль скопирован.').replace('Password copied. While Soulu runs, the clipboard clears after 30 seconds if its content stays unchanged.','Password copied.')

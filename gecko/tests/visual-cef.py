@@ -100,7 +100,7 @@ try:
  for name in reference:
   deltas={s:max(abs(reference[name][s][k]-gecko[name][s][k]) for k in ['x','y','width','height']) for s in reference[name]};a=Image.open(out/(name+'-cef.png')).convert('RGB');b=Image.open(out/(name+'-gecko.png')).convert('RGB');diff=ImageChops.difference(a,b);diff.save(out/(name+'-difference.png'));area=(8,0,width-8,88) if name!='settings-dark' else (0,0,width,height);mean=sum(ImageStat.Stat(diff.crop(area)).mean)/3
   item={'name':name,'geometryMaxDelta':max(deltas.values()),'geometryDeltas':deltas,'meanRGBDifference':mean,'reference':reference[name],'gecko':gecko[name]};report['comparisons'].append(item)
-  montage=Image.new('RGB',(width*2,height+28),'#ddd');montage.paste(a,(0,28));montage.paste(b,(width,28));draw=ImageDraw.Draw(montage);draw.text((8,8),'Soulu CEF 1.0.76',fill='black');draw.text((width+8,8),'Soulu Gecko Preview 2',fill='black');montage.save(out/(name+'-comparison.png'))
+  montage=Image.new('RGB',(width*2,height+28),'#ddd');montage.paste(a,(0,28));montage.paste(b,(width,28));draw=ImageDraw.Draw(montage);draw.text((8,8),'Soulu CEF 1.0.76',fill='black');draw.text((width+8,8),'Soulu Gecko Preview 4',fill='black');montage.save(out/(name+'-comparison.png'))
   print(name,json.dumps({'geometryMaxDelta':item['geometryMaxDelta'],'meanRGBDifference':mean}),flush=True)
   assert item['geometryMaxDelta']<=3,'Original frontend geometry differs: '+json.dumps(item)
   assert mean<22,'Screenshot difference needs review: '+json.dumps(item)

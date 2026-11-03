@@ -84,6 +84,13 @@ jobs:
           python gecko/tests/preview4.py gecko-out/runtime/firefox.exe gecko4-acceptance
           if ($LASTEXITCODE -ne 0) { throw 'Preview 4 acceptance failed' }
           Copy-Item gecko4-acceptance/preview4.json gecko-out/preview4.json
+      - name: Compare actual CEF and Gecko at equal Windows client sizes
+        shell: pwsh
+        run: |
+          python -m pip install websocket-client
+          python gecko/tests/visual-cef.py gecko-out/runtime/firefox.exe gecko4-acceptance
+          if ($LASTEXITCODE -ne 0) { throw 'CEF visual comparison failed' }
+          Copy-Item gecko4-acceptance/visual-comparison.json gecko-out/
       - name: Package verified candidate and verify extracted launcher
         shell: pwsh
         run: |
