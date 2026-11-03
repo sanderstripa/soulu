@@ -44,7 +44,7 @@ jobs:
                   data=z.read(name);report=json.loads(data)
                   assert report['passed'] and len(report['checks'])>=count and all(c['passed'] for c in report['checks'].values()),name
                   (root/name).write_bytes(data)
-              for name in ['BUILD.json','adblock-update.json']:(root/name).write_bytes(z.read(name))
+              for name in ['BUILD.json']:(root/name).write_bytes(z.read(name))
           for name in ['extensions.json','visual-comparison.json','zip-smoke.json']:
               data=(pathlib.Path('evidence')/name).read_bytes();assert json.loads(data)['passed'],name
               if name=='extensions.json':assert data==(root/name).read_bytes()
@@ -67,4 +67,4 @@ jobs:
 
           Исходники проверенного архива: 1359f0ca2599e9572ccde0af4fd457bae9780c7b. Коммит тега дополнительно содержит только сценарий публикации; содержимое проверенного ZIP не пересобиралось и не изменялось.
           EOF
-          gh release create gecko-preview-4-update-1 package/Soulu-Gecko-Preview-4-Update-1-win64.zip package/SHA256SUMS.txt package/BUILD.json package/preview4.json package/final4.json package/adblock-update.json package/extensions.json package/visual-comparison.json package/zip-smoke.json package/gecko4-update1-evidence.zip --target "$GITHUB_SHA" --title 'Soulu Gecko Preview 4 Update 1' --prerelease --notes-file package/release-notes.md
+          gh release create gecko-preview-4-update-1 package/Soulu-Gecko-Preview-4-Update-1-win64.zip package/SHA256SUMS.txt package/BUILD.json package/preview4.json package/final4.json package/extensions.json package/visual-comparison.json package/zip-smoke.json package/gecko4-update1-evidence.zip --target "$GITHUB_SHA" --title 'Soulu Gecko Preview 4 Update 1' --prerelease --notes-file package/release-notes.md
