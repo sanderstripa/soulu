@@ -1,0 +1,7 @@
+// The original Home UI. Geolocation stays off; configured cities use Gecko's network.
+(()=>{
+ const {shared}=Soulu.backend;let lastKey='',cached=null;
+ Soulu.weather=async()=>{const s=shared.config.settings,city=String(s.homeWeatherCity||'').trim(),key=city+'|'+s.homeWeatherUnits;if(!city||s.homeWeatherMode!=='configured')return {status:'unavailable'};if(key===lastKey&&cached&&Date.now()/1000-cached.fetchedAt<900)return cached;
+  try{const geo=await fetch('https://geocoding-api.open-meteo.com/v1/search?count=1&language='+encodeURIComponent(s.language||'ru')+'&name='+encodeURIComponent(city),{signal:AbortSignal.timeout(10000)});if(!geo.ok)throw Error('Geocoding unavailable');const place=(await geo.json()).results?.[0];if(!place)return {status:'unavailable'};const query=new URLSearchParams({latitude:place.latitude,longitude:place.longitude,timezone:'auto',forecast_days:'6',current:'temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,precipitation,weather_code',daily:'temperature_2m_max,temperature_2m_min,precipitation_probability_max',temperature_unit:s.homeWeatherUnits==='fahrenheit'?'fahrenheit':'celsius'});const response=await fetch('https://api.open-meteo.com/v1/forecast?'+query,{signal:AbortSignal.timeout(10000)});if(!response.ok)throw Error('Weather unavailable');const data=await response.json();lastKey=key;cached={status:'ready',city:place.name,current:data.current,daily:data.daily,fetchedAt:Date.now()/1000};return cached;}catch{return cached&&key===lastKey?{...cached,status:'stale'}:{status:'unavailable'};}
+ };
+})();

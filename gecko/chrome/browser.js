@@ -17,7 +17,7 @@ const windows=()=>[...Services.wm.getEnumerator('navigator:browser')];
 const pref=(key,value)=>{if(typeof value==='boolean'){if(Services.prefs.getBoolPref(key,!value)!==value)Services.prefs.setBoolPref(key,value);}else if(typeof value==='number'){if(Services.prefs.getIntPref(key,-999)!==value)Services.prefs.setIntPref(key,value);}else if(Services.prefs.getStringPref(key,'')!==String(value))Services.prefs.setStringPref(key,String(value));};
 function emit(name,value){for(const win of windows())win.Soulu?._emit(name,value);}
 const builtin={geo:'geolocation',camera:'camera',microphone:'microphone','desktop-notification':'notifications',popup:'popups'};
-async function save(){const write=async()=>{const disk=structuredClone(shared.config);const sdr=Cc['@mozilla.org/security/sdr;1'].getService(Ci.nsISecretDecoderRing);disk.vpn={protected:sdr.encryptString(JSON.stringify(disk.vpn))};await IOUtils.writeJSON(settingsFile,disk,{tmpPath:settingsFile+'.tmp'});await IOUtils.setPermissions(settingsFile,0o600);};const operation=(shared.saveQueue||Promise.resolve()).then(write);shared.saveQueue=operation.catch(()=>{});return operation;}
+async function save(){const write=async()=>{if(shared.storageError)throw Error('Encrypted settings could not be unlocked; the original file was preserved. '+shared.storageError);const disk=structuredClone(shared.config);const sdr=Cc['@mozilla.org/security/sdr;1'].getService(Ci.nsISecretDecoderRing);disk.vpn={protected:sdr.encryptString(JSON.stringify(disk.vpn))};await IOUtils.writeJSON(settingsFile,disk,{tmpPath:settingsFile+'.tmp'});await IOUtils.setPermissions(settingsFile,0o600);};const operation=(shared.saveQueue||Promise.resolve()).then(write);shared.saveQueue=operation.catch(()=>{});return operation;}
 function layout(){const s=shared.config.settings,root=document.documentElement;root.toggleAttribute('soulu-single',gBrowser.visibleTabs.filter(t=>!t.closing).length<2);root.toggleAttribute('soulu-dark',s.theme==='dark'||s.theme==='system'&&matchMedia('(prefers-color-scheme:dark)').matches);}
 function apply(){
  layout();
@@ -40,9 +40,11 @@ function apply(){
  for(const [type,key] of Object.entries(builtin))pref('permissions.default.'+type,({0:1,1:0,2:2})[Number(shared.config.rules.defaults[key]??1)]);
  pref('dom.disable_open_during_load',shared.config.rules.defaults.popups!==0);
  pref('media.autoplay.default',shared.config.rules.defaults.sound===2?5:0);
+ for(const entry of shared.managedPermissions||[])if(shared.config.rules.sites[entry.origin]?.[entry.key]===undefined)Services.perms.removeFromPrincipal(entry.principal,entry.type);
+ shared.managedPermissions=[];
  for(const [origin,rules] of Object.entries(shared.config.rules.sites)){
   let principal;try{principal=Services.scriptSecurityManager.createContentPrincipal(Services.io.newURI(origin.includes('://')?origin:'https://'+origin),{});}catch{continue;}
-  for(const [type,key] of Object.entries(builtin)){if(rules[key]===undefined)continue;const v=Number(rules[key]);if(v===1)Services.perms.removeFromPrincipal(principal,type);else Services.perms.addFromPrincipal(principal,type,v===2?Services.perms.DENY_ACTION:Services.perms.ALLOW_ACTION);}
+  for(const [type,key] of Object.entries(builtin)){if(rules[key]===undefined)continue;const v=Number(rules[key]);shared.managedPermissions.push({origin,key,principal,type});Services.perms.addFromPrincipal(principal,type,v===1?Services.perms.PROMPT_ACTION:v===2?Services.perms.DENY_ACTION:Services.perms.ALLOW_ACTION);}
  }
  pref('privacy.trackingprotection.enabled',shared.config.rules.blocking.enabled);
  pref('privacy.trackingprotection.pbmode.enabled',shared.config.rules.blocking.enabled);
@@ -149,6 +151,7 @@ async function dispatch(action,payload,source){
  case 'browser.extensions.openStore':return open('https://addons.mozilla.org/firefox/');
  case 'browser.performance.optimize':open('about:unloads');return {ok:true};
  case 'browser.passwords.get':open('about:logins');throw Error('Пароли открыты в защищённом менеджере Firefox.');
+ case 'browser.import.native':{const {MigrationUtils}=ChromeUtils.importESModule('resource:///modules/MigrationUtils.sys.mjs');MigrationUtils.showMigrationWizard(window);return true;}
  case 'browser.import.sources':case 'browser.import.browsers':open('about:preferences#general');throw Error('Импорт доступен в разделе Firefox «Импорт данных».');
  default:throw Error('Эта функция ещё не перенесена в Gecko Preview 1: '+action);
  }
@@ -156,10 +159,11 @@ async function dispatch(action,payload,source){
 window.Soulu={dispatch,settings,refresh:apply,get config(){return shared.config;},get vpnState(){return shared.vpnState;},_emit(name,value){if(shared.settingsWindow&&!shared.settingsWindow.closed)shared.settingsWindow.__souluEmit?.(name,value);},ready:false};
 function button(id,label,command){const b=document.createXULElement('toolbarbutton');b.id=id;b.className='toolbarbutton-1 chromeclass-toolbar-additional';b.setAttribute('label',label);b.setAttribute('tooltiptext',label);b.addEventListener('command',command);return b;}
 async function initialize(){
- if(!shared.initialized){try{const stored=await IOUtils.readJSON(settingsFile);if(stored.vpn?.protected)stored.vpn=JSON.parse(Cc['@mozilla.org/security/sdr;1'].getService(Ci.nsISecretDecoderRing).decryptString(stored.vpn.protected));shared.config={...defaults,...stored,settings:{...defaults.settings,...stored.settings},rules:{...defaults.rules,...stored.rules},vpn:{...defaults.vpn,...stored.vpn}};}catch(error){if(await IOUtils.exists(settingsFile))console.error('Soulu settings:',error);}proxy(false);shared.initialized=true;}
+ if(!shared.initialized){try{const stored=await IOUtils.readJSON(settingsFile);if(stored.vpn?.protected)stored.vpn=JSON.parse(Cc['@mozilla.org/security/sdr;1'].getService(Ci.nsISecretDecoderRing).decryptString(stored.vpn.protected));shared.config={...defaults,...stored,settings:{...defaults.settings,...stored.settings},rules:{...defaults.rules,...stored.rules},vpn:{...defaults.vpn,...stored.vpn}};}catch(error){if(await IOUtils.exists(settingsFile)){shared.storageError=String(error);console.error('Soulu settings preserved:',error);}}proxy(false);shared.initialized=true;}
  Soulu.backend={shared,Services,IOUtils,PathUtils,PlacesUtils,profile,isPrivate,save,apply};
  Services.scriptloader.loadSubScript('chrome://soulu/content/storage.js',window);
  Services.scriptloader.loadSubScript('chrome://soulu/content/shell-host.js',window);
+ Services.scriptloader.loadSubScript('chrome://soulu/content/weather.js',window);
  try{const {adblock}=ChromeUtils.importESModule('chrome://soulu/content/adblock.sys.mjs');await adblock.initialize(shared,profile);Soulu.adblock=adblock;}catch(error){Soulu.blockerError=String(error);console.error(error);}
  window.addEventListener('unload',()=>{if(windows().filter(w=>w!==window&&!w.closed).length===0&&shared.helper){shared.helper.stdin.close();shared.helper=null;}},{once:true});
  await save();apply();
