@@ -51,7 +51,7 @@ try:
 except Exception as e:
  report['error']=str(e)
  try:
-  report['diagnostic']=chrome('return Services.console.getMessageArray().map(m=>m.message).slice(-20)');(out/'failure.png').write_bytes(base64.b64decode(m.screenshot()))
+  report['diagnostic']=chrome('return {url:gBrowser.selectedBrowser.currentURI.spec,newProfile:Soulu.backend.shared.isNewProfile,flow:Soulu.config.onboarding,onboardingModule:!!Soulu.showOnboarding,errors:Services.console.getMessageArray().map(m=>m.message).slice(-20)}');(out/'failure.png').write_bytes(base64.b64decode(m.screenshot()))
  except Exception:pass
  raise
 finally:

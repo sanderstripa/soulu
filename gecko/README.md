@@ -1,54 +1,19 @@
-# Soulu Gecko Preview 4 Update 1
+# Soulu Gecko Preview 5 — Windows x64
 
-Extract the complete ZIP and run `Soulu Gecko Preview 4.exe` (Windows x64).
+Extract the complete ZIP into a writable folder and run `Soulu.exe`. Firefox and CEF do not need to be installed. Never copy individual executables out of the package.
 
-Preview 4 uses the original Soulu HTML/CSS/SVG/fonts for the adaptive toolbar,
-Home page, bookmark management, history and all 12 settings sections. Gecko
-renders normal websites in its native isolated processes; no website receives
-the application bridge. The bridge is restricted to four exact installed file
-URLs and validates the sending principal in the parent process.
+User data remains in `%LOCALAPPDATA%\SouluGecko\Profiles`, separately from Firefox and Soulu CEF. Existing Preview 4 profiles are reused; they are not reset and do not repeat first-run onboarding. New profiles receive the original Soulu welcome layout.
 
-Data is stored separately in `%LOCALAPPDATA%\SouluGecko\Profiles`.
-Firefox Places stores history and bookmarks. Native NSS protects passwords and
-saved VPN keys; the JSON settings file does not contain plaintext VPN links.
-Existing Soulu CEF and installed Firefox profiles are not modified.
+The original Soulu interface uses Firefox gBrowser/SessionStore, Places, NSS/LoginManager, native Downloads, permission prompts, Reader View and local translation. Xray/Sudoku and the Rust blocker are the accepted Preview 4 binaries, unchanged. Fission, the sandbox, HTTPS checks and extension signature enforcement remain enabled.
 
-VPN: add and select a VLESS/Sudoku connection in Settings → VPN. Use the original
-Soulu toolbar button to connect. Only Gecko's proxy changes. SOCKS DNS is remote,
-direct fallback is disabled, and WebRTC is disabled while connected. A failed
-connection remains blocked until the user disconnects.
+Optional local voice input uses the isolated SouluSpeech helper, adapted from Soulu CEF, and a checksum-pinned multilingual Whisper model. Audio is not uploaded or saved as a recording. Recognized text is placed in Home search for review before submission. Physical microphone/acoustic checks require the user's Windows device.
 
-The original Soulu CEF Rust adblock engine (adblock-rust 0.13.3) is built as a DLL
-with the same EasyList/EasyPrivacy/RuAdList baseline. It cancels real requests in
-Gecko's parent network observer and applies cosmetic selectors through an
-isolated actor. Per-site exceptions use Soulu's original site menu.
+Optional YouTube voice-over uses the unchanged, Firefox-signed VOT 1.12.6 XPI. It is installed only after permission and external-service consent in Settings → Translation. VOT contacts Yandex/VOT servers; it is distinct from the local page translator. Its compact controls live on supported videos. Actual public YouTube voice-over is not proven by successful installation alone; consult the release report.
 
-See bundled `preview4.json`, the release ZIP smoke report and `visual-evidence` for actual Windows checks. The helper and Rust DLL are rebuilt; pinned Xray/Sudoku cores and their licenses are reused from checksum-verified Preview 3. CI does not certify a physical GPU, physical
-multi-monitor DPI, or the quality of the user's external VPN service.
+The About page checks only Gecko preview assets in the official Soulu GitHub repository and can download/verify a Windows ZIP. It does not replace files automatically. Independent package signing and transactional automatic installation remain future work.
 
-Page translation uses the native local Gecko translator. Models are downloaded
-on first use; page text stays on the device. Configured-city weather uses
-Open-Meteo. Automatic location requires explicit permission.
+Default-browser registration is per current Windows user and only after pressing the corresponding button. Windows controls the final HTTP/HTTPS choice. External links reuse the chosen Soulu profile through authenticated loopback remoting; the Windows system proxy is never changed.
 
-Matte transparency uses the Soulu frosted surface and Windows Mica where
-available. This is a native compositor material, not CEF page-glass capture.
+Firefox WebExtensions cannot inject content scripts into local file pages, protecting Soulu's application bridge. This also restricts scripts on other local HTML files. Ordinary HTTP/HTTPS extension permissions remain native.
 
-Known unavailable/limited features: YouTube voice-over translation;
-Chrome CRX installation; voice search; CEF-specific background-tab suspension.
-Unsupported controls report their
-availability explicitly. Firefox extensions use the native Firefox manager.
-The native Gecko permission prompt may differ from the CEF prompt. Desktop
-backdrop material depends on the OS compositor. None of these limitations is
-proof of a working control; acceptance tests exercise actual effects.
-
-Engine provenance and source commit: `BUILD.json`. Mozilla licenses remain in
-the unmodified Firefox runtime (`about:license`). Rust notices are in
-`runtime/soulu/adblock/notices`.
-
-Preview 4 uses native SessionStore for restore/duplicate/reorder/session persistence, Places for folders and HTML import/export, NSS LoginManager for GUID-based password editing and CSV import, the Firefox migration wizard, native Downloads for file operations and permission preflight, and native Reader View. Filter files download through Gecko (including its VPN policy), then compile and install atomically in a Rust worker; failures retain the previous engine/cache. Soulu does not run ETP URL classification alongside the same Rust EasyPrivacy lists; native cookie partitioning, Safe Browsing and process isolation remain enabled.
-
-Each profile has its own VPN working directory and dynamically allocated SOCKS port. Firefox's native profile-removal service refuses removal of a locked profile. No system proxy change is needed. Page text translation remains local; voice-over YouTube translation is deferred. Portable default-browser registration and Soulu automatic updates are unavailable. Native reader styling uses compatible Firefox settings; CEF-only image hiding/custom fonts are not promised. Import availability depends on the source browser and operating-system protection; exported CSV files contain plaintext secrets and should be removed after import.
-
-Switching the VPN resets Gecko's existing network connections and DNS cache so already-open direct sockets are not retained across the route change. Active transfers may need retry after that explicit switch. Component updates also remain behind SOCKS when a VPN core has failed; only explicit disconnect returns to direct networking. Mozilla onboarding/reporting notifications are disabled alongside telemetry in this portable Soulu distribution; no user acceptance date is forged. Firefox component licenses remain available at about:license.
-
-Update 1 connects original Soulu extension action slots and pin controls to native Firefox BrowserAction, CustomizableUI and PanelPopup. Popups remain in the isolated extension process. Icons and badges update from native events, without the old periodic UI polling. Private-window access requires Firefox's explicit per-extension permission. Native file-scheme guards protect Soulu's application HTML even against extensions granted file access; content scripts on local files are therefore unavailable in this build. HTTP/HTTPS extension access remains governed by native permissions. Page-action URL-bar buttons remain outside this integration scope. Firefox action.openPopup uses the same popup renderer and preserves its own gesture and permission checks.
+Mozilla licenses remain available through `about:license` and the bundled runtime. VOT and Whisper licenses/provenance accompany their components. See release notes and included reports for confirmed tests and limitations.

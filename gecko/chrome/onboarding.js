@@ -22,5 +22,5 @@ Soulu.dispatch=async(action,payload,source)=>{
  if(action==='onboarding.finish'){current.done=true;current.skipped=!!payload?.skip;await save();Soulu.native.navigate('soulu://home');return true;}
  throw Error('Unknown welcome action');
 };
-Promise.resolve(Soulu.startupReady).then(()=>{if(!isPrivate&&!flow().done&&['about:blank','about:newtab',Soulu.native.homeURL].includes(gBrowser.selectedBrowser.currentURI.spec))Soulu.showOnboarding();}).catch(console.error);
+Promise.resolve(Soulu.startupReady).then(()=>{if(!isPrivate&&!flow().done&&['about:blank','about:newtab','about:home',Soulu.native.homeURL].includes(gBrowser.selectedBrowser.currentURI.spec))Soulu.showOnboarding();}).catch(console.error);
 })();

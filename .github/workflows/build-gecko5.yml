@@ -71,18 +71,34 @@ jobs:
           key: win64-whisper-4979e04-portable-mt-v1
       - name: Bundle the unchanged signed Firefox VOT extension
         run: python gecko/prepare-vot.py gecko-out
-      - name: Verify only corrected components and direct dependencies
+      - name: Install test dependencies
+        run: python -m pip install marionette_driver pillow psutil websocket-client numpy soundfile
+      - name: Check changed browser components
+        id: corrected
+        continue-on-error: true
+        run: python gecko/tests/preview5.py gecko-out/runtime/firefox.exe gecko5-checks
+      - name: Check real local RU and EN recognition
+        id: speech
+        continue-on-error: true
+        run: python gecko/tests/speech5.py gecko-out/runtime/soulu/speech/SouluSpeech.exe gecko5-checks/speech5.json
+      - name: Check signed VOT and Windows integration
+        id: native
+        continue-on-error: true
+        run: python gecko/tests/optional5.py gecko-out/runtime/firefox.exe gecko5-optional
+      - name: Check directly related native extension behavior
+        id: extensions
+        continue-on-error: true
+        run: python gecko/tests/extensions.py gecko-out/runtime/firefox.exe gecko5-extensions
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gecko5-build-inputs
+          path: gecko-out/
+          compression-level: 1
+      - name: Require all changed-component gates
         shell: pwsh
         run: |
-          python -m pip install marionette_driver pillow psutil websocket-client numpy soundfile
-          python gecko/tests/preview5.py gecko-out/runtime/firefox.exe gecko5-checks
-          if ($LASTEXITCODE -ne 0) { throw 'Preview 5 checks failed' }
-          python gecko/tests/speech5.py gecko-out/runtime/soulu/speech/SouluSpeech.exe gecko5-checks/speech5.json
-          if ($LASTEXITCODE -ne 0) { throw 'Real local recognition failed' }
-          python gecko/tests/optional5.py gecko-out/runtime/firefox.exe gecko5-optional
-          if ($LASTEXITCODE -ne 0) { throw 'Native Windows integrations failed' }
-          python gecko/tests/extensions.py gecko-out/runtime/firefox.exe gecko5-extensions
-          if ($LASTEXITCODE -ne 0) { throw 'Extension integration regressed' }
+          if ('${{ steps.corrected.outcome }}' -ne 'success' -or '${{ steps.speech.outcome }}' -ne 'success' -or '${{ steps.native.outcome }}' -ne 'success' -or '${{ steps.extensions.outcome }}' -ne 'success') { throw 'A targeted component check failed; passed reports remain reusable' }
       - name: Save candidate and evidence without publishing an unfinished release
         shell: pwsh
         run: |
