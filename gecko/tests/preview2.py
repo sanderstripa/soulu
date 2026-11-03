@@ -12,10 +12,10 @@ class Site(http.server.BaseHTTPRequestHandler):
   if self.path.startswith('/pagead/'):
    Site.ads+=1;body=b'window.advertisementLoaded=true';kind='application/javascript'
   else:
-   body=('''<!doctype html><meta charset=utf-8><title>Soulu fixture</title><style>html{color-scheme:light dark}body{margin:0;height:2400px}#box{height:100px;background:#4182e8}video{width:400px;height:225px}</style><div id=box>Gecko fixture</div><ins class=adsbygoogle data-ad-client=ca-test id=ad>Ad placeholder</ins><input id=input><video id=v muted autoplay></video><canvas id=c width=200 height=100 hidden></canvas><script src="http://pagead2.googlesyndication.com:%d/pagead/js/adsbygoogle.js"></script><script>const canvas=document.getElementById('c'),video=document.getElementById('v');let n=0;setInterval(()=>{const x=canvas.getContext('2d');x.fillStyle=++n%%2?'blue':'green';x.fillRect(0,0,200,100)},50);video.srcObject=canvas.captureStream(20);video.play().catch(()=>{});document.documentElement.dataset.identity=String(Math.random())</script>'''%self.server.server_port).encode();kind='text/html'
+   body=('''<!doctype html><meta charset=utf-8><title>Soulu fixture</title><style>html{color-scheme:light dark}body{margin:0;height:2400px}#box{height:100px;background:#4182e8}video{width:400px;height:225px}</style><div id=box>Gecko fixture</div><div class=ad-banner-container id=ad>Ad placeholder</div><input id=input><video id=v muted autoplay></video><canvas id=c width=200 height=100 hidden></canvas><script src="http://pagead2.googlesyndication.com:%d/pagead/js/adsbygoogle.js"></script><script>const canvas=document.getElementById('c'),video=document.getElementById('v');let n=0;setInterval(()=>{const x=canvas.getContext('2d');x.fillStyle=++n%%2?'blue':'green';x.fillRect(0,0,200,100)},50);video.srcObject=canvas.captureStream(20);video.play().catch(()=>{});document.documentElement.dataset.identity=String(Math.random())</script>'''%self.server.server_port).encode();kind='text/html'
   self.send_response(200);self.send_header('Content-Type',kind);self.end_headers();self.wfile.write(body)
  def log_message(self,*_):pass
-server=http.server.ThreadingHTTPServer(('127.0.0.1',0),Site);threading.Thread(target=server.serve_forever,daemon=True).start();url=f'http://127.0.0.1:{server.server_port}/'
+server=http.server.ThreadingHTTPServer(('127.0.0.1',0),Site);threading.Thread(target=server.serve_forever,daemon=True).start();url=f'http://soulu-fixture.example.org:{server.server_port}/'
 log=open(out/'runtime.log','w',encoding='utf-8');proc=m=None
 
 def check(name,value,detail=None):
@@ -45,7 +45,7 @@ def start(launcher=False):
  global proc,m
  with socket.socket() as sock:sock.bind(('127.0.0.1',0));port=sock.getsockname()[1]
  active=root/'launcher/SouluGecko/Profiles/launch-test' if launcher else profile;active.mkdir(parents=True,exist_ok=True)
- (active/'user.js').write_text('user_pref("marionette.port",'+str(port)+');\nuser_pref("network.dns.localDomains","pagead2.googlesyndication.com");\n',encoding='utf-8')
+ (active/'user.js').write_text('user_pref("marionette.port",'+str(port)+');\nuser_pref("network.dns.localDomains","pagead2.googlesyndication.com,soulu-fixture.example.org");\n',encoding='utf-8')
  env=dict(os.environ,MOZ_REMOTE_ALLOW_SYSTEM_ACCESS='1',SOULU_GECKO_TEST='1')
  headless=[]
  if os.name!='nt':headless=['-headless'];env['MOZ_DISABLE_CONTENT_SANDBOX']='1'
@@ -81,13 +81,13 @@ try:
  second=call('browser.state.get')['activeTabId'];ui('document.querySelector('+json.dumps('[data-close-tab="'+str(second)+'"]')+').click();return true;');wait(lambda:len(call('browser.state.get')['tabs'])==1);time.sleep(.4)
  check('frontend_close_tab_and_collapse',abs(chrome('return gBrowser.selectedBrowser.getBoundingClientRect().top')-68)<2)
  select_latest();ui('const i=document.getElementById("classicAddress");i.value='+json.dumps(url)+';document.getElementById("classicAddressForm").requestSubmit();return true;');m.set_context('content');wait(lambda:content('return !!document.getElementById("v") && document.getElementById("v").currentTime>.1'),30)
- check('address_form_performs_navigation',content('return location.href.startsWith("http://127.0.0.1:")'))
+ check('address_form_performs_navigation',content('return location.href.startsWith("http://soulu-fixture.example.org:")'))
  check('website_has_no_application_bridge',content('return !window.cefQuery&&!window.browserShell&&!window.Soulu'))
  check('isolated_web_process',str(chrome('return gBrowser.selectedBrowser.remoteType')).startswith('webIsolated'))
  if not args.ui_only:
   status=chrome('return Soulu.adblock?.status(gBrowser.selectedBrowser.browsingContext.id)');check('own_rust_adblock_ready',status and status.get('ready') and status.get('networkRules',0)>10000,status)
   time.sleep(1);check('actual_ad_request_cancelled',Site.ads==0,{'adServerRequests':Site.ads})
-  diagnostic=run('const b=gBrowser.selectedBrowser;let actor;try{actor=await b.browsingContext.currentWindowGlobal.getActor("SouluCosmetic").sendQuery("probe");}catch(e){actor=String(e);}return {engine:Soulu.adblock.cosmetic(b.currentURI.spec,{classes:["adsbygoogle"],ids:["ad"]}).slice(0,12),actor,error:Soulu.blockerError||""};');print('cosmetic_diagnostic',diagnostic,flush=True)
+  diagnostic=run('const b=gBrowser.selectedBrowser;let actor;try{actor=await b.browsingContext.currentWindowGlobal.getActor("SouluCosmetic").sendQuery("probe");}catch(e){actor=String(e);}return {engine:Soulu.adblock.cosmetic(b.currentURI.spec,{classes:["ad-banner-container"],ids:["ad"]}).slice(0,12),actor,error:Soulu.blockerError||""};');print('cosmetic_diagnostic',diagnostic,flush=True)
   check('cosmetic_filter_hides_real_ad',wait(lambda:content('return getComputedStyle(document.getElementById("ad")).display==="none"'),15))
  # Verify no browsing rectangle or document identity changes during real toolbar activity.
  m.set_context('content');before=content('return {h:innerHeight,w:innerWidth,y:scrollY,top:document.getElementById("v").getBoundingClientRect().top,identity:document.documentElement.dataset.identity,time:document.getElementById("v").currentTime}')
@@ -101,7 +101,7 @@ try:
  check('no_page_jitter_during_toolbar_hover',bool(before['identity']) and all(all(abs(s[k]-before[k])<1 for k in ['h','w','y','top']) and s['identity']==before['identity'] for s in samples),samples)
  check('playing_video_continues_during_hover',samples[-1]['time']>before['time'])
  check('bookmark_frontend_writes_places',ui('await browserShell.addBookmark();const rows=await browserShell.getBookmarks();return rows.some(r=>r.url==='+json.dumps(url)+');'))
- history=call('history.query',{'search':'127.0.0.1','offset':0});check('history_records_real_navigation',len(history['rows'])>0,{'visits':len(history['rows'])})
+ history=call('history.query',{'search':'soulu-fixture.example.org','offset':0});check('history_records_real_navigation',len(history['rows'])>0,{'visits':len(history['rows'])})
  ui('await browserShell.openHistory();return true;');select_latest();check('original_history_ui_reads_places',wait(lambda:ui('return document.querySelectorAll(".visit").length>0','page')))
  call('browser.closeTab',call('browser.state.get')['activeTabId']);m.switch_to_window(m.window_handles[0]);m.set_context('chrome')
  ui('await browserShell.openSettingsWindow();return true;');wait(lambda:call('browser.state.get')['settingsOverlayReady']);
