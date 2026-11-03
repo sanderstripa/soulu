@@ -155,7 +155,7 @@ async function dispatch(action,payload,source){
  case 'browser.passwords.get':open('about:logins');throw Error('Пароли открыты в защищённом менеджере Firefox.');
  case 'browser.import.native':{const {MigrationUtils}=ChromeUtils.importESModule('resource:///modules/MigrationUtils.sys.mjs');MigrationUtils.showMigrationWizard(window);return true;}
  case 'browser.import.sources':case 'browser.import.browsers':open('about:preferences#general');throw Error('Импорт доступен в разделе Firefox «Импорт данных».');
- default:throw Error('Эта функция ещё не перенесена в Gecko Preview 1: '+action);
+ default:throw Error('Эта функция ещё не перенесена в Gecko Preview 2: '+action);
  }
 }
 window.Soulu={dispatch,settings,refresh:apply,get config(){return shared.config;},get vpnState(){return shared.vpnState;},_emit(name,value){if(shared.settingsWindow&&!shared.settingsWindow.closed)shared.settingsWindow.__souluEmit?.(name,value);},ready:false};

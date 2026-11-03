@@ -102,7 +102,7 @@ async function dispatch(action,payload,source){
  case 'window.maximize':windowState===STATE_MAXIMIZED?window.restore():window.maximize();notify();return true;
  case 'window.close':await shared.saveQueue;window.close();return true;
  case 'window.captionBounds':return true;
- case 'window.beginDrag':if(Number(payload)>1){windowState===STATE_MAXIMIZED?window.restore():window.maximize();}else if(frame.__souluPointer)window.beginWindowMove(source.__souluPointer);return true;
+ case 'window.beginDrag':if(Number(payload)>1){windowState===STATE_MAXIMIZED?window.restore():window.maximize();}else ChromeUtils.importESModule('chrome://soulu/content/window-controls.sys.mjs').beginDrag();return true;
  case 'window.toolbarMenu':{const command=await menu([{command:1,label:'Настройки'},{command:2,label:'История'},{command:3,label:'Новое окно инкогнито'}],frame.__souluPointer?.clientX||40,48);if(command===1)settings();if(command===2)openHistory();if(command===3)OpenBrowserWindow({private:true});return true;}
  }
  if(action.startsWith('browser.site.'))return siteAction(action.slice(13),payload||{});
