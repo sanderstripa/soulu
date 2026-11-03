@@ -7,6 +7,6 @@ export class SouluCosmeticChild extends JSWindowActorChild{
   this.observer=new win.MutationObserver(records=>{for(const r of records){if(r.type==='attributes')state.queue.push(r.target);else for(const n of r.addedNodes)if(n.nodeType===1)state.queue.push(n);}if(!state.timer)state.timer=win.setTimeout(()=>{state.timer=0;for(const root of new Set(state.queue.splice(0)))collect(root);},200);});
   this.observer.observe(doc,{subtree:true,childList:true,attributes:true,attributeFilter:['class','id']});send({});collect(doc);
  }
- receiveMessage(message){if(message.name==='refresh'){if(!this.state)this.handleEvent();else this.state.refresh();}}
+ async receiveMessage(message){if(message.name==='probe'&&Services.env.get('SOULU_GECKO_TEST')==='1')return {started:!!this.state,uri:this.document.documentURI,sheets:this.document.adoptedStyleSheets.length,rules:this.state?.sheet.cssRules.length,selectors:this.state?.selectors.size};if(message.name==='refresh'){if(!this.state)this.handleEvent();else this.state.refresh();}}
  didDestroy(){this.observer?.disconnect();}
 }

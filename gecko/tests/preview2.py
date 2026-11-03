@@ -77,6 +77,7 @@ try:
  check('hardware_acceleration_and_security_preferences',chrome('return Services.prefs.getBoolPref("fission.autostart") && Services.prefs.getIntPref("security.sandbox.content.level")>0 && !Services.prefs.getBoolPref("layers.acceleration.disabled",false) && !Services.prefs.getBoolPref("gfx.webrender.force-disabled",false) && Services.prefs.getBoolPref("browser.safebrowsing.malware.enabled")'))
  first=call('browser.state.get')['activeTabId'];ui('document.getElementById("newTabButton").click();return true;');wait(lambda:len(call('browser.state.get')['tabs'])==2);time.sleep(.4)
  check('frontend_new_tab_and_adaptive_geometry',abs(chrome('return gBrowser.selectedBrowser.getBoundingClientRect().top')-88)<2)
+ check('new_tab_focuses_original_address_input',wait(lambda:ui('return document.activeElement?.id==="classicAddress";')))
  second=call('browser.state.get')['activeTabId'];ui('document.querySelector('+json.dumps('[data-close-tab="'+str(second)+'"]')+').click();return true;');wait(lambda:len(call('browser.state.get')['tabs'])==1);time.sleep(.4)
  check('frontend_close_tab_and_collapse',abs(chrome('return gBrowser.selectedBrowser.getBoundingClientRect().top')-68)<2)
  select_latest();ui('const i=document.getElementById("classicAddress");i.value='+json.dumps(url)+';document.getElementById("classicAddressForm").requestSubmit();return true;');m.set_context('content');wait(lambda:content('return !!document.getElementById("v") && document.getElementById("v").currentTime>.1'),30)
@@ -86,6 +87,7 @@ try:
  if not args.ui_only:
   status=chrome('return Soulu.adblock?.status(gBrowser.selectedBrowser.browsingContext.id)');check('own_rust_adblock_ready',status and status.get('ready') and status.get('networkRules',0)>10000,status)
   time.sleep(1);check('actual_ad_request_cancelled',Site.ads==0,{'adServerRequests':Site.ads})
+  diagnostic=run('const b=gBrowser.selectedBrowser;let actor;try{actor=await b.browsingContext.currentWindowGlobal.getActor("SouluCosmetic").sendQuery("probe");}catch(e){actor=String(e);}return {engine:Soulu.adblock.cosmetic(b.currentURI.spec,{classes:["adsbygoogle"],ids:["ad"]}).slice(0,12),actor,error:Soulu.blockerError||""};');print('cosmetic_diagnostic',diagnostic,flush=True)
   check('cosmetic_filter_hides_real_ad',wait(lambda:content('return getComputedStyle(document.getElementById("ad")).display==="none"'),15))
  # Verify no browsing rectangle or document identity changes during real toolbar activity.
  m.set_context('content');before=content('return {h:innerHeight,w:innerWidth,y:scrollY,top:document.getElementById("v").getBoundingClientRect().top,identity:document.documentElement.dataset.identity,time:document.getElementById("v").currentTime}')

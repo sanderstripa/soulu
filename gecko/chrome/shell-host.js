@@ -4,7 +4,7 @@
 const {shared,Services,IOUtils,PathUtils,PlacesUtils,profile,isPrivate,save,apply}=Soulu.backend;
 const {appRoot}=ChromeUtils.importESModule('chrome://soulu/content/AppParent.sys.mjs');const appURL=appRoot();
 const H='http://www.w3.org/1999/xhtml',homeURL=appURL+'home.html';
-const base=Soulu.dispatch,ids=new WeakMap(),tabs=new Map();let nextId=1,frame,settingsFrame,shade,pending=0,expanded=false,side=false,bookmarksSide=false,overview=false,rightPanel=0,suggestions=0,popover=false,barAuto=false,toolbarHeight=68,marks=[],downloads=[],lastSnapshot='',lastTabCount=0,autoMuted=new WeakSet(),targetHeight=68,geometryToken=0,settingsReady=false,pendingSection=null;
+const base=Soulu.dispatch,ids=new WeakMap(),tabs=new Map();let nextId=1,frame,settingsFrame,shade,pending=0,expanded=false,side=false,bookmarksSide=false,overview=false,rightPanel=0,suggestions=0,popover=false,barAuto=false,toolbarHeight=68,marks=[],downloads=[],lastSnapshot='',lastTabCount=0,lastCosmeticGeneration=0,autoMuted=new WeakSet(),targetHeight=68,geometryToken=0,settingsReady=false,pendingSection=null,focusAfterHome=0;
 const tabID=tab=>{if(!ids.has(tab)){ids.set(tab,nextId);tabs.set(nextId++,tab);}return ids.get(tab);};
 const selected=()=>gBrowser.selectedBrowser;
 const currentURL=browser=>browser.currentURI.spec===homeURL?'soulu://home':browser.currentURI.spec;
@@ -26,7 +26,7 @@ function actorSend(browser,name,data){try{browser?.browsingContext?.currentWindo
 function send(name,value){actorSend(frame,'emit',{name,value});if(settingsFrame&&!settingsFrame.hidden)actorSend(settingsFrame,'emit',{name,value});}
 function emitTo(browser,value){actorSend(browser,'home',value);}
 function soundPolicy(){for(const tab of validTabs()){let host='';try{host=new URL(tab.linkedBrowser.currentURI.spec).hostname;}catch{}const value=shared.config.rules.sites[host]?.sound??shared.config.rules.defaults.sound;const mute=value===1||value===2;if(mute&&!tab.hasAttribute('muted')){tab.toggleMuteAudio();autoMuted.add(tab);}else if(!mute&&autoMuted.has(tab)){if(tab.hasAttribute('muted'))tab.toggleMuteAudio();autoMuted.delete(tab);}}}
-function notify(){if(pending)return;pending=requestAnimationFrame(()=>{pending=0;geometry();soundPolicy();const value=snapshot(),signature=JSON.stringify(value);if(signature!==lastSnapshot){lastSnapshot=signature;send('state',value);}document.title=(value.page?.title?value.page.title+' — ':'')+'Soulu';});}
+function notify(){if(pending)return;pending=requestAnimationFrame(()=>{pending=0;geometry();soundPolicy();const value=snapshot();if(value.page?.generation!==lastCosmeticGeneration&&/^https?:/.test(value.page?.url||'')){lastCosmeticGeneration=value.page.generation;Soulu.adblock?.attach?.(selected());}const signature=JSON.stringify(value);if(signature!==lastSnapshot){lastSnapshot=signature;send('state',value);}document.title=(value.page?.title?value.page.title+' — ':'')+'Soulu';});}
 function surface(){geometry();return snapshot();}
 const originalEmit=Soulu._emit;Soulu._emit=(name,value)=>{originalEmit(name,value);send(name,value);if(name==='settings'){notify();for(const tab of validTabs())if(tab.linkedBrowser.currentURI.spec===homeURL)emitTo(tab.linkedBrowser,homeState());}};
 function makeFrame(id,url){const node=document.createXULElement('browser');node.id=id;node.setAttribute('type','content');node.setAttribute('remote','true');node.setAttribute('remoteType','file');node.setAttribute('disablehistory','true');node.setAttribute('transparent','true');node.setAttribute('src',url);node.setAttribute('aria-label',id==='soulu-shell-frame'?'Панель Soulu':'Настройки Soulu');document.documentElement.append(node);return node;}
@@ -47,11 +47,11 @@ async function siteAction(action,payload){const browser=selected();if(payload?.t
  else if(action.startsWith('reader.'))throw Error('Режим чтения Gecko будет подключён отдельным этапом.');
  else throw Error('Недоступное действие сайта: '+action);notify();return site();}
 async function menu(items,x,y){return new Promise(resolve=>{const popup=document.createXULElement('menupopup');let result=0;for(const item of items){const el=document.createXULElement(item.separator?'menuseparator':'menuitem');if(!item.separator){el.setAttribute('label',item.label||'');if(item.enabled===false)el.setAttribute('disabled','true');el.addEventListener('command',()=>{result=item.command;});}popup.append(el);}document.getElementById('mainPopupSet').append(popup);popup.addEventListener('popuphidden',()=>{popup.remove();resolve(result);},{once:true});popup.openPopupAtScreen(window.screenX+x,window.screenY+y,false);});}
-async function key(event){if(event.defaultPrevented)return;const code=event.key.toLowerCase();if(event.ctrlKey&&code==='l'){event.preventDefault();send('focusAddress',null);frame.focus();}else if(event.ctrlKey&&code==='t'){event.preventDefault();load(internalURL('newTab'));setTimeout(()=>send('focusAddress',null),40);}else if(event.ctrlKey&&code==='w'){event.preventDefault();await dispatch('browser.closeTab',tabID(gBrowser.selectedTab));}else if(event.ctrlKey&&code==='h'){event.preventDefault();openHistory();}else if(event.key==='Escape'){popover=false;suggestions=0;overview=false;bookmarksSide=false;geometry();notify();}}
+async function key(event){if(event.defaultPrevented)return;const code=event.key.toLowerCase();if(event.ctrlKey&&code==='l'){event.preventDefault();send('focusAddress',null);frame.focus();}else if(event.ctrlKey&&code==='t'){event.preventDefault();await dispatch('browser.newTab');}else if(event.ctrlKey&&code==='w'){event.preventDefault();await dispatch('browser.closeTab',tabID(gBrowser.selectedTab));}else if(event.ctrlKey&&code==='h'){event.preventDefault();openHistory();}else if(event.key==='Escape'){popover=false;suggestions=0;overview=false;bookmarksSide=false;geometry();notify();}}
 function openHistory(clear=false){const id=load(appURL+'history.html'+(clear?'?clear=1':''));return id;}
 async function dispatch(action,payload,source){
  if(action.startsWith('home.')){
-  if(action==='home.get')return homeState();if(action==='home.ready')return true;if(action==='home.navigate'){navigate(payload);return true;}
+  if(action==='home.get')return homeState();if(action==='home.ready'){if(focusAfterHome===tabID(gBrowser.selectedTab)){focusAfterHome=0;frame.focus();send('focusAddress',null);}return true;}if(action==='home.navigate'){navigate(payload);return true;}
   if(action==='home.set'){Object.assign(shared.config.settings,payload);await save();notify();return homeState();}
   if(action==='home.favorite'){const row=marks.find(r=>r.id===payload.id);if(row)load(row.url,payload.background);return true;}
   if(action==='home.favorite.edit'){settings('tabs');return true;}
@@ -62,7 +62,7 @@ async function dispatch(action,payload,source){
  switch(action){
  case 'browser.state.get':return {...await base('browser.state.get'),...snapshot()};
  case 'browser.navigate':navigate(payload);return true;
- case 'browser.newTab':load(internalURL('newTab'));setTimeout(()=>send('focusAddress',null),40);notify();return true;
+ case 'browser.newTab':focusAfterHome=load(internalURL('newTab'));setTimeout(()=>send('focusAddress',null),40);notify();return true;
  case 'browser.openTab':{const url=payload.url;if(!/^(https?:|about:)/.test(url))throw Error('Unsupported URL');load(url,!!payload.background);notify();return true;}
  case 'browser.home':navigate('soulu://home');return true;
  case 'browser.back':if(selected().canGoBack)selected().goBack();return true;
@@ -114,7 +114,7 @@ document.documentElement.setAttribute('chromemargin','0,0,0,0');
 frame=makeFrame('soulu-shell-frame',appURL+'index.html');
 const permissionAnchor=document.getElementById('notification-popup-box');if(permissionAnchor){document.documentElement.append(permissionAnchor);permissionAnchor.style.cssText='position:fixed;left:calc(50% - 285px);top:14px;width:22px;height:22px;opacity:.01;pointer-events:none;z-index:9999';}
 for(const event of ['TabOpen','TabClose','TabSelect','TabPinned','TabUnpinned','TabAttrModified'])gBrowser.tabContainer.addEventListener(event,notify);
-gBrowser.addTabsProgressListener({onLocationChange:notify,onStateChange:notify,onSecurityChange:notify});
+gBrowser.addTabsProgressListener({onLocationChange(_browser,progress){if(!progress||progress.isTopLevel)notify();},onStateChange(_browser,progress,_request,flags){if((!progress||progress.isTopLevel)&&(flags&(Ci.nsIWebProgressListener.STATE_START|Ci.nsIWebProgressListener.STATE_STOP)))notify();},onSecurityChange(_browser,progress){if(!progress||progress.isTopLevel)notify();}});
 window.addEventListener('resize',notify);window.addEventListener('sizemodechange',notify);window.addEventListener('keydown',key,true);
 gBrowser.addEventListener('mousedown',()=>{suggestions=0;popover=false;send('dismissSuggestions',null);geometry();},true);
 window.addEventListener('blur',()=>{suggestions=0;geometry();send('dismissSuggestions',null);});

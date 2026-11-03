@@ -10,6 +10,7 @@ export const adblock={
   if(!init(PathUtils.join(profile,'soulu-adblock-cache.json'),'',false))throw Error('Soulu adblock initialization failed');state.ready=true;Services.obs.addObserver(observer,'http-on-modify-request');
   ChromeUtils.registerWindowActor('SouluCosmetic',{parent:{esModuleURI:'chrome://soulu/content/CosmeticParent.sys.mjs'},child:{esModuleURI:'chrome://soulu/content/CosmeticChild.sys.mjs',events:{DOMContentLoaded:{capture:true}}},allFrames:true,remoteTypes:['web'],safeForUntrustedWebProcess:true,matches:['http://*/*','https://*/*']});
  },
+ attach(browser){try{browser.browsingContext.currentWindowGlobal.getActor('SouluCosmetic').sendAsyncMessage('refresh');}catch{}},
  refresh(){function visit(bc){try{bc.currentWindowGlobal?.getActor('SouluCosmetic').sendAsyncMessage('refresh');}catch{}for(const child of bc.children)visit(child);}for(const win of Services.wm.getEnumerator('navigator:browser'))for(const tab of win.gBrowser.tabs)visit(tab.linkedBrowser.browsingContext);},
  status(id=0){return {...(state.ready?json(state.stats):{ready:false}),blockedRequests:state.counts.get(id)||0,source:'Soulu CEF Rust engine',active:state.config?.config.rules.blocking.enabled||false};},
  cosmetic(url,tokens){return state.ready&&active(url)?json(state.cosmetic,url,JSON.stringify(tokens)):[];},
