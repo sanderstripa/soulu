@@ -1,0 +1,9 @@
+/* Loaded by AutoConfig before any browser window is created. */
+@-moz-document url-prefix("chrome://browser/content/") {
+ :root{background:#f6f6f8!important;--soulu-toolbar-height:68px;--soulu-surface-height:68px;}
+ @media(prefers-color-scheme:dark){:root{background:#08090b!important}}
+ :root#main-window#main-window #navigator-toolbox,#titlebar,#sidebar-main,#sidebar-box,#sidebar-splitter,#sidebar-launcher,#tab-notification-deck,#vertical-tabs-newtab-button{display:none!important;visibility:collapse!important;min-height:0!important;height:0!important}
+ #browser{border:0!important;margin-top:var(--soulu-toolbar-height)!important;min-height:0!important;flex:1!important;background:transparent!important}
+ :root:not([soulu-ui-ready]) #browser{visibility:hidden!important}
+ #tabbrowser-tabbox,#tabbrowser-tabpanels,#appcontent,.browserStack,.browserContainer,.browserSidebarContainer{min-height:0!important;border:0!important;outline:none!important;box-shadow:none!important;background:transparent!important;border-radius:0!important}
+}

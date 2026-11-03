@@ -12,7 +12,7 @@ import (
 
 func fail(s string) {
 	p, _ := syscall.UTF16PtrFromString(s)
-	t, _ := syscall.UTF16PtrFromString("Soulu Gecko Preview 2")
+	t, _ := syscall.UTF16PtrFromString("Soulu Gecko Preview 3")
 	syscall.NewLazyDLL("user32.dll").NewProc("MessageBoxW").Call(0, uintptr(unsafe.Pointer(p)), uintptr(unsafe.Pointer(t)), 16)
 	os.Exit(1)
 }

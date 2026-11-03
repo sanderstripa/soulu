@@ -13,3 +13,11 @@
 #browser{margin-inline-start:var(--soulu-left-panel,0px)!important}
 
 #tabbrowser-tabpanels,#appcontent,.browserStack,.browserContainer,.browserSidebarContainer{border:0!important;outline:none!important;box-shadow:none!important}
+:root{background:light-dark(#f6f6f8,#08090b)!important;color-scheme:light dark;}
+:root[soulu-dark]{color-scheme:dark}
+:root:not([soulu-dark]){color-scheme:light}
+:root[soulu-matte]{background:transparent!important}
+#browser,#tabbrowser-tabbox,#tabbrowser-tabpanels,.browserContainer,.browserSidebarContainer{min-height:0!important;min-width:0!important;overflow:clip!important;background:transparent!important}
+#soulu-settings-frame{will-change:transform,opacity;contain:paint;}
+
+:root#main-window #navigator-toolbox,:root#main-window #titlebar,:root#main-window #sidebar-main{display:none!important}

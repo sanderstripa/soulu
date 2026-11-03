@@ -1,0 +1,9 @@
+/* Gecko integration, preserving the original Soulu components and palette. */
+html.cef-runtime body[data-matte=true][data-page-glass-ready]:not([data-gecko-opaque]) .browser-toolbar{background:linear-gradient(112deg,light-dark(#ffffffa8,#171a21b8),light-dark(#e9f0f8aa,#202a39b8))!important;background-image:linear-gradient(112deg,light-dark(#ffffffa8,#171a21b8),light-dark(#e9f0f8aa,#202a39b8))!important;backdrop-filter:saturate(145%) blur(22px)!important}
+body[data-layout=adaptive][data-adaptive-expanded=false] .tabs-zone{visibility:hidden!important;opacity:0!important;pointer-events:none!important}
+.overview-close{display:grid!important;place-items:center!important;padding:0!important;line-height:1!important;width:32px!important;height:32px!important;min-height:32px!important;flex:none!important;align-self:center!important}
+.navigation-search:not(:focus-visible){outline:none!important;box-shadow:none!important}
+.navigation-search::-moz-search-clear-button{display:none}
+.soulu-translate-button{width:26px;height:26px;min-height:26px;flex:none;padding:4px;border:0;background:transparent;border-radius:50%;color:inherit;cursor:pointer}
+.soulu-translate-button svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.5}
+.settings-content{contain:paint}.settings-header,.settings-nav{backface-visibility:hidden}

@@ -6,3 +6,5 @@
  window.addEventListener('SouluResponse',event=>{const {id,value,error}=JSON.parse(event.detail);const call=pending.get(id);if(!call)return;pending.delete(id);error?call.onFailure(1,error):call.onSuccess(JSON.stringify(value??null));});
  window.addEventListener('SouluEmit',event=>{const {name,value}=JSON.parse(event.detail);if(name==='dismissSuggestions')document.querySelectorAll('.suggestions.visible').forEach(n=>n.classList.remove('visible'));window.__souluEmit?.(name,value);if(name==='home')window.souluHomeApply?.(value);});
 })();
+
+addEventListener('DOMContentLoaded',async()=>{if(!location.pathname.endsWith('/index.html'))return;await document.fonts.ready;await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));window.cefQuery({request:JSON.stringify({action:'window.frontendReady'}),onSuccess(){},onFailure(){}});},{once:true});
