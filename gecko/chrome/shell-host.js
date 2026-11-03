@@ -99,7 +99,7 @@ async function dispatch(action,payload,source){
  case 'settings.close':closeSettings();return true;
  case 'settings.resize':{if(settingsFrame){settingsFrame.style.height=Math.min(Number(payload.height)||720,innerHeight)+'px';}return true;}
  case 'settings.ready':settingsReady=true;if(settingsFrame&&Soulu.settingsRequested)animateSettings(true);if(pendingSection)actorSend(settingsFrame,'openSection',pendingSection);notify();return true;
- case 'settings.capabilities':return {matteAvailable:true,defaultBrowser:ChromeUtils.importESModule('chrome://soulu/content/window-controls.sys.mjs').isDefault()};
+ case 'settings.capabilities':return {matteAvailable:Soulu.material?.native===true,defaultBrowser:ChromeUtils.importESModule('chrome://soulu/content/window-controls.sys.mjs').isDefault()};
  case 'window.frontendReady':if(source?.appURI?.endsWith('/index.html')){document.documentElement.setAttribute('soulu-ui-ready','true');notify();}return true;
  case 'browser.bookmarks.get':marks=await Soulu.bookmarks('get');notify();return marks;
  case 'browser.bookmarks.add':marks=await Soulu.bookmarks('add',{url:currentURL(selected()),title:gBrowser.selectedTab.label});notify();return marks;

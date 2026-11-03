@@ -17,11 +17,16 @@ export function brand(win){
  try{library('shell32.dll').declare('SetCurrentProcessExplicitAppUserModelID',abi,ctypes.long,(ctypes.char16_t||ctypes.jschar).ptr)('Soulu.Gecko.Preview');}catch{}
 }
 export function material(win,enabled){
- if(Services.appinfo.OS!=='WINNT')return {enabled,native:false};
- const dwm=library('dwmapi.dll'),set=dwm.declare('DwmSetWindowAttribute',(ctypes.winapi_abi||ctypes.default_abi),ctypes.long,ctypes.uintptr_t,ctypes.uint32_t,ctypes.voidptr_t,ctypes.uint32_t),hwnd=handle(win),value=ctypes.int(enabled?2:1),dark=ctypes.int(win.document.documentElement.hasAttribute('soulu-dark')?1:0);
- set(hwnd,20,dark.address(),ctypes.int.size);const result=set(hwnd,38,value.address(),ctypes.int.size);
- const Margins=ctypes.StructType('SouluMargins',[{left:ctypes.int},{right:ctypes.int},{top:ctypes.int},{bottom:ctypes.int}]),margins=Margins(enabled?-1:0,enabled?-1:0,enabled?-1:0,enabled?-1:0);const extend=dwm.declare('DwmExtendFrameIntoClientArea',(ctypes.winapi_abi||ctypes.default_abi),ctypes.long,ctypes.uintptr_t,Margins.ptr);extend(hwnd,margins.address());
- const code=Number(result.value??result);return {enabled,native:code===0,result:code};
+ if(Services.appinfo.OS!=='WINNT')return {enabled:false,native:false};
+ // Use Gecko's own ChromeObserver / nsWindow Mica path, including OS fallbacks.
+ if(!Services.prefs.getBoolPref('widget.windows.mica',false))Services.prefs.setBoolPref('widget.windows.mica',true);
+ if(Services.prefs.getIntPref('widget.windows.mica.toplevel-backdrop',1)!==1)Services.prefs.setIntPref('widget.windows.mica.toplevel-backdrop',1);
+ const available=win.matchMedia('(-moz-windows-mica)').matches;
+ win.document.documentElement.toggleAttribute('windowsmica',!!enabled&&available);
+ win.document.documentElement.toggleAttribute('soulu-matte',!!enabled&&available);
+ const dwm=library('dwmapi.dll'),dark=ctypes.int(win.document.documentElement.hasAttribute('soulu-dark')?1:0);
+ dwm.declare('DwmSetWindowAttribute',(ctypes.winapi_abi||ctypes.default_abi),ctypes.long,ctypes.uintptr_t,ctypes.uint32_t,ctypes.voidptr_t,ctypes.uint32_t)(handle(win),20,dark.address(),ctypes.int.size);
+ return {enabled:!!enabled&&available,native:available};
 }
 
 export function isDefault(){

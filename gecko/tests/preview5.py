@@ -24,6 +24,10 @@ try:
  chrome('Soulu.closeSettings()');time.sleep(.3)
  bounds=chrome('const a=document.getElementById("browser").getBoundingClientRect(),b=gBrowser.selectedBrowser.getBoundingClientRect();return {left:b.left-a.left,right:a.right-b.right,bottom:a.bottom-b.bottom};');check('native_content_fills_browser_bounds',all(abs(v)<=1 for v in bounds.values()),bounds)
  call('browser.settings.set',{'startupMode':'continue'});stop();start();rows=call('browser.bookmarks.get');check('places_edit_survives_restart',any(r['id']==mark['id'] and r['title']=='Renamed bookmark' and r['parentId']==folder for r in rows));check('home_favorite_survives_restart',mark['id'] in call('browser.state.get')['settings']['homeFavoriteIds'])
+ # Native Mica path must toggle for supported Windows, or remain opaque.
+ call('browser.settings.set',{'mattePanel':False});check('matte_off_removes_native_backdrop',chrome('return !document.documentElement.hasAttribute("windowsmica")'))
+ call('browser.settings.set',{'mattePanel':True});matte=chrome('return {available:Soulu.material.native,enabled:document.documentElement.hasAttribute("windowsmica"),opaque:getComputedStyle(document.documentElement).backgroundColor!=="rgba(0, 0, 0, 0)"};')
+ check('matte_uses_native_gecko_or_opaque_fallback',matte['enabled'] if matte['available'] else matte['opaque'],matte)
  # Remote URL opening is authenticated and stays in this Firefox profile.
  info=json.loads((profile/'soulu-remote.json').read_text());count=len(call('browser.state.get')['tabs'])
  def remote_request(token,address):
