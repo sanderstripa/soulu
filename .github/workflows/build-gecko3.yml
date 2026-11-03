@@ -42,8 +42,16 @@ jobs:
         shell: pwsh
         run: |
           Push-Location gecko/launcher
-          go run github.com/akavel/rsrc@v0.10.2 -arch amd64 -ico ../../ui/soulu-app-icon.ico -o rsrc_windows_amd64.syso
-          if ($LASTEXITCODE -ne 0) { throw 'Icon resource compilation failed' }
+          $resourceCompiler = (Get-ChildItem "${env:ProgramFiles(x86)}/Windows Kits/10/bin/*/x64/rc.exe" | Sort-Object FullName -Descending | Select-Object -First 1).FullName
+          $vswhere = "${env:ProgramFiles(x86)}/Microsoft Visual Studio/Installer/vswhere.exe"
+          $convertResource = (& $vswhere -latest -products '*' -find 'VC/Tools/MSVC/**/bin/Hostx64/x64/cvtres.exe' | Select-Object -First 1)
+          if (-not $resourceCompiler -or -not $convertResource) { throw 'Windows resource toolchain unavailable' }
+          '1 ICON "../../ui/soulu-app-icon.ico"' | Set-Content soulu-icon.rc -Encoding ascii
+          & $resourceCompiler /nologo /fo soulu-icon.res soulu-icon.rc
+          if ($LASTEXITCODE -ne 0) { throw 'Windows icon resource compilation failed' }
+          & $convertResource /nologo /machine:x64 /out:rsrc.syso soulu-icon.res
+          if ($LASTEXITCODE -ne 0) { throw 'COFF icon conversion failed' }
+          go list -f '{{.SysoFiles}}' .
           go build -trimpath -ldflags '-s -w -H=windowsgui' -o '../../gecko-out/Soulu Gecko Preview 3.exe' .
           if ($LASTEXITCODE -ne 0) { throw 'Launcher compilation failed' }
           Pop-Location

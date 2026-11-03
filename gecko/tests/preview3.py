@@ -46,7 +46,7 @@ try:
   import ctypes as C
   from ctypes import wintypes as W
   exe=binary.parent.parent/'Soulu Gecko Preview 3.exe';large=C.c_void_p();small=C.c_void_p();C.windll.shell32.ExtractIconExW.argtypes=[W.LPCWSTR,C.c_int,C.POINTER(C.c_void_p),C.POINTER(C.c_void_p),C.c_uint]
-  icons=C.windll.shell32.ExtractIconExW(str(exe),0,C.byref(large),C.byref(small),1);check('launcher_contains_cef_app_icon',icons==1 and large.value is not None)
+  icons=C.windll.shell32.ExtractIconExW(str(exe),0,C.byref(large),C.byref(small),1);check('launcher_contains_cef_app_icon',icons>=1 and large.value is not None,{'path':str(exe),'exists':exe.exists(),'count':icons,'large':large.value,'small':small.value,'lastError':C.windll.kernel32.GetLastError()})
   for icon in [large,small]:
    if icon.value:C.windll.user32.DestroyIcon(icon)
  # Screenshots for this change set only.

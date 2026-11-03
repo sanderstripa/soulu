@@ -10,6 +10,7 @@
   const unsupported=['freezeBackgroundTabs','backgroundTabTimeout','memorySaver','performanceExclusions'];
   for(const id of unsupported){const input=document.getElementById(id);if(input)input.disabled=true;}
   const mode=document.getElementById('performanceMode');if(mode){const eco=mode.querySelector('option[value=eco]');if(eco)eco.disabled=true;if(!box.querySelector('[data-gecko-performance]')){const note=document.createElement('p');note.className='note';note.dataset.geckoPerformance='true';note.textContent='В этой сборке работают штатные механизмы Gecko. CEF-приостановка вкладок и отдельный режим экономии пока недоступны.';box.append(note);}}
+  const video=document.getElementById('videoTranslationEnabled');if(video){video.disabled=true;video.checked=false;video.title='Озвучка YouTube пока не перенесена. Перевод страниц работает через локальный движок Gecko.';}
   const downloads=document.getElementById('permissions-downloads');if(downloads){downloads.disabled=true;downloads.title='Автоматические загрузки пока контролируются штатной защитой Firefox.';}
  };
  new MutationObserver(annotate).observe(document.getElementById('sectionContent'),{childList:true});document.addEventListener('change',()=>setTimeout(annotate,0),true);
