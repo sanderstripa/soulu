@@ -7,6 +7,7 @@
 (()=>{
  const annotate=()=>{
   const box=document.getElementById('sectionContent');if(!box)return;
+  const portable=document.querySelector('#control-settings-defaultBrowser button');if(portable){portable.disabled=true;portable.title='Портативная Preview 4 пока не регистрируется браузером по умолчанию.';}
   const unsupported=['freezeBackgroundTabs','backgroundTabTimeout','memorySaver','performanceExclusions'];
   for(const id of unsupported){const input=document.getElementById(id);if(input)input.disabled=true;}
   const mode=document.getElementById('performanceMode');if(mode){const eco=mode.querySelector('option[value=eco]');if(eco)eco.disabled=true;if(!box.querySelector('[data-gecko-performance]')){const note=document.createElement('p');note.className='note';note.dataset.geckoPerformance='true';note.textContent='В этой сборке работают штатные механизмы Gecko. CEF-приостановка вкладок и отдельный режим экономии пока недоступны.';box.append(note);}}

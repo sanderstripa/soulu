@@ -167,6 +167,7 @@ window.Soulu={dispatch,settings,refresh:apply,get config(){return shared.config;
 function button(id,label,command){const b=document.createXULElement('toolbarbutton');b.id=id;b.className='toolbarbutton-1 chromeclass-toolbar-additional';b.setAttribute('label',label);b.setAttribute('tooltiptext',label);b.addEventListener('command',command);return b;}
 async function initialize(){
  if(!shared.initialized){try{const stored=await IOUtils.readJSON(settingsFile);if(stored.vpn?.protected)stored.vpn=JSON.parse(Cc['@mozilla.org/security/sdr;1'].getService(Ci.nsISecretDecoderRing).decryptString(stored.vpn.protected));shared.config={...defaults,...stored,settings:{...defaults.settings,...stored.settings},rules:{...defaults.rules,...stored.rules},vpn:{...defaults.vpn,...stored.vpn}};}catch(error){if(await IOUtils.exists(settingsFile)){shared.storageError=String(error);console.error('Soulu settings preserved:',error);}}try{shared.networkBeforeVPN=await IOUtils.readJSON(PathUtils.join(profile,'soulu-network-before-vpn.json'));}catch{}proxy(false);await IOUtils.remove(PathUtils.join(profile,'soulu-network-before-vpn.json'),{ignoreAbsent:true});shared.initialized=true;}
+ shared.config.settings.layout='adaptive';
  Soulu.backend={shared,Services,IOUtils,PathUtils,PlacesUtils,profile,isPrivate,save,apply};
  Services.scriptloader.loadSubScript('chrome://soulu/content/storage.js',window);
  Services.scriptloader.loadSubScript('chrome://soulu/content/shell-host.js',window);

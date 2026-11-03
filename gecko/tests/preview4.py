@@ -111,6 +111,13 @@ try:
  call('browser.passwords.add',{'origin':url.rstrip('/'),'username':'autofill-user','password':'fixture-autofill'})
  call('browser.navigate',url+'login');wait(lambda:content('return !!document.getElementById("password")'))
  check('native_login_autofill',wait(lambda:content('return document.getElementById("username").value==="autofill-user"&&document.getElementById("password").value==="fixture-autofill"'),20))
+ # Save a genuinely submitted site login through Firefox's actual prompt.
+ call('browser.navigate',url+'login-save');wait(lambda:content('return !!document.getElementById("password")&&location.pathname==="/login-save"'))
+ m.set_context('content');m.find_element('id','username').clear();m.find_element('id','username').send_keys('saved-through-site');m.find_element('id','password').clear();m.find_element('id','password').send_keys('fixture-site-save');m.find_element('tag name','button').click()
+ wait(lambda:chrome('return !!PopupNotifications.getNotification("password",gBrowser.selectedBrowser)'))
+ wait(lambda:chrome('const n=document.getElementById("password-notification"),p=PopupNotifications.getNotification("password",gBrowser.selectedBrowser);return !!n?.button&&!n.button.disabled&&p?.timeShown&&ChromeUtils.now()-p.timeShown>Services.prefs.getIntPref("security.notification_enable_delay",500)+100'))
+ check('native_save_prompt_action',chrome('const n=document.getElementById("password-notification");if(!n?.button)return false;n.button.click();return true;'))
+ check('native_site_submission_saved_to_nss',wait(lambda:any(r['username']=='saved-through-site' for r in call('browser.passwords.get'))))
  chrome('Services.prefs.clearUserPref("signon.autofillForms.http")')
  call('browser.navigate',url);wait(lambda:content('return !!document.getElementById("v")'))
  call('browser.settings.openWindow');wait(lambda:call('browser.state.get')['settingsOverlayReady'])
