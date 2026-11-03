@@ -9,6 +9,8 @@ signed_id=installed['id'];wait(lambda:any(i['id']==signed_id and i['action'] for
 call('browser.extensions.pin',{'profile':'default','id':signed_id,'pinned':True});native_selector='[data-extension-toolbar="classic"] [data-extension-id="'+signed_id+'"]';wait(lambda:ui('return !!document.querySelector('+json.dumps(native_selector)+')'))
 call('browser.settings.set',{'startupMode':'soulu'});stop();start()
 check('signed_extension_and_native_pin_survive_restart',wait(lambda:any(i['id']==signed_id and i['enabled'] and i['pinned'] for i in action_items())) and wait(lambda:ui('return !!document.querySelector('+json.dumps(native_selector)+')')))
+call('browser.navigate',url);select_latest();wait(lambda:content('return location.href==='+json.dumps(url)+'&&!!document.getElementById("v")'))
+wait(lambda:next(i for i in action_items() if i['id']==signed_id)['actionEnabled'])
 real_click(native_selector);state=wait(lambda:(lambda s:s if s and s['state']=='open' else False)(popup_state()));check('real_signed_extension_popup_opens',state['id']==signed_id and state['remote'].startswith('extension'),state)
 (out/'signed-extension-popup.png').write_bytes(base64.b64decode(m.screenshot()))
 call('browser.extensions.close')

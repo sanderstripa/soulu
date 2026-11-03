@@ -16,7 +16,12 @@ async function iconFor(extension,api){
  const value=(async()=>{try{const response=await window.fetch(url,{credentials:'omit'}),mime=(response.headers.get('content-type')||'').split(';')[0];if(!response.ok||!/^image\/(png|jpeg|gif|webp|svg\+xml|x-icon|vnd\.microsoft\.icon)$/i.test(mime))return '';const reader=response.body.getReader(),parts=[];let length=0;for(;;){const {done,value}=await reader.read();if(done)break;length+=value.length;if(length>262144){await reader.cancel();return '';}parts.push(value);}let binary='';for(const part of parts)for(const byte of part)binary+=String.fromCharCode(byte);return 'data:'+mime+';base64,'+btoa(binary);}catch{return '';}})();
  if(icons.size>=128)icons.delete(icons.keys().next().value);icons.set(key,value);return value;
 }
-function watch(api){const node=api.widget?.forWindow(window)?.node;if(!node?.isConnected||widgets.has(node))return;const observer=new MutationObserver(schedule);observer.observe(node,{attributes:true,subtree:true,attributeFilter:['style','badge','badgeStyle','disabled','data-l10n-args']});widgets.set(node,observer);}
+function delegate(api){
+ const delegates=shared.extensionDelegates??=new Map();if(delegates.has(api))return;const original=api.openPopup;
+ const wrapped=function(win,withoutUserInteraction=false){const handler=win?.Soulu?.extensions?.openNativePopup;if(handler)return handler(this.extension.id,withoutUserInteraction);return original.call(this,win,withoutUserInteraction);};
+ delegates.set(api,{original,wrapped});api.openPopup=wrapped;
+}
+function watch(api){delegate(api);const node=api.widget?.forWindow(window)?.node;if(!node?.isConnected||widgets.has(node))return;const observer=new MutationObserver(schedule);observer.observe(node,{attributes:true,subtree:true,attributeFilter:['style','badge','badgeStyle','disabled','data-l10n-args']});widgets.set(node,observer);}
 async function list(){
  for(const [node,observer] of widgets)if(!node.isConnected){observer.disconnect();widgets.delete(node);}
  const addons=await AddonManager.getAddonsByTypes(['extension']),items=[];
@@ -27,16 +32,23 @@ async function list(){
 }
 function schedule(){if(closed||pending)return;const current=++revision;pending=requestAnimationFrame(async()=>{pending=0;try{const value=await list();if(closed||current!==revision)return;const signature=JSON.stringify(value);if(signature!==last){last=signature;Soulu.native.send('extensions',value);}}catch(error){console.error('Soulu extensions:',error);}});}
 function closePopup(){epoch++;if(popup){const old=popup;popup=null;if(!old.destroyed)old.closePopup();}anchor?.remove();anchor=null;}
-async function open(payload,source){
+function checkRequest(payload,source){
  checkProfile(payload);if(!source?.appURI?.endsWith('/index.html')||!Number.isFinite(source.gesture?.at)||Date.now()-source.gesture.at<0||Date.now()-source.gesture.at>2000)throw Error('Нажмите кнопку расширения в панели Soulu.');
  if(payload.tabId!==Soulu.native.tabID(gBrowser.selectedTab)||payload.generation!==(gBrowser.selectedBrowser.browsingContext.currentWindowGlobal?.innerWindowId||0))throw Error('Активная страница изменилась. Нажмите кнопку снова.');
+}
+function triggerUserAction(api,tab){const handling=window.windowUtils.setHandlingUserInput(true);try{return api.action.triggerClickOrPopup(tab,{button:0,modifiers:[]});}finally{handling.destruct();}}
+async function open(payload,source){
+ checkRequest(payload,source);
  const {extension,api}=native(payload.id);if(!extension||!api||!extension.canAccessWindow(window))throw Error('Расширение недоступно в этом окне.');if(!api.action.isShownForTab(gBrowser.selectedTab))throw Error('Действие расширения отключено для этой страницы.');
  if(popup?.extension===extension&&!popup.destroyed){closePopup();return {open:false};}closePopup();const ticket=epoch,tab=gBrowser.selectedTab;
  // This is the stock action path: enabled/restricted-site checks, activeTab grant,
  // activation of scripts and onClicked dispatch remain inside Firefox.
- const url=api.action.triggerClickOrPopup(tab,{button:0,modifiers:[]});if(!url){schedule();return {open:false,clicked:true};}
+ const url=triggerUserAction(api,tab);if(!url){schedule();return {open:false,clicked:true};}
+ return showPopup(extension,api,url,payload.anchor,tab,ticket);
+}
+async function showPopup(extension,api,url,rectangle,tab,ticket){
  const uri=Services.io.newURI(url);if(uri.scheme!=='moz-extension'||uri.prePath!==extension.baseURI.prePath)throw Error('Неподдерживаемый адрес панели расширения.');
- const rect=payload.anchor;if(!rect||!['x','y','width','height'].every(k=>Number.isFinite(rect[k]))||rect.width<=0||rect.height<=0)throw Error('Invalid action anchor');
+ const rect=rectangle;if(!rect||!['x','y','width','height'].every(k=>Number.isFinite(rect[k]))||rect.width<=0||rect.height<=0)throw Error('Invalid action anchor');
  const node=document.createElementNS('http://www.w3.org/1999/xhtml','span');node.id='soulu-extension-anchor';node.style.cssText=`position:fixed;left:${Math.max(0,Math.min(innerWidth-1,rect.x))}px;top:${Math.max(0,Math.min(innerHeight-1,rect.y))}px;width:${Math.min(64,rect.width)}px;height:${Math.min(64,rect.height)}px;pointer-events:none;background:transparent;`;document.documentElement.append(node);anchor=node;
  const current=new PanelPopup(extension,document,url,api.browserStyle);popup=current;const panel=current.viewNode;panel.dataset.souluExtension=extension.id;
  panel.addEventListener('popuphidden',()=>{if(popup===current){popup=null;anchor?.remove();anchor=null;}schedule();},{once:true});
@@ -46,12 +58,29 @@ Soulu.dispatch=async(action,payload,source)=>{
  if(action==='browser.extensions.list'){if(payload?.profile!==undefined)checkProfile(payload);return list();}
  if(action==='browser.extensions.pin'){checkProfile(payload);const {extension,api}=native(payload.id);if(!extension||!api||!extension.canAccessWindow(window))throw Error('Расширение недоступно.');CustomizableUI.addWidgetToArea(api.id,payload.pinned?CustomizableUI.AREA_NAVBAR:CustomizableUI.AREA_ADDONS);schedule();return list();}
  if(action==='browser.extensions.open')return open(payload,source);
+ if(action==='browser.extensions.overflow'){
+  checkRequest(payload,source);closePopup();const available=(await list()).items.filter(i=>i.enabled&&i.pinned&&i.action),menu=document.createXULElement('menupopup');menu.dataset.souluExtensions='true';let chosen=null;
+  for(const item of available){const node=document.createXULElement('menuitem');node.setAttribute('label',item.title||item.name);node.dataset.extensionId=item.id;if(!item.actionEnabled)node.setAttribute('disabled','true');node.addEventListener('command',event=>{if(event.isTrusted)chosen=item.id;});menu.append(node);}
+  document.getElementById('mainPopupSet').append(menu);return new Promise((resolve,reject)=>{menu.addEventListener('popuphidden',()=>{menu.remove();if(!chosen){resolve({open:false});return;}open({...payload,id:chosen},{...source,gesture:{at:Date.now()}}).then(resolve,reject);},{once:true});const r=payload.anchor;if(!r||!['x','y','width','height'].every(k=>Number.isFinite(r[k]))){menu.remove();reject(Error('Invalid menu anchor'));return;}menu.openPopupAtScreen(window.mozInnerScreenX+r.x,window.mozInnerScreenY+r.y+r.height,false);});
+ }
  if(action==='browser.extensions.close'){closePopup();return true;}
  return base(action,payload,source);
 };
-const addonListener={onInstalled:schedule,onEnabled:schedule,onDisabled(){closePopup();schedule();},onUninstalled(){closePopup();icons.clear();schedule();},onPropertyChanged:schedule};AddonManager.addAddonListener(addonListener);
+const addonListener={onInstalled:schedule,onEnabled:schedule,onDisabled(){closePopup();schedule();},onUninstalled(addon){closePopup();icons.clear();for(const [api,value] of shared.extensionDelegates||[])if(api.extension.id===addon.id){if(api.openPopup===value.wrapped)api.openPopup=value.original;shared.extensionDelegates.delete(api);}schedule();},onPropertyChanged:schedule};AddonManager.addAddonListener(addonListener);
 const customization={onWidgetAdded:schedule,onWidgetRemoved:schedule,onWidgetMoved:schedule,onWidgetAfterDOMChange:schedule};CustomizableUI.addListener(customization);
 const selected=()=>{closePopup();schedule();};gBrowser.tabContainer.addEventListener('TabSelect',selected);gBrowser.tabContainer.addEventListener('TabAttrModified',schedule);window.addEventListener('resize',closePopup);
-window.addEventListener('unload',()=>{closed=true;closePopup();if(pending)cancelAnimationFrame(pending);for(const observer of widgets.values())observer.disconnect();widgets.clear();icons.clear();AddonManager.removeAddonListener(addonListener);CustomizableUI.removeListener(customization);},{once:true});
-Soulu.extensions={refresh:schedule};schedule();
+window.addEventListener('unload',()=>{closed=true;closePopup();if(pending)cancelAnimationFrame(pending);for(const observer of widgets.values())observer.disconnect();widgets.clear();icons.clear();AddonManager.removeAddonListener(addonListener);CustomizableUI.removeListener(customization);if(![...Services.wm.getEnumerator('navigator:browser')].some(w=>w!==window&&!w.closed&&w.Soulu?.extensions)){for(const [api,value] of shared.extensionDelegates||[])if(api.openPopup===value.wrapped)api.openPopup=value.original;shared.extensionDelegates?.clear();}},{once:true});
+async function openNativePopup(id,withoutUserInteraction){
+ const {extension,api}=native(id);if(!extension||!api||!extension.canAccessWindow(window))throw Error('Расширение недоступно в этом окне.');
+ if(Services.focus.activeWindow!==window)return;if(popup?.extension===extension&&!popup.destroyed)return {open:true};
+ const tab=gBrowser.selectedTab,url=api.action.getPopupUrl(tab);if(!url)return;
+ const rectangle=await Soulu.ui().browsingContext.currentWindowGlobal.getActor('SouluApp').sendQuery('extensionAnchor',id);
+ if(!rectangle)throw Error('Закрепите расширение на панели Soulu перед открытием его окна.');
+ if(tab!==gBrowser.selectedTab)return;closePopup();const ticket=epoch;
+ // Firefox's API has already validated its own user-gesture policy. Preserve
+ // its distinction: programmatic openPopup must not mint activeTab permission.
+ const target=withoutUserInteraction?url:triggerUserAction(api,tab);if(!target)return;
+ return showPopup(extension,api,target,rectangle,tab,ticket);
+}
+Soulu.extensions={refresh:schedule,openNativePopup};schedule();
 })();

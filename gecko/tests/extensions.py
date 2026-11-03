@@ -7,11 +7,12 @@ from PIL import Image
 report={'passed':False,'scope':'Native extension action integration','checks':{},'limitations':[]}
 fixture_id='soulu-action-fixture@example.test'
 click_id='soulu-click-fixture@example.test'
-def fixture(path,id,popup=True):
+def fixture(path,id,popup=True,api_popup=False):
  image=io.BytesIO();Image.new('RGBA',(32,32),(65,130,232,255)).save(image,format='PNG')
  manifest={'manifest_version':3,'name':'Soulu extension fixture','version':'1.0','browser_specific_settings':{'gecko':{'id':id}},'permissions':['activeTab','scripting','storage'],'background':{'scripts':['background.js']},'action':{'default_icon':{'32':'icon.png'},'default_title':'Fixture action'}}
  if popup:manifest['action']['default_popup']='popup.html'
  background='browser.action.onClicked.addListener(async tab=>{await browser.scripting.executeScript({target:{tabId:tab.id},func:()=>document.documentElement.dataset.souluExtensionClicked="yes"});await browser.action.setBadgeText({text:"C"});});'
+ if api_popup:background='browser.action.onClicked.addListener(async()=>{await browser.action.setPopup({popup:"popup.html"});await browser.action.openPopup();});'
  popup_js='browser.action.setBadgeText({text:"A"});document.getElementById("apply").onclick=async()=>{const [tab]=await browser.tabs.query({active:true,currentWindow:true});await browser.scripting.executeScript({target:{tabId:tab.id},func:()=>document.documentElement.dataset.souluExtensionPopup="yes"});await browser.storage.local.set({worked:true});await browser.action.setBadgeText({text:"B"});document.getElementById("result").textContent="done";};'
  with zipfile.ZipFile(path,'w') as z:
   z.writestr('manifest.json',json.dumps(manifest));z.writestr('background.js',background);z.writestr('icon.png',image.getvalue());z.writestr('popup.html','<!doctype html><meta charset=utf-8><title>Fixture popup</title><link rel=stylesheet href=popup.css><button id=apply>Apply to active tab</button><p id=result>ready</p><script src=popup.js></script>');z.writestr('popup.js',popup_js);z.writestr('popup.css','body{width:260px;min-height:120px;background:#fff;color:#111;font:14px sans-serif}button{padding:12px}')
@@ -61,6 +62,11 @@ try:
  call('browser.extensions.pin',{'profile':'default','id':fixture_id,'pinned':True})
  for id in [fixture_id,click_id]:run('const {AddonManager}=ChromeUtils.importESModule("resource://gre/modules/AddonManager.sys.mjs");await (await AddonManager.getAddonByID('+json.dumps(id)+')).uninstall();return true;')
  check('uninstall_removes_action_and_observers',wait(lambda:not any(i['id'] in [fixture_id,click_id] for i in action_items())) and wait(lambda:ui('return !document.querySelector("[data-extension-id]")')))
+ # Some real extensions set a popup in onClicked and then use action.openPopup.
+ api_id='soulu-api-popup@example.test';api_path=root/'api-popup.xpi';fixture(api_path,api_id,False,True);install(api_path);wait(lambda:any(i['id']==api_id and i['action'] for i in action_items()));call('browser.extensions.pin',{'profile':'default','id':api_id,'pinned':True})
+ api_selector='[data-extension-toolbar="classic"] [data-extension-id="'+api_id+'"]';wait(lambda:ui('return !!document.querySelector('+json.dumps(api_selector)+')'));real_click(api_selector)
+ state=wait(lambda:(lambda s:s if s and s['state']=='open' else False)(popup_state()));check('native_action_openpopup_api_uses_soulu_anchor',state['id']==api_id and state['remote'].startswith('extension'),state)
+ call('browser.extensions.close');run('const {AddonManager}=ChromeUtils.importESModule("resource://gre/modules/AddonManager.sys.mjs");await (await AddonManager.getAddonByID('+json.dumps(api_id)+')).uninstall();return true;')
  # A file-enabled add-on must still be unable to inject into Soulu UI.
  guarded='soulu-file-fixture@example.test';guardpath=root/'guarded.xpi'
  manifest={'manifest_version':2,'name':'File injection fixture','version':'1.0','applications':{'gecko':{'id':guarded}},'permissions':['<all_urls>','tabs','activeTab'],'browser_action':{'default_title':'File guard probe'},'background':{'scripts':['guard-background.js']},'content_scripts':[{'matches':['<all_urls>'],'js':['guard-content.js'],'all_frames':True,'run_at':'document_start'}]}
@@ -79,6 +85,20 @@ try:
  check('dynamic_extension_injection_into_app_document_denied',wait(lambda:next(i for i in action_items() if i['id']==guarded)['badge']=='DENIED'))
  check('app_bridge_not_escalated_by_extension',ui('return !document.documentElement.dataset.souluDynamicInjection','page'))
  run('const {AddonManager}=ChromeUtils.importESModule("resource://gre/modules/AddonManager.sys.mjs");await (await AddonManager.getAddonByID('+json.dumps(guarded)+')).uninstall();return true;')
+ # Native overflow keeps a narrow toolbar usable with several pinned actions.
+ call('browser.navigate',url);wait(lambda:content('return !!document.getElementById("v")'))
+ overflow_ids=[]
+ for i in range(5):
+  id=f'soulu-overflow-{i}@example.test';path=root/f'overflow-{i}.xpi';fixture(path,id,False);install(path);wait(lambda:any(v['id']==id and v['action'] for v in action_items()));call('browser.extensions.pin',{'profile':'default','id':id,'pinned':True});overflow_ids.append(id)
+ chrome('window.restore();window.resizeTo(780,740)');wait(lambda:chrome('return innerWidth<=800'))
+ more='[data-extension-toolbar="classic"] [data-extension-overflow]';check('pinned_actions_have_overflow_menu',wait(lambda:ui('return !!document.querySelector('+json.dumps(more)+')')))
+ real_click(more);check('overflow_lists_native_actions',wait(lambda:chrome('const p=document.querySelector("menupopup[data-soulu-extensions]");return p?.state==="open"&&p.querySelectorAll("menuitem").length===5')))
+ m.set_context('chrome');m._send_message('WebDriver:PerformActions',{'actions':[{'type':'key','id':'soulu-menu-keyboard','actions':[{'type':'keyDown','value':'\ue010'},{'type':'keyUp','value':'\ue010'},{'type':'keyDown','value':'\ue007'},{'type':'keyUp','value':'\ue007'}]}]})
+ check('overflow_action_executes_on_real_webpage',wait(lambda:content('return document.documentElement.dataset.souluExtensionClicked==="yes"')))
+ for width in [780,1000]:
+  chrome(f'window.resizeTo({width},740)');time.sleep(.2)
+  check('extension_slots_do_not_overlap_back_'+str(width),ui('const host=document.querySelector("[data-extension-toolbar=classic]"),back=document.getElementById("backButton").getBoundingClientRect(),vpn=document.getElementById("vpnButton").getBoundingClientRect(),r=host.getBoundingClientRect();return Math.min(r.x,vpn.x)>=back.right-1;'))
+ for id in overflow_ids:run('const {AddonManager}=ChromeUtils.importESModule("resource://gre/modules/AddonManager.sys.mjs");await (await AddonManager.getAddonByID('+json.dumps(id)+')).uninstall();return true;')
  if os.name=='nt':
   exec(compile(Path(__file__).with_name('extensions-signed.py').read_text(encoding='utf-8'),str(Path(__file__).with_name('extensions-signed.py')),'exec'),globals())
  report['passed']=True
