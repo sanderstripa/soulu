@@ -1,0 +1,105 @@
+name: Soulu Gecko Preview 4
+on:
+  push:
+    branches: [gecko-preview]
+    paths: ['gecko/**', 'vpn/helper/**', '.github/workflows/build-gecko4.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: soulu-gecko-preview4
+  cancel-in-progress: true
+jobs:
+  windows:
+    runs-on: windows-2025
+    timeout-minutes: 60
+    env:
+      PYTHONUTF8: 1
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: sanderstripa/soulu
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.0'
+          cache: false
+      - name: Assemble pinned Gecko and original Soulu resources
+        run: python gecko/build.py --platform win64 --output gecko-out
+      - name: Reuse integrity-verified external VPN cores and licenses
+        shell: pwsh
+        run: |
+          gh release download gecko-preview-3 -p Soulu-Gecko-Preview-3-win64.zip -p SHA256SUMS.txt -D previous
+          $expected = ((Get-Content previous/SHA256SUMS.txt -Raw).Trim() -split '\s+')[0]
+          if ((Get-FileHash previous/Soulu-Gecko-Preview-3-win64.zip -Algorithm SHA256).Hash.ToLowerInvariant() -cne $expected) { throw 'Previous release checksum mismatch' }
+          Expand-Archive previous/Soulu-Gecko-Preview-3-win64.zip previous/expanded
+          Copy-Item previous/expanded/runtime/soulu/vpn gecko-out/runtime/soulu/vpn -Recurse
+      - name: Build and test profile-isolated VPN helper with actual cores
+        shell: pwsh
+        run: |
+          $env:SOULU_VPN_FIXTURE_BIN = "$env:GITHUB_WORKSPACE/gecko-out/runtime/soulu/vpn"
+          Push-Location vpn/helper
+          go test ./... -count=1 -timeout 5m -v
+          if ($LASTEXITCODE -ne 0) { throw 'VPN helper tests failed' }
+          go build -trimpath -ldflags '-s -w -H=windowsgui' -o ../../gecko-out/runtime/soulu/vpn/SouluVpnHost.exe .
+          if ($LASTEXITCODE -ne 0) { throw 'VPN helper compilation failed' }
+          Pop-Location
+      - name: Select CEF-compatible Rust toolchain
+        shell: pwsh
+        run: |
+          rustup toolchain install 1.99.0 --profile minimal
+          rustup override set 1.99.0
+      - uses: actions/cache/restore@v4
+        id: blocker-cache
+        with:
+          path: gecko-cache/adblock/target
+          key: gecko-blocker4-rust199-${{ hashFiles('cef/soulu/adblock/Cargo.lock', 'cef/soulu/adblock/src/lib.rs', 'gecko/adblock-adapter.rs') }}
+          restore-keys: |
+            gecko-blocker-rust199-
+      - name: Build original Rust engine with isolated atomic-update adapter
+        run: python gecko/build-adblock.py gecko-out
+      - uses: actions/cache/save@v4
+        if: always() && steps.blocker-cache.outputs.cache-hit != 'true'
+        with:
+          path: gecko-cache/adblock/target
+          key: gecko-blocker4-rust199-${{ hashFiles('cef/soulu/adblock/Cargo.lock', 'cef/soulu/adblock/src/lib.rs', 'gecko/adblock-adapter.rs') }}
+      - name: Build launcher with original Soulu icon
+        shell: pwsh
+        run: |
+          Push-Location gecko/launcher
+          go run github.com/akavel/rsrc@v0.10.2 -arch amd64 -ico ../../ui/soulu-app-icon.ico -o rsrc.syso
+          if ($LASTEXITCODE -ne 0) { throw 'Icon resource compilation failed' }
+          go build -trimpath -ldflags '-s -w -H=windowsgui' -o '../../gecko-out/Soulu Gecko Preview 4.exe' .
+          if ($LASTEXITCODE -ne 0) { throw 'Launcher compilation failed' }
+          Pop-Location
+      - name: Real Windows browser acceptance
+        shell: pwsh
+        run: |
+          python -m pip install marionette_driver pillow psutil
+          python gecko/tests/preview4.py gecko-out/runtime/firefox.exe gecko4-acceptance
+          if ($LASTEXITCODE -ne 0) { throw 'Preview 4 acceptance failed' }
+          Copy-Item gecko4-acceptance/preview4.json gecko-out/preview4.json
+      - name: Package verified candidate and verify extracted launcher
+        shell: pwsh
+        run: |
+          Copy-Item gecko/docs gecko-out/docs -Recurse
+          New-Item -ItemType Directory -Force gecko-out/visual-evidence | Out-Null
+          Copy-Item gecko4-acceptance/*.png gecko-out/visual-evidence/
+          Compress-Archive -Path gecko-out/* -DestinationPath Soulu-Gecko-Preview-4-win64.zip -CompressionLevel Optimal
+          python gecko/tests/zip_smoke.py Soulu-Gecko-Preview-4-win64.zip gecko4-acceptance
+          if ($LASTEXITCODE -ne 0) { throw 'Extracted ZIP launch failed' }
+          (Get-FileHash Soulu-Gecko-Preview-4-win64.zip -Algorithm SHA256).Hash.ToLowerInvariant() + '  Soulu-Gecko-Preview-4-win64.zip' | Set-Content SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gecko4-acceptance
+          path: gecko4-acceptance/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Soulu-Gecko-Preview-4-win64
+          path: |
+            Soulu-Gecko-Preview-4-win64.zip
+            SHA256SUMS.txt

@@ -3,6 +3,7 @@ import pathlib,shutil,subprocess,os,sys
 root=pathlib.Path(__file__).resolve().parent.parent
 source=root/'gecko-cache/adblock';source.parent.mkdir(exist_ok=True)
 shutil.copytree(root/'cef/soulu/adblock',source,dirs_exist_ok=True,ignore=shutil.ignore_patterns('target'))
+rust=source/'src/lib.rs';rust.write_text(rust.read_text()+'\n'+(root/'gecko/adblock-adapter.rs').read_text())
 p=source/'Cargo.toml';p.write_text(p.read_text().replace('crate-type = ["staticlib"]','crate-type = ["staticlib", "cdylib"]'))
 subprocess.run(['cargo','build','--release','--locked'],cwd=source,check=True)
 name='soulu_adblock.dll' if os.name=='nt' else 'libsoulu_adblock.so'

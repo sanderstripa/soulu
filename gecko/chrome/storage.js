@@ -49,8 +49,8 @@ Soulu.dispatch=async(action,payload,source)=>{
   const login=all.find(l=>l.guid===payload||l.guid===payload?.id);
   if(op==='reveal'){if(!login)throw Error('Запись не найдена.');return login.password;}
   if(op==='copy'){if(!login)throw Error('Запись не найдена.');const value=payload.field==='password'?login.password:login.username;Cc['@mozilla.org/widget/clipboardhelper;1'].getService(Ci.nsIClipboardHelper).copyString(value);return true;}
-  if(op==='remove'){if(login)Services.logins.removeLogin(login);return Soulu.dispatch('browser.passwords.get');}
-  if(op==='add'){if(isPrivate)throw Error('Пароли не сохраняются в инкогнито.');const u=new URL(payload.origin);if(!['http:','https:'].includes(u.protocol)||!payload.password)throw Error('Invalid password record');const record=Cc['@mozilla.org/login-manager/loginInfo;1'].createInstance(Ci.nsILoginInfo);record.init(u.origin,u.origin,null,payload.username,payload.password,'','');const prior=payload.id?all.find(l=>l.guid===payload.id):all.find(l=>l.hostname===u.origin&&l.username===payload.username);if(payload.id&&!prior)throw Error('Запись изменилась.');if(prior)await Services.logins.modifyLogin(prior,record);else await Services.logins.addLoginAsync(record);return Soulu.dispatch('browser.passwords.get');}
+  if(op==='remove'){if(login)await Services.logins.removeLoginAsync(login);return Soulu.dispatch('browser.passwords.get');}
+  if(op==='add'){if(isPrivate)throw Error('Пароли не сохраняются в инкогнито.');const u=new URL(payload.origin);if(!['http:','https:'].includes(u.protocol)||!payload.password)throw Error('Invalid password record');const record=Cc['@mozilla.org/login-manager/loginInfo;1'].createInstance(Ci.nsILoginInfo);record.init(u.origin,u.origin,null,payload.username,payload.password,'','');const prior=payload.id?all.find(l=>l.guid===payload.id):all.find(l=>l.hostname===u.origin&&l.username===payload.username);if(payload.id&&!prior)throw Error('Запись изменилась.');if(prior)await Services.logins.modifyLoginAsync(prior,record);else await Services.logins.addLoginAsync(record);return Soulu.dispatch('browser.passwords.get');}
  }
  return base(action,payload,source);
 };

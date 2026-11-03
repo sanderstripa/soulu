@@ -52,7 +52,7 @@ async function key(event){if(event.defaultPrevented)return;const code=event.key.
 function openHistory(clear=false){const id=load(appURL+'history.html'+(clear?'?clear=1':''));return id;}
 async function dispatch(action,payload,source){
  if(action.startsWith('home.')){
-  if(action==='home.get')return homeState();if(action==='home.ready'){if(focusAfterHome===tabID(gBrowser.selectedTab)){focusAfterHome=0;frame.focus();send('focusAddress',null);}return true;}if(action==='home.navigate'){navigate(payload);return true;}
+  if(action==='home.get')return homeState();if(action==='home.ready'){if(focusAfterHome===tabID(gBrowser.selectedTab)){focusAfterHome=0;frame.focus();send('focusAddress',null);}return true;}if(action==='home.navigate'){const query=String(payload||'').trim();if(query&&!/^https?:\/\//i.test(query)&&!/^([^\s/.]+\.[^\s/]+)(:\d+)?([/?#].*)?$/.test(query)){const provider=shared.config.settings.homeProvider==='perplexity'?'https://www.perplexity.ai/search?q=':'https://www.google.com/search?q=';navigate(provider+encodeURIComponent(query));}else navigate(query);return true;}
   if(action==='home.set'){Object.assign(shared.config.settings,payload);await save();notify();return homeState();}
   if(action==='home.favorite'){const row=marks.find(r=>r.id===payload.id);if(row)load(row.url,payload.background);return true;}
   if(action==='home.favorite.edit'){settings('startup');return true;}

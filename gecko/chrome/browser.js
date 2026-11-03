@@ -54,12 +54,13 @@ function apply(){
  
  pref('layout.css.prefers-color-scheme.content-override',s.theme==='dark'?0:s.theme==='light'?1:2);Soulu.notify?.();
 }
+function socksPort(){if(!shared.socksPort){const socket=Cc['@mozilla.org/network/server-socket;1'].createInstance(Ci.nsIServerSocket);socket.init(-1,true,-1);shared.socksPort=socket.port;socket.close();}return shared.socksPort;}
 async function helperRequest(request){
  const operation=async()=>{
   if(!shared.helper){
    if(Services.appinfo.OS!=='WINNT')throw Error('VPN helper is available in the Windows build');
    const base=Services.dirsvc.get('GreD',Ci.nsIFile).path;
-   const env=Subprocess.getEnvironment();env.LOCALAPPDATA=PathUtils.parent(PathUtils.parent(profile));
+   const env=Subprocess.getEnvironment();env.SOULU_SOCKS_PORT=String(socksPort());env.SOULU_VPN_ROOT=PathUtils.join(profile,'soulu-vpn');
    shared.helper=await Subprocess.call({command:PathUtils.join(base,'soulu','vpn','SouluVpnHost.exe'),arguments:[],environment:env,stderr:'pipe'});
   }
   const bytes=new TextEncoder().encode(JSON.stringify(request));const header=new Uint8Array(4);new DataView(header.buffer).setUint32(0,bytes.length,true);
@@ -73,20 +74,23 @@ async function helperRequest(request){
  const promise=shared.helperQueue.then(operation);shared.helperQueue=promise.catch(()=>{});return promise;
 }
 function proxy(enabled){
+ if(shared.proxyEnabled!==enabled){Soulu.adblock?.abortUpdate?.();shared.proxyEnabled=enabled;}
  // SOCKS DNS and no direct fallback: core failure leaves browser traffic blocked.
- pref('network.proxy.socks','127.0.0.1');pref('network.proxy.socks_port',17890);pref('network.proxy.socks_version',5);
+ pref('network.proxy.socks','127.0.0.1');pref('network.proxy.socks_port',enabled?socksPort():(shared.socksPort||17890));pref('network.proxy.socks_version',5);
  pref('network.proxy.socks_remote_dns',true);pref('network.proxy.failover_direct',false);
  pref('network.proxy.no_proxies_on',shared.config.vpn.directDomains.split(/[\s,]+/).filter(Boolean).join(','));
- pref('network.trr.mode',enabled?5:0);pref('media.peerconnection.ice.proxy_only_if_behind_proxy',true);
- pref('media.peerconnection.enabled',!enabled);pref('network.proxy.type',enabled?1:0);
+ if(enabled)shared.networkBeforeVPN??={trr:Services.prefs.getIntPref('network.trr.mode',0),rtc:Services.prefs.getBoolPref('media.peerconnection.enabled',true)};
+ pref('network.trr.mode',enabled?5:(shared.networkBeforeVPN?.trr??Services.prefs.getIntPref('network.trr.mode',0)));pref('media.peerconnection.ice.proxy_only_if_behind_proxy',true);
+ pref('media.peerconnection.enabled',enabled?false:(shared.networkBeforeVPN?.rtc??Services.prefs.getBoolPref('media.peerconnection.enabled',true)));pref('network.proxy.type',enabled?1:0);if(!enabled)shared.networkBeforeVPN=null;
 }
 async function vpn(action){
  if(isPrivate)throw Error('Изменение VPN доступно из обычного окна профиля.');
- if(action==='status')return shared.vpnState;
+ if(action==='status'){if(shared.vpnState.connected&&shared.helper){try{const result=await helperRequest({action:'status'});if(!result.connected)shared.vpnState={state:'error',connected:false,error:'VPN остановлен. Соединение заблокировано до отключения VPN.'};}catch(error){shared.vpnState={state:'error',connected:false,error:String(error)};}emit('vpnState',shared.vpnState);paintVPN();}return shared.vpnState;}
  if(action==='disconnect'){
-  await helperRequest({action:'disconnect'});proxy(false);shared.vpnState={ok:true,state:'disconnected',connected:false};
+  await helperRequest({action:'disconnect'});proxy(false);await IOUtils.remove(PathUtils.join(profile,'soulu-network-before-vpn.json'),{ignoreAbsent:true});shared.vpnState={ok:true,state:'disconnected',connected:false};
  }else if(action==='connect'){
   const selected=shared.config.vpn.profiles.find(p=>p.id===shared.config.vpn.defaultProfileId);if(!selected)throw Error('Добавьте и выберите ключ в Настройки → VPN.');
+  shared.networkBeforeVPN??={trr:Services.prefs.getIntPref('network.trr.mode',0),rtc:Services.prefs.getBoolPref('media.peerconnection.enabled',true)};await IOUtils.writeJSON(PathUtils.join(profile,'soulu-network-before-vpn.json'),shared.networkBeforeVPN);
   proxy(true);shared.vpnState={state:'connecting',connected:false};emit('vpnState',shared.vpnState);
   try{const result=await helperRequest({action:'connect',url:selected.link,profileId:selected.id});shared.vpnState={...result,state:'connected'};}
   catch(error){shared.vpnState={state:'error',connected:false,error:error.message};emit('vpnState',shared.vpnState);paintVPN();throw error;}
@@ -162,12 +166,12 @@ async function dispatch(action,payload,source){
 window.Soulu={dispatch,settings,refresh:apply,get config(){return shared.config;},get vpnState(){return shared.vpnState;},_emit(name,value){if(shared.settingsWindow&&!shared.settingsWindow.closed)shared.settingsWindow.__souluEmit?.(name,value);},ready:false};
 function button(id,label,command){const b=document.createXULElement('toolbarbutton');b.id=id;b.className='toolbarbutton-1 chromeclass-toolbar-additional';b.setAttribute('label',label);b.setAttribute('tooltiptext',label);b.addEventListener('command',command);return b;}
 async function initialize(){
- if(!shared.initialized){try{const stored=await IOUtils.readJSON(settingsFile);if(stored.vpn?.protected)stored.vpn=JSON.parse(Cc['@mozilla.org/security/sdr;1'].getService(Ci.nsISecretDecoderRing).decryptString(stored.vpn.protected));shared.config={...defaults,...stored,settings:{...defaults.settings,...stored.settings},rules:{...defaults.rules,...stored.rules},vpn:{...defaults.vpn,...stored.vpn}};}catch(error){if(await IOUtils.exists(settingsFile)){shared.storageError=String(error);console.error('Soulu settings preserved:',error);}}proxy(false);shared.initialized=true;}
+ if(!shared.initialized){try{const stored=await IOUtils.readJSON(settingsFile);if(stored.vpn?.protected)stored.vpn=JSON.parse(Cc['@mozilla.org/security/sdr;1'].getService(Ci.nsISecretDecoderRing).decryptString(stored.vpn.protected));shared.config={...defaults,...stored,settings:{...defaults.settings,...stored.settings},rules:{...defaults.rules,...stored.rules},vpn:{...defaults.vpn,...stored.vpn}};}catch(error){if(await IOUtils.exists(settingsFile)){shared.storageError=String(error);console.error('Soulu settings preserved:',error);}}try{shared.networkBeforeVPN=await IOUtils.readJSON(PathUtils.join(profile,'soulu-network-before-vpn.json'));}catch{}proxy(false);await IOUtils.remove(PathUtils.join(profile,'soulu-network-before-vpn.json'),{ignoreAbsent:true});shared.initialized=true;}
  Soulu.backend={shared,Services,IOUtils,PathUtils,PlacesUtils,profile,isPrivate,save,apply};
  Services.scriptloader.loadSubScript('chrome://soulu/content/storage.js',window);
  Services.scriptloader.loadSubScript('chrome://soulu/content/shell-host.js',window);
  Services.scriptloader.loadSubScript('chrome://soulu/content/weather.js',window);
- try{const {adblock}=ChromeUtils.importESModule('chrome://soulu/content/adblock.sys.mjs');await adblock.initialize(shared,profile);Soulu.adblock=adblock;}catch(error){Soulu.blockerError=String(error);console.error(error);}
+ try{const {adblock}=ChromeUtils.importESModule('chrome://soulu/content/adblock.sys.mjs');await adblock.initialize(shared,profile);Soulu.adblock=adblock;if(!shared.blockerUpdateScheduled){shared.blockerUpdateScheduled=true;setTimeout(()=>adblock.scheduleUpdate(),15000);}}catch(error){Soulu.blockerError=String(error);console.error(error);}
  window.addEventListener('unload',()=>{if(windows().filter(w=>w!==window&&!w.closed).length===0&&shared.helper){shared.helper.stdin.close();shared.helper=null;}},{once:true});
  try{Soulu.components=await IOUtils.readJSON(PathUtils.join(Services.dirsvc.get('GreD',Ci.nsIFile).path,'soulu','vpn','components.json'));}catch{}
  Services.scriptloader.loadSubScript('chrome://soulu/content/translations.js',window);

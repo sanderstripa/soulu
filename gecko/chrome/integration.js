@@ -21,6 +21,8 @@ Soulu.dispatch=async(action,payload,source)=>{
  if(action.startsWith('browser.site.'))action='site.'+action.slice(13);
  const browser=selected();
  switch(action){
+ case 'browser.adblock.status':return Soulu.adblock?.status()||{ready:false};
+ case 'browser.adblock.update':return Soulu.adblock.update();
  case 'browser.restoreTab':{const tab=SessionStore.undoCloseTab(window,0,window);Soulu.notify();return tab?tabID(tab):null;}
  case 'browser.duplicateTab':{const tab=SessionStore.duplicateTab(window,checkedTab(payload));gBrowser.selectedTab=tab;Soulu.notify();return tabID(tab);}
  case 'browser.reloadTab':checkedTab(payload).linkedBrowser.reload();return true;
@@ -32,7 +34,7 @@ Soulu.dispatch=async(action,payload,source)=>{
  case 'browser.requestFind':send('requestFind',null);return true;
  case 'browser.find':if(payload?.repeat)browser.finder.findAgain(!!payload.backwards,false,false);else browser.finder.fastFind(String(payload?.text||''),false,false);return true;
  case 'browser.profile.rename':{const file=profileFile(payload.id),name=String(payload.name||'').replace(/[\x00-\x1f]/g,'').trim().slice(0,160);if(!name)throw Error('Введите название профиля.');await IOUtils.writeJSON(PathUtils.join(file.path,'soulu-profile.json'),{name});return true;}
- case 'browser.profile.delete':{if(payload===shared.config.profile)throw Error('Нельзя удалить активный профиль.');const file=profileFile(payload),service=Cc['@mozilla.org/toolkit/profile-service;1'].getService(Ci.nsIToolkitProfileService);let lock;try{lock=service.lockProfilePath(file,file);}catch{throw Error('Профиль используется другим процессом. Закройте его перед удалением.');}lock.unlock();await IOUtils.remove(file.path,{recursive:true});return true;}
+ case 'browser.profile.delete':{if(payload===shared.config.profile)throw Error('Нельзя удалить активный профиль.');const file=profileFile(payload),service=Cc['@mozilla.org/toolkit/profile-service;1'].getService(Ci.nsIToolkitProfileService);try{await service.removeProfileFilesByPath(file,file,0);}catch{throw Error('Профиль используется другим процессом или недоступен. Закройте его перед удалением.');}return true;}
  case 'browser.settings.siteSnapshot':{const tab=checkedTab(payload.tabId),b=tab.linkedBrowser;return {tabId:tabID(tab),url:b.currentURI.spec,generation:b.browsingContext.currentWindowGlobal?.innerWindowId||0};}
  case 'browser.settings.clearSite':{const tab=checkedTab(payload.tabId),b=tab.linkedBrowser;if(!payload.confirmed||b.currentURI.spec!==payload.url||b.browsingContext.currentWindowGlobal?.innerWindowId!==payload.generation)throw Error('Страница изменилась. Подтвердите очистку заново.');await new Promise((resolve,reject)=>Services.clearData.deleteDataFromPrincipal(b.contentPrincipal,false,Ci.nsIClearDataService.CLEAR_DOM_STORAGES,failed=>failed?reject(Error('Не удалось очистить данные.')):resolve()));return {cleared:true};}
  case 'browser.import.native':{const {MigrationUtils}=ChromeUtils.importESModule('moz-src:///browser/components/migration/MigrationUtils.sys.mjs');MigrationUtils.showMigrationWizard(null,{entrypoint:MigrationUtils.MIGRATION_ENTRYPOINTS.UNKNOWN});return true;}
