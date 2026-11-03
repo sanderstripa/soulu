@@ -17,7 +17,7 @@ function host(overrides = {}) {
     ...overrides,
   };
   context.window = context;
-  context.top = context;
+  context.top = overrides.top ?? context;
   vm.runInNewContext(source, context);
   return {context, sent, timers};
 }
@@ -31,6 +31,11 @@ test('ordinary web pages receive no privileged bridge', () => {
     assert.equal(context.cefQuery, undefined);
     assert.equal(sent.length, 0);
   }
+});
+test('same-origin subframes receive no privileged bridge', () => {
+  const {context, sent} = host({top: {}});
+  assert.equal(context.cefQuery, undefined);
+  assert.equal(sent.length, 0);
 });
 test('responses match requests even when native replies arrive out of order', () => {
   const {context, sent, timers} = host();

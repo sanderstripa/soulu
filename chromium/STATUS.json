@@ -1,0 +1,36 @@
+{
+  "product": "Soulu Chromium Preview 1",
+  "branch": "chromium-preview",
+  "status": "native-source-port-in-progress",
+  "working_windows_archive": false,
+  "native_compilation": "NOT RUN",
+  "runtime_acceptance": "NOT RUN",
+  "source_checks": {
+    "tested_commit": "3e854a8b61f1feed61c41a46d36116b1fdf4507a",
+    "windows_run": "https://github.com/sanderstripa/soulu/actions/runs/41602674329",
+    "result": "passed",
+    "python_tests": 3,
+    "transport_tests": 5,
+    "overlay_files": 194,
+    "powershell_syntax": "passed"
+  },
+  "standard_runner_probe": {
+    "free_disk_bytes_on_c": 32821063680,
+    "ram_bytes": 17174360064,
+    "logical_cpus": 4,
+    "required_sdk_installed": false,
+    "dedicated_build_runner_configured": false
+  },
+  "next_required_work": [
+    "Enable a suitable Windows source-build runner using BUILDING.md",
+    "Compile native Chromium overlay and resolve compiler/build errors",
+    "Adapt original DOM HTML writes to preserved WebUI Trusted Types enforcement",
+    "Integrate Soulu Home and complete settings sessions",
+    "Integrate Xray/Sudoku with per-profile proxy and helper process management",
+    "Integrate own request and cosmetic ad blocking",
+    "Integrate Soulu history/bookmarks/profiles/permission controls with native services",
+    "Verify secure storage, profile/incognito isolation and UI anchors",
+    "Run requested Windows visual, video, functionality and smoothness acceptance",
+    "Assemble and publish complete portable ZIP only after mandatory acceptance"
+  ]
+}

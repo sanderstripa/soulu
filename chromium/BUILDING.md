@@ -46,6 +46,14 @@ The connector used in this session cannot enumerate repository runners or
 provision a machine. Their availability has not been inferred from public
 repository metadata. No paid infrastructure was created.
 
+Actual hosted probe on 2026-11-03, run
+https://github.com/sanderstripa/soulu/actions/runs/41602674329:
+Windows Server 2025, VS 2026, 4 logical CPUs, 17,174,360,064 bytes RAM,
+32,821,063,680 bytes free on the selected C: NTFS volume. SDK 10.0.28000.0
+headers were absent. Windows source/transport tests and PowerShell syntax
+passed; the native compilation job was skipped because no builder label was
+configured. See the run's `chromium-source-checks-*` artifact for the report.
+
 Sources:
 
 * https://chromium.googlesource.com/chromium/src/+/d0c02bfad08ec92a6ffcf989e53cd995e6381a4c/docs/windows_build_instructions.md
@@ -106,7 +114,8 @@ working portable distribution.
 ## What is still required for a releasable Preview 1
 
 First compile and resolve any API/GRIT/GN compatibility errors in this source
-overlay. Then integrate the Home page and all Soulu settings sessions, native
+overlay. Adapt original dynamic HTML writes to Chromium WebUI Trusted Types
+enforcement without disabling it. Then integrate the Home page and all Soulu settings sessions, native
 history/bookmark/profile services, Xray/Sudoku IPC/proxy management, the own
 network/cosmetic ad blocker and privacy/permission controls. Settings not yet
 applied must continue to fail explicitly.

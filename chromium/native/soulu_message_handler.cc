@@ -1,6 +1,7 @@
 #include "chrome/browser/ui/webui_browser/soulu_message_handler.h"
 
 #include "base/functional/bind.h"
+#include "base/strings/string_number_conversions.h"
 #include "base/strings/utf_string_conversions.h"
 #include "base/task/sequenced_task_runner.h"
 #include "chrome/app/chrome_command_ids.h"
@@ -66,8 +67,11 @@ base::DictValue SouluMessageHandler::Snapshot() const {
   for (int i = 0; i < model->count(); ++i) {
     auto* contents = model->GetWebContentsAt(i);
     const auto id = Id(model->GetTabAtIndex(i));
+    int numeric_id = 0;
+    CHECK(base::StringToInt(id, &numeric_id));
     base::DictValue tab;
-    tab.Set("id", id);
+    // The original renderer keys its DOM by numeric tab IDs.
+    tab.Set("id", numeric_id);
     // This is the NodeIdConverter wire format used by Chromium's tab service.
     tab.Set("guestTabId", id + ":2");
     tab.Set("title", base::UTF16ToUTF8(contents->GetTitle()));
@@ -82,7 +86,7 @@ base::DictValue SouluMessageHandler::Snapshot() const {
     tab.Set("pinned", model->IsTabPinned(i));
     tab.Set("incognito", browser_->GetProfile()->IsOffTheRecord());
     if (i == model->active_index()) {
-      state.Set("activeTabId", id);
+      state.Set("activeTabId", numeric_id);
       state.Set("page", tab.Clone());
     }
     tabs.Append(std::move(tab));
@@ -106,10 +110,11 @@ base::DictValue SouluMessageHandler::Snapshot() const {
 }
 
 int SouluMessageHandler::IndexForId(const base::Value& id) const {
-  if (!id.is_string()) return -1;
+  if (!id.is_string() && !id.is_int()) return -1;
+  const std::string key = id.is_int() ? base::NumberToString(id.GetInt()) : id.GetString();
   auto* model = browser_->GetTabStripModel();
   for (int i = 0; i < model->count(); ++i)
-    if (Id(model->GetTabAtIndex(i)) == id.GetString()) return i;
+    if (Id(model->GetTabAtIndex(i)) == key) return i;
   return -1;
 }
 void SouluMessageHandler::Reply(const base::Value& id, bool success,

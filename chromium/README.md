@@ -53,6 +53,9 @@ fullscreen, animations and smoothness require Windows compilation and testing.
 History is handled by Chromium's existing engine but is not integrated with Soulu's
 history page. Home, full settings sessions, bookmarks, profile management UI,
 VPN, the own ad blocker, translation and extensions toolbar remain unported.
+Chromium WebUI Trusted Types enforcement is preserved. Adapting the original
+dynamic HTML writes to that enforcement is still required before UI acceptance;
+the source preparation checks do not exercise those DOM writes.
 
 ## Reproducible remote build
 
