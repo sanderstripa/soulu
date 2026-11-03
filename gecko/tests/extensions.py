@@ -21,6 +21,16 @@ def action_items():return call('browser.extensions.list',{'profile':'default'})[
 def real_click(selector):
  rect=ui('const r=document.querySelector('+json.dumps(selector)+').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};')
  m.set_context('chrome');m._send_message('WebDriver:PerformActions',{'actions':[{'type':'pointer','id':'soulu-native-mouse','parameters':{'pointerType':'mouse'},'actions':[{'type':'pointerMove','origin':'viewport','x':round(rect['x']),'y':round(rect['y']),'duration':0},{'type':'pointerDown','button':0},{'type':'pointerUp','button':0}]}]})
+def capture_popup(name):
+ m.set_context('chrome')
+ if os.name=='nt':
+  import ctypes as C
+  from ctypes import wintypes as W
+  from PIL import ImageGrab
+  u=C.windll.user32;u.FindWindowW.argtypes=[W.LPCWSTR,W.LPCWSTR];u.FindWindowW.restype=W.HWND
+  hwnd=u.FindWindowW('MozillaWindowClass',None);rect=W.RECT();point=W.POINT(0,0);u.GetClientRect.argtypes=[W.HWND,C.POINTER(W.RECT)];u.ClientToScreen.argtypes=[W.HWND,C.POINTER(W.POINT)];assert hwnd and u.GetClientRect(hwnd,C.byref(rect)) and u.ClientToScreen(hwnd,C.byref(point))
+  time.sleep(.25);ImageGrab.grab(all_screens=True).crop((point.x,point.y,point.x+rect.right,point.y+rect.bottom)).save(out/name)
+ else:(out/name).write_bytes(base64.b64decode(m.screenshot()))
 def popup_state():return chrome('const panel=document.querySelector("panel[data-soulu-extension]");return panel?{id:panel.dataset.souluExtension,state:panel.state,url:panel.querySelector("browser")?.currentURI.spec,remote:panel.querySelector("browser")?.remoteType,rect:(()=>{const r=panel.getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height}})()}:null')
 try:
  start();print('NATIVE_GUARD',chrome('return {guard:typeof ExtensionGuardSet,api:typeof WebExtensionPolicy.getActiveExtensions}'),flush=True);check('native_extension_module_loaded',chrome('return !!Soulu.extensions'))
@@ -30,6 +40,7 @@ try:
  row=wait(lambda:next((i for i in action_items() if i['id']==fixture_id and i['action']),None));check('native_action_and_local_icon',row['enabled'] and row['icon'].startswith('data:image/png'),row['id'])
  call('browser.extensions.pin',{'profile':'default','id':fixture_id,'pinned':True});selector='[data-extension-toolbar="classic"] [data-extension-id="'+fixture_id+'"]'
  check('original_soulu_action_slot',wait(lambda:ui('return !!document.querySelector('+json.dumps(selector)+')')))
+ ui('window.souluFixtureButton=document.querySelector('+json.dumps(selector)+');return true;')
  before=content('return {height:innerHeight,width:innerWidth,identity:document.documentElement.dataset.identity}')
  real_click(selector);state=wait(lambda:(lambda s:s if s and s['state']=='open' else False)(popup_state()));check('real_native_popup_in_extension_process',state['url'].startswith('moz-extension:') and state['remote'].startswith('extension'),state)
  # The fixture popup runs in Firefox's extension process. A test-only frame
@@ -37,8 +48,9 @@ try:
  applied=run('const browser=document.querySelector("panel[data-soulu-extension] browser");if(!browser?.currentURI.spec.startsWith("moz-extension:"))throw Error("Not a fixture popup");return await new Promise((resolve,reject)=>{const mm=browser.messageManager,listener=m=>{mm.removeMessageListener("SouluFixtureClick",listener);resolve(m.data);};mm.addMessageListener("SouluFixtureClick",listener);mm.loadFrameScript("data:application/javascript,"+encodeURIComponent(`content.document.getElementById("apply").click();sendAsyncMessage("SouluFixtureClick",true);`),false);});')
  check('popup_action_changes_real_active_tab',applied and wait(lambda:content('return document.documentElement.dataset.souluExtensionPopup==="yes"')))
  check('native_badge_updates_without_polling',wait(lambda:ui('return document.querySelector('+json.dumps(selector)+')?.textContent.includes("B")')))
+ check('badge_update_preserves_focused_button_node',ui('return document.querySelector('+json.dumps(selector)+')===window.souluFixtureButton'))
  after=content('return {height:innerHeight,width:innerWidth,identity:document.documentElement.dataset.identity}');check('popup_does_not_resize_or_reload_page',before==after)
- (out/'extension-popup.png').write_bytes(base64.b64decode(m.screenshot()))
+ capture_popup('extension-popup.png')
  call('browser.extensions.close');wait(lambda:not popup_state())
  # A stale/programmatic UI request cannot mint an activeTab grant.
  time.sleep(2.1)

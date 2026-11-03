@@ -1,8 +1,5 @@
 name: Soulu Gecko Preview 4 Update 1
 on:
-  push:
-    branches: [gecko-preview]
-    paths: ['gecko/**', '.github/workflows/build-gecko4-update1.yml']
   workflow_dispatch:
 permissions:
   contents: read

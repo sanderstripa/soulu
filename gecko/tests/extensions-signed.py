@@ -14,7 +14,7 @@ call('browser.navigate',url);select_latest();wait(lambda:content('return locatio
 wait(lambda:next(i for i in action_items() if i['id']==signed_id)['actionEnabled'])
 print('SIGNED_ACTION_DIAGNOSTIC',ui('const b=document.querySelector('+json.dumps(native_selector)+');const r=b.getBoundingClientRect();return {item:(()=>{const i=window.souluExtensionToolbar.items.find(i=>i.id==='+json.dumps(signed_id)+');return i?{id:i.id,enabled:i.enabled,actionEnabled:i.actionEnabled}:null;})(),disabled:b.disabled,rect:{x:r.x,y:r.y,w:r.width,h:r.height},active:document.activeElement?.id};'),chrome('return {focus:Services.focus.activeWindow===window,modal:document.documentElement.hasAttribute("window-modal-open"),tab:gBrowser.selectedBrowser.currentURI.spec};'),flush=True)
 real_click(native_selector);print('SIGNED_CLICK_RESULT',ui('return window.souluExtensionToolbar.lastError'),flush=True);state=wait(lambda:(lambda s:s if s and s['state']=='open' else False)(popup_state()));check('real_signed_extension_popup_opens',state['id']==signed_id and state['remote'].startswith('extension'),state)
-(out/'signed-extension-popup.png').write_bytes(base64.b64decode(m.screenshot()))
+capture_popup('signed-extension-popup.png')
 call('browser.extensions.close')
 run('const {AddonManager}=ChromeUtils.importESModule("resource://gre/modules/AddonManager.sys.mjs");await (await AddonManager.getAddonByID('+json.dumps(signed_id)+')).disable();return true;')
 check('disable_removes_action_icon',wait(lambda:ui('return !document.querySelector('+json.dumps(native_selector)+')')))

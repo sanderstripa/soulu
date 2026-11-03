@@ -1,0 +1,66 @@
+name: Final resource checks for Soulu Gecko Preview 4 Update 1
+on:
+  push:
+    branches: [gecko-preview]
+    paths: ['.github/workflows/finalize-gecko4-update1.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  windows:
+    runs-on: windows-2025
+    timeout-minutes: 20
+    env:
+      PYTHONUTF8: 1
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: sanderstripa/soulu
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify accepted Windows candidate before a resource-only overlay
+        shell: pwsh
+        run: |
+          if ((gh api repos/sanderstripa/soulu/actions/runs/41663449503 --jq .conclusion) -ne 'success') { throw 'Base Windows acceptance failed' }
+          if ((gh api repos/sanderstripa/soulu/actions/runs/41663449503 --jq .head_sha) -ne '23a4542a84f2c53772c7a3400e89a354c4138da3') { throw 'Wrong accepted base' }
+          gh run download 41663449503 -n Soulu-Gecko-Preview-4-Update-1 -D candidate
+          python gecko/tests/prepare-update1-final.py
+          if ($LASTEXITCODE -ne 0) { throw 'Resource overlay verification failed' }
+      - name: Verify stable action buttons and real signed-extension popups
+        shell: pwsh
+        run: |
+          python -m pip install marionette_driver pillow psutil websocket-client
+          python gecko/tests/extensions.py gecko-out/runtime/firefox.exe gecko4-update1-final
+          if ($LASTEXITCODE -ne 0) { throw 'Final native extension checks failed' }
+          Copy-Item gecko4-update1-final/extensions.json gecko-out/
+      - name: Recheck final UI against the actual CEF release
+        shell: pwsh
+        run: |
+          python gecko/tests/visual-cef.py gecko-out/runtime/firefox.exe gecko4-update1-final
+          if ($LASTEXITCODE -ne 0) { throw 'Final CEF comparison failed' }
+          Copy-Item gecko4-update1-final/visual-comparison.json gecko-out/
+          Remove-Item gecko-out/visual-evidence -Recurse -Force
+          New-Item -ItemType Directory gecko-out/visual-evidence | Out-Null
+          Copy-Item gecko4-update1-final/*.png gecko-out/visual-evidence/
+      - name: Package and verify extracted launch
+        shell: pwsh
+        run: |
+          Compress-Archive -Path gecko-out/* -DestinationPath Soulu-Gecko-Preview-4-Update-1-win64.zip -CompressionLevel Optimal
+          python gecko/tests/zip_smoke.py Soulu-Gecko-Preview-4-Update-1-win64.zip gecko4-update1-final
+          if ($LASTEXITCODE -ne 0) { throw 'Final extracted ZIP launch failed' }
+          (Get-FileHash Soulu-Gecko-Preview-4-Update-1-win64.zip -Algorithm SHA256).Hash.ToLowerInvariant() + '  Soulu-Gecko-Preview-4-Update-1-win64.zip' | Set-Content SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gecko4-update1-final-evidence
+          path: gecko4-update1-final/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Soulu-Gecko-Preview-4-Update-1-final
+          path: |
+            Soulu-Gecko-Preview-4-Update-1-win64.zip
+            SHA256SUMS.txt
