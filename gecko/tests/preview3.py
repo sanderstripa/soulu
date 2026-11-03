@@ -18,6 +18,7 @@ try:
  call('browser.settings.openWindow');wait(lambda:call('browser.state.get')['settingsOverlayReady']);time.sleep(.25)
  ui('souluSettings.openSection("about");return true;','settings');time.sleep(.15)
  versions=ui('return [...document.querySelectorAll(".version-grid strong")].map(n=>n.textContent);','settings');check('about_versions_remain_visible_after_state_updates',len(versions)>=6 and 'Gecko Preview 3' in versions and versions[1]!='—',versions)
+ (out/'about-preview3.png').write_bytes(base64.b64decode(m.screenshot()))
  ui('souluSettings.openSection("extensions");return true;','settings');check('firefox_extensions_store_no_chrome_embedding',ui('return !document.getElementById("sectionContent").textContent.includes("Chrome Web Store")&&document.getElementById("sectionContent").textContent.includes("Firefox Add-ons")','settings'))
  ui('souluSettings.openSection("interface");document.querySelector("input[name=settings-layout][value=compact]").click();await souluSettings.flush();return true;','settings');time.sleep(.5)
  check('original_compact_toolbar_and_58px_page_geometry',ui('return document.body.dataset.layout==="compact"&&getComputedStyle(document.querySelector(".compact-toolbar")).display!=="none"') and abs(chrome('return gBrowser.selectedBrowser.getBoundingClientRect().top')-58)<2)
@@ -28,7 +29,9 @@ try:
  check('matte_toggle_changes_actual_material',opaque!=matte,{'opaque':opaque,'matte':matte,'native':chrome('return Soulu.material')})
  chrome('Soulu.closeSettings()');check('settings_exit_is_animated',chrome('return !document.getElementById("soulu-settings-frame").hidden&&document.getElementById("soulu-settings-frame").getAnimations().length>0'));time.sleep(.3)
  check('settings_hide_after_animation_finishes',chrome('return document.getElementById("soulu-settings-frame").hidden'))
- call('browser.overview',True);time.sleep(.15);check('overview_no_search_autofocus_and_centered_close',ui('const b=document.querySelector(".overview-close"),s=getComputedStyle(b);return document.activeElement?.className!=="navigation-search"&&s.paddingTop==="0px"&&s.display==="grid";'));call('browser.overview',False)
+ call('browser.overview',True);time.sleep(.15);check('overview_no_search_autofocus_and_centered_close',ui('const b=document.querySelector(".overview-close"),s=getComputedStyle(b);return document.activeElement?.className!=="navigation-search"&&s.paddingTop==="0px"&&s.display==="grid"&&b.querySelector("svg")&&Math.abs(b.getBoundingClientRect().width-b.getBoundingClientRect().height)<1;'));
+ (out/'overview-preview3.png').write_bytes(base64.b64decode(m.screenshot()))
+ call('browser.overview',False)
  call('browser.newTab');time.sleep(.4);call('browser.closeTab',call('browser.state.get')['activeTabId']);time.sleep(.05)
  check('single_remaining_tab_row_never_flashes',ui('return document.body.dataset.adaptiveExpanded==="false"&&getComputedStyle(document.querySelector(".tabs-zone")).visibility==="hidden";'))
  if not args.ui_only:

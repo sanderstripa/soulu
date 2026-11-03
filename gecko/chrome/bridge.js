@@ -7,4 +7,4 @@
  window.addEventListener('SouluEmit',event=>{const {name,value}=JSON.parse(event.detail);if(name==='dismissSuggestions')document.querySelectorAll('.suggestions.visible').forEach(n=>n.classList.remove('visible'));window.__souluEmit?.(name,value);if(name==='home')window.souluHomeApply?.(value);});
 })();
 
-addEventListener('DOMContentLoaded',async()=>{if(!location.pathname.endsWith('/index.html'))return;await document.fonts.ready;await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));window.cefQuery({request:JSON.stringify({action:'window.frontendReady'}),onSuccess(){},onFailure(){}});},{once:true});
+addEventListener('DOMContentLoaded',async()=>{if(!location.pathname.endsWith('/index.html'))return;const close=document.querySelector('.overview-close');if(close)close.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>';await document.fonts.ready;await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));window.cefQuery({request:JSON.stringify({action:'window.frontendReady'}),onSuccess(){},onFailure(){}});},{once:true});
