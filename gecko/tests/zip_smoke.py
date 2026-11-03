@@ -1,7 +1,7 @@
 """Launch the actual portable EXE after extracting the final ZIP into a spaced path."""
 import json,os,pathlib,socket,subprocess,sys,tempfile,time,zipfile
 from marionette_driver.marionette import Marionette
-archive=pathlib.Path(sys.argv[1]);out=pathlib.Path(sys.argv[2]);result={'passed':False}
+archive=pathlib.Path(sys.argv[1]);out=pathlib.Path(sys.argv[2]);result={'passed':False};out.mkdir(parents=True,exist_ok=True)
 with tempfile.TemporaryDirectory(prefix='Soulu ZIP extraction ') as tmp:
  root=pathlib.Path(tmp);package=root/'Soulu Portable Browser';package.mkdir()
  with zipfile.ZipFile(archive) as z:z.extractall(package)
