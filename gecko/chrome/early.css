@@ -7,3 +7,10 @@
  :root:not([soulu-ui-ready]) #browser{visibility:hidden!important}
  #tabbrowser-tabbox,#tabbrowser-tabpanels,#appcontent,.browserStack,.browserContainer,.browserSidebarContainer{min-height:0!important;border:0!important;outline:none!important;box-shadow:none!important;background:transparent!important;border-radius:0!important}
 }
+/* Retain native permission/password/migration logic; apply the Soulu palette. */
+@-moz-document url-prefix("chrome://browser/content/"),url("about:addons"),url("about:preferences") {
+ :root{--color-accent-primary:#0879e6!important;--color-accent-primary-hover:#066bce!important;--color-accent-primary-active:#055aac!important;--button-background-color-primary:#0879e6!important;--button-background-color-primary-hover:#066bce!important;--button-text-color-primary:#fff!important;--in-content-primary-button-background:#0879e6!important;--in-content-primary-button-background-hover:#066bce!important;--focus-outline-color:#0879e6!important;--border-radius-medium:10px!important;--arrowpanel-border-radius:14px!important;--font-size-root:13px!important}
+ .popup-notification-body,.popup-notification-footer{font-family:Onest,"Segoe UI",sans-serif!important;font-size:12px!important}
+ :is(button,toolbarbutton).primary{background-color:#0879e6!important;color:#fff!important}
+ #tabbrowser-tabbox,#tabbrowser-tabpanels{padding:0!important;margin:0!important;border-radius:0!important}
+}

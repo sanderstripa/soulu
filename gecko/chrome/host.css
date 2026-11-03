@@ -21,3 +21,8 @@
 #soulu-settings-frame{will-change:transform,opacity;contain:paint;}
 
 :root#main-window #navigator-toolbox,:root#main-window #titlebar,:root#main-window #sidebar-main{display:none!important}
+/* Remove Firefox split-view/theme insets around Soulu's native content surface. */
+#browser,#tabbrowser-tabbox,#tabbrowser-tabpanels,#appcontent,.browserSidebarContainer,.browserContainer,.browserStack{padding:0!important;margin-block-end:0!important;border-radius:0!important;box-shadow:none!important}
+#tabbrowser-tabbox,#tabbrowser-tabpanels{margin-inline:0!important;flex:1!important;--tab-selected-bgcolor:transparent;--tabpanel-background-color:transparent}
+#tabbrowser-tabpanels>.browserSidebarContainer{inset:0!important}
+:root{--tabpanel-background-color:transparent!important;--sidebar-background-color:transparent!important;--chrome-content-separator-color:transparent!important}

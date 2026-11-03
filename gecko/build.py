@@ -42,6 +42,7 @@ shutil.copy(ROOT/'gecko/chrome/translation-gecko-ui.js',runtime/'soulu/chrome/ui
 shutil.copy(ROOT/'gecko/chrome/frontend.css',runtime/'soulu/chrome/ui/gecko-frontend.css')
 shutil.copy(ROOT/'gecko/chrome/extensions-ui.js',runtime/'soulu/chrome/ui/extension-toolbar.js')
 shutil.copy(ROOT/'gecko/chrome/integration-ui.js',runtime/'soulu/chrome/ui/integration-ui.js')
+shutil.copy(ROOT/'gecko/chrome/tab-preview-ui.js',runtime/'soulu/chrome/ui/tab-preview-ui.js')
 # Install the bridge before the unchanged frontend scripts run.
 for page in ['index.html','settings.html','home.html','history.html']:
  path=runtime/'soulu/chrome/ui'/page
@@ -49,7 +50,7 @@ for page in ['index.html','settings.html','home.html','history.html']:
  if page=='index.html':
   import re
   content=re.sub(r'<script src="(?:third_party/bergamot-runtime.js|third_party/tinyld.js|translation-models.js|translation-service.js|translation-ui.js)"></script>','',content)
- if page=='index.html':content=content.replace('</body>','<script src="translation-gecko-ui.js"></script><script src="integration-ui.js"></script></body>')
+ if page=='index.html':content=content.replace('</body>','<script src="translation-gecko-ui.js"></script><script src="integration-ui.js"></script><script src="tab-preview-ui.js"></script></body>')
  content=content.replace('<head>','<head><link rel="stylesheet" href="gecko-frontend.css"><script src="gecko-bridge.js"></script>',1)
  path.write_text(content,encoding='utf-8')
 js=runtime/'soulu/chrome/ui/settings.js';text=js.read_text(encoding='utf-8')
@@ -68,7 +69,7 @@ text=text.replace("[{opacity:0,transform:reduced?'none':'translateY(5px)'},{opac
 text=text.replace("...(id?[document.querySelector('aside')]:[])","...[]")
 text=text.replace("$('settingsSearch').focus();","$('settingsSearch').blur();")
 js.write_text(text,encoding='utf-8')
-renderer=runtime/'soulu/chrome/ui/renderer.js';text=renderer.read_text(encoding='utf-8').replace('const disconnect=vpnState==="connected"','const disconnect=vpnState==="connected"||vpnState==="error"').replace('function renderTabs(){renderClassicTabs();renderCompactTabs();}', 'function renderTabs(){if(state.settings.layout==="compact")renderCompactTabs();else renderClassicTabs();}');renderer.write_text(text,encoding='utf-8')
+renderer=runtime/'soulu/chrome/ui/renderer.js';text=renderer.read_text(encoding='utf-8').replace('const disconnect=vpnState==="connected"','const disconnect=vpnState==="connected"||vpnState==="error"').replace('function renderTabs(){renderClassicTabs();renderCompactTabs();}', 'function renderTabs(){if(state.settings.layout==="compact")renderCompactTabs();else renderClassicTabs();}');text=text.replace(' data-tooltip="${attributeTitle}"','').replace("['aria-selected','aria-label','data-tooltip']","['aria-selected','aria-label']");renderer.write_text(text,encoding='utf-8')
 data=runtime/'soulu/chrome/ui/settings-data.js';text=data.read_text(encoding='utf-8')
 text=text.replace('Пароли активного профиля защищены учётной записью Windows.','Пароли активного профиля защищены хранилищем NSS Firefox.').replace('Passwords for the active profile are protected by your Windows account.','Passwords for the active profile are protected by the Firefox NSS store.')
 text=text.replace('Пароль скопирован. Пока Soulu запущен, буфер очистится через 30 секунд, если его содержимое не изменится.','Пароль скопирован.').replace('Password copied. While Soulu runs, the clipboard clears after 30 seconds if its content stays unchanged.','Password copied.')
@@ -91,7 +92,7 @@ defaults.update({'termsofuse.bypassNotification':True,'datareporting.policy.data
 with (runtime/'defaults/pref/autoconfig.js').open('a',encoding='utf-8') as f:
  for key,value in defaults.items():f.write('\n'+'pref('+json.dumps(key)+','+json.dumps(value)+');')
 
-provenance={'name':'Soulu Gecko Preview 4 Update 1','firefox':version,'platform':platform,'mozilla_archive':base+'/'+rel,'mozilla_sha256':digest,'adblock':'Same Rust source and bundled filters as Soulu CEF','soulu_source':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip()}
+provenance={'name':'Soulu Gecko Preview 5','firefox':version,'platform':platform,'mozilla_archive':base+'/'+rel,'mozilla_sha256':digest,'adblock':'Same Rust source and bundled filters as Soulu CEF','soulu_source':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip()}
 (out/'BUILD.json').write_text(json.dumps(provenance,indent=2))
 shutil.copy(ROOT/'gecko/README.md',out/'README.md')
 print('Prepared',out,flush=True)
