@@ -124,9 +124,9 @@ async function dispatch(action,payload,source){
  if(next.settings.searchEngine!==old.settings.searchEngine){await Services.search.init();const names={google:'Google',yandex:'Яндекс',bing:'Bing',duckduckgo:'DuckDuckGo'};const engines=await Services.search.getVisibleEngines();const engine=engines.find(e=>e.name.toLowerCase().includes(names[next.settings.searchEngine]?.toLowerCase()));if(!engine)throw Error('Поисковая система недоступна в этой локализации Firefox.');await Services.search.setDefault(engine,Services.search.CHANGE_REASON_USER);}await save();for(const w of windows())w.Soulu?.refresh();if(shared.vpnState.connected)proxy(true);emit('settings',shared.config.settings);return {ok:true,persisted:structuredClone(shared.config)};}catch(error){shared.config=old;return {ok:false,error:error.message,persisted:structuredClone(shared.config)};}}
  case 'settings.close':source?.close();return true;
  case 'settings.resize':case 'settings.extensions':return true;
- case 'settings.geckoSiteSettings':return open('about:preferences#privacy');
+ case 'settings.geckoSiteSettings':return Soulu.settings('sites');
  case 'settings.geckoAdblockSettings':return open('about:addons');
- case 'settings.geckoTranslation':return open('about:preferences#general');
+ case 'settings.geckoTranslation':return Soulu.settings('sites');
  case 'settings.geckoExtensions':return open('about:addons');
  case 'settings.geckoExtensionStore':return open('https://addons.mozilla.org/firefox/');
  case 'settings.geckoReader':document.getElementById('reader-mode-button')?.click();return true;
@@ -160,7 +160,7 @@ async function dispatch(action,payload,source){
  case 'browser.performance.optimize':open('about:unloads');return {ok:true};
  case 'browser.passwords.get':open('about:logins');throw Error('Пароли открыты в защищённом менеджере Firefox.');
  case 'browser.import.native':{const {MigrationUtils}=ChromeUtils.importESModule('resource:///modules/MigrationUtils.sys.mjs');MigrationUtils.showMigrationWizard(window);return true;}
- case 'browser.import.sources':case 'browser.import.browsers':open('about:preferences#general');throw Error('Импорт доступен в разделе Firefox «Импорт данных».');
+ case 'browser.import.sources':case 'browser.import.browsers':return Soulu.dispatch('browser.import.native',null,source);
  default:throw Error('Эта функция ещё не перенесена в Gecko Preview 4: '+action);
  }
 }
@@ -181,7 +181,9 @@ async function initialize(){
  const nativeWindow=ChromeUtils.importESModule('chrome://soulu/content/window-controls.sys.mjs');try{nativeWindow.brand(window);}catch(error){console.error(error);}
  await save();apply();
  Services.scriptloader.loadSubScript('chrome://soulu/content/integration.js',window);
+ Services.scriptloader.loadSubScript('chrome://soulu/content/page-glass.js',window);
+ Services.scriptloader.loadSubScript('chrome://soulu/content/settings-routing.js',window);
  window.Soulu.ready=true;
 }
-if(gBrowserInit.delayedStartupFinished)initialize().catch(console.error);else{const observer=(subject)=>{if(subject!==window)return;Services.obs.removeObserver(observer,'browser-delayed-startup-finished');initialize().catch(console.error);};Services.obs.addObserver(observer,'browser-delayed-startup-finished');}
+initialize().catch(console.error);
 })();

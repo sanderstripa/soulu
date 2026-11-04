@@ -26,3 +26,9 @@
 #tabbrowser-tabbox,#tabbrowser-tabpanels{margin-inline:0!important;flex:1!important;--tab-selected-bgcolor:transparent;--tabpanel-background-color:transparent}
 #tabbrowser-tabpanels>.browserSidebarContainer{inset:0!important}
 :root{--tabpanel-background-color:transparent!important;--sidebar-background-color:transparent!important;--chrome-content-separator-color:transparent!important}
+/* A root clip keeps backdrop and remote content in a readable WR cache slice. */
+:root[soulu-page-glass]{clip-path:inset(0);background:var(--soulu-bg,#f6f6f8)!important}
+:root[soulu-page-glass] #browser{margin-top:0!important}
+#soulu-page-glass{display:none;position:fixed;inset:0 0 auto;height:var(--soulu-toolbar-height,68px);pointer-events:none;z-index:9999;backdrop-filter:blur(24px) saturate(130%);background:linear-gradient(to bottom,#f6f6f85c,#f6f6f8b0 65%,#f6f6f8)}
+:root[soulu-page-glass] #soulu-page-glass{display:block}
+:root[soulu-dark] #soulu-page-glass{background:linear-gradient(to bottom,#08090b60,#08090bb0 65%,#08090b)}

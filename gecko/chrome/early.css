@@ -33,3 +33,4 @@
  #browser,#tabbrowser-tabbox,#tabbrowser-tabpanels,.browserStack,.browserContainer,.browserSidebarContainer{background-color:#f6f6f8!important}
  :root[soulu-dark] :is(#browser,#tabbrowser-tabbox,#tabbrowser-tabpanels,.browserStack,.browserContainer,.browserSidebarContainer){background-color:#08090b!important}
 }
+@-moz-document url-prefix("about:preferences") { :root{visibility:hidden!important} }

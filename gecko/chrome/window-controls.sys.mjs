@@ -21,15 +21,11 @@ export function brand(win){
  return result;
 }
 export function material(win,enabled){
- if(Services.appinfo.OS!=='WINNT')return {enabled:false,native:false};
- // Use Gecko's own ChromeObserver / nsWindow Mica path, including OS fallbacks.
- if(!Services.prefs.getBoolPref('widget.windows.mica',false))Services.prefs.setBoolPref('widget.windows.mica',true);
- if(Services.prefs.getIntPref('widget.windows.mica.toplevel-backdrop',1)!==1)Services.prefs.setIntPref('widget.windows.mica.toplevel-backdrop',1);
- const available=win.matchMedia('(-moz-windows-mica)').matches;
- win.document.documentElement.toggleAttribute('windowsmica',!!enabled&&available);
- win.document.documentElement.toggleAttribute('soulu-matte',!!enabled&&available);
- try{const dwm=library('dwmapi.dll'),dark=ctypes.int(win.document.documentElement.hasAttribute('soulu-dark')?1:0);dwm.declare('DwmSetWindowAttribute',(ctypes.winapi_abi||ctypes.default_abi),ctypes.long,ctypes.uintptr_t,ctypes.uint32_t,ctypes.voidptr_t,ctypes.uint32_t)(handle(win),20,dark.address(),ctypes.int.size);}catch(error){console.debug('Soulu DWM dark hint',String(error));}
- return {enabled:!!enabled&&available,native:available};
+ // Page translucency is rendered by WebRender, not the Windows wallpaper material.
+ Services.prefs.setBoolPref('widget.windows.mica',false);
+ win.document.documentElement.removeAttribute('windowsmica');
+ win.document.documentElement.removeAttribute('soulu-matte');
+ return {enabled:!!enabled,native:true};
 }
 
 export function isDefault(){
