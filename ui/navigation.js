@@ -101,7 +101,7 @@
     const path=mark=>{const names=[mark.title];let id=mark.parentId,depth=0;while(id&&depth++<64){const folder=rows.find(r=>r.id===id);if(!folder)break;names.unshift(folder.title);id=folder.parentId;}return names.join(' / ');};
     for(const mark of rows.filter(r=>r.type==='folder'&&!excluded.has(r.id)))select.append(new Option(path(mark),String(mark.id)));
     select.value=String(existing?.parentId??parent??0);if(select.selectedIndex<0)select.value='0';place.append(select);box.append(place);
-    const favorite=el('input');favorite.type='checkbox';favorite.id='bookmarkHomeFavorite';favorite.checked=!!existing&&(state.homeFavoriteIds||[]).includes(existing.id);
+    const favorite=el('input');favorite.type='checkbox';favorite.id='bookmarkHomeFavorite';favorite.checked=!!existing&&(state.settings?.homeFavoriteIds||[]).includes(existing.id);
     if(!isFolder){const label=el('label','bookmark-editor-favorite');label.append(favorite,document.createTextNode(t('Избранное на Home','Home favorites')));box.append(label);}
     const error=el('p','bookmark-editor-error');error.setAttribute('role','alert');error.hidden=true;box.append(error);
     const footer=el('div','bookmark-editor-footer'),cancel=button(t('Отмена','Cancel'),()=>closeEditor()),save=button(t('Сохранить','Save'),()=>{});save.type='submit';footer.append(cancel,save);box.append(footer);
