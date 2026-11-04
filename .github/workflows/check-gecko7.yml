@@ -1,4 +1,4 @@
-name: Preview 7 first functional frame and persistence checks
+name: Preview 7 isolated early UI, native extensions and first frames
 on:
   push:
     branches: [gecko-preview]
@@ -41,6 +41,9 @@ jobs:
           python -m pip install marionette_driver pillow psutil websocket-client
       - name: Run real editor, Home, version, routing and pixel checks
         run: python gecko/tests/preview7.py gecko-out/runtime/firefox.exe gecko7-checks
+      - name: Check grouped native user extensions
+        if: always()
+        run: python gecko/tests/extensions7.py gecko-out/runtime/firefox.exe gecko7-checks
       - name: Observe first actual visible native window
         if: always()
         run: python gecko/tests/firstframe7.py gecko-out/runtime/firefox.exe gecko7-checks
@@ -52,3 +55,7 @@ jobs:
         with:
           name: gecko7-diagnostic-evidence
           path: gecko7-checks/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gecko7-verified-build-inputs
+          path: gecko-out/
