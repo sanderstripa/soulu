@@ -75,9 +75,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh run view $env:GITHUB_RUN_ID --repo "$env:GITHUB_REPOSITORY" --log > ci-full.log
+          $ok = $false
+          foreach ($i in 1..10) {
+            gh run view $env:GITHUB_RUN_ID --repo "$env:GITHUB_REPOSITORY" --log > ci-full.log 2>$null
+            if ($LASTEXITCODE -eq 0 -and (Test-Path ci-full.log) -and ((Get-Item ci-full.log).Length -gt 0)) { $ok = $true; break }
+            Start-Sleep -Seconds 30
+          }
           "--- full run log (tail) ---" | Set-Content failure-report.md -Encoding utf8NoBOM
-          Get-Content ci-full.log -Tail 500 | Add-Content failure-report.md
+          if ($ok) { Get-Content ci-full.log -Tail 500 | Add-Content failure-report.md } else { "run log unavailable after retries" | Add-Content failure-report.md }
           gh issue create --repo "$env:GITHUB_REPOSITORY" --title "CI: Preview 9 build failed (run $env:GITHUB_RUN_ID)" --body-file failure-report.md
 
       - name: Checksums
