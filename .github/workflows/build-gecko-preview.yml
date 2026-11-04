@@ -1,0 +1,59 @@
+name: Build Soulu Gecko Preview
+on:
+  push:
+    branches: [gecko-preview]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+      - name: Assemble pinned Gecko runtime and Soulu chrome
+        run: |
+          python gecko/build.py --platform win64 --output gecko-out
+          python gecko/build-adblock.py gecko-out
+          python gecko/prepare-vot.py gecko-out
+          python gecko/prepare-vpn.py gecko-out
+      - name: Speech components (best effort)
+        continue-on-error: true
+        run: python gecko/speech/prepare.py gecko-out
+      - name: Build launcher
+        working-directory: gecko/launcher
+        run: |
+          go run github.com/josephspurrior/goversioninfo/cmd/goversioninfo@v1.5.0 -64 -o resources_windows_amd64.syso
+          go build -trimpath -buildvcs=false -ldflags "-s -w -H windowsgui" -o ../../gecko-out/Soulu.exe
+      - name: Build installer
+        run: pwsh gecko/installer/build.ps1 -BuildDir gecko-out -OutFile Soulu-Gecko-Preview-9-Setup-win64.exe
+      - name: Preview 9 acceptance checks
+        run: python gecko/tests/preview9.py gecko-out
+      - name: Checksums
+        shell: pwsh
+        run: |
+          $hash = (Get-FileHash Soulu-Gecko-Preview-9-Setup-win64.exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  Soulu-Gecko-Preview-9-Setup-win64.exe" | Out-File SHA256SUMS.txt -Encoding utf8
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: gecko-preview-9
+          name: Soulu Gecko Preview 9
+          body: |
+            Soulu Gecko Preview 9
+
+            Fixes in this build:
+            - First-run welcome import now reliably opens the migration wizard instead of bouncing back to Settings.
+            - Settings -> Profile -> Import works again (hook now calls the native import action).
+            - No second browser: Firefox shell-integration, updater and crash-reporting binaries are removed from the runtime, and stale Firefox registry registrations are cleaned up at startup.
+            - Startup no longer hangs on a dead UI: a native fallback restores the classic toolbar if the shell UI is not ready in 8 seconds, eliminating the frozen stub windows.
+            - Faster startup: ad-block initialization no longer blocks first launch.
+          files: |
+            Soulu-Gecko-Preview-9-Setup-win64.exe
+            Soulu-Gecko-Preview-9-Setup-win64.exe.build.json
+            SHA256SUMS.txt
