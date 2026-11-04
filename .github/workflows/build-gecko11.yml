@@ -41,7 +41,14 @@ jobs:
           if ($LASTEXITCODE) { throw 'Launcher compilation failed' }
           Pop-Location
           python -m pip install marionette_driver pillow psutil websocket-client
-      - name: Verify weather and Mozilla folder deletion in the real browser
+      - name: Verify automatic and configured weather with readable failures
+        env:
+          SOULU_GECKO11_PHASE: weather
+        run: python gecko/tests/preview11.py gecko-out/runtime/firefox.exe gecko11-checks
+      - name: Verify Mozilla folder deletion and cancellation
+        if: ${{ !cancelled() && steps.assemble.outcome == 'success' }}
+        env:
+          SOULU_GECKO11_PHASE: bookmarks
         run: python gecko/tests/preview11.py gecko-out/runtime/firefox.exe gecko11-checks
       - name: Build Preview 11 installer
         id: installer
@@ -68,8 +75,8 @@ jobs:
       - name: Publish tested Preview 11 installer
         shell: pwsh
         run: |
-          python -c "import json,pathlib; paths=['preview11.json','installer11.json']; assert all(json.loads((pathlib.Path('gecko11-checks')/p).read_text())['passed'] for p in paths)"
+          python -c "import json,pathlib; paths=['weather11.json','bookmarks11.json','installer11.json']; assert all(json.loads((pathlib.Path('gecko11-checks')/p).read_text())['passed'] for p in paths)"
           if ($LASTEXITCODE) { throw 'Acceptance reports not green' }
           (Get-FileHash Soulu-Gecko-Preview-11-Setup-win64.exe -Algorithm SHA256).Hash.ToLowerInvariant() + '  Soulu-Gecko-Preview-11-Setup-win64.exe' | Set-Content SHA256SUMS.txt
-          gh release create gecko-preview-10 Soulu-Gecko-Preview-11-Setup-win64.exe Soulu-Gecko-Preview-11-Setup-win64.exe.build.json SHA256SUMS.txt gecko11-checks/preview11.json gecko11-checks/installer11.json --target $env:GITHUB_SHA --title 'Soulu Gecko Preview 11' --notes-file gecko/docs/PREVIEW10-RESULTS.md
+          gh release create gecko-preview-10 Soulu-Gecko-Preview-11-Setup-win64.exe Soulu-Gecko-Preview-11-Setup-win64.exe.build.json SHA256SUMS.txt gecko11-checks/weather11.json gecko11-checks/bookmarks11.json gecko11-checks/installer11.json --target $env:GITHUB_SHA --title 'Soulu Gecko Preview 11' --notes-file gecko/docs/PREVIEW10-RESULTS.md
           if ($LASTEXITCODE) { throw 'Release publication failed' }
