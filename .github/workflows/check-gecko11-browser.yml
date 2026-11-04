@@ -27,7 +27,14 @@ jobs:
           python gecko/prepare-preview11.py
           if ($LASTEXITCODE) { throw 'Overlay failed' }
           python -m pip install marionette_driver pillow psutil
-      - name: Test only requested browser regressions
+      - name: Verify automatic and configured weather with readable failures
+        env:
+          SOULU_GECKO11_PHASE: weather
+        run: python gecko/tests/preview11.py gecko-out/runtime/firefox.exe gecko11-checks
+      - name: Verify Mozilla folder deletion and cancellation
+        if: ${{ !cancelled() }}
+        env:
+          SOULU_GECKO11_PHASE: bookmarks
         run: python gecko/tests/preview11.py gecko-out/runtime/firefox.exe gecko11-checks
       - uses: actions/upload-artifact@v4
         if: always()
