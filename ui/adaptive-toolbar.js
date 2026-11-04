@@ -2,7 +2,8 @@
 (() => {
   const toolbar = document.querySelector('.classic-toolbar');
   const row = toolbar.querySelector('.tabs-zone');
-  function apply(frame) {
+  let animationToken = 0, animationEnd = 0;
+  function render(frame) {
     if (document.body.dataset.layout !== 'adaptive' || !frame) return;
     const progress = Math.max(0, Math.min(1, Number(frame.progress) || 0));
     document.body.style.setProperty('--adaptive-progress', String(progress));
@@ -17,6 +18,22 @@
     // Popups must follow the address capsule while it moves.
     const box = document.querySelector('#classicAddress')?.closest('form')?.addressSuggestions;
     if (box?.classList.contains('visible')) box.positionForAddress?.();
+  }
+  function apply(frame) {
+    if (frame?.animation) {
+      const {startAt,duration,from,to} = frame.animation;
+      const token = ++animationToken;
+      animationEnd = startAt + duration;
+      const tick = () => {
+        if (token !== animationToken) return;
+        const p = Math.max(0,Math.min(1,(Date.now()-startAt)/duration));
+        const height = from+(to-from)*(1-Math.pow(1-p,3));
+        render({expanded:frame.expanded,progress:(height-68)/20,height});
+        if (p<1) requestAnimationFrame(tick);
+        else animationEnd=0;
+      };
+      requestAnimationFrame(tick);
+    } else if (Date.now()>=animationEnd) render(frame);
   }
   function sync(state) {
     if (state.settings?.layout !== 'adaptive') {

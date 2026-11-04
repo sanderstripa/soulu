@@ -1,4 +1,4 @@
-name: Preview 7 startup presentation, actual updater and persistence validation
+name: Preview 7 compositor presentation and synchronized single-tab transition
 on:
   push:
     branches: [gecko-preview]

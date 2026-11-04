@@ -35,12 +35,39 @@ export function isDefault(){
 
 // Present the native window only once its real Soulu controls and state are ready.
 // This does not create a splash window or expose a nonfunctional placeholder.
+function cloak(win,enabled){
+ const abi=ctypes.winapi_abi||ctypes.default_abi;
+ const set=library('dwmapi.dll').declare('DwmSetWindowAttribute',abi,ctypes.long,ctypes.uintptr_t,ctypes.uint32_t,ctypes.voidptr_t,ctypes.uint32_t);
+ const value=ctypes.int(enabled?1:0);const result=set(handle(win),13,value.address(),ctypes.int.size);
+ if(result!==0)throw Error('DWM cloak failed: '+result);
+}
 export function prepareStartup(win){
  if(win.__souluStartupHidden)return;
- try{const base=win.docShell.treeOwner.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIBaseWindow);base.visibility=false;win.__souluStartupHidden=true;win.__souluStartupRevealTimer=win.setTimeout(()=>revealStartup(win),15000);}catch(error){console.debug('Soulu initial presentation',String(error));}
+ try{
+  if(Services.appinfo.OS==='WINNT'){cloak(win,true);win.__souluStartupCloaked=true;}
+  else win.docShell.treeOwner.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIBaseWindow).visibility=false;
+  win.__souluStartupHidden=true;
+  win.__souluStartupRevealTimer=win.setTimeout(()=>revealStartup(win),15000);
+ }catch(error){console.error('Soulu initial presentation',String(error));}
 }
 export function revealStartup(win){
- if(!win.__souluStartupHidden)return;
+ if(!win.__souluStartupHidden||win.__souluStartupRevealing)return;
+ win.__souluStartupRevealing=true;
  win.clearTimeout(win.__souluStartupRevealTimer);
- try{win.docShell.treeOwner.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIBaseWindow).visibility=true;win.__souluStartupHidden=false;win.focus();}catch(error){console.error(error);}
+ const present=()=>{
+  if(!win.__souluStartupHidden)return;
+  try{
+   if(win.__souluStartupCloaked){cloak(win,false);win.__souluStartupCloaked=false;}
+   else win.docShell.treeOwner.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIBaseWindow).visibility=true;
+   win.__souluStartupHidden=false;win.focus();
+  }catch(error){console.error(error);}
+ };
+ // DWM keeps composing a cloaked HWND. Wait for the ready remote controls
+ // to reach the parent paint before presenting that real window.
+ win.requestAnimationFrame(()=>win.requestAnimationFrame(()=>{
+  const painted=()=>{win.removeEventListener('MozAfterPaint',painted);win.clearTimeout(fallback);present();};
+  win.addEventListener('MozAfterPaint',painted);
+  const fallback=win.setTimeout(painted,200);
+  win.document.documentElement.getBoundingClientRect();
+ }));
 }

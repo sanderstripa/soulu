@@ -8,12 +8,15 @@ import psutil
 from ctypes import wintypes as W
 from PIL import ImageGrab,ImageStat
 u=C.windll.user32;u.SetProcessDpiAwarenessContext(C.c_void_p(-4));u.FindWindowW.argtypes=[W.LPCWSTR,W.LPCWSTR];u.FindWindowW.restype=W.HWND;u.IsWindowVisible.argtypes=[W.HWND];u.GetWindowThreadProcessId.argtypes=[W.HWND,C.POINTER(W.DWORD)];u.GetClientRect.argtypes=[W.HWND,C.POINTER(W.RECT)];u.ClientToScreen.argtypes=[W.HWND,C.POINTER(W.POINT)]
+dwm=C.windll.dwmapi;dwm.DwmGetWindowAttribute.argtypes=[W.HWND,W.DWORD,C.c_void_p,W.DWORD]
 started=time.monotonic()
 def observe():
  while not done.is_set() and time.monotonic()-started<12 and len(report['visibleFrames'])<12:
   try:
    hwnd=u.FindWindowW('MozillaWindowClass',None);pid=W.DWORD()
-   if hwnd and u.IsWindowVisible(hwnd):
+   cloaked=W.DWORD()
+   if hwnd:dwm.DwmGetWindowAttribute(hwnd,14,C.byref(cloaked),C.sizeof(cloaked))
+   if hwnd and u.IsWindowVisible(hwnd) and not cloaked.value:
     u.GetWindowThreadProcessId(hwnd,C.byref(pid))
     if proc and pathlib.Path(psutil.Process(pid.value).exe()).resolve()==binary:
      r=W.RECT();p=W.POINT();u.GetClientRect(hwnd,C.byref(r));u.ClientToScreen(hwnd,C.byref(p))

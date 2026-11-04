@@ -52,6 +52,7 @@ try:
   chrome('window.'+('maximize' if maximized else 'restore')+'()');call('browser.openTab',{'url':url+'animation'});select_latest();time.sleep(.5);closing=call('browser.state.get')['activeTabId'];call('browser.closeOtherTabs',closing);call('browser.openTab',{'url':url+'animation2'});select_latest();time.sleep(.5);closing=call('browser.state.get')['activeTabId']
   chrome('setTimeout(()=>Soulu.dispatch("browser.closeTab",'+str(closing)+'),70);return true')
   samples=ui('const rows=[],start=performance.now();while(performance.now()-start<650){const r=document.getElementById("classicAddress").getBoundingClientRect();rows.push({t:performance.now()-start,y:r.y+r.height/2});await new Promise(requestAnimationFrame);}return rows;')
+  report['transitionSamples'+str(maximized)]=samples
   jumps=[abs(b['y']-a['y']) for a,b in zip(samples,samples[1:])];check('single_tab_transition_has_no_jump_'+str(maximized),len(samples)>5 and max(jumps)<4 and abs(samples[-1]['y']-34)<2,{'maxStep':max(jumps),'last':samples[-1],'frames':len(samples)})
  # Inspect the actual native location/permissions, not a filtered Soulu label.
  result=run('return await Soulu.dispatch("browser.vot.install",{consent:true},{gesture:{at:Date.now()}});');check('vot_builtin_install_completes',result['installed'])
