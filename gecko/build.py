@@ -25,12 +25,6 @@ if platform=='win64':
  extracted=cache/'expanded';shutil.rmtree(extracted,ignore_errors=True)
  subprocess.run(['7z','x',str(archive),'-o'+str(extracted),'-y'],check=True,stdout=subprocess.DEVNULL)
  shutil.copytree(extracted/'core',runtime)
- # Preview 9: drop Firefox's own shell integration, updater and crash tooling.
- # These binaries register a second "Mozilla Firefox" browser entry that points
- # inside this Soulu installation; Soulu is the only browser shipped here.
- for stale in ['default-browser-agent.exe','updater.exe','updater-settings.ini','updater.ini','crashreporter.exe','crashreporter.ini','crashreporter-override.ini','pingsender.exe','maintenanceservice.exe','maintenanceservice_installer.exe','minidump-analyzer.exe']:
-  target=runtime/stale
-  if target.exists():target.unlink()
 else:
  with tarfile.open(archive) as t:t.extractall(out,filter='data')
  (out/'firefox').rename(runtime)
@@ -101,7 +95,7 @@ defaults.update({'termsofuse.bypassNotification':True,'datareporting.policy.data
 with (runtime/'defaults/pref/autoconfig.js').open('a',encoding='utf-8') as f:
  for key,value in defaults.items():f.write('\n'+'pref('+json.dumps(key)+','+json.dumps(value)+');')
 
-provenance={'channel':'gecko-preview','name':'Soulu Gecko Preview 9','firefox':version,'platform':platform,'mozilla_archive':base+'/'+rel,'mozilla_sha256':digest,'adblock':'Same Rust source and bundled filters as Soulu CEF','soulu_source':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip()}
+provenance={'channel':'gecko-preview','name':'Soulu Gecko Preview 8','firefox':version,'platform':platform,'mozilla_archive':base+'/'+rel,'mozilla_sha256':digest,'adblock':'Same Rust source and bundled filters as Soulu CEF','soulu_source':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip()}
 (out/'BUILD.json').write_text(json.dumps(provenance,indent=2))
 shutil.copy(ROOT/'gecko/README.md',out/'README.md')
 print('Prepared',out,flush=True)

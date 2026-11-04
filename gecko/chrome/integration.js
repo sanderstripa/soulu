@@ -25,7 +25,7 @@ Soulu.dispatch=async(action,payload,source)=>{
  case 'browser.adblock.status':return Soulu.adblock?.status()||{ready:false};
  case 'browser.adblock.update':return Soulu.adblock.update();
  case 'site.find':send('requestFind',null);return true;
- case 'site.reader.preferences':{const values=payload.preferences||{};for(const [key,value] of Object.entries(values)){if(!['theme','font','size','width','spacing'].includes(key))throw Error('Параметр недоступен в режиме чтения Firefox.');if(key==='theme'&&!['light','dark','sepia','auto'].includes(value)||key==='font'&&!['system','sans','serif'].includes(value)||['size','width','spacing'].includes(key)&&!Number.isFinite(Number(value)))throw Error('Invalid reader preference');}Object.assign(shared.config.reader,values);await save();readerPrefs();return Soulu.dispatch('browser.site.get');}
+ case 'site.reader.preferences':{const values=payload.preferences||{};for(const [key,value] of Object.entries(values)){if(!['theme','font','size','width','spacing'].includes(key))throw Error('Параметр недоступен в режиме чтения Soulu.');if(key==='theme'&&!['light','dark','sepia','auto'].includes(value)||key==='font'&&!['system','sans','serif'].includes(value)||['size','width','spacing'].includes(key)&&!Number.isFinite(Number(value)))throw Error('Invalid reader preference');}Object.assign(shared.config.reader,values);await save();readerPrefs();return Soulu.dispatch('browser.site.get');}
  case 'browser.shareMenu':{const url=browser.currentURI.spec;if(!/^https?:/.test(url))throw Error('Откройте веб-страницу.');const command=await base('browser.menu.show',{items:[{command:1,label:'Копировать ссылку'},{command:2,label:'QR-код страницы'}],x:innerWidth/2,y:50},source);if(command===1)Cc['@mozilla.org/widget/clipboardhelper;1'].getService(Ci.nsIClipboardHelper).copyString(url);if(command===2)send('geckoQR',url);return true;}
  case 'browser.restoreTab':{const tab=SessionStore.undoCloseTab(window,0,window);Soulu.notify();return tab?tabID(tab):null;}
  case 'browser.duplicateTab':{const tab=SessionStore.duplicateTab(window,checkedTab(payload));gBrowser.selectedTab=tab;Soulu.notify();return tabID(tab);}
@@ -41,16 +41,6 @@ Soulu.dispatch=async(action,payload,source)=>{
  case 'browser.profile.delete':{if(payload===shared.config.profile)throw Error('Нельзя удалить активный профиль.');const file=profileFile(payload),service=Cc['@mozilla.org/toolkit/profile-service;1'].getService(Ci.nsIToolkitProfileService);try{await service.removeProfileFilesByPath(file,file,0);}catch{throw Error('Профиль используется другим процессом или недоступен. Закройте его перед удалением.');}return true;}
  case 'browser.settings.siteSnapshot':{const tab=checkedTab(payload.tabId),b=tab.linkedBrowser;return {tabId:tabID(tab),url:b.currentURI.spec,generation:b.browsingContext.currentWindowGlobal?.innerWindowId||0};}
  case 'browser.settings.clearSite':{const tab=checkedTab(payload.tabId),b=tab.linkedBrowser;if(!payload.confirmed||b.currentURI.spec!==payload.url||b.browsingContext.currentWindowGlobal?.innerWindowId!==payload.generation)throw Error('Страница изменилась. Подтвердите очистку заново.');await new Promise((resolve,reject)=>Services.clearData.deleteDataFromPrincipal(b.contentPrincipal,false,Ci.nsIClearDataService.CLEAR_DOM_STORAGES,failed=>failed?reject(Error('Не удалось очистить данные.')):resolve()));return {cleared:true};}
- case 'browser.import.native':{
-  // Preview 9: the wizard must visibly open and take focus. A lost dialog
-  // reads as a dead import button that just returns the user to Settings.
-  const {MigrationUtils}=ChromeUtils.importESModule('moz-src:///browser/components/migration/MigrationUtils.sys.mjs');
-  const known=new Set([...Services.wm.getEnumerator(null)]);
-  const focusWizard=()=>{for(const w of Services.wm.getEnumerator(null)){if(known.has(w))continue;const uri=w.document?String(w.document.documentURI||''):'';if(uri.startsWith('chrome://browser/content/migration/')){try{w.focus();}catch{}return true;}}return false;};
-  try{MigrationUtils.showMigrationWizard(window,{entrypoint:MigrationUtils.MIGRATION_ENTRYPOINTS.UNKNOWN});}catch(error){console.error(error);}
-  window.setTimeout(()=>{if(!focusWizard()){try{MigrationUtils.showMigrationWizard(window,{entrypoint:MigrationUtils.MIGRATION_ENTRYPOINTS.UNKNOWN});}catch(error){console.error(error);}window.setTimeout(()=>focusWizard(),1500);}},500);
-  return {opened:true};
- }
  case 'browser.import.filePicker':{const kind=payload;if(!['bookmarks','passwords'].includes(kind))throw Error('Invalid import');const path=await choose(Ci.nsIFilePicker.modeOpen,kind==='bookmarks'?'Импорт закладок':'Импорт паролей',kind==='bookmarks'?['HTML','*.html;*.htm']:['CSV','*.csv']);return path?importFile(kind,path):{canceled:true};}
  case 'browser.import.exportBookmarks':{if(isPrivate)throw Error('Экспорт недоступен в инкогнито.');const path=await choose(Ci.nsIFilePicker.modeSave,'Экспорт закладок',['HTML','*.html']);if(!path)return {canceled:true};const {BookmarkHTMLUtils}=ChromeUtils.importESModule('resource://gre/modules/BookmarkHTMLUtils.sys.mjs');await BookmarkHTMLUtils.exportToFile(path);return {ok:true};}
  case 'site.reader.toggle':case 'site.reader.enter':case 'site.reader.exit':{const url=browser.currentURI.spec;if(url.startsWith('about:reader?')){const original=new URL(url).searchParams.get('url');if(!/^https?:/.test(original||''))throw Error('Invalid reader URL');browser.loadURI(Services.io.newURI(original),{triggeringPrincipal:Services.scriptSecurityManager.getSystemPrincipal()});}else{if(!/^https?:/.test(url))throw Error('Режим чтения доступен для веб-страниц.');readerPrefs();browser.loadURI(Services.io.newURI('about:reader?url='+encodeURIComponent(url)),{triggeringPrincipal:Services.scriptSecurityManager.getSystemPrincipal()});}return true;}
@@ -72,7 +62,9 @@ Services.scriptloader.loadSubScript('chrome://soulu/content/speech.js',window);
 Services.scriptloader.loadSubScript('chrome://soulu/content/vot.js',window);
 Services.scriptloader.loadSubScript('chrome://soulu/content/extension-migration.js',window);
 Services.scriptloader.loadSubScript('chrome://soulu/content/onboarding.js',window);
+Services.scriptloader.loadSubScript('chrome://soulu/content/import.js',window);
 Services.scriptloader.loadSubScript('chrome://soulu/content/updates.js',window);
 })();
 
 Services.scriptloader.loadSubScript('chrome://soulu/content/startup-session.js',window);
+

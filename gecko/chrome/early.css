@@ -42,11 +42,3 @@
 }
 
 @-moz-document url("about:addons"){addon-card[addon-id="vot-ext@firefox"]{display:none!important}}
-/* Preview 9: emergency native fallback. If the Soulu shell never composes, the
- * watchdog marks the root and these rules restore the stock toolbox so the window
- * stays usable and closable instead of a dead gradient-colored stub. */
-@-moz-document url("chrome://browser/content/browser.xhtml") {
- :root#main-window#main-window[soulu-native-fallback] #navigator-toolbox,:root#main-window#main-window[soulu-native-fallback] #titlebar{display:flex!important;visibility:visible!important;height:auto!important;min-height:0!important}
- :root#main-window#main-window[soulu-native-fallback] #browser{visibility:visible!important;margin-top:0!important}
- :root#main-window#main-window[soulu-native-fallback] #soulu-shell-frame{display:none!important}
-}

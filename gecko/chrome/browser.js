@@ -25,7 +25,7 @@ function apply(){
  const s=shared.config.settings,root=document.documentElement;
  root.toggleAttribute('soulu-dark',s.theme==='dark'||s.theme==='system'&&matchMedia('(prefers-color-scheme:dark)').matches);
  root.toggleAttribute('soulu-single',gBrowser.visibleTabs.filter(t=>!t.closing).length<2);
- root.setAttribute('soulu-version','Soulu Gecko Preview 9');
+ root.setAttribute('soulu-version','Soulu Gecko Preview 10');
  for(const [id,key] of [['soulu-sidebar','showSidebar'],['back-button','showBack'],['home-button','showHome'],['soulu-newtab','showNewTab'],['downloads-button','showDownloads'],['soulu-vpn','vpnToolbarVisible']]){const el=document.getElementById(id);if(el)el.hidden=s[key]===false;}
  const bar=document.getElementById('PersonalToolbar');if(bar)bar.collapsed=s.bookmarksBarMode==='never'||s.bookmarksBarPosition==='hidden';
  pref('browser.startup.page',s.startupMode==='continue'?3:1);
@@ -105,7 +105,7 @@ function open(url){
 function settings(){if(shared.settingsWindow&&!shared.settingsWindow.closed){shared.settingsWindow.focus();return;}shared.settingsWindow=window.openDialog('chrome://soulu/content/ui/settings.html','soulu-settings','chrome,dialog=no,resizable,centerscreen,width=1060,height=760');}
 function tabRows(){return gBrowser.tabs.map((t,id)=>({id,title:t.label,url:t.linkedBrowser.currentURI.spec,incognito:isPrivate}));}
 async function bookmarks(){const rows=[];const tree=await PlacesUtils.promiseBookmarksTree(PlacesUtils.bookmarks.rootGuid);function walk(node){for(const n of node.children||[]){if(n.uri)rows.push({id:n.guid,title:n.title||n.uri,url:n.uri});walk(n);}}walk(tree);return rows;}
-async function state(){const dirs=await IOUtils.getChildren(PathUtils.parent(profile));const profiles=[];for(const path of dirs){if((await IOUtils.stat(path)).type!=='directory')continue;let name=PathUtils.filename(path);try{name=(await IOUtils.readJSON(PathUtils.join(path,'soulu-profile.json'))).name;}catch{}profiles.push({id:PathUtils.filename(path),name,active:path===profile});}return {settings:shared.config.settings,profiles,activeProfileId:shared.config.profile,tabs:tabRows(),capabilities:{matteAvailable:Soulu.material?.native===true},update:{soulu:'Gecko Preview 9',gecko:Services.appinfo.platformVersion,firefox:Services.appinfo.version,xray:Soulu.components?.xray?.version||'—',sudoku:Soulu.components?.sudoku?.version||'—',adblock:'adblock-rust 0.13.3'}};}
+async function state(){const dirs=await IOUtils.getChildren(PathUtils.parent(profile));const profiles=[];for(const path of dirs){if((await IOUtils.stat(path)).type!=='directory')continue;let name=PathUtils.filename(path);try{name=(await IOUtils.readJSON(PathUtils.join(path,'soulu-profile.json'))).name;}catch{}profiles.push({id:PathUtils.filename(path),name,active:path===profile});}return {settings:shared.config.settings,profiles,activeProfileId:shared.config.profile,tabs:tabRows(),capabilities:{matteAvailable:Soulu.material?.native===true},update:{soulu:'Gecko Preview 10',gecko:Services.appinfo.platformVersion,firefox:Services.appinfo.version,xray:Soulu.components?.xray?.version||'—',sudoku:Soulu.components?.sudoku?.version||'—',adblock:'adblock-rust 0.13.3'}};}
 function validate(next){
  if(next.profile!==shared.config.profile)throw Error('Profile changed');
  if(!['system','light','dark'].includes(next.settings.theme))throw Error('Invalid theme');
@@ -121,13 +121,13 @@ async function dispatch(action,payload,source){
  case 'settings.capabilities':return {matteAvailable:Soulu.material?.native===true,defaultBrowser:ChromeUtils.importESModule('chrome://soulu/content/window-controls.sys.mjs').isDefault()};
  case 'settings.ready':return true;
  case 'settings.save':{if(settingsBaseline&&JSON.stringify(payload.settings?.homeFavoriteIds)===JSON.stringify(settingsBaseline.settings.homeFavoriteIds))payload={...payload,settings:{...payload.settings,homeFavoriteIds:shared.config.settings.homeFavoriteIds}};const next=validate({...payload,onboarding:shared.config.onboarding,bookmarkIds:shared.config.bookmarkIds||{}}),old=shared.config;shared.config=next;try{
- if(next.settings.searchEngine!==old.settings.searchEngine){await Services.search.init();const names={google:'Google',yandex:'Яндекс',bing:'Bing',duckduckgo:'DuckDuckGo'};const engines=await Services.search.getVisibleEngines();const engine=engines.find(e=>e.name.toLowerCase().includes(names[next.settings.searchEngine]?.toLowerCase()));if(!engine)throw Error('Поисковая система недоступна в этой локализации Firefox.');await Services.search.setDefault(engine,Services.search.CHANGE_REASON_USER);}await save();for(const w of windows())w.Soulu?.refresh();if(shared.vpnState.connected)proxy(true);emit('settings',shared.config.settings);settingsBaseline=structuredClone(shared.config);return {ok:true,persisted:structuredClone(shared.config)};}catch(error){shared.config=old;return {ok:false,error:error.message,persisted:structuredClone(shared.config)};}}
+ if(next.settings.searchEngine!==old.settings.searchEngine){await Services.search.init();const names={google:'Google',yandex:'Яндекс',bing:'Bing',duckduckgo:'DuckDuckGo'};const engines=await Services.search.getVisibleEngines();const engine=engines.find(e=>e.name.toLowerCase().includes(names[next.settings.searchEngine]?.toLowerCase()));if(!engine)throw Error('Поисковая система недоступна в этой локализации Soulu.');await Services.search.setDefault(engine,Services.search.CHANGE_REASON_USER);}await save();for(const w of windows())w.Soulu?.refresh();if(shared.vpnState.connected)proxy(true);emit('settings',shared.config.settings);settingsBaseline=structuredClone(shared.config);return {ok:true,persisted:structuredClone(shared.config)};}catch(error){shared.config=old;return {ok:false,error:error.message,persisted:structuredClone(shared.config)};}}
  case 'settings.close':source?.close();return true;
  case 'settings.resize':case 'settings.extensions':return true;
  case 'settings.geckoSiteSettings':return Soulu.settings('sites');
- case 'settings.geckoAdblockSettings':return open('about:addons');
+ case 'settings.geckoAdblockSettings':return Soulu.settings('extensions');
  case 'settings.geckoTranslation':return Soulu.settings('sites');
- case 'settings.geckoExtensions':return open('about:addons');
+ case 'settings.geckoExtensions':return Soulu.settings('extensions');
  case 'settings.geckoExtensionStore':return open('https://addons.mozilla.org/firefox/');
  case 'settings.geckoReader':document.getElementById('reader-mode-button')?.click();return true;
  case 'settings.openFolder':{const file=Services.dirsvc.get('DfltDwnld',Ci.nsIFile);file.launch();return true;}
@@ -155,11 +155,11 @@ async function dispatch(action,payload,source){
  case 'vpn.settings.get':return shared.config.vpn;
  case 'browser.components.manage':{if(!['xray','sudoku'].includes(payload?.component)||!['status','list','install','rollback'].includes(payload?.operation))throw Error('Invalid VPN component operation');return helperRequest({...payload,action:'components',name:payload.operation,proxy:shared.proxyEnabled===true});}
  case 'browser.extensions.list':{const {AddonManager}=ChromeUtils.importESModule('resource://gre/modules/AddonManager.sys.mjs');return {items:(await AddonManager.getAddonsByTypes(['extension'])).map(a=>({id:a.id,name:a.name,version:a.version,enabled:a.isActive,action:false}))};}
- case 'browser.extensions.manager':return open('about:addons');
+ case 'browser.extensions.manager':return Soulu.settings('extensions');
  case 'browser.extensions.openStore':return open('https://addons.mozilla.org/firefox/');
  case 'browser.performance.optimize':open('about:unloads');return {ok:true};
- case 'browser.passwords.get':open('about:logins');throw Error('Пароли открыты в защищённом менеджере Firefox.');
- case 'browser.import.native':{const {MigrationUtils}=ChromeUtils.importESModule('resource:///modules/MigrationUtils.sys.mjs');MigrationUtils.showMigrationWizard(window);return true;}
+ case 'browser.passwords.get':return Soulu.settings('passwords');
+ case 'browser.import.native':throw Error('Мастер импорта ещё загружается. Повторите через секунду.');
  case 'browser.import.sources':case 'browser.import.browsers':return Soulu.dispatch('browser.import.native',null,source);
  default:throw Error('Эта функция ещё не перенесена в Gecko Preview 4: '+action);
  }
@@ -175,9 +175,12 @@ async function initialize(){
  Services.scriptloader.loadSubScript('chrome://soulu/content/storage.js',window);
  Services.scriptloader.loadSubScript('chrome://soulu/content/shell-host.js',window);
  Services.scriptloader.loadSubScript('chrome://soulu/content/weather.js',window);
- // Preview 9: initialize the adblock engine without blocking first paint.
- // Filter loading must never hold the window cloaked for 10+ seconds.
- try{const {adblock}=ChromeUtils.importESModule('chrome://soulu/content/adblock.sys.mjs');Soulu.adblock=adblock;adblock.initialize(shared,profile).catch(error=>{Soulu.blockerError=String(error);console.error(error);});if(!shared.blockerUpdateScheduled){shared.blockerUpdateScheduled=true;setTimeout(()=>adblock.scheduleUpdate(),15000);}}catch(error){Soulu.blockerError=String(error);console.error(error);}
+ // Native filter compilation is synchronous FFI even inside an async method.
+ // Start it after the first real Soulu frame has been presented, not during
+ // backend initialization while the window is hidden.
+ window.addEventListener('SouluPresented',()=>{window.setTimeout(async()=>{
+ try{const {adblock}=ChromeUtils.importESModule('chrome://soulu/content/adblock.sys.mjs');Soulu.adblock=adblock;await adblock.initialize(shared,profile);if(!shared.blockerUpdateScheduled){shared.blockerUpdateScheduled=true;setTimeout(()=>adblock.scheduleUpdate(),15000);}}catch(error){Soulu.blockerError=String(error);console.error(error);}
+ },0);},{once:true});
  timing('adblock');
  window.addEventListener('unload',()=>{if(windows().filter(w=>w!==window&&!w.closed).length===0&&shared.helper){shared.helper.stdin.close();shared.helper=null;}},{once:true});
  try{Soulu.components=await IOUtils.readJSON(PathUtils.join(Services.dirsvc.get('GreD',Ci.nsIFile).path,'soulu','vpn','components.json'));}catch{}
@@ -191,3 +194,4 @@ async function initialize(){
 }
 initialize().catch(console.error);
 })();
+

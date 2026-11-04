@@ -13,8 +13,5 @@
 
  };
  new MutationObserver(annotate).observe(document.getElementById('sectionContent'),{childList:true});document.addEventListener('change',()=>setTimeout(annotate,0),true);
- // Preview 9: browserShell.browserImport does not exist in the Gecko build, so
- // the click silently failed. Route the Settings import button straight to the
- // native migration wizard through the cefQuery bridge.
- const open=()=>{if(window.souluBrowserImport)window.souluBrowserImport.open=()=>cefQuery({request:JSON.stringify({action:'browser.import.native'}),onSuccess:()=>{},onFailure:(_,e)=>{console.error('Soulu import',String(e));}});};open();setInterval(open,500);
+ const open=()=>{if(window.souluBrowserImport)window.souluBrowserImport.open=()=>browserShell.browserImport('native');};open();
 })();
