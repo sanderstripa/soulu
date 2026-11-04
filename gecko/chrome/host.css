@@ -36,3 +36,5 @@
 menupopup[data-soulu-extensions]{appearance:none;min-width:220px;padding:6px;background:var(--soulu-bg,#f6f6f8);color:var(--soulu-text,#191a1e);border:1px solid light-dark(#00000020,#ffffff24);border-radius:14px;font:13px Onest,"Segoe UI",sans-serif}
 menupopup[data-soulu-extensions] menuitem{min-height:34px;padding:6px 10px;border-radius:8px}
 menupopup[data-soulu-extensions] .menu-iconic-icon{width:18px;height:18px}
+:root{--soulu-bg:#f6f6f8;--soulu-text:#191a1e}
+:root[soulu-dark]{--soulu-bg:#08090b;--soulu-text:#eeeeef}

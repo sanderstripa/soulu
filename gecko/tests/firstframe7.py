@@ -4,6 +4,7 @@ source=Path(__file__).with_name('preview4.py').read_text().split('\ntry:\n start
 exec(compile(source,str(Path(__file__).with_name('preview4.py')),'exec'),globals())
 report={'passed':False,'checks':{},'visibleFrames':[]};done=threading.Event()
 import ctypes as C
+import psutil
 from ctypes import wintypes as W
 from PIL import ImageGrab,ImageStat
 u=C.windll.user32;u.SetProcessDpiAwarenessContext(C.c_void_p(-4));u.FindWindowW.argtypes=[W.LPCWSTR,W.LPCWSTR];u.FindWindowW.restype=W.HWND;u.IsWindowVisible.argtypes=[W.HWND];u.GetWindowThreadProcessId.argtypes=[W.HWND,C.POINTER(W.DWORD)];u.GetClientRect.argtypes=[W.HWND,C.POINTER(W.RECT)];u.ClientToScreen.argtypes=[W.HWND,C.POINTER(W.POINT)]
@@ -14,7 +15,7 @@ def observe():
    hwnd=u.FindWindowW('MozillaWindowClass',None);pid=W.DWORD()
    if hwnd and u.IsWindowVisible(hwnd):
     u.GetWindowThreadProcessId(hwnd,C.byref(pid))
-    if proc and pid.value==proc.pid:
+    if proc and pathlib.Path(psutil.Process(pid.value).exe()).resolve()==binary:
      r=W.RECT();p=W.POINT();u.GetClientRect(hwnd,C.byref(r));u.ClientToScreen(hwnd,C.byref(p))
      if r.right>500 and r.bottom>100:
       frame=ImageGrab.grab(all_screens=True).crop((p.x,p.y,p.x+r.right,p.y+68));name='first-visible-'+str(len(report['visibleFrames']))+'.png';frame.save(out/name);report['visibleFrames'].append({'seconds':round(time.monotonic()-started,3),'contrast':max(ImageStat.Stat(frame).stddev),'image':name})

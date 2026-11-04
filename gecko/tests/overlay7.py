@@ -17,8 +17,9 @@ for name in changed:
 for p in (root/'gecko/chrome').rglob('*'):
  if p.is_file():
   target=runtime/p.relative_to(root/'gecko/chrome');target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(p,target)
-for source,target in [('extensions-ui.js','extension-toolbar.js'),('bridge.js','gecko-bridge.js'),('frontend.css','gecko-frontend.css'),('integration-ui.js','integration-ui.js'),('settings-support.js','settings-support.js')]:shutil.copyfile(root/'gecko/chrome'/source,runtime/'ui'/target)
+for source,target in [('extensions-ui.js','extension-toolbar.js'),('bridge.js','gecko-bridge.js'),('frontend.css','gecko-frontend.css'),('integration-ui.js','integration-ui.js'),('settings-support.js','settings-support.js'),('updates-ui.js','updates-ui.js'),('vot-ui.js','vot-ui.js')]:shutil.copyfile(root/'gecko/chrome'/source,runtime/'ui'/target)
 shutil.copyfile(root/'gecko/soulu.cfg',out/'runtime/soulu.cfg')
 shutil.copyfile(root/'gecko/chrome.manifest',out/'runtime/soulu/chrome.manifest')
+shutil.copyfile(root/'gecko/README.md',out/'README.md')
 assert before==hashes(),'Existing executable components must remain byte-identical'
 build=json.loads((out/'BUILD.json').read_text());build['base_runtime_source']=build.get('soulu_source');build['soulu_source']=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip();build['name']='Soulu Gecko Preview 7';build['channel']='gecko-preview';build['platform']='win64';build['resource_source']=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip();(out/'BUILD.json').write_text(json.dumps(build,indent=2))

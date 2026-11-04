@@ -22,5 +22,7 @@ Soulu.dispatch=async(action,payload,source)=>{
  if(action==='onboarding.finish'){current.done=true;current.skipped=!!payload?.skip;await save();Soulu.native.navigate('soulu://home');return true;}
  throw Error('Unknown welcome action');
 };
-Promise.resolve(Soulu.startupReady).then(()=>{if(!isPrivate&&!flow().done&&['about:blank','about:newtab','about:home',Soulu.native.homeURL].includes(gBrowser.selectedBrowser.currentURI.spec))Soulu.showOnboarding();}).catch(console.error);
+let welcomeRedirectPending=false;gBrowser.addTabsProgressListener({onLocationChange(browser,_progress,_request,uri){if(isPrivate||!shared.isNewProfile||flow().done||welcomeRedirectPending||browser!==gBrowser.selectedBrowser||!['about:home','about:newtab',Soulu.native.homeURL].includes(uri.spec))return;welcomeRedirectPending=true;window.setTimeout(()=>{welcomeRedirectPending=false;if(!flow().done&&browser===gBrowser.selectedBrowser)Soulu.showOnboarding();},0);}});
+const ensureWelcome=()=>{if(!isPrivate&&!flow().done&&['about:blank','about:newtab','about:home',Soulu.native.homeURL].includes(gBrowser.selectedBrowser.currentURI.spec))Soulu.showOnboarding();};
+if(gBrowserInit.delayedStartupFinished)Promise.resolve(Soulu.startupReady).then(ensureWelcome).catch(console.error);else{const ready=subject=>{if(subject!==window)return;Services.obs.removeObserver(ready,'browser-delayed-startup-finished');Promise.resolve(Soulu.startupReady).then(ensureWelcome).catch(console.error);};Services.obs.addObserver(ready,'browser-delayed-startup-finished');window.addEventListener('unload',()=>{try{Services.obs.removeObserver(ready,'browser-delayed-startup-finished');}catch{}},{once:true});}
 })();
