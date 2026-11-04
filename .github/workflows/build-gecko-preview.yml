@@ -27,17 +27,30 @@ jobs:
         run: |
           rustup toolchain install 1.99.0 --profile minimal
           rustup default 1.99.0
+      - name: Restore pinned download cache
+        uses: actions/cache@v4
+        with:
+          path: gecko-cache
+          key: gecko-cache-v1-${{ hashFiles('gecko/runtime-pin.json','gecko/vot-pin.json','vpn/components-pin.json') }}
       - name: Assemble pinned Gecko runtime and Soulu chrome
         shell: pwsh
         run: |
-          python gecko/build.py --platform win64 --output gecko-out
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          python gecko/build-adblock.py gecko-out
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          python gecko/prepare-vot.py gecko-out
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          python gecko/prepare-vpn.py gecko-out
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $steps = @(
+            @('gecko/build.py','--platform','win64','--output','gecko-out'),
+            @('gecko/purge-firefox-integration.py','gecko-out'),
+            @('gecko/build-adblock.py','gecko-out'),
+            @('gecko/prepare-vot.py','gecko-out'),
+            @('gecko/prepare-vpn.py','gecko-out')
+          )
+          foreach ($s in $steps) {
+            $ok = $false
+            foreach ($attempt in 1..2) {
+              python $s
+              if ($LASTEXITCODE -eq 0) { $ok = $true; break }
+              Write-Host "step $($s[0]) failed, retrying"
+            }
+            if (-not $ok) { throw "Assemble failed at $($s[0])" }
+          }
       - name: Speech components (best effort)
         continue-on-error: true
         run: python gecko/speech/prepare.py gecko-out
@@ -66,8 +79,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $body = "Installer log:`n`n``````````````````" + (Get-Content installer-build.log -Raw -ErrorAction SilentlyContinue) + "``````````````````"`n`nAcceptance log:`n`n``````````````````" + (Get-Content acceptance.log -Raw -ErrorAction SilentlyContinue) + "``````````````````"
-          Set-Content failure-report.md $body -Encoding utf8NoBOM
+          '--- installer-build.log ---' | Set-Content failure-report.md -Encoding utf8NoBOM
+          if (Test-Path installer-build.log) { Add-Content failure-report.md (Get-Content installer-build.log -Raw) }
+          '--- acceptance.log ---' | Add-Content failure-report.md
+          if (Test-Path acceptance.log) { Add-Content failure-report.md (Get-Content acceptance.log -Raw) }
           gh issue create --repo "$env:GITHUB_REPOSITORY" --title "CI: Preview 9 build failed (run $env:GITHUB_RUN_ID)" --body-file failure-report.md
       - name: Checksums
         if: success()
