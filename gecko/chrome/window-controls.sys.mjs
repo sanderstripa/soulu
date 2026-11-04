@@ -42,6 +42,21 @@ function cloak(win,enabled){
  if(Number(result)!==0)throw Error('DWM cloak failed: '+result);
  const get=library('dwmapi.dll').declare('DwmGetWindowAttribute',abi,ctypes.int32_t,ctypes.uintptr_t,ctypes.uint32_t,ctypes.voidptr_t,ctypes.uint32_t),observed=ctypes.uint32_t();const status=get(handle(win),14,observed.address(),ctypes.uint32_t.size);return {setStatus:Number(result),getStatus:Number(status),observed:Number(observed.value)};
 }
+// Preview 9: last-resort native fallback. If the Soulu shell never composes,
+// mark the window and show the stock toolbox so it stays usable and closable
+// instead of a dead gradient-colored stub.
+export function nativeFallback(win){
+ if(win.__souluNativeFallback)return;
+ win.__souluNativeFallback=true;
+ win.__souluStartupPresentation.nativeFallbackAt=Date.now();
+ try{win.document.documentElement.setAttribute('soulu-native-fallback','true');}catch(error){console.error(error);}
+ try{
+  if(win.__souluStartupCloaked){cloak(win,false);win.__souluStartupCloaked=false;}
+  else win.docShell.treeOwner.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIBaseWindow).visibility=true;
+  win.__souluStartupHidden=false;
+ }catch(error){console.error(error);}
+ try{win.focus();}catch(error){console.error(error);}
+}
 export function prepareStartup(win){
  if(win.__souluStartupHidden)return;
  win.__souluStartupPresentation={preparedAt:Date.now()};
@@ -89,5 +104,10 @@ export function revealStartup(win){
   // Do not block the UI thread on DwmFlush: GPU/driver stalls can create a
   // Windows ghost window. Gecko layer acknowledgement is the presentation gate.
   win.__souluStartupPresentation.layersReadyAt=Date.now();present();
- })().catch(error=>{win.__souluStartupPresentation.error=String(error);console.error(error);});
+  // Preview 9 watchdog: if the shell never reports itself ready, fall back to
+  // the native toolbox rather than leaving a dead cloaked window.
+  win.clearTimeout(win.__souluFallbackTimer);
+  win.__souluFallbackTimer=win.setTimeout(()=>{if(win.closed)return;if(!win.document.documentElement.hasAttribute('soulu-ui-ready'))nativeFallback(win);},8000);
+ })().catch(error=>{win.__souluStartupPresentation.error=String(error);console.error(error);try{nativeFallback(win);}catch{nativeFallbackWin(win);}});
 }
+function nativeFallbackWin(win){try{win.docShell.treeOwner.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIBaseWindow).visibility=true;win.__souluStartupHidden=false;win.focus();}catch(error){console.error(error);}}
