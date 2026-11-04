@@ -4,7 +4,8 @@ source=Path(__file__).with_name('preview4.py').read_text().split('\ntry:\n start
 exec(compile(source,str(Path(__file__).with_name('preview4.py')),'exec'),globals())
 report={'passed':False,'checks':{}}
 try:
- started=time.monotonic();start();report['startupSeconds']=time.monotonic()-started
+ (profile/'soulu-weather.json').write_text(json.dumps({'key':'automatic|||ru','status':'ready','city':'Cached city','current':{'temperature_2m':12,'weather_code':0},'daily':{},'fetchedAt':time.time()}));
+ started=time.monotonic();start();report['startupSeconds']=time.monotonic()-started;report['startupTimings']=chrome('return Soulu.startupTimings')
  wait(lambda:content('return location.pathname.endsWith("onboarding.html")'));wait(lambda:ui('return !!document.querySelector("#actions button:not(.primary)")','page'));ui('document.querySelector("#actions button:not(.primary)").click();return true','page');wait(lambda:content('return location.pathname.endsWith("home.html")'))
  call('browser.navigate',url);wait(lambda:content('return !!document.getElementById("v")'));rows=call('browser.bookmarks.add');mark=next(r for r in rows if r['url']==url);call('browser.bookmarks.homeFavorite',{'id':mark['id'],'selected':True})
  call('browser.navigate',url+'second');wait(lambda:content('return location.pathname==="/second"'));rows=call('browser.bookmarks.add');second=next(r for r in rows if r['url']==url+'second');call('browser.bookmarks.homeFavorite',{'id':second['id'],'selected':True})
@@ -15,7 +16,14 @@ try:
  ui('document.querySelector(".bookmark-editor").requestSubmit();return true');wait(lambda:ui('return !document.querySelector(".bookmark-editor")'));check('editor_preserves_other_favorites',set(call('browser.state.get')['settings']['homeFavoriteIds'])=={mark['id'],second['id']})
  call('browser.home');wait(lambda:content('return location.pathname.endsWith("home.html")'));wait(lambda:ui('return document.body.classList.contains("home-ready")','page'));check('home_shows_both_favorites_after_edit',ui('return document.querySelectorAll(".favorite").length===2','page'))
  chrome('window.openPreferences("panePrivacy")');check('native_preferences_entry_routes_to_soulu',wait(lambda:call('browser.state.get')['settingsOverlayOpen']));check('no_native_preferences_tab',all(not t['url'].startswith('about:preferences') for t in call('browser.state.get')['tabs']));chrome('Soulu.closeSettings()');time.sleep(.25)
- check('puzzle_icon_matches_existing_asset',ui('return document.querySelector("#soulu-extensions-menu path").getAttribute("d").startsWith("M4 4h6V2")'))
+ # A physical pointer click must reach Home while the shell sidebar is expanded.
+ call('browser.bookmarks.sidebar',True);time.sleep(.25)
+ r=ui('const r=document.getElementById("favoritesToggle").getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};','page');offset=chrome('const r=gBrowser.selectedBrowser.getBoundingClientRect();return {x:r.x,y:r.y};')
+ m.set_context('chrome');m._send_message('WebDriver:PerformActions',{'actions':[{'type':'pointer','id':'home-favorite-click','parameters':{'pointerType':'mouse'},'actions':[{'type':'pointerMove','origin':'viewport','x':round(r['x']+offset['x']),'y':round(r['y']+offset['y']),'duration':0},{'type':'pointerDown','button':0},{'type':'pointerUp','button':0}]}]})
+ check('real_home_favorites_click_reaches_page_with_sidebar',wait(lambda:ui('return !document.getElementById("favoritesPanel").hidden','page')))
+ call('browser.bookmarks.sidebar',False)
+ check('cached_weather_hydrated_before_home_reveal',ui('return document.getElementById("weatherSummary").textContent.includes("Cached city")','page'))
+ check('puzzle_icon_matches_existing_asset' ,ui('return document.querySelector("#soulu-extensions-menu path").getAttribute("d").startsWith("M4 4h6V2")'))
  fixture={'draft':False,'tag_name':'gecko-preview-7','assets':[{'id':1,'name':'Soulu-Gecko-Preview-7-win64.zip','size':100,'digest':'sha256:'+'a'*64,'browser_download_url':'https://github.com/sanderstripa/soulu/releases/download/gecko-preview-7/Soulu-Gecko-Preview-7-win64.zip'}]};check('updater_never_offers_current_release',chrome('return Soulu.updateCandidate('+json.dumps([fixture])+')===null'))
  call('browser.navigate',url+'glass');wait(lambda:content('return !!document.getElementById("v")'));content('document.body.style.background="#ff0000";document.getElementById("box").style.background="#ff0000";return true')
  call('browser.settings.set',{'mattePanel':True});time.sleep(.6)

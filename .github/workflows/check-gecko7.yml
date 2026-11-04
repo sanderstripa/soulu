@@ -1,4 +1,4 @@
-name: Preview 7 native glass and builtin integration checks
+name: Preview 7 physical Home clicks and startup measurements
 on:
   push:
     branches: [gecko-preview]
@@ -41,6 +41,9 @@ jobs:
           python -m pip install marionette_driver pillow psutil websocket-client
       - name: Run real editor, Home, version, routing and pixel checks
         run: python gecko/tests/preview7.py gecko-out/runtime/firefox.exe gecko7-checks
+      - name: Check actual Windows live resize edges
+        if: always()
+        run: python gecko/tests/resize7.py gecko-out/runtime/firefox.exe gecko7-checks
       - uses: actions/upload-artifact@v4
         if: always()
         with:
