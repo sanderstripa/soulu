@@ -1,0 +1,35 @@
+name: Preview 8 reproduce actual launcher windows and normal closing
+on:
+  push:
+    branches: [gecko-preview]
+    paths: ['.github/workflows/check-gecko8.yml']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  windows:
+    runs-on: windows-2025
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: sanderstripa/soulu
+      PYTHONUTF8: 1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Retrieve exact published Preview 7
+        shell: pwsh
+        run: |
+          gh release download gecko-preview-7 -p Soulu-Gecko-Preview-7-win64.zip -D accepted
+          if ((Get-FileHash accepted/Soulu-Gecko-Preview-7-win64.zip -Algorithm SHA256).Hash.ToLowerInvariant() -cne 'aa27044bc2569a735540b2068759efabdd5878c3314cba5038d465b9a3468c14') { throw 'Base checksum mismatch' }
+          Expand-Archive accepted/Soulu-Gecko-Preview-7-win64.zip gecko-out
+          python -m pip install marionette_driver pillow psutil
+      - name: Check physical windows and ordinary close
+        run: python gecko/tests/startup8.py gecko-out/runtime/firefox.exe gecko8-checks
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gecko8-launcher-diagnostics
+          path: gecko8-checks/
