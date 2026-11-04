@@ -15,7 +15,7 @@ export class SouluAppChild extends JSWindowActorChild{
    const win=this.contentWindow.wrappedJSObject,sandbox=Cu.Sandbox(win,{sandboxPrototype:win,wantXrays:false});return await Cu.evalInSandbox('(async()=>{'+message.data+'})()',sandbox);
   }
   if(message.name==='emit'||message.name==='home'){const data=message.name==='home'?{name:'home',value:message.data}:message.data;this.contentWindow.dispatchEvent(new this.contentWindow.CustomEvent('SouluEmit',{detail:JSON.stringify(data)}));}
-  if(message.name==='openSection')this.contentWindow.wrappedJSObject.souluSettings?.openSection(message.data);
+  if(message.name==='openSection'){const settings=this.contentWindow.wrappedJSObject.souluSettings;if(settings){await settings.reload();settings.openSection(message.data);}}
  }
  respond(value){try{this.contentWindow.dispatchEvent(new this.contentWindow.CustomEvent('SouluResponse',{detail:JSON.stringify(value)}));}catch{}}
 }

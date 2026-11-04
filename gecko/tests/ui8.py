@@ -11,6 +11,7 @@ try:
   ui('const n=document.getElementById("showExtensions");if(n.checked!=='+json.dumps(value)+')n.click();await souluSettings.flush();return true','settings');chrome('Soulu.closeSettings()');time.sleep(.3)
   check('extensions_toggle_actual_layout_'+str(value),wait(lambda:ui('const n=document.getElementById("soulu-extensions-menu");return (n.getBoundingClientRect().width>0)==='+json.dumps(value))),call('browser.state.get')['settings'].get('showExtensions'))
   if not value:call('browser.settings.openWindow','interface');time.sleep(.25)
+ check('settings_changes_do_not_reset_completed_welcome',chrome('return Soulu.config.onboarding.done'))
  call('browser.navigate',url+'saved');select_latest();wait(lambda:content('return !!document.getElementById("v")'));marks=call('browser.bookmarks.add');mark=next(x for x in marks if x['url']==url+'saved');call('browser.home');wait(lambda:ui('return document.body.classList.contains("home-ready")','page'))
  ui('await souluNavigation.openBookmarks();return true');time.sleep(.2);chrome('Soulu.native.send("editBookmark",'+str(mark['id'])+');return true');wait(lambda:ui('return !!document.getElementById("bookmarkHomeFavorite")'))
  ui('const n=document.getElementById("bookmarkHomeFavorite");if(!n.checked)n.click();document.querySelector(".bookmark-editor").requestSubmit();return true');wait(lambda:ui('return !document.querySelector(".bookmark-editor")'));time.sleep(.3)
