@@ -43,12 +43,13 @@ function cloak(win,enabled){
 }
 export function prepareStartup(win){
  if(win.__souluStartupHidden)return;
+ win.__souluStartupPresentation={preparedAt:Date.now()};
  try{
   if(Services.appinfo.OS==='WINNT'){cloak(win,true);win.__souluStartupCloaked=true;}
   else win.docShell.treeOwner.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIBaseWindow).visibility=false;
   win.__souluStartupHidden=true;
   win.__souluStartupRevealTimer=win.setTimeout(()=>revealStartup(win),15000);
- }catch(error){console.error('Soulu initial presentation',String(error));}
+ }catch(error){win.__souluStartupPresentation.error=String(error);console.error('Soulu initial presentation',String(error));}
 }
 export function revealStartup(win){
  if(!win.__souluStartupHidden||win.__souluStartupRevealing)return;
@@ -59,7 +60,7 @@ export function revealStartup(win){
   try{
    if(win.__souluStartupCloaked){cloak(win,false);win.__souluStartupCloaked=false;}
    else win.docShell.treeOwner.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIBaseWindow).visibility=true;
-   win.__souluStartupHidden=false;win.focus();
+   win.__souluStartupHidden=false;win.__souluStartupPresentation.presentedAt=Date.now();win.focus();
   }catch(error){console.error(error);}
  };
  // DWM keeps composing a cloaked HWND. Wait for the ready remote controls

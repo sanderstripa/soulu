@@ -46,6 +46,8 @@ try:
  # Native Fluent/legacy branding uses the product name, not a text overlay.
  brand=run('const loc=new Localization(["branding/brand.ftl","branding/soulu-check.ftl"]);return await loc.formatValue("soulu-branding-check");')
  check('native_branding_source_is_soulu',brand=='Soulu',brand)
+ # Exercise normal animation explicitly; Windows CI has reduced motion enabled.
+ chrome('Services.prefs.setIntPref("ui.prefersReducedMotion",0)');report['reducedMotion']=chrome('return matchMedia("(prefers-reduced-motion:reduce)").matches')
  # Sample the closing transition, rather than only its final centered position.
  chrome('Soulu.closeSettings()');time.sleep(.25)
  for maximized in [False,True]:

@@ -21,11 +21,12 @@ def observe():
     if proc and pathlib.Path(psutil.Process(pid.value).exe()).resolve()==binary:
      r=W.RECT();p=W.POINT();u.GetClientRect(hwnd,C.byref(r));u.ClientToScreen(hwnd,C.byref(p))
      if r.right>500 and r.bottom>100:
-      frame=ImageGrab.grab(all_screens=True).crop((p.x,p.y,p.x+r.right,p.y+68));name='first-visible-'+str(len(report['visibleFrames']))+'.png';frame.save(out/name);report['visibleFrames'].append({'seconds':round(time.monotonic()-started,3),'contrast':max(ImageStat.Stat(frame).stddev),'image':name})
+      frame=ImageGrab.grab(all_screens=True).crop((p.x,p.y,p.x+r.right,p.y+68));name='first-visible-'+str(len(report['visibleFrames']))+'.png';frame.save(out/name);report['visibleFrames'].append({'hwnd':int(hwnd),'pid':pid.value,'rect':[p.x,p.y,r.right,r.bottom],'cloaked':cloaked.value,'seconds':round(time.monotonic()-started,3),'contrast':max(ImageStat.Stat(frame).stddev),'image':name})
   except Exception as e:report['observerError']=str(e)
   done.wait(.04)
 try:
  monitor=threading.Thread(target=observe,daemon=True);monitor.start();start();monitor.join(timeout=8)
+ report['presentation']=chrome('return {events:window.__souluStartupEvents,presentation:window.__souluStartupPresentation,hidden:window.__souluStartupHidden,cloaked:window.__souluStartupCloaked,mainHandle:String(window.docShell.treeOwner.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIBaseWindow).nativeHandle),timing:Soulu.startupTimings,console:Services.console.getMessageArray().map(x=>x.message).slice(-15)}')
  frames=report['visibleFrames'];check('visible_window_never_starts_with_blank_header',bool(frames) and all(f['contrast']>5 for f in frames),frames)
  report['timing']=chrome('return Soulu.startupTimings');check('first_visible_window_is_functionally_ready',chrome('return Soulu.ready&&document.documentElement.hasAttribute("soulu-ui-ready")&&!window.__souluStartupHidden'))
  count=len(call('browser.state.get')['tabs']);call('browser.newTab');check('new_tab_command_works_on_first_launch',wait(lambda:len(call('browser.state.get')['tabs'])==count+1));check('web_process_isolation_retained',chrome('return Services.prefs.getBoolPref("fission.autostart")&&!Services.prefs.getBoolPref("layers.acceleration.disabled",false)'))
