@@ -1,4 +1,4 @@
-# Soulu Gecko Preview 7 — Windows x64
+# Soulu Gecko Preview 8 — Windows x64
 
 Extract the complete ZIP into a writable folder and run `Soulu.exe`. Firefox and CEF do not need to be installed. Never copy individual executables out of the package.
 

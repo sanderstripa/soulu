@@ -65,3 +65,5 @@ Services.scriptloader.loadSubScript('chrome://soulu/content/extension-migration.
 Services.scriptloader.loadSubScript('chrome://soulu/content/onboarding.js',window);
 Services.scriptloader.loadSubScript('chrome://soulu/content/updates.js',window);
 })();
+
+Services.scriptloader.loadSubScript('chrome://soulu/content/startup-session.js',window);

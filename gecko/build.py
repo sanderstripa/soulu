@@ -65,7 +65,7 @@ text=text.replace("['Firefox',state.update?.firefox]","['Firefox',state.update?.
 # Avoid rebuilding an embedded Chrome page; use Firefox's actual manager/store.
 start=text.index("          n.classList.add('long');n.replaceChildren();card.querySelector('h3')?.remove();")
 end=text.index("        if(r.key==='defaultBrowser')",start)
-text=text[:start]+"          n.classList.add('long');n.replaceChildren();const controls=el('div',undefined,'extension-controls');controls.append(button(t('Установленные расширения Firefox','Installed Firefox extensions'),()=>browserShell.openTab('about:addons')),button('Firefox Add-ons',()=>browserShell.openTab('https://addons.mozilla.org/firefox/')));n.append(controls,el('p',t('Расширения устанавливаются из Firefox Add-ons. Локальные подписанные XPI можно установить через менеджер Firefox.','Install extensions from Firefox Add-ons. Local signed XPI packages can be installed in the Firefox manager.'),'note'));const pins=el('div',undefined,'extension-pin-list');pins.id='extensionPins';n.append(pins);renderExtensionPins(pins);card.append(n);continue;\n        }\n"+text[end:]
+text=text[:start]+"          n.classList.add('long');n.replaceChildren();const controls=el('div',undefined,'extension-controls');controls.append(button(t('Установленные расширения','Installed extensions'),()=>browserShell.openTab('about:addons')),button('Каталог расширений',()=>browserShell.openTab('https://addons.mozilla.org/firefox/')));n.append(controls,el('p',t('Расширения устанавливаются из Каталог расширений. Локальные подписанные XPI можно установить через менеджер расширений.','Install extensions from Каталог расширений. Local signed XPI packages can be installed in the extension manager.'),'note'));const pins=el('div',undefined,'extension-pin-list');pins.id='extensionPins';n.append(pins);renderExtensionPins(pins);card.append(n);continue;\n        }\n"+text[end:]
 text=text.replace("setInterval(()=>{const host=$('extensionPins');if(current&&section==='extensions'&&host)renderExtensionPins(host);},3000);","window.addEventListener('SouluExtensionsChanged',()=>{const host=$('extensionPins');if(current&&section==='extensions'&&host)renderExtensionPins(host);});")
 text=text.replace("search.focus();","search.blur();")
 text=text.replace("[{opacity:0,transform:reduced?'none':'translateY(5px)'},{opacity:1,transform:'none'}]","[{opacity:.94},{opacity:1}]").replace("duration:reduced?90:320,delay:reduced?0:45","duration:reduced?60:140,delay:0")
@@ -95,7 +95,7 @@ defaults.update({'termsofuse.bypassNotification':True,'datareporting.policy.data
 with (runtime/'defaults/pref/autoconfig.js').open('a',encoding='utf-8') as f:
  for key,value in defaults.items():f.write('\n'+'pref('+json.dumps(key)+','+json.dumps(value)+');')
 
-provenance={'channel':'gecko-preview','name':'Soulu Gecko Preview 7','firefox':version,'platform':platform,'mozilla_archive':base+'/'+rel,'mozilla_sha256':digest,'adblock':'Same Rust source and bundled filters as Soulu CEF','soulu_source':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip()}
+provenance={'channel':'gecko-preview','name':'Soulu Gecko Preview 8','firefox':version,'platform':platform,'mozilla_archive':base+'/'+rel,'mozilla_sha256':digest,'adblock':'Same Rust source and bundled filters as Soulu CEF','soulu_source':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip()}
 (out/'BUILD.json').write_text(json.dumps(provenance,indent=2))
 shutil.copy(ROOT/'gecko/README.md',out/'README.md')
 print('Prepared',out,flush=True)

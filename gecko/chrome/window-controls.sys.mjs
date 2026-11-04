@@ -86,7 +86,8 @@ export function revealStartup(win){
   win.windowUtils.updateLayerTree();
   await new Promise(resolve=>win.requestAnimationFrame(()=>win.requestAnimationFrame(resolve)));
   win.windowUtils.updateLayerTree();
-  if(Services.appinfo.OS==='WINNT')library('dwmapi.dll').declare('DwmFlush',ctypes.winapi_abi||ctypes.default_abi,ctypes.int32_t)();
+  // Do not block the UI thread on DwmFlush: GPU/driver stalls can create a
+  // Windows ghost window. Gecko layer acknowledgement is the presentation gate.
   win.__souluStartupPresentation.layersReadyAt=Date.now();present();
  })().catch(error=>{win.__souluStartupPresentation.error=String(error);console.error(error);});
 }

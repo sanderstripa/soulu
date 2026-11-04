@@ -32,3 +32,6 @@ body[data-theme=light]:has(.card>.hero){color-scheme:light;color:#191a1e}body[da
 body[data-native-page-glass] .browser-toolbar,body[data-native-page-glass] .classic-toolbar,body[data-native-page-glass] .classic-main-row{background:transparent!important;background-image:none!important;backdrop-filter:none!important}
 /* The remote UI must not paint a second opaque/Mica layer over native page glass. */
 html.cef-runtime body[data-native-page-glass][data-matte=true][data-page-glass-ready=true]:not([data-gecko-opaque]) :is(.browser-toolbar,.classic-toolbar,.classic-main-row){background:transparent!important;background-image:none!important;backdrop-filter:none!important}
+
+/* Caption controls have display:grid rules; hidden must still remove the button. */
+#soulu-extensions-menu[hidden]{display:none!important}

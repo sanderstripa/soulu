@@ -1,2 +1,5 @@
 content soulu chrome/
 override chrome://branding/locale/brand.properties chrome://soulu/content/branding/brand.properties
+
+override chrome://branding/content/about-logo.png chrome://soulu/content/ui/branding/soulu-128.png
+override chrome://branding/content/about-logo@2x.png chrome://soulu/content/ui/branding/soulu-128.png

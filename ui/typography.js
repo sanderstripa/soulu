@@ -59,6 +59,7 @@ new MutationObserver(records=>{const roots=new Set();for(const r of records){if(
 })();
 
 (()=>{
+ if(location.pathname.endsWith('/home.html')){window.souluSelectReady=Promise.resolve();return;}
  const script=document.createElement('script');script.src=new URL('select-control.js',document.currentScript.src).href;script.async=false;
  window.souluSelectReady=new Promise((resolve,reject)=>{script.onload=()=>Promise.resolve(window.souluSelectControlsReady).then(resolve,reject);script.onerror=()=>reject(Error('Soulu controls could not be loaded'));});
  window.souluSelectReady.catch(error=>console.error('Soulu controls:',error));document.head.append(script);

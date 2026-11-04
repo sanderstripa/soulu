@@ -23,6 +23,7 @@ function delegate(api){
 }
 function watch(api){delegate(api);const node=api.widget?.forWindow(window)?.node;if(!node?.isConnected||widgets.has(node))return;const observer=new MutationObserver(schedule);observer.observe(node,{attributes:true,subtree:true,attributeFilter:['style','badge','badgeStyle','disabled','data-l10n-args']});widgets.set(node,observer);}
 async function list(){
+ if(Soulu.votReady)await Soulu.votReady;
  for(const [node,observer] of widgets)if(!node.isConnected){observer.disconnect();widgets.delete(node);}
  const addons=await AddonManager.getAddonsByTypes(['extension']),items=[];
  for(const addon of addons){if(addon.isSystem||addon.isBuiltin||addon.hidden)continue;const {extension,api}=native(addon.id);if(isPrivate&&(!extension||!extension.canAccessWindow(window)))continue;const action=api?.action,context=action?.getContextData(gBrowser.selectedTab);if(api)watch(api);const color=context?.badgeBackgroundColor||[217,46,54,255],textColor=context?.badgeTextColor||[255,255,255,255];
