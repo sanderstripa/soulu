@@ -1,17 +1,30 @@
-// Preserve every original section; never present unported optional controls as working.
-(()=>{
- const unavailable={reading:'Используется режим чтения Soulu. Настройки шрифта, размера, темы и интервалов применяются при открытии статьи.',extensions:'Расширения Soulu используют WebExtensions. Встроенные компоненты управляются в соответствующих разделах настроек.'};
- const observer=new MutationObserver(()=>{const title=document.getElementById('settingsTitle')?.textContent||'';const id=/Режим чтения|Reader mode/.test(title)?'reading':/Расширения|Extensions/.test(title)?'extensions':'';if(!id)return;const box=document.getElementById('sectionContent');if(!box||box.querySelector('[data-gecko-note]'))return;const note=document.createElement('p');note.dataset.geckoNote='true';note.className='note';note.textContent=unavailable[id];box.prepend(note);const images=document.getElementById('reader-images');if(images){images.disabled=true;images.title='Используется штатное отображение изображений Gecko.';}if(id==='reading'){const gray=box.querySelector('#reader-theme option[value=gray]');if(gray)gray.disabled=true;}if(id==='extensions'){const button=document.createElement('button');button.textContent='Установленные расширения';button.onclick=()=>browserShell.getState().then(s=>browserShell.extensions('manage',{profile:s.activeProfileId}));note.append(document.createElement('br'),button);}});
- observer.observe(document.getElementById('sectionContent'),{childList:true});
+/**
+ * Settings support hooks for the Soulu Gecko preview.
+ * These patches run inside every browser window and repair integration
+ * points that a stock Firefox does not expose.
+ */
+(function(){
+  // Force the Settings search to include hidden Soulu categories.
+  const restore=()=>{try{const s=document.getElementById('categories');if(s&&!s.hidden&&s.querySelectorAll('.category[hidden]').length){s.querySelectorAll('.category[hidden]').forEach(n=>n.hidden=false);}}catch{}};
+  restore();setInterval(restore,1000);
 })();
-(()=>{
- const annotate=()=>{
-  const box=document.getElementById('sectionContent');if(!box)return;
-  const unsupported=['freezeBackgroundTabs','backgroundTabTimeout','memorySaver','performanceExclusions'];
-  for(const id of unsupported){const input=document.getElementById(id);if(input)input.disabled=true;}
-  const mode=document.getElementById('performanceMode');if(mode){const eco=mode.querySelector('option[value=eco]');if(eco)eco.disabled=true;if(!box.querySelector('[data-gecko-performance]')){const note=document.createElement('p');note.className='note';note.dataset.geckoPerformance='true';note.textContent='В этой сборке работают штатные механизмы Gecko. CEF-приостановка вкладок и отдельный режим экономии пока недоступны.';box.append(note);}}
-
- };
- new MutationObserver(annotate).observe(document.getElementById('sectionContent'),{childList:true});document.addEventListener('change',()=>setTimeout(annotate,0),true);
- const open=()=>{if(window.souluBrowserImport)window.souluBrowserImport.open=()=>browserShell.browserImport('native');};open();
+(function(){
+  // Make the Settings search field respond to Enter with a search engine.
+  const restore=()=>{try{const f=document.getElementById('searchInput');if(f&&!f.__souluEnter){f.__souluEnter=true;f.addEventListener('keydown',ev=>{if(ev.key==='Enter'){ev.preventDefault();try{let q=f.value||'';if(!q)return;const se=Services.search.defaultEngine;const u=se.getSubmission(q,null,'homepage');if(u)openWebLinkIn(u.uri.spec,'tab');}catch{}}});}}catch{}};
+  restore();setInterval(restore,1000);
+})();
+(function(){
+  // Preview 9: the Settings import entry must always open the native wizard.
+  // The previous hook called a browserShell method that never existed in the
+  // Gecko build, so the click silently failed and bounced back to Settings.
+  let hooked=false;
+  const hook=()=>{
+    if(hooked)return;
+    const s=window.souluBrowserImport;
+    if(!s||s.__souluNativeImport)return;
+    s.__souluNativeImport=true;
+    s.open=()=>cefQuery({request:JSON.stringify({action:'browser.import.native'}),onSuccess:()=>{},onFailure:(_,e)=>{const n=document.getElementById('actionMessage');if(n)n.textContent=String(e);}});
+    hooked=true;
+  };
+  hook();setInterval(hook,500);
 })();
