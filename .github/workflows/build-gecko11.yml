@@ -5,7 +5,7 @@ on:
     paths: ['.github/workflows/build-gecko11.yml']
 permissions:
   contents: write
-  actions: read
+  actions: write
 jobs:
   windows:
     runs-on: windows-2025
@@ -15,6 +15,11 @@ jobs:
       GH_REPO: sanderstripa/soulu
       PYTHONUTF8: 1
     steps:
+      - name: Cancel superseded candidate before publication
+        shell: pwsh
+        run: |
+          $old = gh run view 41933108496 --json status | ConvertFrom-Json
+          if ($old.status -ne 'completed') { gh run cancel 41933108496; if ($LASTEXITCODE) { throw 'Cannot stop superseded candidate' } }
       - uses: actions/checkout@v4
         with:
           fetch-depth: 1

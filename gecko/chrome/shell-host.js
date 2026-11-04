@@ -5,6 +5,7 @@ const {shared,Services,IOUtils,PathUtils,PlacesUtils,profile,isPrivate,save,appl
 const {appRoot}=ChromeUtils.importESModule('chrome://soulu/content/AppParent.sys.mjs');const appURL=appRoot();
 const H='http://www.w3.org/1999/xhtml',homeURL=appURL+'home.html';
 const base=Soulu.dispatch,ids=new WeakMap(),tabs=new Map();let nextId=1,frame,settingsFrame,shade,pending=0,expanded=false,side=false,bookmarksSide=false,overview=false,rightPanel=0,suggestions=0,popover=false,barAuto=false,toolbarHeight=68,marks=[],downloads=[],lastSnapshot='',lastTabCount=0,lastCosmeticGeneration=0,autoMuted=new WeakSet(),targetHeight=68,geometryToken=0,settingsReady=false,settingsAnimation=null,settingsEpoch=0,pendingSection=null,focusAfterHome=0;
+let bookmarkConfirmation=false;
 const tabID=tab=>{if(!ids.has(tab)){ids.set(tab,nextId);tabs.set(nextId++,tab);}return ids.get(tab);};
 const selected=()=>gBrowser.selectedBrowser;
 const currentURL=browser=>browser.currentURI.spec===homeURL?'soulu://home':browser.currentURI.spec;
@@ -14,8 +15,9 @@ function load(url,background=false){const tab=gBrowser.addTrustedTab(url,{inBack
 function rows(){return validTabs().map(tab=>({id:tabID(tab),active:tab===gBrowser.selectedTab,pinned:tab.pinned,title:tab.linkedBrowser.currentURI.spec===homeURL?'Soulu':tab.label,label:tab.label,url:currentURL(tab.linkedBrowser),favicon:tab.image||'',loading:tab.linkedBrowser.currentURI.spec!==homeURL&&tab.hasAttribute('busy'),canGoBack:tab.linkedBrowser.canGoBack,canGoForward:tab.linkedBrowser.canGoForward,microphoneActive:!!tab._sharingState?.microphone,cameraActive:!!tab._sharingState?.camera,audible:tab.hasAttribute('soundplaying'),muted:tab.hasAttribute('muted'),generation:tab.linkedBrowser.browsingContext.currentWindowGlobal?.innerWindowId||0,incognito:isPrivate,thumbnail:overview?(Soulu.thumbnails?.get(tab)||null):null}));}
 function barVisible(){const s=shared.config.settings;if(s.bookmarksBarPosition==='hidden'||s.bookmarksBarMode==='never')return false;return s.bookmarksBarMode==='always'||s.bookmarksBarMode==='auto'&&barAuto||['newTab','home'].includes(s.bookmarksBarMode)&&currentURL(selected())==='soulu://home';}
 function geometry(){
- const isolatedSidebar=bookmarksSide&&!popover&&!side&&!overview&&!rightPanel&&!suggestions;
- const full=popover||side||bookmarksSide||overview||rightPanel>0||suggestions>0;if(isolatedSidebar&&frame)frame.style.clipPath=`polygon(0 0,100% 0,100% ${toolbarHeight}px,276px ${toolbarHeight}px,276px 100%,0 100%)`;else if(!full&&frame)frame.style.clipPath='none';else if(frame&&frame.style.clipPath==='none')frame.style.clipPath=`inset(0 0 calc(100% - ${toolbarHeight}px) 0)`;
+ const isolatedSidebar=bookmarksSide&&!bookmarkConfirmation&&!popover&&!side&&!overview&&!rightPanel&&!suggestions;
+ const full=bookmarkConfirmation||popover||side||bookmarksSide||overview||rightPanel>0||suggestions>0;if(isolatedSidebar&&frame)frame.style.clipPath=`polygon(0 0,100% 0,100% ${toolbarHeight}px,276px ${toolbarHeight}px,276px 100%,0 100%)`;else if(!full&&frame)frame.style.clipPath='none';else if(frame&&frame.style.clipPath==='none')frame.style.clipPath=`inset(0 0 calc(100% - ${toolbarHeight}px) 0)`;
+ if(bookmarkConfirmation&&frame)frame.style.clipPath='none';
  const height=(validTabs().length>1?88:68)+(barVisible()?28:0),root=document.documentElement;
  if(height!==targetHeight){targetHeight=height;const from=toolbarHeight,start=performance.now(),token=++geometryToken,duration=matchMedia('(prefers-reduced-motion:reduce)').matches?60:320;
   send('adaptiveGeometry',{animation:{startAt:Date.now(),duration,from:from-(barVisible()?28:0),to:height-(barVisible()?28:0)},expanded:validTabs().length>1});
@@ -83,8 +85,10 @@ async function dispatch(action,payload,source){
  case 'browser.bookmarks.auto':barAuto=!!payload;notify();return snapshot();
  case 'browser.setRightPanel':rightPanel=Math.max(0,Math.min(400,Number(payload)||0));geometry();return true;
  case 'browser.setSuggestionsHeight':suggestions=Number(payload)||0;geometry();return true;
+ case 'browser.bookmarks.confirmation':{if(!source?.appURI?.endsWith('/index.html')||typeof payload!=='boolean')throw Error('Trusted shell required');bookmarkConfirmation=payload;geometry();notify();return true;}
  case 'browser.surfaceRegions':{
   if(!source?.appURI?.endsWith('/index.html'))throw Error('Trusted shell required');
+  if(bookmarkConfirmation){frame.style.clipPath='none';return true;}
   if(!(popover||side||bookmarksSide||overview||rightPanel||suggestions))return true;
   if(bookmarksSide&&!popover&&!side&&!overview&&!rightPanel&&!suggestions){geometry();return true;}
   if(!Array.isArray(payload)||payload.length>24)throw Error('Invalid regions');

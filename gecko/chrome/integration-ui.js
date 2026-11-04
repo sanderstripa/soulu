@@ -11,8 +11,8 @@ window.souluConfirmBookmarkDelete=title=>new Promise(resolve=>{
  const heading=document.createElement('h2');heading.textContent='Удалить папку?';
  const note=document.createElement('p');note.textContent='Папка «'+title+'» и все вложенные закладки будут удалены.';
  const actions=document.createElement('div'),cancel=button('Отмена',()=>box.close('cancel')),remove=button('Удалить',()=>box.close('delete'));remove.id='soulu-bookmark-delete-confirm';remove.className='primary';actions.append(cancel,remove);box.append(heading,note,actions);document.body.append(box);
- box.addEventListener('close',()=>{const accepted=box.returnValue==='delete';box.remove();api.setPopover(false,'bookmark-delete').finally(()=>resolve(accepted));},{once:true});
- api.setPopover(true,'bookmark-delete').then(()=>{box.showModal();cancel.focus();regions();}).catch(e=>{box.remove();error(e);resolve(false);});
+ box.addEventListener('close',()=>{const accepted=box.returnValue==='delete';box.remove();invoke('browser.bookmarks.confirmation',false).then(()=>api.setPopover(false,'bookmark-delete')).finally(()=>resolve(accepted));},{once:true});
+ invoke('browser.bookmarks.confirmation',true).then(()=>api.setPopover(true,'bookmark-delete')).then(()=>{box.showModal();cancel.focus();regions();}).catch(e=>{box.remove();error(e);resolve(false);});
 });
 if(location.pathname.endsWith('/settings.html')){
  const ui=window.souluSettings;

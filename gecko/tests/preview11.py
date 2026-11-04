@@ -37,6 +37,8 @@ try:
   open_delete()
   check('folder_delete_opens_soulu_confirmation',ui('return document.getElementById("soulu-bookmark-delete").textContent.includes("Mozilla")'))
   check('confirmation_is_visible_and_clickable',wait(lambda:ui('const b=document.getElementById("soulu-bookmark-delete-confirm"),r=b.getBoundingClientRect();return r.width>0&&r.y>=0&&r.bottom<=innerHeight&&document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===b;')))
+  rect=ui('const r=document.getElementById("soulu-bookmark-delete-confirm").getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};')
+  check('host_window_exposes_confirmation_to_real_pointer',wait(lambda:chrome('return document.elementFromPoint('+str(rect['x'])+','+str(rect['y'])+')===document.getElementById("soulu-shell-frame");')))
   (out/'bookmark-confirm11.png').write_bytes(base64.b64decode(m.screenshot()))
   ui('document.querySelector("#soulu-bookmark-delete button").click();return true;')
   check('cancel_preserves_nonempty_folder',any(x['id']==folder_id for x in call('browser.bookmarks.get')))
