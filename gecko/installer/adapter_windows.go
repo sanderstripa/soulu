@@ -76,7 +76,7 @@ func verifyGecko(raw []byte) error {
  entries:=map[string]*zip.File{};for _,f:=range zr.File{if _,ok:=entries[f.Name];ok{return fmt.Errorf("duplicate archive entry")};entries[f.Name]=f}
  manifest:=entries["gecko-runtime-manifest.json"];if manifest==nil{return fmt.Errorf("Gecko integrity manifest missing")}
  r,err:=manifest.Open();if err!=nil{return err};var m struct{Name string `json:"name"`; Files []struct{Path string `json:"path"`;SHA string `json:"sha256"`} `json:"files"`};err=json.NewDecoder(io.LimitReader(r,4<<20)).Decode(&m);r.Close();if err!=nil{return err}
- if m.Name!="Soulu Gecko Preview 8"||len(m.Files)<10{return fmt.Errorf("unexpected Gecko payload")}
+ if m.Name!="Soulu Gecko Preview 9"||len(m.Files)<10{return fmt.Errorf("unexpected Gecko payload")}
  checked:=map[string]bool{}
  for _,item:=range m.Files{if len(item.SHA)!=64||checked[item.Path]{return fmt.Errorf("invalid manifest entry")};f:=entries[item.Path];if f==nil||f.FileInfo().IsDir(){return fmt.Errorf("missing Gecko component: %s",item.Path)};r,e:=f.Open();if e!=nil{return e};h:=sha256.New();_,e=io.Copy(h,r);r.Close();if e!=nil{return e};if !strings.EqualFold(hex.EncodeToString(h.Sum(nil)),item.SHA){return fmt.Errorf("Gecko component hash mismatch: %s",item.Path)};checked[item.Path]=true}
  for name,f:=range entries{if !f.FileInfo().IsDir()&&name!="gecko-runtime-manifest.json"&&!checked[name]{return fmt.Errorf("unverified file: %s",name)}}
@@ -145,7 +145,7 @@ func (a *Adapter) Install(o core.Options) error {
 	if err = core.Shortcuts("Soulu Gecko", dir, "Soulu.exe", strings.TrimPrefix(icon, dir+string(os.PathSeparator)), "", o.Desktop, o.StartMenu); err != nil {
 		return err
 	}
-	if err = setReg(uninstallKey, map[string]string{"DisplayName": "Soulu Gecko Preview 8", "DisplayVersion": products.Version("soulu"), "Publisher": "Soulu", "InstallLocation": dir, "DisplayIcon": exe, "UninstallString": `"` + filepath.Join(dir, "Uninstall Soulu Gecko.exe") + `" --uninstall`}); err != nil {
+	if err = setReg(uninstallKey, map[string]string{"DisplayName": "Soulu Gecko Preview 9", "DisplayVersion": products.Version("soulu"), "Publisher": "Soulu", "InstallLocation": dir, "DisplayIcon": exe, "UninstallString": `"` + filepath.Join(dir, "Uninstall Soulu Gecko.exe") + `" --uninstall`}); err != nil {
 		return err
 	}
  // Register this isolated product without changing Windows UserChoice.
@@ -179,4 +179,3 @@ func (a *Adapter) Remove() error {
 	a.progress.Store(100)
 	return nil
 }
-
