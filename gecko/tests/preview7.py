@@ -5,7 +5,7 @@ exec(compile(source,str(Path(__file__).with_name('preview4.py')),'exec'),globals
 report={'passed':False,'checks':{}}
 try:
  (profile/'soulu-weather.json').write_text(json.dumps({'key':'automatic|||ru','status':'ready','city':'Cached city','current':{'temperature_2m':12,'weather_code':0},'daily':{},'fetchedAt':time.time()}));
- started=time.monotonic();start();report['startupSeconds']=time.monotonic()-started;report['startupTimings']=chrome('return Soulu.startupTimings')
+ started=time.monotonic();start();report['startupSeconds']=time.monotonic()-started;report['startupTimings']=chrome('return {...Soulu.startupTimings,windowAge:performance.now(),processAge:Date.now()-Services.startup.getStartupInfo().process.getTime()}')
  wait(lambda:content('return location.pathname.endsWith("onboarding.html")'));wait(lambda:ui('return !!document.querySelector("#actions button:not(.primary)")','page'));ui('document.querySelector("#actions button:not(.primary)").click();return true','page');wait(lambda:content('return location.pathname.endsWith("home.html")'))
  call('browser.navigate',url);wait(lambda:content('return !!document.getElementById("v")'));rows=call('browser.bookmarks.add');mark=next(r for r in rows if r['url']==url);call('browser.bookmarks.homeFavorite',{'id':mark['id'],'selected':True})
  call('browser.navigate',url+'second');wait(lambda:content('return location.pathname==="/second"'));rows=call('browser.bookmarks.add');second=next(r for r in rows if r['url']==url+'second');call('browser.bookmarks.homeFavorite',{'id':second['id'],'selected':True})
@@ -19,6 +19,7 @@ try:
  # A physical pointer click must reach Home while the shell sidebar is expanded.
  call('browser.bookmarks.sidebar',True);time.sleep(.25)
  r=ui('const r=document.getElementById("favoritesToggle").getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};','page');offset=chrome('const r=gBrowser.selectedBrowser.getBoundingClientRect();return {x:r.x,y:r.y};')
+ report['homeClickTarget']=chrome('const n=document.elementFromPoint('+str(round(r['x']+offset['x']))+','+str(round(r['y']+offset['y']))+');return {id:n?.id,tag:n?.tagName,clip:document.getElementById("soulu-shell-frame").style.clipPath};')
  m.set_context('chrome');m._send_message('WebDriver:PerformActions',{'actions':[{'type':'pointer','id':'home-favorite-click','parameters':{'pointerType':'mouse'},'actions':[{'type':'pointerMove','origin':'viewport','x':round(r['x']+offset['x']),'y':round(r['y']+offset['y']),'duration':0},{'type':'pointerDown','button':0},{'type':'pointerUp','button':0}]}]})
  check('real_home_favorites_click_reaches_page_with_sidebar',wait(lambda:ui('return !document.getElementById("favoritesPanel").hidden','page')))
  call('browser.bookmarks.sidebar',False)

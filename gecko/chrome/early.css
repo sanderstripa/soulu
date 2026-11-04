@@ -37,3 +37,6 @@
 @-moz-document url("chrome://browser/content/browser.xhtml") {
  :root[soulu-page-glass] #browser{margin-top:0!important}
 }
+@-moz-document url("chrome://browser/content/browser.xhtml") {
+ #soulu-shell-frame{position:fixed;inset:0 0 auto;width:100%;height:var(--soulu-surface-height,68px);border:0;z-index:10000;background:transparent}
+}

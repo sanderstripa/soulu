@@ -121,7 +121,7 @@ async function dispatch(action,payload,source){
  case 'settings.capabilities':return {matteAvailable:Soulu.material?.native===true,defaultBrowser:ChromeUtils.importESModule('chrome://soulu/content/window-controls.sys.mjs').isDefault()};
  case 'settings.ready':return true;
  case 'settings.save':{if(settingsBaseline&&JSON.stringify(payload.settings?.homeFavoriteIds)===JSON.stringify(settingsBaseline.settings.homeFavoriteIds))payload={...payload,settings:{...payload.settings,homeFavoriteIds:shared.config.settings.homeFavoriteIds}};const next=validate({...payload,bookmarkIds:shared.config.bookmarkIds||{}}),old=shared.config;shared.config=next;try{
- if(next.settings.searchEngine!==old.settings.searchEngine){await Services.search.init();const names={google:'Google',yandex:'Яндекс',bing:'Bing',duckduckgo:'DuckDuckGo'};const engines=await Services.search.getVisibleEngines();const engine=engines.find(e=>e.name.toLowerCase().includes(names[next.settings.searchEngine]?.toLowerCase()));if(!engine)throw Error('Поисковая система недоступна в этой локализации Firefox.');await Services.search.setDefault(engine,Services.search.CHANGE_REASON_USER);}await save();for(const w of windows())w.Soulu?.refresh();if(shared.vpnState.connected)proxy(true);emit('settings',shared.config.settings);return {ok:true,persisted:structuredClone(shared.config)};}catch(error){shared.config=old;return {ok:false,error:error.message,persisted:structuredClone(shared.config)};}}
+ if(next.settings.searchEngine!==old.settings.searchEngine){await Services.search.init();const names={google:'Google',yandex:'Яндекс',bing:'Bing',duckduckgo:'DuckDuckGo'};const engines=await Services.search.getVisibleEngines();const engine=engines.find(e=>e.name.toLowerCase().includes(names[next.settings.searchEngine]?.toLowerCase()));if(!engine)throw Error('Поисковая система недоступна в этой локализации Firefox.');await Services.search.setDefault(engine,Services.search.CHANGE_REASON_USER);}await save();for(const w of windows())w.Soulu?.refresh();if(shared.vpnState.connected)proxy(true);emit('settings',shared.config.settings);settingsBaseline=structuredClone(shared.config);return {ok:true,persisted:structuredClone(shared.config)};}catch(error){shared.config=old;return {ok:false,error:error.message,persisted:structuredClone(shared.config)};}}
  case 'settings.close':source?.close();return true;
  case 'settings.resize':case 'settings.extensions':return true;
  case 'settings.geckoSiteSettings':return Soulu.settings('sites');
@@ -185,7 +185,7 @@ async function initialize(){
  Services.scriptloader.loadSubScript('chrome://soulu/content/integration.js',window);
  Services.scriptloader.loadSubScript('chrome://soulu/content/page-glass.js',window);
  Services.scriptloader.loadSubScript('chrome://soulu/content/settings-routing.js',window);
- window.Soulu.ready=true;timing('ready');
+ window.Soulu.ready=true;timing('ready');window.dispatchEvent(new Event('SouluBackendReady'));
 }
 initialize().catch(console.error);
 })();

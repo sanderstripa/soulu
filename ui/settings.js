@@ -125,14 +125,14 @@ for(const kind of ['startup','newTab','home']){const n=$('control-settings-'+kin
       if(!host.isConnected||current?.profile!==profile)return;
       const signature=JSON.stringify((data.items||[]).map(e=>[e.id,e.enabled,e.pinned,e.version]));if(host.dataset.signature===signature)return;host.dataset.signature=signature;
       host.replaceChildren();host.append(el('b',t('Расширения в меню','Extensions in menu')));
-      for(const item of (data.items||[]).filter(e=>e.action)){
+      for(const item of (data.items||[])){
         const row=el('label',undefined,'extension-pin-row');
         if(/^data:image\//.test(item.icon||'')){const image=el('img');image.src=item.icon;image.alt='';row.append(image);}
         row.append(el('span',item.name));const toggle=el('input');toggle.type='checkbox';toggle.checked=item.enabled;toggle.disabled=false;toggle.dataset.extensionId=item.id;toggle.setAttribute('aria-label',t('Включить расширение: ','Enable extension: ')+item.name);
         toggle.onchange=async()=>{const wanted=toggle.checked;toggle.disabled=true;try{await window.browserShell.extensions('setEnabled',{profile,id:item.id,enabled:wanted});}catch(error){toggle.checked=!wanted;report(error);}finally{toggle.disabled=false;scheduleExtensions();}};
         row.append(toggle);host.append(row);
       }
-      if(!(data.items||[]).some(e=>e.action))host.append(el('small',t('Установите расширение с кнопкой действия, чтобы закрепить его значок.','Install an extension with a toolbar action to pin its icon.')));
+      if(!(data.items||[]).length)host.append(el('small',t('Установленные пользовательские расширения появятся здесь.','Installed user extensions appear here.')));
       scheduleExtensions();
     }catch(error){if(host.isConnected){host.textContent=error.message;report(error);}}
   }

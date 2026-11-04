@@ -19,4 +19,4 @@ for p in (root/'gecko/chrome').iterdir():
 for source,target in [('extensions-ui.js','extension-toolbar.js'),('bridge.js','gecko-bridge.js'),('frontend.css','gecko-frontend.css'),('integration-ui.js','integration-ui.js'),('settings-support.js','settings-support.js')]:shutil.copyfile(root/'gecko/chrome'/source,runtime/'ui'/target)
 shutil.copyfile(root/'gecko/soulu.cfg',out/'runtime/soulu.cfg')
 assert before==hashes(),'Existing executable components must remain byte-identical'
-build=json.loads((out/'BUILD.json').read_text());build['resource_source']=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip();(out/'BUILD.json').write_text(json.dumps(build,indent=2))
+build=json.loads((out/'BUILD.json').read_text());build['name']='Soulu Gecko Preview 7';build['channel']='gecko-preview';build['platform']='win64';build['resource_source']=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip();(out/'BUILD.json').write_text(json.dumps(build,indent=2))
