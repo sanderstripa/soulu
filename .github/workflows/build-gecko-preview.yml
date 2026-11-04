@@ -41,7 +41,7 @@ jobs:
           foreach ($s in $steps) {
             $ok = $false
             foreach ($attempt in 1..2) {
-              python $s
+              python $s *>&1 | Tee-Object -Append assemble.log
               if ($LASTEXITCODE -eq 0) { $ok = $true; break }
               Write-Host "step $($s[0]) failed, retrying"
             }
@@ -75,14 +75,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $ok = $false
-          foreach ($i in 1..10) {
-            gh run view $env:GITHUB_RUN_ID --repo "$env:GITHUB_REPOSITORY" --log > ci-full.log 2>$null
-            if ($LASTEXITCODE -eq 0 -and (Test-Path ci-full.log) -and ((Get-Item ci-full.log).Length -gt 0)) { $ok = $true; break }
-            Start-Sleep -Seconds 30
-          }
-          "--- full run log (tail) ---" | Set-Content failure-report.md -Encoding utf8NoBOM
-          if ($ok) { Get-Content ci-full.log -Tail 500 | Add-Content failure-report.md } else { "run log unavailable after retries" | Add-Content failure-report.md }
+          "--- assemble.log ---" | Set-Content failure-report.md -Encoding utf8NoBOM
+          if (Test-Path assemble.log) { Add-Content failure-report.md (Get-Content assemble.log -Raw) }
+          "--- installer-build.log ---" | Add-Content failure-report.md
+          if (Test-Path installer-build.log) { Add-Content failure-report.md (Get-Content installer-build.log -Raw) }
+          "--- acceptance.log ---" | Add-Content failure-report.md
+          if (Test-Path acceptance.log) { Add-Content failure-report.md (Get-Content acceptance.log -Raw) }
           gh issue create --repo "$env:GITHUB_REPOSITORY" --title "CI: Preview 9 build failed (run $env:GITHUB_RUN_ID)" --body-file failure-report.md
 
       - name: Checksums
