@@ -56,6 +56,17 @@ try:
   samples=ui('const rows=[],start=performance.now();while(performance.now()-start<650){const r=document.getElementById("classicAddress").getBoundingClientRect();rows.push({t:performance.now()-start,y:r.y+r.height/2});await new Promise(requestAnimationFrame);}return rows;')
   report['transitionSamples'+str(maximized)]=samples
   jumps=[abs(b['y']-a['y']) for a,b in zip(samples,samples[1:])];check('single_tab_transition_has_no_jump_'+str(maximized),len(samples)>5 and max(jumps)<4 and abs(samples[-1]['y']-34)<2,{'maxStep':max(jumps),'last':samples[-1],'frames':len(samples)})
+ # Reduced-motion users get a short, monotonic transition and the same endpoint.
+ chrome('Services.prefs.setIntPref("ui.prefersReducedMotion",1)');call('browser.openTab',{'url':url+'reduced'});time.sleep(.25);call('browser.closeTab',call('browser.state.get')['activeTabId']);time.sleep(.25)
+ check('reduced_motion_single_tab_endpoint',ui('const r=document.getElementById("classicAddress").getBoundingClientRect();return Math.abs(r.y+r.height/2-34)<2'))
+ chrome('Services.prefs.setIntPref("ui.prefersReducedMotion",0)')
+ # Actual video continues while the pointer uses the real toolbar.
+ call('browser.navigate',url+'hover-video');wait(lambda:content('return !!document.getElementById("v")&&document.getElementById("v").currentTime>.1'))
+ before=content('const v=document.getElementById("v");return {h:innerHeight,w:innerWidth,y:v.getBoundingClientRect().y,t:v.currentTime,id:document.documentElement.dataset.identity}');video=[]
+ for x in [22,54,180,220,500,180]:
+  m.set_context('chrome');m._send_message('WebDriver:PerformActions',{'actions':[{'type':'pointer','id':'p7-video-pointer','parameters':{'pointerType':'mouse'},'actions':[{'type':'pointerMove','origin':'viewport','x':x,'y':24,'duration':80}]}]});time.sleep(.2)
+  video.append(content('const v=document.getElementById("v");return {h:innerHeight,w:innerWidth,y:v.getBoundingClientRect().y,t:v.currentTime,id:document.documentElement.dataset.identity}'))
+ check('video_keeps_playing_without_viewport_jitter',video[-1]['t']>before['t']+.5 and all(all(abs(v[k]-before[k])<1 for k in ['h','w','y']) and v['id']==before['id'] for v in video),video)
  # Inspect the actual native location/permissions, not a filtered Soulu label.
  result=run('return await Soulu.dispatch("browser.vot.install",{consent:true},{gesture:{at:Date.now()}});');check('vot_builtin_install_completes',result['installed'])
  native=run('const {AddonManager}=ChromeUtils.importESModule("resource://gre/modules/AddonManager.sys.mjs");const a=await AddonManager.getAddonByID("vot-ext@firefox");return {builtin:a.isBuiltin,canUninstall:!!(a.permissions&AddonManager.PERM_CAN_UNINSTALL),active:a.isActive};')

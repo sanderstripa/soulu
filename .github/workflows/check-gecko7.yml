@@ -1,4 +1,4 @@
-name: Preview 7 normal-motion transition, restart persistence and initial HWND diagnostics
+name: Preview 7 first composed window, verified motion, video and restart persistence
 on:
   push:
     branches: [gecko-preview]

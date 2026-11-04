@@ -37,9 +37,9 @@ export function isDefault(){
 // This does not create a splash window or expose a nonfunctional placeholder.
 function cloak(win,enabled){
  const abi=ctypes.winapi_abi||ctypes.default_abi;
- const set=library('dwmapi.dll').declare('DwmSetWindowAttribute',abi,ctypes.long,ctypes.uintptr_t,ctypes.uint32_t,ctypes.voidptr_t,ctypes.uint32_t);
+ const set=library('dwmapi.dll').declare('DwmSetWindowAttribute',abi,ctypes.int32_t,ctypes.uintptr_t,ctypes.uint32_t,ctypes.voidptr_t,ctypes.uint32_t);
  const value=ctypes.int(enabled?1:0);const result=set(handle(win),13,value.address(),ctypes.int.size);
- if(result!==0)throw Error('DWM cloak failed: '+result);
+ if(Number(result)!==0)throw Error('DWM cloak failed: '+result);
 }
 export function prepareStartup(win){
  if(win.__souluStartupHidden)return;
