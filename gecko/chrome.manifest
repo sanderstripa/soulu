@@ -1,1 +1,2 @@
 content soulu chrome/
+override chrome://branding/locale/brand.properties chrome://soulu/content/branding/brand.properties

@@ -33,8 +33,17 @@ try:
  red=shot('glass-red.png');content('document.body.style.background="#0000ff";document.getElementById("box").style.background="#0000ff";return true');time.sleep(.4);blue=shot('glass-blue.png')
  from PIL import Image
  import io
- a=Image.open(io.BytesIO(red)).convert('RGB');b=Image.open(io.BytesIO(blue)).convert('RGB');points=[(int(a.width*f),10) for f in [.2,.4,.6,.8]];diff=sum(sum(abs(x-y) for x,y in zip(a.getpixel(p),b.getpixel(p))) for p in points);check('actual_toolbar_backdrop_samples_page_pixels',diff>60,{'delta':diff,'points':points})
+ a=Image.open(io.BytesIO(red)).convert('RGB');b=Image.open(io.BytesIO(blue)).convert('RGB');points=[(int(a.width*f),10) for f in [.1,.2,.85,.95]];diff=sum(sum(abs(x-y) for x,y in zip(a.getpixel(p),b.getpixel(p))) for p in points);check('actual_toolbar_backdrop_samples_page_pixels',diff>60,{'delta':diff,'points':points})
+ low=[(x,62) for x,y in points];lowDiff=sum(sum(abs(x-y) for x,y in zip(a.getpixel(p),b.getpixel(p))) for p in low);check('page_glass_fades_to_opaque_at_content_edge',diff>lowDiff+60,{'top':diff,'bottom':lowDiff})
  call('browser.settings.set',{'mattePanel':False});time.sleep(.3);opaque=shot('glass-disabled.png');c=Image.open(io.BytesIO(opaque)).convert('RGB');diffOff=sum(sum(abs(x-y) for x,y in zip(b.getpixel(p),c.getpixel(p))) for p in points);check('matte_toggle_changes_actual_pixels',diffOff>60,{'delta':diffOff})
+ # The actual add-on manager's settings entry must route into Soulu.
+ call('browser.openTab',{'url':'about:addons'});select_latest();wait(lambda:content('return !!(document.getElementById("preferencesButton")||document.querySelector("categories-box")?.shadowRoot?.querySelector("#preferencesButton"))'))
+ content('(document.getElementById("preferencesButton")||document.querySelector("categories-box")?.shadowRoot?.querySelector("#preferencesButton")).click();return true')
+ check('addons_manager_settings_button_opens_soulu',wait(lambda:call('browser.state.get')['settingsOverlayOpen']))
+ check('addons_manager_cannot_leave_firefox_preferences_tab',all(not t['url'].startswith('about:preferences') for t in call('browser.state.get')['tabs']));chrome('Soulu.closeSettings()');time.sleep(.25)
+ # Native Fluent/legacy branding uses the product name, not a text overlay.
+ brand=run('const loc=new Localization(["branding/brand.ftl","branding/soulu-check.ftl"]);return await loc.formatValue("soulu-branding-check");')
+ check('native_branding_source_is_soulu',brand=='Soulu',brand)
  # Inspect the actual native location/permissions, not a filtered Soulu label.
  result=run('return await Soulu.dispatch("browser.vot.install",{consent:true},{gesture:{at:Date.now()}});');check('vot_builtin_install_completes',result['installed'])
  native=run('const {AddonManager}=ChromeUtils.importESModule("resource://gre/modules/AddonManager.sys.mjs");const a=await AddonManager.getAddonByID("vot-ext@firefox");return {builtin:a.isBuiltin,canUninstall:!!(a.permissions&AddonManager.PERM_CAN_UNINSTALL),active:a.isActive};')

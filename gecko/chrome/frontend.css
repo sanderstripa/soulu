@@ -30,3 +30,5 @@ body:has(.card>.hero) #controls>label{display:flex;align-items:center;justify-co
 body[data-theme=light]:has(.card>.hero){color-scheme:light;color:#191a1e}body[data-theme=light] .card:has(>.hero){background:#f6f6f8}body[data-theme=light]:has(.card>.hero) :is(.description,.note){color:#6f747d}body[data-theme=light]:has(.card>.hero) .counter{background:#0001}body:has(.card>.hero) .actions .primary{background:#0879e6;color:white;border-color:#0879e6}body[data-theme=dark]:has(.card>.hero){background:#08090b;color-scheme:dark}
 
 body[data-native-page-glass] .browser-toolbar,body[data-native-page-glass] .classic-toolbar,body[data-native-page-glass] .classic-main-row{background:transparent!important;background-image:none!important;backdrop-filter:none!important}
+/* The remote UI must not paint a second opaque/Mica layer over native page glass. */
+html.cef-runtime body[data-native-page-glass][data-matte=true][data-page-glass-ready=true]:not([data-gecko-opaque]) :is(.browser-toolbar,.classic-toolbar,.classic-main-row){background:transparent!important;background-image:none!important;backdrop-filter:none!important}
