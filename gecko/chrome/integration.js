@@ -1,98 +1,78 @@
-/**
- * Soulu integration bridge (Gecko preview).
- * Exposes the CEF-compatible Soulu API to the runtime and wires cefQuery to
- * the pinned Firefox implementation.
- */
-const Soulu = window.Soulu = {
-  version: 'gecko-preview',
-  tabs: {
-    create: function(o){ o = o || {}; const url = o.url || 'about:blank';
-      try { gBrowser.addTab(url); return {id: Date.now()}; } catch(e){ console.error('Soulu tabs.create failed', e); return {id: 0}; } },
-    update: function(id, o){ try { gBrowser.selectedTab = gBrowser.tabs[parseInt(id,10) || 0]; return {ok:true}; } catch(e){ return {ok:false}; } },
-    remove: function(id){ try { gBrowser.removeTab(gBrowser.tabs[parseInt(id,10) || 0]); return {ok:true}; } catch(e){ return {ok:false}; } },
-    query: function(){ try { return gBrowser.tabs.map(function(t, i){ return {id: i, url: t.linkedBrowser.currentURI.spec, title: t.label}; }); } catch(e){ return []; } }
-  },
-  window: {
-    minimize: function(){ try { window.minimize(); } catch(e){} },
-    maximize: function(){ try { if (window.windowState === window.STATE_MAXIMIZED) { window.restore(); } else { window.maximize(); } } catch(e){} },
-    close: function(){ try { window.close(); } catch(e){} },
-    fullscreen: function(){ try { BrowserFullScreen(); } catch(e){} }
-  },
-  settings: function(path, params){ try { const win = Services.wm.getMostRecentWindow('mozilla:browser'); if (win) { win.openPreferences(path || '', params || {}); } } catch(e){ console.error('Soulu settings open failed', e); } },
-  import: function(){ return cefQuery({request: JSON.stringify({action:'browser.import.native'})}); },
-  privacy: { clearBrowsingData: function(o){ try { Sanitizer.sanitize(o && o.since ? ['history','cache','cookies'] : ['history','cache','cookies']); return {ok:true}; } catch(e){ return {ok:false, error:String(e)}; } } }
+/* Native Firefox integrations. This script runs only in the trusted browser window. */
+(()=>{
+'use strict';
+const {shared,Services,IOUtils,PathUtils,PlacesUtils,profile,isPrivate,save}=Soulu.backend;
+const {tabID,tabs,load,send}=Soulu.native;
+const {SessionStore}=ChromeUtils.importESModule('moz-src:///browser/components/sessionstore/SessionStore.sys.mjs');
+const base=Soulu.dispatch,selected=()=>gBrowser.selectedBrowser;
+function checkedTab(id){const tab=tabs.get(Number(id));if(!tab||tab.closing)throw Error('Вкладка закрыта.');return tab;}
+function profileFile(id){if(!/^[\w-]{1,64}$/.test(id))throw Error('Invalid profile');const file=Cc['@mozilla.org/file/local;1'].createInstance(Ci.nsIFile);file.initWithPath(PathUtils.join(PathUtils.parent(profile),id));if(!file.exists()||!file.isDirectory()||file.isSymlink())throw Error('Invalid profile directory');return file;}
+async function choose(mode,title,filter){const picker=Cc['@mozilla.org/filepicker;1'].createInstance(Ci.nsIFilePicker);picker.init(window.browsingContext,title,mode);if(filter)picker.appendFilter(filter[0],filter[1]);const result=await new Promise(resolve=>picker.open(resolve));return result===Ci.nsIFilePicker.returnOK||result===Ci.nsIFilePicker.returnReplace?picker.file.path:null;}
+async function importFile(kind,path){
+ if(isPrivate)throw Error('Импорт недоступен в инкогнито.');if(!['bookmarks','passwords'].includes(kind))throw Error('Unknown import');const stat=await IOUtils.stat(path);if(stat.size>20*1024*1024)throw Error('Файл превышает 20 МБ.');
+ if(kind==='bookmarks'){const {BookmarkHTMLUtils}=ChromeUtils.importESModule('resource://gre/modules/BookmarkHTMLUtils.sys.mjs');const result=await BookmarkHTMLUtils.importFromFile(path,{replace:false});await Soulu.bookmarks('invalidate');await Soulu.dispatch('browser.bookmarks.get');return {imported:result};}
+ const {LoginCSVImport}=ChromeUtils.importESModule('resource://gre/modules/LoginCSVImport.sys.mjs');const rows=await LoginCSVImport.importFromCSV(path);return {added:rows.filter(r=>r.result==='added').length,modified:rows.filter(r=>r.result==='modified').length,failed:rows.filter(r=>!['added','modified','no_change'].includes(r.result)).length};
+}
+// Parent-only entry point for native fixture tests; no web-content action accepts file paths.
+Soulu.importFile=importFile;
+function readerPrefs(){const r=shared.config.reader;Services.prefs.setStringPref('reader.font_type',r.font==='serif'?'serif':'sans-serif');Services.prefs.setIntPref('reader.font_size',Math.max(1,Math.min(9,Math.round((Number(r.size)||18)/2)-4)));Services.prefs.setStringPref('reader.color_scheme',['light','dark','sepia','auto'].includes(r.theme)?r.theme:'auto');Services.prefs.setIntPref('reader.content_width',[3,6,9][Math.max(0,Math.min(2,Math.round(Number(r.width)||0)))]);Services.prefs.setIntPref('reader.line_height',[3,5,7][Math.max(0,Math.min(2,Math.round(Number(r.spacing)||0)))]);}
+const refresh=Soulu.refresh;Soulu.refresh=()=>{refresh();readerPrefs();};readerPrefs();
+Soulu.dispatch=async(action,payload,source)=>{
+ if(action.startsWith('browser.site.'))action='site.'+action.slice(13);
+ const browser=selected();
+ if(action.startsWith('site.')&&payload?.tabId!==undefined&&(payload.tabId!==tabID(gBrowser.selectedTab)||payload.url!==browser.currentURI.spec||payload.generation!==undefined&&payload.generation!==(browser.browsingContext.currentWindowGlobal?.innerWindowId||0)))throw Error('Страница изменилась. Откройте меню заново.');
+ switch(action){
+ case 'browser.adblock.status':return Soulu.adblock?.status()||{ready:false};
+ case 'browser.adblock.update':return Soulu.adblock.update();
+ case 'site.find':send('requestFind',null);return true;
+ case 'site.reader.preferences':{const values=payload.preferences||{};for(const [key,value] of Object.entries(values)){if(!['theme','font','size','width','spacing'].includes(key))throw Error('Параметр недоступен в режиме чтения Firefox.');if(key==='theme'&&!['light','dark','sepia','auto'].includes(value)||key==='font'&&!['system','sans','serif'].includes(value)||['size','width','spacing'].includes(key)&&!Number.isFinite(Number(value)))throw Error('Invalid reader preference');}Object.assign(shared.config.reader,values);await save();readerPrefs();return Soulu.dispatch('browser.site.get');}
+ case 'browser.shareMenu':{const url=browser.currentURI.spec;if(!/^https?:/.test(url))throw Error('Откройте веб-страницу.');const command=await base('browser.menu.show',{items:[{command:1,label:'Копировать ссылку'},{command:2,label:'QR-код страницы'}],x:innerWidth/2,y:50},source);if(command===1)Cc['@mozilla.org/widget/clipboardhelper;1'].getService(Ci.nsIClipboardHelper).copyString(url);if(command===2)send('geckoQR',url);return true;}
+ case 'browser.restoreTab':{const tab=SessionStore.undoCloseTab(window,0,window);Soulu.notify();return tab?tabID(tab):null;}
+ case 'browser.duplicateTab':{const tab=SessionStore.duplicateTab(window,checkedTab(payload));gBrowser.selectedTab=tab;Soulu.notify();return tabID(tab);}
+ case 'browser.reloadTab':checkedTab(payload).linkedBrowser.reload();return true;
+ case 'browser.closeOtherTabs':gBrowser.removeAllTabsBut(checkedTab(payload));Soulu.notify();return true;
+ case 'browser.moveTabBefore':case 'browser.moveTabAfter':{const tab=checkedTab(payload.id),target=checkedTab(payload.targetId);if(tab.pinned!==target.pinned)throw Error('Закреплённые вкладки перемещаются отдельно.');if(action.endsWith('Before'))gBrowser.moveTabBefore(tab,target);else gBrowser.moveTabAfter(tab,target);Soulu.notify();return true;}
+ case 'browser.forward':if(browser.canGoForward)browser.goForward();return true;
+ case 'browser.stop':browser.stop();return true;
+ case 'browser.forceReload':browser.reloadWithFlags(Ci.nsIWebNavigation.LOAD_FLAGS_BYPASS_CACHE);return true;
+ case 'browser.requestFind':send('requestFind',null);return true;
+ case 'browser.find':if(payload?.repeat)browser.finder.findAgain(!!payload.backwards,false,false);else browser.finder.fastFind(String(payload?.text||''),false,false);return true;
+ case 'browser.profile.rename':{const file=profileFile(payload.id),name=String(payload.name||'').replace(/[\x00-\x1f]/g,'').trim().slice(0,160);if(!name)throw Error('Введите название профиля.');await IOUtils.writeJSON(PathUtils.join(file.path,'soulu-profile.json'),{name});return true;}
+ case 'browser.profile.delete':{if(payload===shared.config.profile)throw Error('Нельзя удалить активный профиль.');const file=profileFile(payload),service=Cc['@mozilla.org/toolkit/profile-service;1'].getService(Ci.nsIToolkitProfileService);try{await service.removeProfileFilesByPath(file,file,0);}catch{throw Error('Профиль используется другим процессом или недоступен. Закройте его перед удалением.');}return true;}
+ case 'browser.settings.siteSnapshot':{const tab=checkedTab(payload.tabId),b=tab.linkedBrowser;return {tabId:tabID(tab),url:b.currentURI.spec,generation:b.browsingContext.currentWindowGlobal?.innerWindowId||0};}
+ case 'browser.settings.clearSite':{const tab=checkedTab(payload.tabId),b=tab.linkedBrowser;if(!payload.confirmed||b.currentURI.spec!==payload.url||b.browsingContext.currentWindowGlobal?.innerWindowId!==payload.generation)throw Error('Страница изменилась. Подтвердите очистку заново.');await new Promise((resolve,reject)=>Services.clearData.deleteDataFromPrincipal(b.contentPrincipal,false,Ci.nsIClearDataService.CLEAR_DOM_STORAGES,failed=>failed?reject(Error('Не удалось очистить данные.')):resolve()));return {cleared:true};}
+ case 'browser.import.native':{
+  // Preview 9: the wizard must visibly open and take focus. A lost dialog
+  // reads as a dead import button that just returns the user to Settings.
+  const {MigrationUtils}=ChromeUtils.importESModule('moz-src:///browser/components/migration/MigrationUtils.sys.mjs');
+  const known=new Set([...Services.wm.getEnumerator(null)]);
+  const focusWizard=()=>{for(const w of Services.wm.getEnumerator(null)){if(known.has(w))continue;const uri=w.document?String(w.document.documentURI||''):'';if(uri.startsWith('chrome://browser/content/migration/')){try{w.focus();}catch{}return true;}}return false;};
+  try{MigrationUtils.showMigrationWizard(window,{entrypoint:MigrationUtils.MIGRATION_ENTRYPOINTS.UNKNOWN});}catch(error){console.error(error);}
+  window.setTimeout(()=>{if(!focusWizard()){try{MigrationUtils.showMigrationWizard(window,{entrypoint:MigrationUtils.MIGRATION_ENTRYPOINTS.UNKNOWN});}catch(error){console.error(error);}window.setTimeout(()=>focusWizard(),1500);}},500);
+  return {opened:true};
+ }
+ case 'browser.import.filePicker':{const kind=payload;if(!['bookmarks','passwords'].includes(kind))throw Error('Invalid import');const path=await choose(Ci.nsIFilePicker.modeOpen,kind==='bookmarks'?'Импорт закладок':'Импорт паролей',kind==='bookmarks'?['HTML','*.html;*.htm']:['CSV','*.csv']);return path?importFile(kind,path):{canceled:true};}
+ case 'browser.import.exportBookmarks':{if(isPrivate)throw Error('Экспорт недоступен в инкогнито.');const path=await choose(Ci.nsIFilePicker.modeSave,'Экспорт закладок',['HTML','*.html']);if(!path)return {canceled:true};const {BookmarkHTMLUtils}=ChromeUtils.importESModule('resource://gre/modules/BookmarkHTMLUtils.sys.mjs');await BookmarkHTMLUtils.exportToFile(path);return {ok:true};}
+ case 'site.reader.toggle':case 'site.reader.enter':case 'site.reader.exit':{const url=browser.currentURI.spec;if(url.startsWith('about:reader?')){const original=new URL(url).searchParams.get('url');if(!/^https?:/.test(original||''))throw Error('Invalid reader URL');browser.loadURI(Services.io.newURI(original),{triggeringPrincipal:Services.scriptSecurityManager.getSystemPrincipal()});}else{if(!/^https?:/.test(url))throw Error('Режим чтения доступен для веб-страниц.');readerPrefs();browser.loadURI(Services.io.newURI('about:reader?url='+encodeURIComponent(url)),{triggeringPrincipal:Services.scriptSecurityManager.getSystemPrincipal()});}return true;}
+ case 'site.get':case 'site.reader.probe':{const result=await base('browser.site.get',payload,source);return {...result,readerActive:browser.currentURI.spec.startsWith('about:reader?'),readerAvailable:!!browser.isArticle||browser.currentURI.spec.startsWith('about:reader?')};}
+ case 'browser.performance.optimize':{const {Downloads}=ChromeUtils.importESModule('resource://gre/modules/Downloads.sys.mjs');if((await (await Downloads.getList(Downloads.ALL)).getAll()).some(d=>!d.stopped))throw Error('Оптимизация отложена: дождитесь завершения загрузок.');let count=0;for(const tab of gBrowser.tabs){if(tab===gBrowser.selectedTab||tab.pinned||tab.hasAttribute('soundplaying')||tab._sharingState?.microphone||tab._sharingState?.camera||tab._sharingState?.screen||tab.hasAttribute('sharing'))continue;if(gBrowser.discardBrowser(tab))count++;}return {ok:true,unloaded:count};}
+ }
+ return base(action.startsWith('site.')?'browser.'+action:action,payload,source);
 };
-
-// ---- Soulu dispatch layer -------------------------------------------------
-Soulu.dispatch = function(request, sender) {
-  const action = request && request.action;
-  const respond = function(payload) { return payload; };
-  switch (action) {
-      case 'runtime.info':{const info={soulu:{version:'gecko-preview'},app:{name:'Soulu',version:Services.appinfo.version},os:{name:Services.appinfo.OS}};return respond(info);}
-      case 'browser.focused':{return respond({focused:document.hasFocus()});}
-      case 'browser.quit':{try{goQuitApplication();}catch(error){}return respond({ok:true});}
-      case 'browser.version':{return respond({version:'9',channel:'preview',impl:'gecko'});}
-      case 'browser.state':{const s=Soulustate||null;return respond({state:s});}
-      case 'tabs.query':{const arr=[];try{gBrowser.tabs.forEach(t=>{arr.push({id:t._tabId,title:t.label,url:t.linkedBrowser.currentURI.spec});});}catch(error){}return respond({tabs:arr});}
-      case 'tabs.create':{try{openWebLinkIn((request.url||'about:blank'),'tab');}catch(error){}return respond({ok:true});}
-      case 'tabs.close':{try{const n=parseInt(request.id,10);if(!isNaN(n)&&gBrowser.tabs[n])gBrowser.removeTab(gBrowser.tabs[n]);}catch(error){}return respond({ok:true});}
-      case 'tabs.update':{try{const n=parseInt(request.id,10);if(!isNaN(n)&&gBrowser.tabs[n]){gBrowser.selectedTab=gBrowser.tabs[n];}}catch(error){}return respond({ok:true});}
-      case 'window.open':{try{openWebLinkIn((request.url||'about:blank'),'window');}catch(error){}return respond({ok:true});}
-      case 'window.state':{return respond({state:window.windowState===window.STATE_MAXIMIZED?'maximized':'normal'});}
-      case 'window.minimize':{try{window.minimize();}catch(error){}return respond({ok:true});}
-      case 'window.maximize':{try{window.maximize();}catch(error){}return respond({ok:true});}
-      case 'window.close':{try{window.close();}catch(error){}return respond({ok:true});}
-      case 'settings.open':{Soulu.settings('paneGeneral');return respond({ok:true});}
-      case 'settings.open.path':{Soulu.settings(request.path||'');return respond({ok:true});}
-      case 'search.query':{try{const url='https://duckduckgo.com/?q='+encodeURIComponent(request.query||'');openWebLinkIn(url,'tab');}catch(error){}return respond({ok:true});}
-      case 'search.default':{try{Services.search.default=Services.search.getEngineByName(request.name||'DuckDuckGo');}catch(error){}return respond({ok:true});}
-      case 'downloads.open':{try{Downloads.getDownloads().then(list=>{const win=BrowserWindowTracker.getTopWindow();if(win)win.DownloadsPanel.showPanel();});}catch(error){}return respond({ok:true});}
-      case 'downloads.list':{return respond({downloads:[]});}
-      case 'privacy.clear':{try{Sanitizer.sanitize(['history','cache','cookies']);}catch(error){}return respond({ok:true});}
-      case 'adblock.state':{return respond({enabled:!!(window.SouluAdblock&&window.SouluAdblock.enabled)});}
-      case 'adblock.set':{try{if(window.SouluAdblock)window.SouluAdblock.enabled=!!request.enabled;}catch(error){}return respond({ok:true});}
-      case 'profile.list':{return respond({profiles:[]});}
-      case 'profile.current':{return respond({profile:{name:'default',path:PathUtils.profileDir}});}
-      case 'updates.check':{try{if(window.SouluUpdates)window.SouluUpdates.check(true);}catch(error){}return respond({ok:true});}
-      case 'updates.state':{return respond({state:(window.SouluUpdates&&window.SouluUpdates.state)||'idle'});}
-      case 'speech.transcribe':{return respond({ok:false,error:'not-available'});}
-      case 'vpn.state':{return respond({enabled:false});}
-      case 'extension.list':{return respond({extensions:[]});}
-      case 'extension.enable':{return respond({ok:true});}
-      case 'extension.disable':{return respond({ok:true});}
-      case 'browser.import.native':{
-        // Preview 9: verify the wizard window actually opened and focus it; a
-        // lost dialog reads as a dead import button that just returns to Settings.
-        const {MigrationUtils}=ChromeUtils.importESModule('moz-src:///browser/components/migration/MigrationUtils.sys.mjs');
-        const known=new Set([...Services.wm.getEnumerator(null)]);
-        const focusWizard=()=>{for(const w of Services.wm.getEnumerator(null)){if(known.has(w))continue;const uri=w.document?String(w.document.documentURI||''):'';if(uri.startsWith('chrome://browser/content/migration/')){try{w.focus();}catch(error){}return true;}}return false;};
-        try{MigrationUtils.showMigrationWizard(window,{entrypoint:MigrationUtils.MIGRATION_ENTRYPOINTS.UNKNOWN});}catch(error){console.error('Soulu migration wizard',String(error));}
-        window.setTimeout(()=>{if(!focusWizard()){try{MigrationUtils.showMigrationWizard(window,{entrypoint:MigrationUtils.MIGRATION_ENTRYPOINTS.UNKNOWN});}catch(error){console.error('Soulu migration wizard retry',String(error));}window.setTimeout(()=>focusWizard(),1500);}},500);
-        return respond({opened:true});
-      }
-      default:{return respond({ok:false,error:'unknown-action'});}
-  }
-};
-
-// Bridge cefQuery to the dispatch layer so the Soulu UI can call native code
-// through the same protocol used by the CEF build.
-(function(){
-  window.cefQuery = function(o) {
-    try {
-      const request = JSON.parse(o.request);
-      const result = Soulu.dispatch(request);
-      if (o.onSuccess) { o.onSuccess(JSON.stringify(result)); }
-      if (o.onFailure) { o.onFailure(0, ''); }
-    } catch(e) {
-      if (o.onFailure) { o.onFailure(-1, String(e)); }
-    }
-    return 0;
-  };
+async function key(event){if(event.defaultPrevented)return;const k=event.key.toLowerCase();let action,payload;if(event.ctrlKey&&event.shiftKey&&k==='t')action='browser.restoreTab';else if(event.ctrlKey&&event.shiftKey&&k==='delete'){action='browser.history.open';payload=true;}else if(event.ctrlKey&&k==='f')action='browser.requestFind';else if(event.altKey&&k==='arrowleft')action='browser.back';else if(event.altKey&&k==='arrowright')action='browser.forward';else if(k==='f5'||event.ctrlKey&&k==='r')action=event.shiftKey?'browser.forceReload':'browser.reload';else if(k==='f9')action='site.reader.toggle';else if(event.ctrlKey&&['+','=','-','0'].includes(k)){action='site.zoom';payload={command:k==='0'?'reset':k==='-'?'out':'in'};}if(action){event.preventDefault();event.stopPropagation?.();await Soulu.dispatch(action,payload);}}
+Soulu.integrationKey=key;window.addEventListener('keydown',e=>key(e).catch(console.error),true);
+let bookmarkTimer;const bookmarkChanged=()=>{clearTimeout(bookmarkTimer);bookmarkTimer=setTimeout(async()=>{try{await Soulu.bookmarks('invalidate');await Soulu.dispatch('browser.bookmarks.get');}catch(e){console.error(e);}},80);};
+const events=['bookmark-added','bookmark-removed','bookmark-moved','bookmark-title-changed','bookmark-url-changed'];PlacesUtils.observers.addListener(events,bookmarkChanged);gBrowser.tabContainer.addEventListener('TabMove',Soulu.notify);window.addEventListener('unload',()=>{clearTimeout(bookmarkTimer);PlacesUtils.observers.removeListener(events,bookmarkChanged);},{once:true});
+let checkingVPN=false;const failedRequest={observe(){if(!shared.vpnState.connected||checkingVPN)return;checkingVPN=true;Soulu.dispatch('vpn.send',{action:'status'}).catch(console.error).finally(()=>checkingVPN=false);}};Services.obs.addObserver(failedRequest,'http-on-failed-opening-request');window.addEventListener('unload',()=>Services.obs.removeObserver(failedRequest,'http-on-failed-opening-request'),{once:true});
+Services.scriptloader.loadSubScript('chrome://soulu/content/downloads.js',window);
+Services.scriptloader.loadSubScript('chrome://soulu/content/extensions.js',window);
+Services.scriptloader.loadSubScript('chrome://soulu/content/thumbnails.js',window);
+Services.scriptloader.loadSubScript('chrome://soulu/content/remote.js',window);
+Services.scriptloader.loadSubScript('chrome://soulu/content/speech.js',window);
+Services.scriptloader.loadSubScript('chrome://soulu/content/vot.js',window);
+Services.scriptloader.loadSubScript('chrome://soulu/content/extension-migration.js',window);
+Services.scriptloader.loadSubScript('chrome://soulu/content/onboarding.js',window);
+Services.scriptloader.loadSubScript('chrome://soulu/content/updates.js',window);
 })();
 
-// Keep the Soulu UI in sync with the browser state.
-(function(){
-  window.addEventListener('load', function(){
-    console.log('Soulu integration online');
-  });
-})();
+Services.scriptloader.loadSubScript('chrome://soulu/content/startup-session.js',window);
