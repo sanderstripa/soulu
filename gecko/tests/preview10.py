@@ -29,7 +29,7 @@ try:
  check('soulu_first_frame_no_firefox_toolbox',chrome('return getComputedStyle(document.getElementById("navigator-toolbox")).display==="none"&&document.documentElement.hasAttribute("soulu-ui-ready")'))
  check('complete_backend_not_dead_stub',chrome('return Soulu.ready&&!!Soulu.integrationKey&&!!Soulu.native'))
  # Point the native directory service at synthetic source profiles only.
- chrome('const d=Cc["@mozilla.org/file/local;1"].createInstance(Ci.nsIFile);d.initWithPath('+json.dumps(str(root/'environment'))+');Services.dirsvc.undefine("LocalAppData");Services.dirsvc.set("LocalAppData",d);return true;')
+ chrome('const d=Cc["@mozilla.org/file/local;1"].createInstance(Ci.nsIFile);d.initWithPath('+json.dumps(str(root/'environment'))+');try{Services.dirsvc.undefine("LocalAppData");}catch{}Services.dirsvc.set("LocalAppData",d);return true;')
  wait(lambda:ui('return location.pathname.endsWith("/onboarding.html")','page'))
  ui('document.querySelector("#actions button.primary").click();return true;','page')
  wait(lambda:ui('return document.getElementById("counter").textContent.startsWith("2")','page'))
@@ -77,6 +77,8 @@ try:
  report['passed']=True
 except Exception as e:
  report['error']=str(e)
+ try:report['importUI']=ui('return {message:document.getElementById("message")?.textContent,dialog:document.getElementById("soulu-import")?.innerText,scripts:[...document.scripts].map(s=>s.src)};','page');print('import_failure_UI',report['importUI'],flush=True)
+ except Exception:pass
  try:report['console']=chrome('return Services.console.getMessageArray().map(x=>x.message).slice(-40)')
  except Exception:pass
  raise

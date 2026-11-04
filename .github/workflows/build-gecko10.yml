@@ -25,6 +25,7 @@ jobs:
         with:
           go-version: '1.27.x'
       - name: Restore exact verified Preview 8 payload and apply targeted changes
+        id: assemble
         shell: pwsh
         run: |
           $run = gh run view 41834119852 --json conclusion,headSha | ConvertFrom-Json
@@ -43,16 +44,21 @@ jobs:
       - name: Test migration from welcome and Settings with actual source data
         run: python gecko/tests/preview10.py gecko-out/runtime/firefox.exe gecko10-checks
       - name: Verify first visible frame contains functional Soulu controls
+        if: ${{ !cancelled() && steps.assemble.outcome == 'success' }}
         run: python gecko/tests/firstframe7.py gecko-out/runtime/firefox.exe gecko10-checks
       - name: Verify single-window launch and normal close
+        if: ${{ !cancelled() && steps.assemble.outcome == 'success' }}
         run: python gecko/tests/startup8.py gecko-out/runtime/firefox.exe gecko10-checks
       - name: Build Preview 10 installer
+        id: installer
+        if: ${{ !cancelled() && steps.assemble.outcome == 'success' }}
         shell: pwsh
         run: |
           ./gecko/installer/build.ps1 -BuildDir gecko-out -OutFile Soulu-Gecko-Preview-10-Setup-win64.exe
           if ($LASTEXITCODE) { throw 'Installer build failed' }
           if ((Get-Item Soulu-Gecko-Preview-10-Setup-win64.exe).VersionInfo.ProductVersion -ne '0.10.0.0') { throw 'Installer version mismatch' }
       - name: Verify clean installation, first launch, upgrade and removal
+        if: ${{ !cancelled() && steps.installer.outcome == 'success' }}
         run: python gecko/tests/installer10.py Soulu-Gecko-Preview-10-Setup-win64.exe gecko10-checks
       - uses: actions/upload-artifact@v4
         if: always()
