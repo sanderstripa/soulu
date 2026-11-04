@@ -16,6 +16,11 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.23'
+      - name: Rust toolchain for the adblock engine
+        shell: pwsh
+        run: |
+          rustup toolchain install 1.99.0 --profile minimal
+          rustup default 1.99.0
       - name: Assemble pinned Gecko runtime and Soulu chrome
         run: |
           python gecko/build.py --platform win64 --output gecko-out
@@ -28,7 +33,7 @@ jobs:
       - name: Build launcher
         working-directory: gecko/launcher
         run: |
-          go run github.com/josephspurrior/goversioninfo/cmd/goversioninfo@v1.5.0 -64 -o resources_windows_amd64.syso
+          go run github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.5.0 -64 -o resources_windows_amd64.syso
           go build -trimpath -buildvcs=false -ldflags "-s -w -H windowsgui" -o ../../gecko-out/Soulu.exe
       - name: Build installer
         run: pwsh gecko/installer/build.ps1 -BuildDir gecko-out -OutFile Soulu-Gecko-Preview-9-Setup-win64.exe
