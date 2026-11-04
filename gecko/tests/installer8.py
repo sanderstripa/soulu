@@ -94,7 +94,7 @@ try:
    with socket.create_connection(('127.0.0.1',mp),timeout=.2):return True
   wait(listening,60);m=Marionette('127.0.0.1',port=mp);m.start_session();m.set_context('chrome');m.timeout.script=60
   wait(lambda:m.execute_script('return !!window.Soulu?.ready&&!window.__souluStartupHidden&&document.documentElement.hasAttribute("soulu-ui-ready")'))
-  check('first_installed_launch_uses_own_runtime',m.execute_script('return Services.dirsvc.get("GreD",Ci.nsIFile).path')==str(destination/'runtime'))
+  check('first_installed_launch_uses_own_runtime',pathlib.Path(m.execute_script('return Services.dirsvc.get("GreD",Ci.nsIFile).path')).resolve()==(destination/'runtime').resolve())
   check('first_installed_launch_has_one_browser_window',m.execute_script('return [...Services.wm.getEnumerator("navigator:browser")].length')==1)
   check('installer_choices_apply_only_to_new_profile',m.execute_script('return Soulu.config.settings.theme==="dark"&&Soulu.config.settings.language==="ru"'))
   check('first_installed_launch_version_is_preview8',m.execute_script('return document.documentElement.getAttribute("soulu-version")')=='Soulu Gecko Preview 8')
@@ -109,7 +109,7 @@ try:
   with setup(exe,env) as (ws,process):
    version(ws,'upgrade');evaluate(ws,'document.getElementById("primary").click();true');wait(lambda:evaluate(ws,'document.body.dataset.stage==="finish"'),120);evaluate(ws,'document.getElementById("launch").checked=false;document.getElementById("done").click();true');process.wait(timeout=20)
   settings=json.loads((profile/'soulu-settings.json').read_text());check('upgrade_keeps_existing_profile_settings',settings['settings']['theme']=='dark' and settings['onboarding']['done'])
-  with sqlite3.connect(profile/'places.sqlite') as db:check('upgrade_keeps_real_bookmarks',db.execute('select count(*) from moz_bookmarks where title=?',('Preview 8 installer persistence',)).fetchone()[0]==1)
+  with contextlib.closing(sqlite3.connect(profile/'places.sqlite')) as db:check('upgrade_keeps_real_bookmarks',db.execute('select count(*) from moz_bookmarks where title=?',('Preview 8 installer persistence',)).fetchone()[0]==1)
   with winreg.OpenKey(winreg.HKEY_CURRENT_USER,r'Software\Microsoft\Windows\CurrentVersion\Uninstall\SouluGecko') as key:check('windows_installed_apps_has_correct_version',winreg.QueryValueEx(key,'DisplayVersion')[0]=='0.8.0-preview8')
   uninstaller=destination/'Uninstall Soulu Gecko.exe'
   with setup(uninstaller,env,True) as (ws,process):

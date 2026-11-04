@@ -27,3 +27,5 @@ build=json.loads((out/'BUILD.json').read_text());build['base_runtime_source']=bu
 
 settings=runtime/'ui/settings.js'
 s=settings.read_text();s=s.replace('Установленные расширения Firefox','Установленные расширения').replace('Installed Firefox extensions','Installed extensions').replace('Firefox Add-ons','Каталог расширений').replace('менеджер Firefox','менеджер расширений').replace('Firefox manager','extension manager');settings.write_text(s)
+
+s=settings.read_text().replace("()=>browserShell.openTab('about:addons')","()=>browserShell.extensions('manage',{profile:state.activeProfileId})");settings.write_text(s)

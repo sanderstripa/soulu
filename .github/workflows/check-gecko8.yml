@@ -1,4 +1,4 @@
-name: Preview 8 protect completed onboarding and verify exact sidebar interaction
+name: Preview 8 native installed-addons view and internal page positioning
 on:
   push:
     branches: [gecko-preview]

@@ -1,4 +1,4 @@
-name: Build and verify Soulu Gecko Preview 8 installer candidate
+name: Build and verify Soulu Gecko Preview 8 installer candidate with corrected native manager layout
 on:
   push:
     branches: [gecko-preview]

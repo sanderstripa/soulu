@@ -19,6 +19,12 @@ Copy-Item (Join-Path $PSScriptRoot 'payload_windows_test.go') $adapter
 $product=Get-Content (Join-Path $core 'products/soulu.json') -Raw | ConvertFrom-Json
 $product.name='Soulu Gecko';$product.version='0.8.0-preview8';$product.id='soulu-gecko';$product.engine='Firefox Gecko; verified isolated runtime'
 $product | ConvertTo-Json | Set-Content (Join-Path $core 'products/soulu.json') -Encoding utf8
+Copy-Item (Join-Path $repo 'ui/branding/soulu-128.png') (Join-Path $core 'core/web/assets/icon.png') -Force
+$uiPath=Join-Path $core 'core/web/setup.js'
+$ui=[IO.File]::ReadAllText($uiPath)
+$ui=$ui.Replace('Выйдите из CONNECT через меню трея, отключите расширение Chrome и повторите.','Закройте все окна CONNECT и повторите.').Replace('Quit CONNECT from its tray menu, disconnect the Chrome extension and retry.','Close all CONNECT windows and retry.').Replace('Ваши соединения и настройки сохранятся. Перед удалением выйдите из CONNECT через меню трея.','Ваши профили, история и закладки сохранятся. Перед удалением закройте CONNECT.').Replace('Your connections and settings will be kept. Quit CONNECT from its tray menu before uninstalling.','Your profiles, history and bookmarks will be kept. Close CONNECT before uninstalling.')
+[IO.File]::WriteAllText($uiPath,$ui,[Text.UTF8Encoding]::new($false))
+
 $build=(Resolve-Path $BuildDir).Path
 python (Join-Path $PSScriptRoot 'prepare-payload.py') $build
 if($LASTEXITCODE){throw 'Payload manifest failed'}

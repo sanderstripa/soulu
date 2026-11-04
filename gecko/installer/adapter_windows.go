@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"golang.org/x/sys/windows/registry"
+ "golang.org/x/sys/windows"
 	"io"
 	"os"
 	"os/exec"
@@ -101,6 +102,8 @@ func (a *Adapter) Install(o core.Options) error {
 			return fmt.Errorf("choose an empty folder or existing Soulu installation")
 		}
 	}
+ // Portable and installed Gecko share profiles: refuse upgrades while either owns one.
+ profiles:=filepath.Join(os.Getenv("LOCALAPPDATA"),"SouluGecko","Profiles");if dirs,e:=os.ReadDir(profiles);e==nil{for _,entry:=range dirs{if !entry.IsDir(){continue};lock:=filepath.Join(profiles,entry.Name(),"parent.lock");if _,e=os.Stat(lock);os.IsNotExist(e){continue};name,e:=windows.UTF16PtrFromString(lock);if e!=nil{return e};handle,e:=windows.CreateFile(name,windows.GENERIC_READ,0,nil,windows.OPEN_EXISTING,windows.FILE_ATTRIBUTE_NORMAL,0);if e!=nil{return fmt.Errorf("close Soulu Gecko before installing: %w",e)};windows.CloseHandle(handle)}}
  // A CEF installation is a different product, even though both use Soulu.exe.
  if _,e:=os.Stat(filepath.Join(dir,"Soulu.exe"));e==nil{data,e:=os.ReadFile(filepath.Join(dir,"BUILD.json"));if e!=nil{return fmt.Errorf("choose a separate Gecko installation folder")};var build struct{Name string `json:"name"`};if json.Unmarshal(data,&build)!=nil||!strings.HasPrefix(build.Name,"Soulu Gecko Preview "){return fmt.Errorf("this folder belongs to another browser")}}
  geckoProfile:=strings.ToLower(filepath.Join(os.Getenv("LOCALAPPDATA"),"SouluGecko"));if d==geckoProfile||strings.HasPrefix(d,geckoProfile+string(os.PathSeparator)){return fmt.Errorf("profile data cannot be used as an installation folder")}
