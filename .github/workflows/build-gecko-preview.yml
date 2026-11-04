@@ -6,6 +6,7 @@ on:
 permissions:
   contents: write
   issues: write
+  actions: read
 jobs:
   build:
     runs-on: windows-2025
@@ -27,13 +28,6 @@ jobs:
         run: |
           rustup toolchain install 1.99.0 --profile minimal
           rustup default 1.99.0
-      - name: Restore pinned download cache
-        uses: actions/cache@v4
-        with:
-          path: gecko-cache
-          key: gecko-cache-v1-${{ hashFiles('gecko/runtime-pin.json','gecko/vot-pin.json','vpn/components-pin.json') }}
-      - name: Assemble pinned Gecko runtime and Soulu chrome
-        shell: pwsh
         run: |
           $steps = @(
             @('gecko/build.py','--platform','win64','--output','gecko-out'),
@@ -58,7 +52,8 @@ jobs:
         shell: pwsh
         run: |
           Push-Location gecko/launcher
-          go run github.com/josephspurrior/goversioninfo/cmd/goversioninfo@v1.5.0 -64 -o rsrc.syso
+          go run github.com/josephspurrior/goversioninfo/cmd/goversioninfo@v1.5.0 -64
+ -o rsrc.syso
           if ($LASTEXITCODE -ne 0) { throw 'Launcher resources failed' }
           go build -trimpath -ldflags '-s -w -H=windowsgui' -o '../../gecko-out/Soulu.exe' .
           if ($LASTEXITCODE -ne 0) { throw 'Launcher compilation failed' }
@@ -79,11 +74,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          '--- installer-build.log ---' | Set-Content failure-report.md -Encoding utf8NoBOM
-          if (Test-Path installer-build.log) { Add-Content failure-report.md (Get-Content installer-build.log -Raw) }
-          '--- acceptance.log ---' | Add-Content failure-report.md
-          if (Test-Path acceptance.log) { Add-Content failure-report.md (Get-Content acceptance.log -Raw) }
+          gh run view $env:GITHUB_RUN_ID --repo "$env:GITHUB_REPOSITORY" --log > ci-full.log
+          "--- full run log (tail) ---" | Set-Content failure-report.md -Encoding utf8NoBOM
+          Get-Content ci-full.log -Tail 500 | Add-Content failure-report.md
           gh issue create --repo "$env:GITHUB_REPOSITORY" --title "CI: Preview 9 build failed (run $env:GITHUB_RUN_ID)" --body-file failure-report.md
+
       - name: Checksums
         if: success()
         shell: pwsh
@@ -97,7 +92,8 @@ jobs:
           tag_name: gecko-preview-9
           name: Soulu Gecko Preview 9
           body: |
-            Soulu Gecko Preview 9
+            Soulu Geck
+o Preview 9
 
             Fixes in this build:
             - First-run welcome import now reliably opens the migration wizard instead of bouncing back to Settings.
