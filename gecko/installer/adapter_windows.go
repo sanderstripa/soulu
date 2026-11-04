@@ -19,6 +19,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+ "strconv"
+ "syscall"
 	"sync/atomic"
 )
 
@@ -27,7 +29,13 @@ var assets embed.FS
 
 const uninstallKey = `Software\Microsoft\Windows\CurrentVersion\Uninstall\SouluGecko`
 
-func (a *Adapter) AfterRemoval() error { return core.CleanupUninstaller(a.dir, "Uninstall Soulu Gecko.exe") }
+// Remove only our uninstaller and empty application directories after exit.
+// The shared installer core does not recognize the Gecko uninstaller name.
+func (a *Adapter) AfterRemoval() error {
+ target,err:=core.OwnedPath(a.dir,"Uninstall Soulu Gecko.exe");if err!=nil{return err}
+ script:=`Wait-Process -Id `+strconv.Itoa(os.Getpid())+` -ErrorAction SilentlyContinue;Start-Sleep -Milliseconds 300;$root=`+core.QuotePS(a.dir)+`;Remove-Item -LiteralPath `+core.QuotePS(target)+` -Force -ErrorAction SilentlyContinue;Get-ChildItem -LiteralPath $root -Directory -Recurse -Force -ErrorAction SilentlyContinue|Sort-Object { $_.FullName.Length } -Descending|ForEach-Object {if(@(Get-ChildItem -LiteralPath $_.FullName -Force).Count -eq 0){Remove-Item -LiteralPath $_.FullName}};if((Test-Path -LiteralPath $root) -and @(Get-ChildItem -LiteralPath $root -Force).Count -eq 0){Remove-Item -LiteralPath $root};`
+ cmd:=exec.Command("powershell.exe","-NoProfile","-NonInteractive","-Command",script);cmd.SysProcAttr=&syscall.SysProcAttr{HideWindow:true};return cmd.Start()
+}
 
 type Adapter struct {
 	dir       string
@@ -76,12 +84,23 @@ func verifyGecko(raw []byte) error {
  entries:=map[string]*zip.File{};for _,f:=range zr.File{if _,ok:=entries[f.Name];ok{return fmt.Errorf("duplicate archive entry")};entries[f.Name]=f}
  manifest:=entries["gecko-runtime-manifest.json"];if manifest==nil{return fmt.Errorf("Gecko integrity manifest missing")}
  r,err:=manifest.Open();if err!=nil{return err};var m struct{Name string `json:"name"`; Files []struct{Path string `json:"path"`;SHA string `json:"sha256"`} `json:"files"`};err=json.NewDecoder(io.LimitReader(r,4<<20)).Decode(&m);r.Close();if err!=nil{return err}
- if m.Name!="Soulu Gecko Preview 10"||len(m.Files)<10{return fmt.Errorf("unexpected Gecko payload")}
+ if m.Name!="Soulu Gecko Preview 11"||len(m.Files)<10{return fmt.Errorf("unexpected Gecko payload")}
  checked:=map[string]bool{}
  for _,item:=range m.Files{if len(item.SHA)!=64||checked[item.Path]{return fmt.Errorf("invalid manifest entry")};f:=entries[item.Path];if f==nil||f.FileInfo().IsDir(){return fmt.Errorf("missing Gecko component: %s",item.Path)};r,e:=f.Open();if e!=nil{return e};h:=sha256.New();_,e=io.Copy(h,r);r.Close();if e!=nil{return e};if !strings.EqualFold(hex.EncodeToString(h.Sum(nil)),item.SHA){return fmt.Errorf("Gecko component hash mismatch: %s",item.Path)};checked[item.Path]=true}
  for name,f:=range entries{if !f.FileInfo().IsDir()&&name!="gecko-runtime-manifest.json"&&!checked[name]{return fmt.Errorf("unverified file: %s",name)}}
  for _,name:=range []string{"Soulu.exe","runtime/firefox.exe","runtime/xul.dll","runtime/soulu.cfg","BUILD.json"}{if !checked[name]{return fmt.Errorf("required Gecko component missing: %s",name)}}
  return nil
+}
+// An interrupted install can lose Soulu.exe. Ownership comes from the product
+// manifest/build identity, not from the presence of one launcher executable.
+func repairableDirectory(dir string) bool {
+ if data,e:=os.ReadFile(filepath.Join(dir,core.ManifestName));e==nil{var m core.FileManifest;if json.Unmarshal(data,&m)==nil&&m.Product=="soulu-gecko"{return true}}
+ if data,e:=os.ReadFile(filepath.Join(dir,"BUILD.json"));e==nil{var b struct{Name string `json:"name"`};if json.Unmarshal(data,&b)==nil&&strings.HasPrefix(b.Name,"Soulu Gecko Preview "){return true}}
+ // Older uninstallers leave empty runtime folders and their own executable.
+ // Ignore these leftovers, while rejecting unrelated files and all links.
+ clean:=true
+ err:=filepath.WalkDir(dir,func(path string,item os.DirEntry,e error)error{if e!=nil{return e};if item.Type()&os.ModeSymlink!=0{clean=false;return nil};if !item.IsDir()&&path!=filepath.Join(dir,"Uninstall Soulu Gecko.exe"){clean=false};return nil})
+ return err==nil&&clean
 }
 func (a *Adapter) Install(o core.Options) error {
 	a.progress.Store(0)
@@ -98,8 +117,8 @@ func (a *Adapter) Install(o core.Options) error {
 		return fmt.Errorf("update the existing installation at %s", a.dir)
 	}
 	if entries, e := os.ReadDir(dir); e == nil && len(entries) > 0 {
-		if _, e := os.Stat(filepath.Join(dir, "Soulu.exe")); e != nil {
-			return fmt.Errorf("choose an empty folder or existing Soulu installation")
+		if _, e := os.Stat(filepath.Join(dir, "Soulu.exe")); e != nil && !repairableDirectory(dir) {
+			return fmt.Errorf("В выбранной папке есть посторонние файлы. Выберите отдельную папку для Soulu.")
 		}
 	}
  // Portable and installed Gecko share profiles: refuse upgrades while either owns one.
@@ -145,7 +164,7 @@ func (a *Adapter) Install(o core.Options) error {
 	if err = core.Shortcuts("Soulu Gecko", dir, "Soulu.exe", strings.TrimPrefix(icon, dir+string(os.PathSeparator)), "", o.Desktop, o.StartMenu); err != nil {
 		return err
 	}
-	if err = setReg(uninstallKey, map[string]string{"DisplayName": "Soulu Gecko Preview 10", "DisplayVersion": products.Version("soulu"), "Publisher": "Soulu", "InstallLocation": dir, "DisplayIcon": exe, "UninstallString": `"` + filepath.Join(dir, "Uninstall Soulu Gecko.exe") + `" --uninstall`}); err != nil {
+	if err = setReg(uninstallKey, map[string]string{"DisplayName": "Soulu Gecko Preview 11", "DisplayVersion": products.Version("soulu"), "Publisher": "Soulu", "InstallLocation": dir, "DisplayIcon": exe, "UninstallString": `"` + filepath.Join(dir, "Uninstall Soulu Gecko.exe") + `" --uninstall`}); err != nil {
 		return err
 	}
  // Register this isolated product without changing Windows UserChoice.

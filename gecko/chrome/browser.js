@@ -25,7 +25,7 @@ function apply(){
  const s=shared.config.settings,root=document.documentElement;
  root.toggleAttribute('soulu-dark',s.theme==='dark'||s.theme==='system'&&matchMedia('(prefers-color-scheme:dark)').matches);
  root.toggleAttribute('soulu-single',gBrowser.visibleTabs.filter(t=>!t.closing).length<2);
- root.setAttribute('soulu-version','Soulu Gecko Preview 10');
+ root.setAttribute('soulu-version','Soulu Gecko Preview 11');
  for(const [id,key] of [['soulu-sidebar','showSidebar'],['back-button','showBack'],['home-button','showHome'],['soulu-newtab','showNewTab'],['downloads-button','showDownloads'],['soulu-vpn','vpnToolbarVisible']]){const el=document.getElementById(id);if(el)el.hidden=s[key]===false;}
  const bar=document.getElementById('PersonalToolbar');if(bar)bar.collapsed=s.bookmarksBarMode==='never'||s.bookmarksBarPosition==='hidden';
  pref('browser.startup.page',s.startupMode==='continue'?3:1);
@@ -105,7 +105,7 @@ function open(url){
 function settings(){if(shared.settingsWindow&&!shared.settingsWindow.closed){shared.settingsWindow.focus();return;}shared.settingsWindow=window.openDialog('chrome://soulu/content/ui/settings.html','soulu-settings','chrome,dialog=no,resizable,centerscreen,width=1060,height=760');}
 function tabRows(){return gBrowser.tabs.map((t,id)=>({id,title:t.label,url:t.linkedBrowser.currentURI.spec,incognito:isPrivate}));}
 async function bookmarks(){const rows=[];const tree=await PlacesUtils.promiseBookmarksTree(PlacesUtils.bookmarks.rootGuid);function walk(node){for(const n of node.children||[]){if(n.uri)rows.push({id:n.guid,title:n.title||n.uri,url:n.uri});walk(n);}}walk(tree);return rows;}
-async function state(){const dirs=await IOUtils.getChildren(PathUtils.parent(profile));const profiles=[];for(const path of dirs){if((await IOUtils.stat(path)).type!=='directory')continue;let name=PathUtils.filename(path);try{name=(await IOUtils.readJSON(PathUtils.join(path,'soulu-profile.json'))).name;}catch{}profiles.push({id:PathUtils.filename(path),name,active:path===profile});}return {settings:shared.config.settings,profiles,activeProfileId:shared.config.profile,tabs:tabRows(),capabilities:{matteAvailable:Soulu.material?.native===true},update:{soulu:'Gecko Preview 10',gecko:Services.appinfo.platformVersion,firefox:Services.appinfo.version,xray:Soulu.components?.xray?.version||'—',sudoku:Soulu.components?.sudoku?.version||'—',adblock:'adblock-rust 0.13.3'}};}
+async function state(){const dirs=await IOUtils.getChildren(PathUtils.parent(profile));const profiles=[];for(const path of dirs){if((await IOUtils.stat(path)).type!=='directory')continue;let name=PathUtils.filename(path);try{name=(await IOUtils.readJSON(PathUtils.join(path,'soulu-profile.json'))).name;}catch{}profiles.push({id:PathUtils.filename(path),name,active:path===profile});}return {settings:shared.config.settings,profiles,activeProfileId:shared.config.profile,tabs:tabRows(),capabilities:{matteAvailable:Soulu.material?.native===true},update:{soulu:'Gecko Preview 11',gecko:Services.appinfo.platformVersion,firefox:Services.appinfo.version,xray:Soulu.components?.xray?.version||'—',sudoku:Soulu.components?.sudoku?.version||'—',adblock:'adblock-rust 0.13.3'}};}
 function validate(next){
  if(next.profile!==shared.config.profile)throw Error('Profile changed');
  if(!['system','light','dark'].includes(next.settings.theme))throw Error('Invalid theme');

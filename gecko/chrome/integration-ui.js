@@ -4,6 +4,16 @@ const api=window.browserShell;if(!api)return;
 const invoke=(action,payload)=>new Promise((resolve,reject)=>cefQuery({request:JSON.stringify({action,payload}),onSuccess:s=>resolve(JSON.parse(s)),onFailure:(_,e)=>reject(Error(e))}));
 const error=e=>{const n=document.getElementById('actionMessage');if(n)n.textContent=e.message;else console.error(e);};
 const button=(text,fn)=>{const n=document.createElement('button');n.textContent=text;n.onclick=()=>Promise.resolve().then(fn).catch(error);return n;};
+// The toolbar is a remote app surface, so window.confirm can be suppressed.
+// Use a real Soulu dialog and return its asynchronous choice to navigation.
+window.souluConfirmBookmarkDelete=title=>new Promise(resolve=>{
+ const box=document.createElement('dialog');box.className='soulu-bookmark-confirm';box.id='soulu-bookmark-delete';
+ const heading=document.createElement('h2');heading.textContent='Удалить папку?';
+ const note=document.createElement('p');note.textContent='Папка «'+title+'» и все вложенные закладки будут удалены.';
+ const actions=document.createElement('div'),cancel=button('Отмена',()=>box.close('cancel')),remove=button('Удалить',()=>box.close('delete'));remove.id='soulu-bookmark-delete-confirm';remove.className='primary';actions.append(cancel,remove);box.append(heading,note,actions);document.body.append(box);
+ box.addEventListener('close',()=>{const accepted=box.returnValue==='delete';box.remove();api.setPopover(false,'bookmark-delete').finally(()=>resolve(accepted));},{once:true});
+ api.setPopover(true,'bookmark-delete').then(()=>{box.showModal();cancel.focus();}).catch(e=>{box.remove();error(e);resolve(false);});
+});
 if(location.pathname.endsWith('/settings.html')){
  const ui=window.souluSettings;
  if(window.souluBrowserImport)window.souluBrowserImport.open=()=>window.souluOpenImport();
@@ -13,7 +23,7 @@ if(location.pathname.endsWith('/settings.html')){
 }
 if(!location.pathname.endsWith('/index.html'))return;
 let snapshot={},drag=null,suppress=0,regionRAF=0,lastRegions='';
-function regions(){if(regionRAF)return;regionRAF=requestAnimationFrame(()=>{regionRAF=0;if(innerHeight<=(snapshot.adaptiveToolbar?.height||68)+(snapshot.bookmarksBarVisible?28:0)+2){lastRegions='';return;}const rectangles=[];for(const n of document.querySelectorAll('.tab-overview,.bookmarks-menu,.bookmark-context,.side-panel.open,.site-popover,.soulu-permission-prompt,.soulu-translation,.suggestions.visible,.site-find,.bookmark-editor,.sidebar.open,.vpn-panel.open,.soulu-gecko-qr,.soulu-tab-preview,.soulu-type-tooltip')){if(n.hidden||getComputedStyle(n).display==='none'||getComputedStyle(n).visibility==='hidden')continue;const r=n.getBoundingClientRect();if(r.width&&r.height)rectangles.push([Math.floor(r.x-24),Math.floor(r.y-24),Math.ceil(r.width+48),Math.ceil(r.height+48)]);}const value=JSON.stringify(rectangles.slice(0,24));if(value!==lastRegions){lastRegions=value;invoke('browser.surfaceRegions',JSON.parse(value)).catch(error);}});}
+function regions(){if(regionRAF)return;regionRAF=requestAnimationFrame(()=>{regionRAF=0;if(innerHeight<=(snapshot.adaptiveToolbar?.height||68)+(snapshot.bookmarksBarVisible?28:0)+2){lastRegions='';return;}const rectangles=[];for(const n of document.querySelectorAll('.tab-overview,.bookmarks-menu,.bookmark-context,.side-panel.open,.site-popover,.soulu-permission-prompt,.soulu-translation,.suggestions.visible,.site-find,.bookmark-editor,.sidebar.open,.vpn-panel.open,.soulu-gecko-qr,.soulu-tab-preview,.soulu-type-tooltip,.soulu-bookmark-confirm')){if(n.hidden||getComputedStyle(n).display==='none'||getComputedStyle(n).visibility==='hidden')continue;const r=n.getBoundingClientRect();if(r.width&&r.height)rectangles.push([Math.floor(r.x-24),Math.floor(r.y-24),Math.ceil(r.width+48),Math.ceil(r.height+48)]);}const value=JSON.stringify(rectangles.slice(0,24));if(value!==lastRegions){lastRegions=value;invoke('browser.surfaceRegions',JSON.parse(value)).catch(error);}});}
 new MutationObserver(regions).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class','hidden','style']});window.addEventListener('resize',regions);
 
 api.onState(value=>{if(!value.surfaceExpanded)lastRegions='';snapshot=value;regions();const back=document.getElementById('backButton');if(back&&!document.getElementById('geckoForward')){const b=back.cloneNode(true);b.id='geckoForward';b.title='Вперёд';b.dataset.tooltip='Вперёд';b.setAttribute('aria-label','Вперёд');b.style.transform='rotate(180deg)';b.onclick=()=>invoke('browser.forward').catch(error);back.after(b);}const forward=document.getElementById('geckoForward');if(forward){forward.hidden=forward.disabled=!value.page?.canGoForward;forward.style.display=value.page?.canGoForward?'':'none';}});
