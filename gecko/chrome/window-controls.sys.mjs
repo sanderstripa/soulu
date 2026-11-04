@@ -32,3 +32,15 @@ export function isDefault(){
  if(Services.appinfo.OS!=='WINNT')return false;
  return ['http','https'].every(scheme=>{let key;try{key=Cc['@mozilla.org/windows-registry-key;1'].createInstance(Ci.nsIWindowsRegKey);key.open(Ci.nsIWindowsRegKey.ROOT_KEY_CURRENT_USER,'Software\\Microsoft\\Windows\\Shell\\Associations\\UrlAssociations\\'+scheme+'\\UserChoice',Ci.nsIWindowsRegKey.ACCESS_READ);return key.readStringValue('ProgId')==='Soulu.Gecko.URL';}catch{return false;}finally{key?.close();}});
 }
+
+// Present the native window only once its real Soulu controls and state are ready.
+// This does not create a splash window or expose a nonfunctional placeholder.
+export function prepareStartup(win){
+ if(win.__souluStartupHidden)return;
+ try{const base=win.docShell.treeOwner.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIBaseWindow);base.visibility=false;win.__souluStartupHidden=true;win.__souluStartupRevealTimer=win.setTimeout(()=>revealStartup(win),15000);}catch(error){console.debug('Soulu initial presentation',String(error));}
+}
+export function revealStartup(win){
+ if(!win.__souluStartupHidden)return;
+ win.clearTimeout(win.__souluStartupRevealTimer);
+ try{win.docShell.treeOwner.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIBaseWindow).visibility=true;win.__souluStartupHidden=false;win.focus();}catch(error){console.error(error);}
+}

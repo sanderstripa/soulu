@@ -7,7 +7,7 @@ try:
  (profile/'soulu-weather.json').write_text(json.dumps({'key':'automatic|||ru','status':'ready','city':'Cached city','current':{'temperature_2m':12,'weather_code':0},'daily':{},'fetchedAt':time.time()}));
  started=time.monotonic();start();report['startupSeconds']=time.monotonic()-started;report['startupTimings']=chrome('return {...Soulu.startupTimings,windowAge:performance.now(),processAge:Date.now()-Services.startup.getStartupInfo().process.getTime()}')
  wait(lambda:content('return location.pathname.endsWith("onboarding.html")'));wait(lambda:ui('return !!document.querySelector("#actions button:not(.primary)")','page'));ui('document.querySelector("#actions button:not(.primary)").click();return true','page');wait(lambda:content('return location.pathname.endsWith("home.html")'))
- call('browser.navigate',url);wait(lambda:content('return !!document.getElementById("v")'));rows=call('browser.bookmarks.add');mark=next(r for r in rows if r['url']==url);call('browser.bookmarks.homeFavorite',{'id':mark['id'],'selected':True})
+ call('browser.navigate',url);wait(lambda:content('return !!document.getElementById("v")'));check('web_content_stays_remote_and_unprivileged',chrome('return gBrowser.selectedBrowser.isRemoteBrowser') and content('return !window.Soulu&&!window.cefQuery&&!window.browserShell'));rows=call('browser.bookmarks.add');mark=next(r for r in rows if r['url']==url);call('browser.bookmarks.homeFavorite',{'id':mark['id'],'selected':True})
  call('browser.navigate',url+'second');wait(lambda:content('return location.pathname==="/second"'));rows=call('browser.bookmarks.add');second=next(r for r in rows if r['url']==url+'second');call('browser.bookmarks.homeFavorite',{'id':second['id'],'selected':True})
  # A real settings snapshot must not overwrite newer favorites on a theme save.
  config=call('settings.begin');call('browser.bookmarks.homeFavorite',{'id':mark['id'],'selected':False});config['settings']['theme']='light';call('settings.save',config);check('stale_settings_do_not_restore_or_erase_favorites',call('browser.state.get')['settings']['homeFavoriteIds']==[second['id']])
@@ -44,10 +44,22 @@ try:
  # Native Fluent/legacy branding uses the product name, not a text overlay.
  brand=run('const loc=new Localization(["branding/brand.ftl","branding/soulu-check.ftl"]);return await loc.formatValue("soulu-branding-check");')
  check('native_branding_source_is_soulu',brand=='Soulu',brand)
+ # Sample the closing transition, rather than only its final centered position.
+ chrome('Soulu.closeSettings()');time.sleep(.25)
+ for maximized in [False,True]:
+  chrome('window.'+('maximize' if maximized else 'restore')+'()');call('browser.openTab',{'url':url+'animation'});select_latest();time.sleep(.5);closing=call('browser.state.get')['activeTabId'];call('browser.closeOtherTabs',closing);call('browser.openTab',{'url':url+'animation2'});select_latest();time.sleep(.5);closing=call('browser.state.get')['activeTabId']
+  chrome('setTimeout(()=>Soulu.dispatch("browser.closeTab",'+str(closing)+'),70);return true')
+  samples=ui('const rows=[],start=performance.now();while(performance.now()-start<650){const r=document.getElementById("classicAddress").getBoundingClientRect();rows.push({t:performance.now()-start,y:r.y+r.height/2});await new Promise(requestAnimationFrame);}return rows;')
+  jumps=[abs(b['y']-a['y']) for a,b in zip(samples,samples[1:])];check('single_tab_transition_has_no_jump_'+str(maximized),len(samples)>5 and max(jumps)<4 and abs(samples[-1]['y']-34)<2,{'maxStep':max(jumps),'last':samples[-1],'frames':len(samples)})
  # Inspect the actual native location/permissions, not a filtered Soulu label.
  result=run('return await Soulu.dispatch("browser.vot.install",{consent:true},{gesture:{at:Date.now()}});');check('vot_builtin_install_completes',result['installed'])
  native=run('const {AddonManager}=ChromeUtils.importESModule("resource://gre/modules/AddonManager.sys.mjs");const a=await AddonManager.getAddonByID("vot-ext@firefox");return {builtin:a.isBuiltin,canUninstall:!!(a.permissions&AddonManager.PERM_CAN_UNINSTALL),active:a.isActive};')
  check('vot_is_native_builtin_and_not_user_removable',native['builtin'] and not native['canUninstall'],native)
+ # Existing favorite IDs and actual builtin registration must survive a real restart.
+ saved=set(call('browser.state.get')['settings']['homeFavoriteIds']);stop();start();check('home_favorites_preserved_after_restart',set(call('browser.state.get')['settings']['homeFavoriteIds'])==saved)
+ native=run('const {AddonManager}=ChromeUtils.importESModule("resource://gre/modules/AddonManager.sys.mjs");const a=await AddonManager.getAddonByID("vot-ext@firefox");return {builtin:a?.isBuiltin,canUninstall:!!(a?.permissions&AddonManager.PERM_CAN_UNINSTALL),active:a?.isActive};')
+ check('builtin_vot_survives_restart',native['builtin'] and native['active'] and not native['canUninstall'],native)
+ check('first_shown_window_has_ready_functional_ui',chrome('return document.documentElement.hasAttribute("soulu-ui-ready")&&!window.__souluStartupHidden'))
  report['passed']=True
 except Exception as error:
  report['error']=str(error)

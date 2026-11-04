@@ -78,6 +78,7 @@
   function closeEditor(restore=true){++editorGeneration;if(!editor)return;editor.remove();editor=null;api.setPopover(false,'bookmark-editor');updatePopover();if(restore&&editorReturn?.isConnected)editorReturn.focus();editorReturn=null;}
   async function edit(row=null,newFolder=false){
     closeEditor(false);
+    const requestGeneration=editorGeneration,current=await api.getState();if(requestGeneration!==editorGeneration)return;state=current;
     const key=profileKey(),profile=state.incognito?'__incognito__':state.activeProfileId,generation=editorGeneration;
     rows=await api.getBookmarks();
     if(profileKey()!==key||generation!==editorGeneration)return;

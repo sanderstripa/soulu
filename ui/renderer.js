@@ -267,11 +267,11 @@ window.browserShell.onOpenSettings(()=>openPanel("settings"));
 window.browserShell.onOpenDownloads(async()=>{renderDownloads(await window.browserShell.getDownloads());openPanel("downloads");});
 window.browserShell.onOpenFavorites(async()=>{if(window.souluNavigation)return window.souluNavigation.openBookmarks();renderBookmarks(await window.browserShell.getBookmarks());openPanel("favorites");});
 window.browserShell.onOpenVpnSettings(()=>window.browserShell.openSettingsWindow("vpn"));
-Promise.all([
+window.souluInitialStateReady=Promise.all([
  window.browserShell.getState(),
  window.browserShell.getDownloads().catch(()=>[]),
  window.browserShell.getBookmarks().catch(()=>[])
-]).then(([s,d,b])=>{renderState(s);renderDownloads(d);renderBookmarks(b);});
+]).then(([s,d,b])=>{if(stateFrame)cancelAnimationFrame(stateFrame);stateFrame=0;const initial=pendingState||s;pendingState=null;applyState(initial);renderDownloads(d);renderBookmarks(b);});
 
 let settingsPollBusy=false,lastSettingsSignature="";
 async function synchronizeSettings(){
