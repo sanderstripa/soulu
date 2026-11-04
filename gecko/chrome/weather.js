@@ -13,6 +13,7 @@
   const geo=Cc['@mozilla.org/geolocation;1'].getService(Ci.nsISupports).QueryInterface(Ci.nsIDOMGeoGeolocation);
   return new Promise((resolve,reject)=>geo.getCurrentPosition(p=>resolve({latitude:Math.round(p.coords.latitude*100)/100,longitude:Math.round(p.coords.longitude*100)/100,name:'Рядом с вами'}),()=>reject(Error('Геолокация недоступна. Укажите город в настройках → Запуск и главная.')),{timeout:8000,maximumAge:900000,enableHighAccuracy:false}));
  }
+ Soulu.weatherReady=weatherState.cache?Promise.resolve():IOUtils.readJSON(file).then(value=>{weatherState.cache=value;cache=value;}).catch(()=>{});
  Soulu.weatherSnapshot=()=>weatherState.cache;
  Soulu.weather=async(options={})=>{
  cache=weatherState.cache;inflight=weatherState.inflight;

@@ -25,7 +25,7 @@ function watch(api){delegate(api);const node=api.widget?.forWindow(window)?.node
 async function list(){
  for(const [node,observer] of widgets)if(!node.isConnected){observer.disconnect();widgets.delete(node);}
  const addons=await AddonManager.getAddonsByTypes(['extension']),items=[];
- for(const addon of addons){if(addon.isSystem||addon.hidden)continue;const {extension,api}=native(addon.id);if(isPrivate&&(!extension||!extension.canAccessWindow(window)))continue;const action=api?.action,context=action?.getContextData(gBrowser.selectedTab);if(api)watch(api);const color=context?.badgeBackgroundColor||[217,46,54,255],textColor=context?.badgeTextColor||[255,255,255,255];
+ for(const addon of addons){if(addon.isSystem||addon.isBuiltin||addon.hidden)continue;const {extension,api}=native(addon.id);if(isPrivate&&(!extension||!extension.canAccessWindow(window)))continue;const action=api?.action,context=action?.getContextData(gBrowser.selectedTab);if(api)watch(api);const color=context?.badgeBackgroundColor||[217,46,54,255],textColor=context?.badgeTextColor||[255,255,255,255];
   items.push({id:addon.id,name:addon.name,version:addon.version,enabled:addon.isActive,action:!!action,actionEnabled:!!action?.isShownForTab(gBrowser.selectedTab),pinned:!!api&&CustomizableUI.getPlacementOfWidget(api.id)?.area===CustomizableUI.AREA_NAVBAR,title:context?.title||addon.name,badge:String(context?.badgeText||'').slice(0,12),badgeColor:color,badgeTextColor:textColor,icon:api?await iconFor(extension,api):'',privateAllowed:!!extension?.privateBrowsingAllowed});
  }
  return {profile:shared.config.profile,incognito:isPrivate,items};

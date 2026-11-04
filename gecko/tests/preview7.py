@@ -26,6 +26,10 @@ try:
  import io
  a=Image.open(io.BytesIO(red)).convert('RGB');b=Image.open(io.BytesIO(blue)).convert('RGB');points=[(int(a.width*f),10) for f in [.2,.4,.6,.8]];diff=sum(sum(abs(x-y) for x,y in zip(a.getpixel(p),b.getpixel(p))) for p in points);check('actual_toolbar_backdrop_samples_page_pixels',diff>60,{'delta':diff,'points':points})
  call('browser.settings.set',{'mattePanel':False});time.sleep(.3);opaque=shot('glass-disabled.png');c=Image.open(io.BytesIO(opaque)).convert('RGB');diffOff=sum(sum(abs(x-y) for x,y in zip(b.getpixel(p),c.getpixel(p))) for p in points);check('matte_toggle_changes_actual_pixels',diffOff>60,{'delta':diffOff})
+ # Inspect the actual native location/permissions, not a filtered Soulu label.
+ result=run('return await Soulu.dispatch("browser.vot.install",{consent:true},{gesture:{at:Date.now()}});');check('vot_builtin_install_completes',result['installed'])
+ native=run('const {AddonManager}=ChromeUtils.importESModule("resource://gre/modules/AddonManager.sys.mjs");const a=await AddonManager.getAddonByID("vot-ext@firefox");return {builtin:a.isBuiltin,canUninstall:!!(a.permissions&AddonManager.PERM_CAN_UNINSTALL),active:a.isActive};')
+ check('vot_is_native_builtin_and_not_user_removable',native['builtin'] and not native['canUninstall'],native)
  report['passed']=True
 except Exception as error:
  report['error']=str(error)

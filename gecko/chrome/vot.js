@@ -2,12 +2,15 @@
 (()=>{
 const {AddonManager}=ChromeUtils.importESModule('resource://gre/modules/AddonManager.sys.mjs');
 const {shared,save}=Soulu.backend,id='vot-ext@firefox',base=Soulu.dispatch;
+async function builtin(){await candidate();await AddonManager.installBuiltinAddon('resource://soulu-vot/');const addon=await AddonManager.getAddonByID(id);if(!addon?.isBuiltin)throw Error('Компонент перевода не зарегистрирован как встроенный.');return addon;}
 async function candidate(){const file=Services.dirsvc.get('GreD',Ci.nsIFile);for(const p of ['soulu','optional','vot-1.12.6.xpi'])file.append(p);if(!file.exists())throw Error('Компонент VOT отсутствует в сборке.');const install=await AddonManager.getInstallForFile(file);if(install.addon?.id!==id||install.addon?.version!=='1.12.6'||install.addon?.signedState<2)throw Error('Подпись или версия VOT не прошла проверку Firefox.');return install;}
+Soulu.votReady=(async()=>{const existing=await AddonManager.getAddonByID(id);if(existing&&!existing.isBuiltin)await builtin();})().catch(error=>{Soulu.votError=String(error);console.error(error);});
 Soulu.dispatch=async(action,payload,source)=>{
+ if(action.startsWith('browser.vot.'))await Soulu.votReady;
  if(action==='browser.vot.status'){const addon=await AddonManager.getAddonByID(id);return {installed:!!addon,enabled:!!addon?.isActive,version:addon?.version||'1.12.6',externalService:'Яндекс / серверы VOT',permissions:addon?.userPermissions||((await candidate()).addon.userPermissions)};}
  if(action==='browser.vot.install'){
   if(Soulu.backend.isPrivate)throw Error('Установка выполняется в обычном окне.');if(!payload?.consent||!source?.gesture||Date.now()-source.gesture.at>2000)throw Error('Подтвердите разрешения VOT кнопкой установки.');
-  const install=await candidate();const result=await new Promise((resolve,reject)=>{install.addListener({onInstallEnded(_i,addon){resolve(addon);},onInstallFailed(i){reject(Error('Firefox отказал в установке VOT: '+i.error));},onDownloadFailed(i){reject(Error('Не удалось прочитать VOT: '+i.error));}});install.install();});
+  const result=await builtin();
   shared.config.settings.videoTranslationEnabled=!!result.isActive;await save();return {installed:true,version:result.version};
  }
  if(action==='browser.vot.setEnabled'){const addon=await AddonManager.getAddonByID(id);if(!addon)throw Error('Сначала установите VOT и подтвердите разрешения.');payload.enabled?await addon.enable():await addon.disable();shared.config.settings.videoTranslationEnabled=!!addon.isActive;await save();return {enabled:addon.isActive};}

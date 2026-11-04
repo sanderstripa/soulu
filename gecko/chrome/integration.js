@@ -61,6 +61,7 @@ Services.scriptloader.loadSubScript('chrome://soulu/content/thumbnails.js',windo
 Services.scriptloader.loadSubScript('chrome://soulu/content/remote.js',window);
 Services.scriptloader.loadSubScript('chrome://soulu/content/speech.js',window);
 Services.scriptloader.loadSubScript('chrome://soulu/content/vot.js',window);
+Services.scriptloader.loadSubScript('chrome://soulu/content/extension-migration.js',window);
 Services.scriptloader.loadSubScript('chrome://soulu/content/onboarding.js',window);
 Services.scriptloader.loadSubScript('chrome://soulu/content/updates.js',window);
 })();
