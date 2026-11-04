@@ -61,7 +61,7 @@ try:
  check('reduced_motion_single_tab_endpoint',ui('const r=document.getElementById("classicAddress").getBoundingClientRect();return Math.abs(r.y+r.height/2-34)<2'))
  chrome('Services.prefs.setIntPref("ui.prefersReducedMotion",0)')
  # Actual video continues while the pointer uses the real toolbar.
- call('browser.navigate',url+'hover-video');wait(lambda:content('return !!document.getElementById("v")&&document.getElementById("v").currentTime>.1'))
+ select_latest();call('browser.navigate',url+'hover-video');select_latest();wait(lambda:content('return !!document.getElementById("v")&&document.getElementById("v").currentTime>.1'))
  before=content('const v=document.getElementById("v");return {h:innerHeight,w:innerWidth,y:v.getBoundingClientRect().y,t:v.currentTime,id:document.documentElement.dataset.identity}');video=[]
  for x in [22,54,180,220,500,180]:
   m.set_context('chrome');m._send_message('WebDriver:PerformActions',{'actions':[{'type':'pointer','id':'p7-video-pointer','parameters':{'pointerType':'mouse'},'actions':[{'type':'pointerMove','origin':'viewport','x':x,'y':24,'duration':80}]}]});time.sleep(.2)

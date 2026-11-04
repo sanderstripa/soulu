@@ -40,12 +40,13 @@ function cloak(win,enabled){
  const set=library('dwmapi.dll').declare('DwmSetWindowAttribute',abi,ctypes.int32_t,ctypes.uintptr_t,ctypes.uint32_t,ctypes.voidptr_t,ctypes.uint32_t);
  const value=ctypes.int(enabled?1:0);const result=set(handle(win),13,value.address(),ctypes.int.size);
  if(Number(result)!==0)throw Error('DWM cloak failed: '+result);
+ const get=library('dwmapi.dll').declare('DwmGetWindowAttribute',abi,ctypes.int32_t,ctypes.uintptr_t,ctypes.uint32_t,ctypes.voidptr_t,ctypes.uint32_t),observed=ctypes.uint32_t();const status=get(handle(win),14,observed.address(),ctypes.uint32_t.size);return {setStatus:Number(result),getStatus:Number(status),observed:Number(observed.value)};
 }
 export function prepareStartup(win){
  if(win.__souluStartupHidden)return;
  win.__souluStartupPresentation={preparedAt:Date.now()};
  try{
-  if(Services.appinfo.OS==='WINNT'){cloak(win,true);win.__souluStartupCloaked=true;}
+  if(Services.appinfo.OS==='WINNT'){win.__souluStartupPresentation.native=cloak(win,true);win.__souluStartupCloaked=true;}
   else win.docShell.treeOwner.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIBaseWindow).visibility=false;
   win.__souluStartupHidden=true;
   win.__souluStartupRevealTimer=win.setTimeout(()=>revealStartup(win),15000);

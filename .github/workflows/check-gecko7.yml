@@ -1,4 +1,4 @@
-name: Preview 7 first composed window, verified motion, video and restart persistence
+name: Preview 7 physical first-window visibility, video context and preserved state
 on:
   push:
     branches: [gecko-preview]
