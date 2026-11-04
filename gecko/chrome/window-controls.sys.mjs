@@ -46,6 +46,7 @@ export function prepareStartup(win){
  if(win.__souluStartupHidden)return;
  win.__souluStartupPresentation={preparedAt:Date.now()};
  try{
+  win.docShell.treeOwner.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIBaseWindow).visibility=false;
   if(Services.appinfo.OS==='WINNT'){win.__souluStartupPresentation.native=cloak(win,true);win.__souluStartupCloaked=true;}
   else win.docShell.treeOwner.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIBaseWindow).visibility=false;
   win.__souluStartupHidden=true;
@@ -56,6 +57,10 @@ export function revealStartup(win){
  if(!win.__souluStartupHidden||win.__souluStartupRevealing)return;
  win.__souluStartupRevealing=true;
  win.clearTimeout(win.__souluStartupRevealTimer);
+ // AppWindow must be allowed to create its backing surface only after Soulu
+ // is ready. Its first Show() resets DWMWA_CLOAK, so reapply it synchronously.
+ win.docShell.treeOwner.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIBaseWindow).visibility=true;
+ if(win.__souluStartupCloaked)cloak(win,true);
  const present=()=>{
   if(!win.__souluStartupHidden)return;
   try{

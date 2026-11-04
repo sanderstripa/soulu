@@ -18,6 +18,7 @@ for p in (root/'gecko/chrome').rglob('*'):
  if p.is_file():
   target=runtime/p.relative_to(root/'gecko/chrome');target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(p,target)
 for source,target in [('extensions-ui.js','extension-toolbar.js'),('bridge.js','gecko-bridge.js'),('frontend.css','gecko-frontend.css'),('integration-ui.js','integration-ui.js'),('settings-support.js','settings-support.js'),('updates-ui.js','updates-ui.js'),('vot-ui.js','vot-ui.js')]:shutil.copyfile(root/'gecko/chrome'/source,runtime/'ui'/target)
+with (out/'runtime/defaults/pref/autoconfig.js').open('a',encoding='utf-8') as f:f.write('\npref("browser.startup.blankWindow",false);\npref("browser.startup.preXulSkeletonUI",false);\n')
 shutil.copyfile(root/'gecko/soulu.cfg',out/'runtime/soulu.cfg')
 shutil.copyfile(root/'gecko/chrome.manifest',out/'runtime/soulu/chrome.manifest')
 shutil.copyfile(root/'gecko/README.md',out/'README.md')
