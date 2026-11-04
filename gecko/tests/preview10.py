@@ -28,6 +28,8 @@ try:
  check('startup_under_seven_seconds',timing['timing']['functionalFirstFrameProcessAge']<7000,{'attachSeconds':elapsed,**timing})
  check('soulu_first_frame_no_firefox_toolbox',chrome('return getComputedStyle(document.getElementById("navigator-toolbox")).display==="none"&&document.documentElement.hasAttribute("soulu-ui-ready")'))
  check('complete_backend_not_dead_stub',chrome('return Soulu.ready&&!!Soulu.integrationKey&&!!Soulu.native'))
+ # Point the native directory service at synthetic source profiles only.
+ chrome('const d=Cc["@mozilla.org/file/local;1"].createInstance(Ci.nsIFile);d.initWithPath('+json.dumps(str(root/'environment'))+');Services.dirsvc.undefine("LocalAppData");Services.dirsvc.set("LocalAppData",d);return true;')
  wait(lambda:ui('return location.pathname.endsWith("/onboarding.html")','page'))
  ui('document.querySelector("#actions button.primary").click();return true;','page')
  wait(lambda:ui('return document.getElementById("counter").textContent.startsWith("2")','page'))

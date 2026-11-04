@@ -17,7 +17,7 @@ Copy-Item (Join-Path $PSScriptRoot 'adapter_windows.go') (Join-Path $adapter 'ad
 Get-ChildItem $adapter -Filter '*_test.go' | Remove-Item
 Copy-Item (Join-Path $PSScriptRoot 'payload_windows_test.go') $adapter
 $product=Get-Content (Join-Path $core 'products/soulu.json') -Raw | ConvertFrom-Json
-$product.name='Soulu Gecko';$product.version='0.10.0-preview10';$product.id='soulu-gecko';$product.engine='Firefox Gecko; verified isolated runtime'
+$product.name='Soulu Gecko';$product.version='0.10.0-preview10';$product.id='soulu-gecko';$product.engine='Soulu'
 $product | ConvertTo-Json | Set-Content (Join-Path $core 'products/soulu.json') -Encoding utf8
 Copy-Item (Join-Path $repo 'ui/branding/soulu-128.png') (Join-Path $core 'core/web/assets/icon.png') -Force
 $uiPath=Join-Path $core 'core/web/setup.js'

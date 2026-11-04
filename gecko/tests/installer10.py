@@ -75,6 +75,7 @@ def setup(binary,environment,uninstall=False):
 def capture(ws,name):
  data=command(ws,'Page.captureScreenshot',{'format':'png','captureBeyondViewport':False});(out/name).write_bytes(base64.b64decode(data['data']))
 def version(ws,stage):
+ check('only_soulu_brand_'+stage,not evaluate(ws,'/firefox/i.test(document.body.innerText)'))
  value=evaluate(ws,'document.getElementById("version").textContent');check('version_visible_'+stage,'0.10.0-preview10' in value and evaluate(ws,'document.getElementById("version").getBoundingClientRect().height>0'),value)
 try:
  with tempfile.TemporaryDirectory(prefix='Soulu Gecko installer acceptance ') as temporary:
