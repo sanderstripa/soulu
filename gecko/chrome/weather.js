@@ -12,8 +12,10 @@
    const allowed=Services.prompt.confirm(window,'Погода Soulu','Разрешить геолокацию для погоды? Приблизительные координаты будут переданы Open-Meteo. Город также можно указать вручную в настройках.');
    shared.config.rules.sites['soulu://home']={...(shared.config.rules.sites['soulu://home']||{}),geolocation:allowed?0:2};await save();if(!allowed)throw userError('Для автоматической погоды разрешите геолокацию или укажите город в настройках.');
   }
-  const geo=window.navigator.geolocation;
-  if(!geo)throw userError('Геолокация недоступна. Укажите город в настройках → Запуск и главная.');
+  // This backend is chrome code, not a web document. The service exposes
+  // Gecko's non-window Geolocation WebIDL object directly; it has no XPCOM QI.
+  const geo=Cc['@mozilla.org/geolocation;1'].getService(Ci.nsISupports);
+  if(typeof geo?.getCurrentPosition!=='function')throw userError('Геолокация недоступна. Укажите город в настройках → Запуск и главная.');
   return new Promise((resolve,reject)=>geo.getCurrentPosition(p=>resolve({latitude:Math.round(p.coords.latitude*100)/100,longitude:Math.round(p.coords.longitude*100)/100,name:'Рядом с вами'}),()=>reject(userError('Геолокация недоступна. Укажите город в настройках → Запуск и главная.')),{timeout:8000,maximumAge:900000,enableHighAccuracy:false}));
  }
  Soulu.weatherReady=weatherState.cache?Promise.resolve():IOUtils.readJSON(file).then(value=>{weatherState.cache=value;cache=value;}).catch(()=>{});

@@ -41,3 +41,5 @@ jobs:
         with:
           name: gecko11-browser-evidence
           path: gecko11-checks/
+
+# Validate the non-window chrome geolocation service.

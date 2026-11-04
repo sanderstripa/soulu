@@ -65,7 +65,7 @@ try:
 except Exception as e:
  report['error']=str(e)
  try:report['console']=chrome('return Services.console.getMessageArray().map(x=>x.message).slice(-30)');print('failure_console',report['console'],flush=True)
- except Exception:pass
+ except Exception as diag:print('failure_diagnostics',repr(diag),'process_exit',proc.poll() if proc else None,flush=True)
  raise
 finally:
  try:stop()
