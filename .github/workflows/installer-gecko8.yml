@@ -1,0 +1,59 @@
+name: Build and verify Soulu Gecko Preview 8 installer candidate
+on:
+  push:
+    branches: [gecko-preview]
+    paths: ['.github/workflows/installer-gecko8.yml']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  windows:
+    runs-on: windows-2025
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: sanderstripa/soulu
+      PYTHONUTF8: 1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.x'
+      - name: Assemble Preview 8 payload
+        shell: pwsh
+        run: |
+          gh release download gecko-preview-7 -p Soulu-Gecko-Preview-7-win64.zip -D accepted
+          if ((Get-FileHash accepted/Soulu-Gecko-Preview-7-win64.zip -Algorithm SHA256).Hash.ToLowerInvariant() -cne 'aa27044bc2569a735540b2068759efabdd5878c3314cba5038d465b9a3468c14') { throw 'Base checksum mismatch' }
+          Expand-Archive accepted/Soulu-Gecko-Preview-7-win64.zip gecko-out
+          python gecko/tests/overlay8.py
+          if ($LASTEXITCODE -ne 0) { throw 'Overlay failed' }
+          Push-Location gecko/launcher
+          go run github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.5.0 -64 -o rsrc.syso
+          go build -trimpath -ldflags '-s -w -H=windowsgui' -o ../../gecko-out/Soulu.exe .
+          if ($LASTEXITCODE -ne 0) { throw 'Launcher failed' }
+          Pop-Location
+          python -m pip install marionette_driver pillow psutil websocket-client
+      - name: Build the CEF-style installer with isolated Gecko adapter
+        shell: pwsh
+        run: |
+          ./gecko/installer/build.ps1 -BuildDir gecko-out -OutFile Soulu-Gecko-Preview-8-Setup-win64.exe
+          if ($LASTEXITCODE -ne 0) { throw 'Installer build failed' }
+          if ((Get-Item Soulu-Gecko-Preview-8-Setup-win64.exe).VersionInfo.ProductVersion -ne '0.8.0.0') { throw 'Installer file version mismatch' }
+      - name: Verify actual installer stages, first launch, upgrade and removal
+        run: python gecko/tests/installer8.py Soulu-Gecko-Preview-8-Setup-win64.exe installer8-checks
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gecko8-installer-evidence
+          path: installer8-checks/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gecko8-verified-installer
+          path: |
+            Soulu-Gecko-Preview-8-Setup-win64.exe
+            Soulu-Gecko-Preview-8-Setup-win64.exe.build.json
