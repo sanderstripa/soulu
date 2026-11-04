@@ -69,12 +69,24 @@ export function revealStartup(win){
    win.__souluStartupHidden=false;win.__souluStartupPresentation.presentedAt=Date.now();win.focus();
   }catch(error){console.error(error);}
  };
- // DWM keeps composing a cloaked HWND. Wait for the ready remote controls
- // to reach the parent paint before presenting that real window.
- win.requestAnimationFrame(()=>win.requestAnimationFrame(()=>{
-  const painted=()=>{win.removeEventListener('MozAfterPaint',painted);win.clearTimeout(fallback);present();};
-  win.addEventListener('MozAfterPaint',painted);
-  const fallback=win.setTimeout(painted,200);
-  win.document.documentElement.getBoundingClientRect();
- }));
+ // Flush the real remote UI's layer transaction once. DOM readiness alone
+ // does not mean that WebRender has received the file process's controls.
+ (async()=>{
+  const frame=win.document.getElementById('soulu-shell-frame');
+  const remote=frame?.frameLoader?.remoteTab;
+  if(!remote)throw Error('Soulu UI process is not available');
+  remote.renderLayers=true;
+  await frame.browsingContext.currentWindowGlobal.getActor('SouluApp').sendQuery('preparePresentation');
+  if(!remote.hasLayers)await new Promise((resolve,reject)=>{
+   const ready=()=>{if(!remote.hasLayers)return;win.removeEventListener('MozLayerTreeReady',ready);win.clearTimeout(timer);resolve();};
+   win.addEventListener('MozLayerTreeReady',ready);
+   const timer=win.setTimeout(()=>{win.removeEventListener('MozLayerTreeReady',ready);reject(Error('Soulu compositor did not receive UI layers'));},3000);
+   ready();
+  });
+  win.windowUtils.updateLayerTree();
+  await new Promise(resolve=>win.requestAnimationFrame(()=>win.requestAnimationFrame(resolve)));
+  win.windowUtils.updateLayerTree();
+  if(Services.appinfo.OS==='WINNT')library('dwmapi.dll').declare('DwmFlush',ctypes.winapi_abi||ctypes.default_abi,ctypes.int32_t)();
+  win.__souluStartupPresentation.layersReadyAt=Date.now();present();
+ })().catch(error=>{win.__souluStartupPresentation.error=String(error);console.error(error);});
 }

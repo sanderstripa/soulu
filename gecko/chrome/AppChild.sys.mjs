@@ -6,6 +6,7 @@ export class SouluAppChild extends JSWindowActorChild{
   this.sendQuery('dispatch',{...input,pointer:this.pointer,userGesture:this.gesture}).then(value=>this.respond({id:input.id,value}),error=>this.respond({id:input.id,error:String(error.message||error)}));
  }
  async receiveMessage(message){
+  if(message.name==='preparePresentation'){const win=this.contentWindow;win.document.documentElement.getBoundingClientRect();win.windowUtils.updateLayerTree();return true;}
   if(message.name==='extensionAnchor'){
    const win=this.contentWindow,id=String(message.data),node=win.document.querySelector('[data-extension-toolbar="classic"] [data-extension-id="'+win.CSS.escape(id)+'"]');const target=node||win.document.querySelector('#soulu-extensions-menu');if(!target)return null;const r=target.getBoundingClientRect();return r.width&&r.height?{x:r.x,y:r.y,width:r.width,height:r.height}:null;
   }

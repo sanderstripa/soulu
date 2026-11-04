@@ -1,4 +1,4 @@
-name: Preview 7 disable early blank window and present ready Soulu chrome
+name: Preview 7 present only after remote UI layers reach Gecko compositor
 on:
   push:
     branches: [gecko-preview]
