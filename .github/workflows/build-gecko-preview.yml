@@ -45,7 +45,7 @@ jobs:
         shell: pwsh
         run: |
           Push-Location gecko/launcher
-          go run github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.5.0 -64 -o rsrc.syso
+          go run github.com/josephspurrior/goversioninfo/cmd/goversioninfo@v1.5.0 -64 -o rsrc.syso
           if ($LASTEXITCODE -ne 0) { throw 'Launcher resources failed' }
           go build -trimpath -ldflags '-s -w -H=windowsgui' -o '../../gecko-out/Soulu.exe' .
           if ($LASTEXITCODE -ne 0) { throw 'Launcher compilation failed' }
@@ -55,21 +55,28 @@ jobs:
         run: |
           ./gecko/installer/build.ps1 -BuildDir gecko-out -OutFile Soulu-Gecko-Preview-9-Setup-win64.exe *>&1 | Tee-Object installer-build.log
           if ($LASTEXITCODE -ne 0) { throw 'Installer build failed' }
-      - name: Report installer failure in an issue
+      - name: Preview 9 acceptance checks
+        shell: pwsh
+        run: |
+          python gecko/tests/preview9.py gecko-out *>&1 | Tee-Object acceptance.log
+          if ($LASTEXITCODE -ne 0) { throw 'Acceptance failed' }
+      - name: Report failure in an issue with full logs
         if: failure()
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh issue create --repo "$env:GITHUB_REPOSITORY" --title "CI: gecko installer build failed (run $env:GITHUB_RUN_ID)" --body-file installer-build.log
-      - name: Preview 9 acceptance checks
-        run: python gecko/tests/preview9.py gecko-out
+          $body = "Installer log:`n`n``````````````````" + (Get-Content installer-build.log -Raw -ErrorAction SilentlyContinue) + "``````````````````"`n`nAcceptance log:`n`n``````````````````" + (Get-Content acceptance.log -Raw -ErrorAction SilentlyContinue) + "``````````````````"
+          Set-Content failure-report.md $body -Encoding utf8NoBOM
+          gh issue create --repo "$env:GITHUB_REPOSITORY" --title "CI: Preview 9 build failed (run $env:GITHUB_RUN_ID)" --body-file failure-report.md
       - name: Checksums
+        if: success()
         shell: pwsh
         run: |
           $hash = (Get-FileHash Soulu-Gecko-Preview-9-Setup-win64.exe -Algorithm SHA256).Hash.ToLowerInvariant()
           "$hash  Soulu-Gecko-Preview-9-Setup-win64.exe" | Out-File SHA256SUMS.txt -Encoding utf8
       - name: Publish release
+        if: success()
         uses: softprops/action-gh-release@v2
         with:
           tag_name: gecko-preview-9
