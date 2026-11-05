@@ -117,6 +117,11 @@ def watch_launch(destination):
   while not stopped.is_set():C.windll.user32.EnumWindows(inspect,0);stopped.wait(.1)
  thread=threading.Thread(target=record,daemon=True);thread.start()
  return stopped,thread,observed
+def finished(ws):
+ stage=evaluate(ws,'document.body.dataset.stage');
+ if stage in ['error','failed']:
+  capture(ws,'installer-error.png');raise RuntimeError(evaluate(ws,'document.body.innerText'))
+ return stage=='finish'
 def capture(ws,name):
  data=command(ws,'Page.captureScreenshot',{'format':'png','captureBeyondViewport':False});(out/name).write_bytes(base64.b64decode(data['data']))
 def version(ws,stage):
@@ -135,7 +140,7 @@ try:
    version(ws,'welcome');capture(ws,'installer-welcome.png');check('default_installation_is_separate_gecko_folder',evaluate(ws,'document.getElementById("path").value')==str(destination))
    evaluate(ws,'document.getElementById("settingsButton").click();document.getElementById("ru").click();document.getElementById("dark").click();true');version(ws,'settings');capture(ws,'installer-settings.png')
    evaluate(ws,'document.getElementById("accept").click();true');wait(lambda:evaluate(ws,'document.body.dataset.stage==="installing"'));version(ws,'installing');capture(ws,'installer-progress.png')
-   wait(lambda:evaluate(ws,'document.body.dataset.stage==="finish"'),120);version(ws,'finish');capture(ws,'installer-finish.png')
+   wait(lambda:finished(ws),120);version(ws,'finish');capture(ws,'installer-finish.png')
    check('installed_engine_and_uninstaller_exist',(destination/'Soul.exe').is_file() and (destination/'engine/xul.dll').is_file() and (destination/'Uninstall Soul.exe').is_file())
    check('installer_does_not_change_system_proxy',proxy_snapshot()==original_proxy)
    recording,recorder,observed=watch_launch(destination)
@@ -164,11 +169,12 @@ try:
   reopened=subprocess.Popen([str(destination/'Soul.exe')],env=env)
   wait(listening,60);again=Marionette('127.0.0.1',port=mp);again.start_session();again.set_context('chrome');again.timeout.script=60
   check('launcher_reopens_after_normal_close',wait(lambda:again.execute_script('return !!window.Soulu?.ready&&Soulu.config.onboarding.done')))
-  again.execute_script('window.close();');reopened.wait(timeout=30)
+  second_pid=again.execute_script('return Services.appinfo.processID');again.execute_script('window.close();');reopened.wait(timeout=30)
+  check('reopened_browser_process_exits_normally',wait(lambda:not psutil.pid_exists(second_pid),30))
   # A partially removed install is still recognized by its ownership manifest.
   (destination/'Soul.exe').unlink()
   with setup(exe,env) as (ws,process):
-   version(ws,'upgrade');evaluate(ws,'document.getElementById("primary").click();true');wait(lambda:evaluate(ws,'document.body.dataset.stage==="finish"'),120);evaluate(ws,'document.getElementById("launch").checked=false;document.getElementById("done").click();true');process.wait(timeout=20)
+   version(ws,'upgrade');evaluate(ws,'document.getElementById("primary").click();true');wait(lambda:finished(ws),120);evaluate(ws,'document.getElementById("launch").checked=false;document.getElementById("done").click();true');process.wait(timeout=20)
   settings=json.loads((profile/'soulu-settings.json').read_text());check('upgrade_keeps_existing_profile_settings',settings['settings']['theme']=='dark' and settings['onboarding']['done'])
   with contextlib.closing(sqlite3.connect(profile/'places.sqlite')) as db:check('upgrade_keeps_real_bookmarks',db.execute('select count(*) from moz_bookmarks where title=?',('Preview 11 installer persistence',)).fetchone()[0]==1)
   with winreg.OpenKey(winreg.HKEY_CURRENT_USER,r'Software\Microsoft\Windows\CurrentVersion\Uninstall\Soul') as key:check('windows_installed_apps_has_correct_version',winreg.QueryValueEx(key,'DisplayVersion')[0]=='0.12.0-preview')
