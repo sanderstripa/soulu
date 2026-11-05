@@ -97,3 +97,5 @@ jobs:
 # Theme choices use Soulu buttons, without a platform menulist surface.
 
 # Include shell settings polling in the resolved system theme path.
+
+# Unicode shortcut fixtures use the PowerShell UTF-16 command transport.

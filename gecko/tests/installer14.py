@@ -139,7 +139,7 @@ try:
   localized=[programs/'Приватный просмотр.lnk',programs/'Приватный просмотр (2).lnk']
   for index,link in enumerate(localized):
    script="$s=New-Object -ComObject WScript.Shell;$l=$s.CreateShortcut('"+str(link).replace("'","''")+"');$l.TargetPath='"+str(local/'Programs/Soulu/engine/private_browsing.exe').replace("'","''")+"';$l.Arguments='-private-window';$l.Save()"
-   subprocess.run(['powershell.exe','-NoProfile','-Command',script],check=True)
+   subprocess.run(['powershell.exe','-NoProfile','-EncodedCommand',base64.b64encode(script.encode('utf-16le')).decode('ascii')],check=True)
 
 
   # Reproduce Preview 8 uninstall leftovers from the user's failed installation.
