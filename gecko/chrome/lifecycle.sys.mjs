@@ -12,4 +12,19 @@ const observer={observe(_subject,topic){
   Services.startup.quit(Ci.nsIAppStartup.eForceQuit);
  },50);
 }};
-export function ensureApplicationLifetime(){if(registered)return;registered=true;Services.obs.addObserver(observer,'domwindowclosed');Services.obs.addObserver(observer,'quit-application-granted');}
+export function ensureApplicationLifetime(win,shared){
+ if(!shared.initialWindow||shared.initialWindow.closed)shared.initialWindow=win;
+ const interacted=event=>{if(event.isTrusted)shared.initialUserInput=true;};
+ win.addEventListener('mousedown',interacted,true);win.addEventListener('keydown',interacted,true);
+ if(registered)return;registered=true;Services.obs.addObserver(observer,'domwindowclosed');Services.obs.addObserver(observer,'quit-application-granted');}
+
+// Suppress only redundant, empty automatic windows before the first user input.
+// User-created windows and every window with actual page data remain untouched.
+export function consolidateAutomaticStart(win){
+ const backend=win.Soulu?.backend;if(!backend)return;
+ const {shared,isPrivate}=backend,owner=shared.initialWindow;
+ if(isPrivate||shared.initialUserInput||!owner||owner.closed||shared.config.settings.startupMode==='continue')return;
+ const empty=w=>{if(w.closed||!w.Soulu?.backend||w.Soulu.backend.isPrivate||w.gBrowser?.tabs.length!==1)return false;const uri=w.gBrowser.selectedBrowser.currentURI.spec;return ['about:blank','about:newtab','about:home',w.Soulu.native.homeURL].includes(uri);};
+ if(!empty(owner))return;
+ for(const other of Services.wm.getEnumerator('navigator:browser'))if(other!==owner&&empty(other))other.close();
+}

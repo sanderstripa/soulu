@@ -73,6 +73,11 @@ export function revealStartup(win){
  // Flush the real remote UI's layer transaction once. DOM readiness alone
  // does not mean that WebRender has received the file process's controls.
  (async()=>{
+  // Empty automatic startup peers must not be presented as extra windows.
+  const lifetime=ChromeUtils.importESModule('chrome://soulu/content/lifecycle.sys.mjs');
+  lifetime.consolidateAutomaticStart(win);
+  if(win.closed)return;
+  if(win.closed)return;
   const frame=win.document.getElementById('soulu-shell-frame');
   const remote=frame?.frameLoader?.remoteTab;
   if(!remote)throw Error('Soulu UI process is not available');

@@ -1,5 +1,6 @@
 export class SouluAppChild extends JSWindowActorChild{
  handleEvent(event){
+  if(event.isTrusted&&['mousedown','keydown'].includes(event.type)&&!this.interacted){this.interacted=true;this.sendAsyncMessage('interaction');}
   if(event.type==='mousedown'){if(event.isTrusted){this.gesture={at:Date.now()};this.pointer={screenX:event.screenX,screenY:event.screenY,clientX:event.clientX,clientY:event.clientY};}return;}
   if(event.type==='keydown'){if(event.isTrusted&&['Enter',' '].includes(event.key))this.gesture={at:Date.now()};if(event.isTrusted&&!event.defaultPrevented&&(event.ctrlKey&&(['l','t','w','h','f','r','b',',','+','=','-','0'].includes(event.key.toLowerCase())||!event.shiftKey&&event.key.toLowerCase()==='j'||event.shiftKey&&['Delete','o','O'].includes(event.key))||['F5','F9'].includes(event.key)||event.altKey&&['ArrowLeft','ArrowRight','f','F','t','T'].includes(event.key))){event.preventDefault();this.sendAsyncMessage('accelerator',{key:event.key,ctrlKey:event.ctrlKey,shiftKey:event.shiftKey,altKey:event.altKey,metaKey:event.metaKey});}return;}
   if(event.type!=='SouluRequest'||typeof event.detail!=='string')return;let input;try{input=JSON.parse(event.detail);}catch{return;}if(!Number.isSafeInteger(input.id)||typeof input.request!=='string')return;

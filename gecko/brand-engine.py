@@ -21,9 +21,10 @@ for kind in [16,3,14]:
   resources.append((kind,identifier,c.string_at(k.LockResource(k.LoadResource(module,resource)),size)))
   return True
  assert k.EnumResourceNamesW(h,c.c_void_p(kind),collect,0)
-update=k.BeginUpdateResourceW(str(root/'engine/SoulEngine.exe'),False);assert update
-for kind,identifier,data in resources:
- name=c.c_void_p(identifier) if isinstance(identifier,int) else c.cast(c.c_wchar_p(identifier),c.c_void_p)
- buf=c.create_string_buffer(data)
- assert k.UpdateResourceW(update,c.c_void_p(kind),name,0x409,buf,len(data))
-assert k.EndUpdateResourceW(update,False)
+for target in (root/'engine').glob('*.exe'):
+ update=k.BeginUpdateResourceW(str(target),False);assert update
+ for kind,identifier,data in resources:
+  name=c.c_void_p(identifier) if isinstance(identifier,int) else c.cast(c.c_wchar_p(identifier),c.c_void_p)
+  buf=c.create_string_buffer(data)
+  assert k.UpdateResourceW(update,c.c_void_p(kind),name,0x409,buf,len(data))
+ assert k.EndUpdateResourceW(update,False)

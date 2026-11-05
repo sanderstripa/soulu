@@ -20,7 +20,7 @@ with (runtime/'soulu/chrome/ui/gecko-frontend.css').open('a',encoding='utf-8') a
 # Suppress automatic Firefox OS integration and remove registration/install tools,
 # including uninstall/helper.exe, not just files in the runtime root.
 for p in list(runtime.rglob('*')):
- if p.is_file() and (p.name.lower() in {'default-browser-agent.exe','maintenanceservice.exe','maintenanceservice_installer.exe','updater.exe','helper.exe'}):p.unlink()
+ if p.is_file() and (p.name.lower() in {'default-browser-agent.exe','maintenanceservice.exe','maintenanceservice_installer.exe','updater.exe','helper.exe','private_browsing.exe'}):p.unlink()
 shutil.rmtree(runtime/'uninstall',ignore_errors=True)
 with (runtime/'defaults/pref/autoconfig.js').open('a',encoding='utf-8') as f:
  for key,value in {'default-browser-agent.enabled':False,'browser.shell.checkDefaultBrowser':False,'browser.startup.preXulSkeletonUI':False,'browser.startup.blankWindow':False}.items():f.write('\npref('+json.dumps(key)+','+json.dumps(value)+');')
