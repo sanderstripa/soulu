@@ -105,3 +105,5 @@ jobs:
 # Unicode shortcut fixtures use the PowerShell UTF-16 command transport.
 
 # Construct Unicode link fixtures with native filesystem rename after COM saves.
+
+# Native close clicks use client coordinates, excluding maximized resize borders.

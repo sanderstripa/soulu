@@ -5,6 +5,7 @@ from PIL import ImageGrab
 base=pathlib.Path(sys.argv[1]).resolve();out=pathlib.Path(sys.argv[2]).resolve();out.mkdir(parents=True,exist_ok=True);baseline='--baseline' in sys.argv
 report={'passed':False,'checks':{},'automation':False};user=C.windll.user32
 user.IsWindowVisible.argtypes=[W.HWND];user.GetWindowTextW.argtypes=[W.HWND,W.LPWSTR,C.c_int];user.GetClassNameW.argtypes=[W.HWND,W.LPWSTR,C.c_int];user.PostMessageW.argtypes=[W.HWND,W.UINT,W.WPARAM,W.LPARAM];user.SetForegroundWindow.argtypes=[W.HWND];C.windll.dwmapi.DwmGetWindowAttribute.argtypes=[W.HWND,W.DWORD,C.c_void_p,W.DWORD]
+user.GetClientRect.argtypes=[W.HWND,C.POINTER(W.RECT)];user.ClientToScreen.argtypes=[W.HWND,C.POINTER(W.POINT)]
 user.GetWindowThreadProcessId.argtypes=[W.HWND,C.POINTER(W.DWORD)];user.GetWindowRect.argtypes=[W.HWND,C.POINTER(W.RECT)]
 def wait(fn,seconds=35):
  end=time.monotonic()+seconds
@@ -61,7 +62,7 @@ try:
    user.PostMessageW(W.HWND(hwnd),0x0010,0,0)
   else:
    # Real pointer click on Soulu's top-right close control, not driver shutdown.
-   rect=W.RECT();user.GetWindowRect(W.HWND(hwnd),C.byref(rect));user.SetForegroundWindow(W.HWND(hwnd));user.SetCursorPos(rect.right-24,rect.top+34);user.mouse_event(2,0,0,0,0);user.mouse_event(4,0,0,0,0)
+   rect=W.RECT();user.GetClientRect(W.HWND(hwnd),C.byref(rect));point=W.POINT(rect.right-40,28);user.ClientToScreen(W.HWND(hwnd),C.byref(point));user.SetForegroundWindow(W.HWND(hwnd));user.SetCursorPos(point.x,point.y);user.mouse_event(2,0,0,0,0);user.mouse_event(4,0,0,0,0)
   wait(lambda:not processes(),30);check('all_processes_exit_'+str(cycle),not processes())
  check('same_profile_preserved',bool(json.loads((profile/'soulu-settings.json').read_text())['onboarding']['done']))
  report['passed']=True
