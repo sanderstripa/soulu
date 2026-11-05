@@ -96,3 +96,5 @@ jobs:
 # Capture actual visible startup frames for review.
 
 # XRE ini parser requires exact Name=Value without padded key names.
+
+# Use Soul labels in the packaged settings and update controls.

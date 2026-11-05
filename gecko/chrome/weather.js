@@ -9,7 +9,7 @@
  async function coordinates(interactive){
   if(shared.config.rules.sites['soulu://home']?.geolocation!==0){
    if(!interactive||shared.config.rules.sites['soulu://home']?.geolocation===2)throw userError('Разрешите геолокацию для погоды или укажите город в настройках → Запуск и главная.');
-   const allowed=Services.prompt.confirm(window,'Погода Soulu','Разрешить геолокацию для погоды? Приблизительные координаты будут переданы Open-Meteo. Город также можно указать вручную в настройках.');
+   const allowed=Services.prompt.confirm(window,'Погода Soul','Разрешить геолокацию для погоды? Приблизительные координаты будут переданы Open-Meteo. Город также можно указать вручную в настройках.');
    shared.config.rules.sites['soulu://home']={...(shared.config.rules.sites['soulu://home']||{}),geolocation:allowed?0:2};await save();if(!allowed)throw userError('Для автоматической погоды разрешите геолокацию или укажите город в настройках.');
   }
   // This backend is chrome code, not a web document. The service exposes

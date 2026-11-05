@@ -1,11 +1,11 @@
-/* Soulu consent/settings; VOT itself owns the compact controls on videos. */
+/* Soul consent/settings; VOT itself owns the compact controls on videos. */
 (()=>{
 if(!location.pathname.endsWith('/settings.html'))return;
 const invoke=(action,payload)=>new Promise((resolve,reject)=>cefQuery({request:JSON.stringify({action,payload}),onSuccess:s=>resolve(JSON.parse(s)),onFailure:(_,e)=>reject(Error(e))}));
 const el=(tag,text)=>{const n=document.createElement(tag);if(text)n.textContent=text;return n;};
 window.souluVideoSettings={open(){souluSettings.dialog('Перевод YouTube · VOT',box=>{
  const status=el('p','Проверка встроенного компонента…');status.setAttribute('role','status');
- const note=el('p','VOT передаёт адрес видео и данные запроса внешним серверам Яндекса/VOT. Это отдельная функция от локального перевода страниц Gecko. Перевод запускается кнопкой VOT на видео; громкость, язык и возврат оригинального звука регулируются там же.');note.className='note';
+ const note=el('p','VOT передаёт адрес видео и данные запроса внешним серверам Яндекса/VOT. Это отдельная функция от локального перевода страниц Soul. Перевод запускается кнопкой VOT на видео; громкость, язык и возврат оригинального звука регулируются там же.');note.className='note';
  const details=el('details'),summary=el('summary','Разрешения компонента');details.append(summary);const permissions=el('pre');permissions.style.cssText='white-space:pre-wrap;max-height:160px;overflow:auto;font:inherit';details.append(permissions);
  const consent=el('input');consent.type='checkbox';consent.id='gecko-vot-consent';const label=el('label');label.append(consent,document.createTextNode('Разрешаю включить встроенный VOT и обращаться к внешнему сервису перевода.'));
  const install=el('button','Включить встроенный VOT 1.12.6');install.type='button';install.id='gecko-vot-install';install.disabled=true;
