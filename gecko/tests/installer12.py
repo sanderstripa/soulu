@@ -169,7 +169,7 @@ try:
   reopened=subprocess.Popen([str(destination/'Soul.exe')],env=env)
   wait(listening,60);again=Marionette('127.0.0.1',port=mp);again.start_session();again.set_context('chrome');again.timeout.script=60
   check('launcher_reopens_after_normal_close',wait(lambda:again.execute_script('return !!window.Soulu?.ready&&Soulu.config.onboarding.done')))
-  check('reopened_browser_has_one_window',again.execute_script('return [...Services.wm.getEnumerator("navigator:browser")].filter(w=>!w.closed).length')==1)
+  windows=again.execute_script('return [...Services.wm.getEnumerator("navigator:browser")].filter(w=>!w.closed).map(w=>({uri:w.document.documentURI,ready:!!w.Soulu?.ready,title:w.document.title,hidden:!!w.__souluStartupHidden}));');check('reopened_browser_has_one_window',len(windows)==1,windows)
   second_pid=again.execute_script('return Services.appinfo.processID');second_handle=int(again.execute_script('return String(window.docShell.treeOwner.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIBaseWindow).nativeHandle)'),16);C.windll.user32.PostMessageW(C.c_void_p(second_handle),0x0010,0,0);reopened.wait(timeout=30)
   check('reopened_browser_process_exits_normally',wait(lambda:not psutil.pid_exists(second_pid),30))
   # A partially removed install is still recognized by its ownership manifest.

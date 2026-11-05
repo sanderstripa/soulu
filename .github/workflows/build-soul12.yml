@@ -111,3 +111,5 @@ jobs:
 # Close the reopened browser through the actual Windows close button path.
 
 # Keep last-window shutdown in a module that survives the closing window global.
+
+# Open exactly one explicit application start window outside session-restore mode.

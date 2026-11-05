@@ -44,6 +44,9 @@ func main(){exe,e:=os.Executable();if e!=nil{fail(e.Error())};base:=filepath.Dir
  sum:=sha256.Sum256([]byte(strings.ToLower(profile)));name,_:=syscall.UTF16PtrFromString(`Local\Soul.`+hex.EncodeToString(sum[:16]));h,_,last:=syscall.NewLazyDLL("kernel32.dll").NewProc("CreateMutexW").Call(0,0,uintptr(unsafe.Pointer(name)));if h==0{fail("Cannot create the profile session lock")};defer syscall.CloseHandle(syscall.Handle(h))
  // Native remoting never crosses profile or installed-Firefox boundaries.
  if last==syscall.Errno(183){for i:=0;i<100;i++{if forward(profile,address,private){return};time.Sleep(100*time.Millisecond)};fail("The profile is starting or busy. Try again shortly.")}
+ // An explicit initial window prevents the native default-startup handler from
+ // opening an additional window while the application home is being restored.
+ if len(args)==0{var saved struct{Settings struct{StartupMode string `json:"startupMode"`;StartupURL string `json:"startupUrl"`} `json:"settings"`};if data,err:=os.ReadFile(filepath.Join(profile,"soulu-settings.json"));err==nil{_ = json.Unmarshal(data,&saved)};if saved.Settings.StartupMode!="continue"{home:=(&url.URL{Scheme:"file",Path:"/"+filepath.ToSlash(filepath.Join(base,"engine","soulu","chrome","ui","home.html"))}).String();if saved.Settings.StartupMode=="blank"{home="about:blank"};if saved.Settings.StartupMode=="custom"&&webURL(saved.Settings.StartupURL){home=saved.Settings.StartupURL};args=[]string{"-new-window",home}}}
  if len(args)>0&&args[0]=="--private"{args=append([]string{"-private-window"},args[1:]...)}
  cmd:=exec.Command(filepath.Join(base,"engine","SoulEngine.exe"),append([]string{"-app",filepath.Join(base,"engine","browser","application.ini"),"-no-remote","-profile",profile},args...)...);cmd.Dir=base;if e=cmd.Start();e!=nil{fail(e.Error())};cmd.Wait()
 }
