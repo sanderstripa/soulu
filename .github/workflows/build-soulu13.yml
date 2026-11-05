@@ -93,3 +93,5 @@ jobs:
           if ($LASTEXITCODE) { throw 'Release publication failed' }
 
 # Verify native automatic add-on routing and themed control painting.
+
+# Theme choices use Soulu buttons, without a platform menulist surface.

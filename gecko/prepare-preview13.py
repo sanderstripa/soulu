@@ -54,10 +54,11 @@ with (ui/'gecko-frontend.css').open('a',encoding='utf-8') as f:f.write('''
 body[data-theme=dark]{color-scheme:dark}body[data-theme=light]{color-scheme:light}
 body[data-theme=dark] #controls :is(select,input:not([type=checkbox]),textarea){appearance:none;background:#303337;color:#f4f5f7;border-color:#555b65}
 #controls select{appearance:none;min-width:160px;border:1px solid #cfd3da;border-radius:12px;padding:10px 14px;color:inherit;background:Canvas}
-.card:has(.welcome-vpn) .hero{height:160px}.card:has(.welcome-vpn) .brand{top:44px}.card:has(.welcome-vpn) #art{transform:scale(.6)}
-.welcome-vpn{display:grid;gap:12px;width:100%;padding:16px;border:1px solid #80808035;border-radius:20px;background:#80808008}
-.welcome-vpn textarea{display:block;resize:vertical;width:100%;min-height:80px;box-sizing:border-box;padding:16px;border:1px solid #80808060;border-radius:14px;font:inherit;color:inherit;background:Canvas;line-height:1.5}
-.welcome-vpn button{justify-self:end;background:#0879e6;color:#fff;border-color:transparent}.welcome-vpn p:empty{display:none}.welcome-vpn-success{margin:0;padding:12px 16px;background:#15936518;border:1px solid #15936560;border-radius:12px;color:light-dark(#126844,#9be6bf)}
+.welcome-themes{display:flex;gap:12px}.welcome-themes button{flex:1;min-width:0;border-radius:14px;background:#80808015;color:inherit}.welcome-themes button[aria-pressed=true]{background:#0879e6;color:#fff;border-color:#0879e6}
+.card:has(.welcome-vpn) .content{padding:18px 30px}.card:has(.welcome-vpn) .hero{height:120px}.card:has(.welcome-vpn) .brand{top:28px}.card:has(.welcome-vpn) #art{transform:scale(.6)}
+.welcome-vpn{display:grid;gap:8px;width:100%;padding:12px;border:1px solid #80808035;border-radius:20px;background:#80808008}
+.welcome-vpn textarea{display:block;resize:vertical;width:100%;min-height:64px;box-sizing:border-box;padding:16px;border:1px solid #80808060;border-radius:14px;font:inherit;color:inherit;background:Canvas;line-height:1.5}
+.welcome-vpn button{justify-self:end;background:#0879e6;color:#fff;border-color:transparent}.welcome-vpn p:empty{display:none}.welcome-vpn-success{margin:0;padding:8px 12px;background:#15936518;border:1px solid #15936560;border-radius:12px;color:light-dark(#126844,#9be6bf)}
 .soulu-import-actions button.primary:only-of-type::after{content:none}.soulu-import-actions button[hidden]{display:none!important}
 ''')
 build=json.loads((out/'BUILD.json').read_text());build.update(name='Soulu 0.13.0 Preview',base_preview=12,soulu_source=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip());(out/'BUILD.json').write_text(json.dumps(build,indent=2))
