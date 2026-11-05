@@ -96,7 +96,7 @@ func imagePath(pid int)string{
 func activateSession(profile,exe string)bool{
  data,e:=os.ReadFile(filepath.Join(profile,"soulu-session.json"));if e!=nil||len(data)>2048{return false}
  var info sessionRecord;if json.Unmarshal(data,&info)!=nil||info.Leader<1||!strings.HasPrefix(info.Job,`Local\Soulu.Session.`+profileKey(profile)+"."){return false}
- if !strings.EqualFold(filepath.Clean(imagePath(info.Leader)),filepath.Clean(exe)){return false}
+ if !sameSessionExecutable(imagePath(info.Leader),exe){return false}
  wide,_:=syscall.UTF16PtrFromString(info.Job);h,_,_:=kernelSession.NewProc("OpenJobObjectW").Call(4,0,uintptr(unsafe.Pointer(wide)));if h==0{return false};j:=&sessionJob{handle:syscall.Handle(h),name:info.Job};defer j.Close()
  wins:=j.windows();if len(wins)==0{return false};hwnd:=wins[0]
  userSession.NewProc("ShowWindowAsync").Call(hwnd,9);userSession.NewProc("SetForegroundWindow").Call(hwnd);return true
@@ -113,4 +113,9 @@ func sessionWindowReady(hwnd uintptr)bool{
  if uint32(style)&0x80!=0{return false}
  title:=make([]uint16,1024);userSession.NewProc("GetWindowTextW").Call(hwnd,uintptr(unsafe.Pointer(&title[0])),uintptr(len(title)))
  return strings.Contains(syscall.UTF16ToString(title),"Soulu")
+}
+
+func sameSessionExecutable(a,b string)bool{
+ if strings.EqualFold(filepath.Clean(a),filepath.Clean(b)){return true}
+ left,e:=os.Stat(a);if e!=nil{return false};right,e:=os.Stat(b);return e==nil&&os.SameFile(left,right)
 }
