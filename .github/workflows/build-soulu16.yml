@@ -96,3 +96,5 @@ jobs:
           gh release create soulu-preview-16 Soulu-0.16.0-Preview-Setup-win64.exe Soulu-0.16.0-Preview-Setup-win64.exe.build.json SHA256SUMS.txt soulu16-checks/restart16.json soulu16-checks/installer16.json soulu16-checks/regressions16.json --target $env:GITHUB_SHA --title 'Soulu 0.16.0 Preview' --prerelease --notes-file gecko/docs/PREVIEW16-RESULTS.md
           if ($LASTEXITCODE) { throw 'Release publication failed' }
 
+
+# Verify the updater version by importing the generated module.

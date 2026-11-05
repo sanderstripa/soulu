@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
+import {pathToFileURL} from 'node:url';
 import assert from 'node:assert/strict';
 const [candidate,baseline]=process.argv.slice(2),report={passed:false,checks:{}};
 function check(name,value){report.checks[name]=!!value;console.log(name,!!value);assert.ok(value,name);}
@@ -28,8 +29,9 @@ try{
  const old=await presentsWithoutGPU(baseline),next=await presentsWithoutGPU(candidate);
  check('preview15_stalls_when_compositor_never_acknowledges',!old.presented&&old.queries>0);
  check('preview16_presents_without_compositor_acknowledgement',next.presented&&next.queries===0);
- const infoSource=chrome(candidate,'build-info.sys.mjs'),info={name:build(candidate).name,version:[...build(candidate).name.match(/0\.(\d+)\.(\d+)/)].slice(1).map(Number)};
- check('updater_uses_exact_package_version',infoSource.includes(JSON.stringify(info.name))&&infoSource.includes(JSON.stringify(info.version)));
+ const info=await import(pathToFileURL(path.resolve(candidate,'engine/soulu/chrome/build-info.sys.mjs')).href);
+ const expected=[...build(candidate).name.match(/0\.(\d+)\.(\d+)/)].slice(1).map(Number);
+ check('updater_uses_exact_package_version',info.name===build(candidate).name&&JSON.stringify(info.version)===JSON.stringify(expected));
  const select=updater(candidate,info),minor=info.version[0],patch=info.version[1];
  const oldSelect=updater(baseline,{name:build(baseline).name,version:[15,0]});
  check('preview15_reproduces_self_update_offer',oldSelect([release(15)])!==null);
