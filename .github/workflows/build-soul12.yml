@@ -33,7 +33,7 @@ jobs:
           gh run download 41834119852 -n gecko8-verified-build-inputs -D gecko-out
           if ($LASTEXITCODE) { throw 'Verified Preview 8 download failed' }
           python gecko/prepare-preview12.py
-          if ($LASTEXITCODE) { throw 'Preview 11 overlay failed' }
+          if ($LASTEXITCODE) { throw 'Soul 0.12.0 Preview overlay failed' }
           Push-Location gecko/launcher
           go run github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.5.0 -64 -o rsrc.syso
           if ($LASTEXITCODE) { throw 'Launcher resources failed' }
@@ -45,7 +45,7 @@ jobs:
           python -m pip install marionette_driver pillow psutil websocket-client
       - name: Verify requested welcome, extensions and restart scenarios
         run: python gecko/tests/preview12.py gecko-out/engine/SoulEngine.exe soul12-checks
-      - name: Build Preview 11 installer
+      - name: Build Soul 0.12.0 Preview installer
         id: installer
         if: ${{ !cancelled() && steps.assemble.outcome == 'success' }}
         shell: pwsh
@@ -67,7 +67,7 @@ jobs:
           path: |
             Soul-0.12.0-Preview-Setup-win64.exe
             Soul-0.12.0-Preview-Setup-win64.exe.build.json
-      - name: Publish tested Preview 11 installer
+      - name: Publish tested Soul 0.12.0 Preview installer
         shell: pwsh
         run: |
           python -c "import json,pathlib; paths=['preview12.json','installer12.json']; assert all(json.loads((pathlib.Path('soul12-checks')/p).read_text())['passed'] for p in paths)"
@@ -79,3 +79,5 @@ jobs:
 # Normalize the Mozilla optimized archive before early chrome styling.
 
 # Reconstruct the optimized central directory without altering file offsets.
+
+# Exercise the renamed application entry point and repair ownership marker.

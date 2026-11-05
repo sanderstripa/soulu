@@ -95,7 +95,7 @@ func verifyGecko(raw []byte) error {
 // manifest/build identity, not from the presence of one launcher executable.
 func repairableDirectory(dir string) bool {
  if data,e:=os.ReadFile(filepath.Join(dir,core.ManifestName));e==nil{var m core.FileManifest;if json.Unmarshal(data,&m)==nil&&m.Product=="soul"{return true}}
- if data,e:=os.ReadFile(filepath.Join(dir,"BUILD.json"));e==nil{var b struct{Name string `json:"name"`};if json.Unmarshal(data,&b)==nil&&strings.HasPrefix(b.Name,"Soul Preview "){return true}}
+ if data,e:=os.ReadFile(filepath.Join(dir,"BUILD.json"));e==nil{var b struct{Name string `json:"name"`};if json.Unmarshal(data,&b)==nil&&strings.HasPrefix(b.Name,"Soul "){return true}}
  // Older uninstallers leave empty engine folders and their own executable.
  // Ignore these leftovers, while rejecting unrelated files and all links.
  clean:=true
@@ -124,7 +124,7 @@ func (a *Adapter) Install(o core.Options) error {
  // Portable and installed Gecko share profiles: refuse upgrades while either owns one.
  profiles:=filepath.Join(os.Getenv("LOCALAPPDATA"),"Soul","Profiles");if dirs,e:=os.ReadDir(profiles);e==nil{for _,entry:=range dirs{if !entry.IsDir(){continue};lock:=filepath.Join(profiles,entry.Name(),"parent.lock");if _,e=os.Stat(lock);os.IsNotExist(e){continue};name,e:=windows.UTF16PtrFromString(lock);if e!=nil{return e};handle,e:=windows.CreateFile(name,windows.GENERIC_READ,0,nil,windows.OPEN_EXISTING,windows.FILE_ATTRIBUTE_NORMAL,0);if e!=nil{return fmt.Errorf("close Soul before installing: %w",e)};windows.CloseHandle(handle)}}
  // A CEF installation is a different product, even though both use Soul.exe.
- if _,e:=os.Stat(filepath.Join(dir,"Soul.exe"));e==nil{data,e:=os.ReadFile(filepath.Join(dir,"BUILD.json"));if e!=nil{return fmt.Errorf("choose a separate Gecko installation folder")};var build struct{Name string `json:"name"`};if json.Unmarshal(data,&build)!=nil||!strings.HasPrefix(build.Name,"Soul Preview "){return fmt.Errorf("this folder belongs to another browser")}}
+ if _,e:=os.Stat(filepath.Join(dir,"Soul.exe"));e==nil{data,e:=os.ReadFile(filepath.Join(dir,"BUILD.json"));if e!=nil{return fmt.Errorf("choose a separate Soul installation folder")};var build struct{Name string `json:"name"`};if json.Unmarshal(data,&build)!=nil||!strings.HasPrefix(build.Name,"Soul "){return fmt.Errorf("this folder belongs to another browser")}}
  geckoProfile:=strings.ToLower(filepath.Join(os.Getenv("LOCALAPPDATA"),"Soul"));if d==geckoProfile||strings.HasPrefix(d,geckoProfile+string(os.PathSeparator)){return fmt.Errorf("profile data cannot be used as an installation folder")}
 	// Refuse a running browser. Never invoke taskkill; the user closes it normally.
 	if err = core.CheckClosed(filepath.Join(dir, "engine", "SoulEngine.exe"));err!=nil{return err}
@@ -164,7 +164,7 @@ func (a *Adapter) Install(o core.Options) error {
 	if err = core.Shortcuts("Soul", dir, "Soul.exe", strings.TrimPrefix(icon, dir+string(os.PathSeparator)), "", o.Desktop, o.StartMenu); err != nil {
 		return err
 	}
-	if err = setReg(uninstallKey, map[string]string{"DisplayName": "Soul 0.12.0 Preview", "DisplayVersion": products.Version("soulu"), "Publisher": "Soulu", "InstallLocation": dir, "DisplayIcon": exe, "UninstallString": `"` + filepath.Join(dir, "Uninstall Soul.exe") + `" --uninstall`}); err != nil {
+	if err = setReg(uninstallKey, map[string]string{"DisplayName": "Soul 0.12.0 Preview", "DisplayVersion": products.Version("soulu"), "Publisher": "Soul", "InstallLocation": dir, "DisplayIcon": exe, "UninstallString": `"` + filepath.Join(dir, "Uninstall Soul.exe") + `" --uninstall`}); err != nil {
 		return err
 	}
  // Register this isolated product without changing Windows UserChoice.
@@ -177,6 +177,10 @@ func (a *Adapter) Install(o core.Options) error {
  {`Software\Clients\StartMenuInternet\Soul\Capabilities\URLAssociations`,map[string]string{"http":"Soul.URL","https":"Soul.URL"}},
  {`Software\RegisteredApplications`,map[string]string{"Soul":`Software\Clients\StartMenuInternet\Soul\Capabilities`}},
  }{if err=setReg(item.key,item.values);err!=nil{return err}}
+ // Move previous application profiles into the renamed product, never deleting them.
+ oldProfiles:=filepath.Join(os.Getenv("LOCALAPPDATA"),"SouluGecko","Profiles");newProfiles:=filepath.Join(os.Getenv("LOCALAPPDATA"),"Soul","Profiles");if _,e:=os.Stat(newProfiles);os.IsNotExist(e){if _,e=os.Stat(oldProfiles);e==nil{if e=os.MkdirAll(filepath.Dir(newProfiles),0700);e!=nil{return e};if e=os.Rename(oldProfiles,newProfiles);e!=nil{return fmt.Errorf("Не удалось перенести прежние профили: %w",e)}}}
+ // Remove obsolete registrations of our own prior product only.
+ _=registry.DeleteKey(registry.CURRENT_USER,`Software\Microsoft\Windows\CurrentVersion\Uninstall\SouluGecko`)
  prefs:=filepath.Join(os.Getenv("LOCALAPPDATA"),"Soul","install-preferences.json");if err=os.MkdirAll(filepath.Dir(prefs),0700);err!=nil{return err};options,_:=json.Marshal(map[string]string{"language":o.Language,"theme":o.Theme});if err=core.AtomicWrite(prefs,options);err!=nil{return err}
 	// All profile, theme, language, history and extension data remain untouched.
 	a.dir = dir

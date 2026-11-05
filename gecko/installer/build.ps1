@@ -18,7 +18,7 @@ Get-ChildItem $adapter -Filter '*_test.go' | Remove-Item
 Copy-Item (Join-Path $PSScriptRoot 'payload_windows_test.go') $adapter
 Copy-Item (Join-Path $PSScriptRoot 'repair_windows_test.go') $adapter
 $product=Get-Content (Join-Path $core 'products/soulu.json') -Raw | ConvertFrom-Json
-$product.name='Soul';$product.version='0.12.0-preview';$product.id='soul';$product.engine='Soulu'
+$product.name='Soul';$product.version='0.12.0-preview';$product.id='soul';$product.engine='Soul'
 $product | ConvertTo-Json | Set-Content (Join-Path $core 'products/soulu.json') -Encoding utf8
 Copy-Item (Join-Path $repo 'ui/branding/soulu-128.png') (Join-Path $core 'core/web/assets/icon.png') -Force
 $uiPath=Join-Path $core 'core/web/setup.js'

@@ -68,3 +68,6 @@ build.update(name='Soul 0.12.0 Preview');(out/'BUILD.json').write_text(json.dump
 
 for name in ['branding/brand.properties','locales/ru/branding/brand.ftl','locales/en-US/branding/brand.ftl']:
  p=runtime/'soulu/chrome'/name;p.write_text(p.read_text(encoding='utf-8').replace('Soulu','Soul'),encoding='utf-8')
+
+# Unpackaged desktop applications use the browser's network geolocation provider.
+with (runtime/'defaults/pref/autoconfig.js').open('a',encoding='utf-8') as f:f.write('\npref("geo.provider.ms-windows-location",false);')
