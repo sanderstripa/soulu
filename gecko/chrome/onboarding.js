@@ -15,12 +15,13 @@ Soulu.dispatch=async(action,payload,source)=>{
   if(typeof payload.weatherLocation==='boolean'){c.rules.sites['soulu://home']={...(c.rules.sites['soulu://home']||{}),geolocation:payload.weatherLocation?0:2};}
   if(typeof payload.adblock==='boolean'){c.rules.blocking.enabled=payload.adblock;current.privacyApplied=true;}
   if(typeof payload.askPermissions==='boolean'){for(const k of ['camera','microphone','geolocation','notifications'])c.rules.defaults[k]=payload.askPermissions?1:2;current.privacyApplied=true;}
-  c.onboarding=current;const result=await base('settings.save',c,source);if(!result.ok)throw Error(result.error);return {flow:current,settings:shared.config.settings,rules:shared.config.rules};
+  c.onboarding=current;const result=await base('settings.save',c,source);if(!result.ok)throw Error(result.error);if(payload.weatherLocation===true)Soulu.weather({interactive:false}).catch(console.error);return {flow:current,settings:shared.config.settings,rules:shared.config.rules};
  }
  if(action==='onboarding.import'){current.importOpened=true;await save();return Soulu.dispatch('browser.import.native',null,source);}
  if(action==='onboarding.vpn'){
  const link=String(payload?.link||'').trim();if(!/^vless:\/\/|^sudoku:\/\//.test(link)||link.length>16384)throw Error('Введите ключ VLESS или Sudoku.');
- const c=structuredClone(shared.config),id=Services.uuid.generateUUID().toString();c.vpn.profiles.push({id,name:String(payload.name||'VPN'),link});c.vpn.defaultProfileId=id;
+ const sandbox=Cu.Sandbox(Services.scriptSecurityManager.getSystemPrincipal());sandbox.window=sandbox;sandbox.URL=URL;sandbox.atob=atob;Services.scriptloader.loadSubScript('chrome://soulu/content/ui/vpn-key.js',sandbox);const parsed=Cu.waiveXrays(sandbox).souluParseVpnKey(link);const row=JSON.parse(JSON.stringify(parsed));const c=structuredClone(shared.config),id=Services.uuid.generateUUID().toString();row.id=id;row.name=row.region&&row.region!=='Не указан'?row.region:row.address;
+ const existing=c.vpn.profiles.find(p=>p.link===row.link);if(!existing)c.vpn.profiles.push(row);c.vpn.defaultProfileId=existing?.id||id;for(const field of ['link','protocol','address','region'])c.vpn[field]=row[field];
  const result=await base('settings.save',c,source);if(!result.ok)throw Error(result.error);return {ok:true};
  }
  if(action==='onboarding.default')return Soulu.dispatch('settings.defaultBrowser',null,source);

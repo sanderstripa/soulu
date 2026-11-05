@@ -24,7 +24,16 @@ export function consolidateAutomaticStart(win){
  const backend=win.Soulu?.backend;if(!backend)return;
  const {shared,isPrivate}=backend,owner=shared.initialWindow;
  if(isPrivate||shared.initialUserInput||!owner||owner.closed||shared.config.settings.startupMode==='continue')return;
- const empty=w=>{if(w.closed||!w.Soulu?.backend||w.Soulu.backend.isPrivate||w.gBrowser?.tabs.length!==1)return false;const uri=w.gBrowser.selectedBrowser.currentURI.spec;return ['about:blank','about:newtab','about:home',w.Soulu.native.homeURL].includes(uri);};
- if(!empty(owner))return;
- for(const other of Services.wm.getEnumerator('navigator:browser'))if(other!==owner&&empty(other))other.close();
+ const startupURL=(w,uri)=>['about:blank','about:newtab','about:home',w.Soulu?.native.homeURL].includes(uri);
+ const automatic=w=>!w.closed&&w.Soulu?.backend&&!w.Soulu.backend.isPrivate&&w.gBrowser&&[...w.gBrowser.tabs].every(tab=>{const uri=tab.linkedBrowser.currentURI.spec;return startupURL(w,uri)||/^about:addons(?:[?#]|$)/.test(uri)||uri.startsWith('moz-extension://');});
+ for(const other of Services.wm.getEnumerator('navigator:browser')){
+  if(other===owner||other.__souluStartupConsolidated||!automatic(other))continue;
+  other.__souluStartupConsolidated=true;
+  for(const tab of [...other.gBrowser.tabs]){
+   if(tab.closing)continue;
+   if(startupURL(other,tab.linkedBrowser.currentURI.spec)&&[...owner.gBrowser.tabs].some(t=>startupURL(owner,t.linkedBrowser.currentURI.spec)))continue;
+   owner.gBrowser.adoptTab(tab,owner.gBrowser.tabs.length,false);
+  }
+  if(!other.closed)other.close();owner.Soulu?.notify();
+ }
 }

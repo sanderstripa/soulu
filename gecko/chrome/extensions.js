@@ -63,6 +63,7 @@ Soulu.dispatch=async(action,payload,source)=>{
  if(action==='browser.extensions.open')return open(payload,source);
  if(action==='browser.extensions.overflow'){
   checkRequest(payload,source);closePopup();const available=(await list()).items.filter(i=>i.enabled&&i.action),menu=document.createXULElement('menupopup');menu.dataset.souluExtensions='true';let chosen=null;
+  if(!available.length){const empty=document.createXULElement('menuitem');empty.setAttribute('label','Нет расширений');empty.setAttribute('disabled','true');menu.append(empty);}
   for(const item of available){const node=document.createXULElement('menuitem');node.setAttribute('label',item.title||item.name);if(/^data:image\//.test(item.icon||'')){node.classList.add('menuitem-iconic');node.setAttribute('image',item.icon);}node.dataset.extensionId=item.id;if(!item.actionEnabled)node.setAttribute('disabled','true');node.addEventListener('command',event=>{if(event.isTrusted)chosen=item.id;});menu.append(node);}
   document.getElementById('mainPopupSet').append(menu);return new Promise((resolve,reject)=>{menu.addEventListener('popuphidden',()=>{menu.remove();if(!chosen){resolve({open:false});return;}open({...payload,id:chosen},{...source,gesture:{at:Date.now()}}).then(resolve,reject);},{once:true});const r=payload.anchor;if(!r||!['x','y','width','height'].every(k=>Number.isFinite(r[k]))){menu.remove();reject(Error('Invalid menu anchor'));return;}menu.openPopupAtScreen(window.mozInnerScreenX+r.x,window.mozInnerScreenY+r.y+r.height,false);});
  }
