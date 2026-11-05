@@ -35,7 +35,7 @@ p=ui/'settings.js';s=p.read_text(encoding='utf-8');s=s.replace("function openSec
 p=ui/'onboarding.html';s=p.read_text(encoding='utf-8').replace('content="light"','content="light dark"');p.write_text(s,encoding='utf-8')
 for p in (engine/'soulu/chrome').rglob('*'):
  if p.is_file() and p.suffix in ['.js','.mjs','.html','.css','.properties','.ftl'] and 'third_party' not in p.parts:
-  s=p.read_text(encoding='utf-8');s=re.sub(r'\bSoul\b','Soulu',s).replace('SoulEngine','SouluEngine').replace('0.14.0','0.15.0');p.write_text(s,encoding='utf-8')
+  s=p.read_text(encoding='utf-8');s=re.sub(r'\bSoul\b','Soulu',s).replace('SoulEngine','SouluEngine').replace('0.13.0','0.15.0').replace('0.14.0','0.15.0');p.write_text(s,encoding='utf-8')
 for name in ['branding/brand.properties','locales/ru/branding/brand.ftl','locales/en-US/branding/brand.ftl']:
  p=engine/'soulu/chrome'/name;p.write_text(p.read_text(encoding='utf-8').replace('Soulu','Soulu'),encoding='utf-8')
 ini=configparser.ConfigParser();ini.optionxform=str;ini.read(engine/'application.ini');ini['App']['Name']='Soulu';ini['App']['Vendor']='Soulu';ini['App']['RemotingName']='Soulu'

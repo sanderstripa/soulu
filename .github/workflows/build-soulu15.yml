@@ -109,3 +109,5 @@ jobs:
 # Native close clicks use client coordinates, excluding maximized resize borders.
 
 # First-use dwell covers the deferred background startup work before closure.
+
+# All own version markers, including inherited source markers, identify Preview 15.
