@@ -94,3 +94,5 @@ jobs:
 # Keep XRE application directory at engine/browser for the external app manifest.
 
 # Capture actual visible startup frames for review.
+
+# XRE ini parser requires exact Name=Value without padded key names.

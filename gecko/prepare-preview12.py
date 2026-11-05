@@ -41,7 +41,7 @@ import configparser,zipfile
 runtime.rename(out/'engine');runtime=out/'engine'
 (runtime/'firefox.exe').rename(runtime/'SoulEngine.exe')
 ini=configparser.ConfigParser();ini.optionxform=str;ini.read(runtime/'application.ini');ini['App']['Name']='Soul';ini['App']['Vendor']='Soul';ini['App']['RemotingName']='Soul'
-with (runtime/'application.ini').open('w') as f:ini.write(f)
+with (runtime/'application.ini').open('w') as f:ini.write(f,space_around_delimiters=False)
 # XRE uses the ini's parent as application directory; browser/ contains its omni.ja.
 shutil.copyfile(runtime/'application.ini',runtime/'browser/application.ini')
 # Hide stock browser chrome in the document itself, before any startup script.

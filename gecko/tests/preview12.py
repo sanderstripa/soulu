@@ -62,8 +62,15 @@ except Exception as e:
   from PIL import ImageGrab
   ImageGrab.grab().save(out/'failure-desktop.png')
  except Exception:pass
- try:print(chrome('return Services.console.getMessageArray().map(x=>x.message).slice(-25)'),flush=True)
- except Exception:pass
+ try:print(chrome('return {uri:document.documentURI,name:Services.appinfo.name,console:Services.console.getMessageArray().map(x=>x.message).slice(-40)}'),flush=True)
+ except Exception as diagnostics_error:
+  print('normal diagnostics unavailable',str(diagnostics_error),flush=True)
+  try:
+   print('window handles',m.window_handles,flush=True)
+   for handle in m.window_handles:
+    m.switch_to_window(handle);m.set_context('chrome')
+    print(m.execute_script('return {uri:document.documentURI,console:Components.classes["@mozilla.org/consoleservice;1"].getService(Components.interfaces.nsIConsoleService).getMessageArray().map(x=>x.message).slice(-60)};'),flush=True)
+  except Exception as error:print('fallback diagnostics',str(error),flush=True)
  raise
 finally:
  try:stop()
