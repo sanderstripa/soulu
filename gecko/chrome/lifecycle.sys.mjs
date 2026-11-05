@@ -1,22 +1,27 @@
 /* Process lifetime belongs to the application, not a closing window global. */
 const {setTimeout,clearTimeout}=ChromeUtils.importESModule('resource://gre/modules/Timer.sys.mjs');
-let registered=false,timer=null,quitting=false,applicationState;
-async function stopOwnedServices(){
+let registered=false,timer=null,quitting=false,applicationState,shutdownTask;
+function stopOwnedServices(){return shutdownTask??=(async()=>{
  const state=applicationState;if(!state)return;
- try{state.remote?.socket.close();}catch{}
+ try{state.remote?.stop();}catch{}
  const helper=state.helper;state.helper=null;
  if(helper){
   let exited=false;const ended=(async()=>{try{await helper.stdin.close();}catch{}await helper.wait();})().then(()=>{exited=true;},()=>{exited=true;});
   await Promise.race([ended,new Promise(resolve=>setTimeout(resolve,1500))]);
   if(!exited){try{helper.kill();}catch{}}
  }
-}
+})();}
 export async function closeWindow(win,shared){
- await shared.saveQueue;win.close();
+ win.__souluClosing=true;
+ try{await shared.saveQueue;}catch(error){win.__souluClosing=false;throw error;}
+ const others=[...Services.wm.getEnumerator('navigator:browser')].filter(w=>w!==win&&!w.closed&&!w.__souluClosing);
+ if(others.length===0)Services.startup.quit(Ci.nsIAppStartup.eAttemptQuit);
+ else win.close();
+ if(!win.closed)win.__souluClosing=false;
 }
 
 const observer={observe(_subject,topic){
- if(topic==='quit-application-granted'){quitting=true;if(timer)clearTimeout(timer);return;}
+ if(topic==='quit-application-granted'){quitting=true;if(timer)clearTimeout(timer);stopOwnedServices().catch(console.error);return;}
  if(quitting)return;
  if(timer)clearTimeout(timer);
  timer=setTimeout(()=>{timer=null;if(quitting)return;
@@ -43,7 +48,10 @@ export function ensureApplicationLifetime(win,shared){
  }
  const interacted=event=>{if(event.isTrusted)shared.initialUserInput=true;};
  win.addEventListener('mousedown',interacted,true);win.addEventListener('keydown',interacted,true);
- if(registered)return;registered=true;Services.obs.addObserver(observer,'domwindowclosed');Services.obs.addObserver(observer,'quit-application-granted');}
+ if(registered)return;registered=true;
+ const {AsyncShutdown}=ChromeUtils.importESModule('resource://gre/modules/AsyncShutdown.sys.mjs');
+ AsyncShutdown.profileBeforeChange.addBlocker('Soulu: close owned native services',stopOwnedServices);
+ Services.obs.addObserver(observer,'domwindowclosed');Services.obs.addObserver(observer,'quit-application-granted');}
 
 // Suppress only redundant, empty automatic windows before the first user input.
 // User-created windows and every window with actual page data remain untouched.
