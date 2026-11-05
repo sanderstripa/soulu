@@ -100,3 +100,5 @@ jobs:
 # Use Soul labels in the packaged settings and update controls.
 
 # Avoid re-triggering the add-on document observer with an unchanged title.
+
+# Close the reopened browser through the actual Windows close button path.
