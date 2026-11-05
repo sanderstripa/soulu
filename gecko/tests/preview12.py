@@ -58,6 +58,10 @@ try:
  report['passed']=True
 except Exception as e:
  report['error']=str(e)
+ try:
+  from PIL import ImageGrab
+  ImageGrab.grab().save(out/'failure-desktop.png')
+ except Exception:pass
  try:print(chrome('return Services.console.getMessageArray().map(x=>x.message).slice(-25)'),flush=True)
  except Exception:pass
  raise
