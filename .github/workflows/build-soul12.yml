@@ -87,3 +87,5 @@ jobs:
 # Run direct-engine tests with the same application.ini as Soul.exe.
 
 # Keep XRE application directory at engine/browser for the external app manifest.
+
+# Capture actual visible startup frames for review.

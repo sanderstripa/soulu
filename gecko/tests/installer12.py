@@ -1,6 +1,7 @@
 """Real CEF-style installer UI: install, launch, upgrade, uninstall, and preserved data."""
 import base64,contextlib,ctypes as C,json,os,pathlib,socket,sqlite3,subprocess,sys,tempfile,time,urllib.request,winreg
-import websocket
+import websocket,threading,psutil
+from PIL import ImageGrab
 from marionette_driver.marionette import Marionette
 exe=pathlib.Path(sys.argv[1]).resolve();out=pathlib.Path(sys.argv[2]).resolve();out.mkdir(parents=True,exist_ok=True)
 report={'passed':False,'checks':{}};serial=0;opener=urllib.request.build_opener(urllib.request.ProxyHandler({}))
@@ -94,6 +95,28 @@ def setup(binary,environment,uninstall=False):
    if process:
     try:process.wait(timeout=15)
     except subprocess.TimeoutExpired:process.terminate();process.wait(timeout=10)
+def watch_launch(destination):
+ stopped=threading.Event();observed=[]
+ def record():
+  index=0
+  @C.WINFUNCTYPE(C.c_bool,C.c_void_p,C.c_void_p)
+  def inspect(hwnd,_):
+   nonlocal index
+   if not C.windll.user32.IsWindowVisible(hwnd):return True
+   pid=C.c_ulong();C.windll.user32.GetWindowThreadProcessId(hwnd,C.byref(pid))
+   try:
+    if pathlib.Path(psutil.Process(pid.value).exe()).resolve()!=(destination/'engine/SoulEngine.exe').resolve():return True
+   except (OSError,psutil.Error):return True
+   cloaked=C.c_int();C.windll.dwmapi.DwmGetWindowAttribute(hwnd,14,C.byref(cloaked),4)
+   if cloaked.value:return True
+   title=C.create_unicode_buffer(1024);C.windll.user32.GetWindowTextW(hwnd,title,1024)
+   observed.append({'at':time.monotonic(),'title':title.value})
+   if index<30:
+    picture=ImageGrab.grab();picture.thumbnail((1000,700));picture.save(out/f'launch-frame-{index:02}.png');index+=1
+   return True
+  while not stopped.is_set():C.windll.user32.EnumWindows(inspect,0);stopped.wait(.1)
+ thread=threading.Thread(target=record,daemon=True);thread.start()
+ return stopped,thread,observed
 def capture(ws,name):
  data=command(ws,'Page.captureScreenshot',{'format':'png','captureBeyondViewport':False});(out/name).write_bytes(base64.b64decode(data['data']))
 def version(ws,stage):
@@ -115,11 +138,14 @@ try:
    wait(lambda:evaluate(ws,'document.body.dataset.stage==="finish"'),120);version(ws,'finish');capture(ws,'installer-finish.png')
    check('installed_engine_and_uninstaller_exist',(destination/'Soul.exe').is_file() and (destination/'engine/xul.dll').is_file() and (destination/'Uninstall Soul.exe').is_file())
    check('installer_does_not_change_system_proxy',proxy_snapshot()==original_proxy)
+   recording,recorder,observed=watch_launch(destination)
    evaluate(ws,'document.getElementById("launch").checked=true;document.getElementById("done").click();true');process.wait(timeout=20)
   def listening():
    with socket.create_connection(('127.0.0.1',mp),timeout=.2):return True
   wait(listening,60);m=Marionette('127.0.0.1',port=mp);m.start_session();m.set_context('chrome');m.timeout.script=60
   wait(lambda:m.execute_script('return !!window.Soulu?.ready&&!window.__souluStartupHidden&&document.documentElement.hasAttribute("soulu-ui-ready")'))
+  time.sleep(.5);recording.set();recorder.join(timeout=5);(out/'launch-windows.json').write_text(json.dumps(observed,indent=2))
+  check('no_visible_firefox_window_during_first_launch',bool(observed) and not any('firefox' in x['title'].lower() for x in observed))
   check('engine_application_identity_is_soul',m.execute_script('return Services.appinfo.name')=='Soul')
   check('no_new_firefox_os_registration',firefox_registrations()==original_firefox)
   check('payload_has_no_firefox_installer_tools',not any(p.name.lower() in ['firefox.exe','helper.exe','default-browser-agent.exe','maintenanceservice_installer.exe'] for p in destination.rglob('*.exe')))

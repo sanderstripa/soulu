@@ -41,6 +41,7 @@ try:
  check('welcome_remains_visible',ui('return location.pathname.endsWith("/onboarding.html")&&document.getElementById("controls").textContent.includes("OK")','page'))
  call('browser.extensions.manage',{'profile':'default'})
  check('extensions_manager_opens',wait(lambda:chrome('return gBrowser.selectedBrowser.currentURI.spec==="about:addons"')))
+ check('extensions_manager_has_soul_title',wait(lambda:content('return document.title.includes(\"Soul\")&&!document.body.innerText.includes(\"Firefox\");')))
  check('no_stock_toolbar',chrome('return getComputedStyle(document.getElementById("navigator-toolbox")).display==="none"'))
  run('Soulu.config.onboarding={done:true,step:6};await Soulu.backend.save();return true;')
  stop();start()
