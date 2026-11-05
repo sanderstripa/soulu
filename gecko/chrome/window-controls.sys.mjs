@@ -33,15 +33,7 @@ export function isDefault(){
  return ['http','https'].every(scheme=>{let key;try{key=Cc['@mozilla.org/windows-registry-key;1'].createInstance(Ci.nsIWindowsRegKey);key.open(Ci.nsIWindowsRegKey.ROOT_KEY_CURRENT_USER,'Software\\Microsoft\\Windows\\Shell\\Associations\\UrlAssociations\\'+scheme+'\\UserChoice',Ci.nsIWindowsRegKey.ACCESS_READ);return key.readStringValue('ProgId')==='Soulu.URL';}catch{return false;}finally{key?.close();}});
 }
 
-// Present the native window only once its real Soulu controls and state are ready.
-// This does not create a splash window or expose a nonfunctional placeholder.
-function cloak(win,enabled){
- const abi=ctypes.winapi_abi||ctypes.default_abi;
- const set=library('dwmapi.dll').declare('DwmSetWindowAttribute',abi,ctypes.int32_t,ctypes.uintptr_t,ctypes.uint32_t,ctypes.voidptr_t,ctypes.uint32_t);
- const value=ctypes.int(enabled?1:0);const result=set(handle(win),13,value.address(),ctypes.int.size);
- if(Number(result)!==0)throw Error('DWM cloak failed: '+result);
- const get=library('dwmapi.dll').declare('DwmGetWindowAttribute',abi,ctypes.int32_t,ctypes.uintptr_t,ctypes.uint32_t,ctypes.voidptr_t,ctypes.uint32_t),observed=ctypes.uint32_t();const status=get(handle(win),14,observed.address(),ctypes.uint32_t.size);return {setStatus:Number(result),getStatus:Number(status),observed:Number(observed.value)};
-}
+// Keep only the initial taskbar suppression; native window visibility owns presentation.
 // A hidden/cloaked composing window must not get a transient taskbar button.
 function taskbarPending(win,pending){
  if(Services.appinfo.OS!=='WINNT')return;
@@ -54,59 +46,29 @@ function taskbarPending(win,pending){
 }
 export function prepareStartup(win){
  if(win.__souluStartupHidden)return;
- win.__souluStartupPresentation={preparedAt:Date.now()};
+ win.__souluStartupPresentation={preparedAt:Date.now(),mode:'native'};
  try{
   taskbarPending(win,true);
   win.docShell.treeOwner.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIBaseWindow).visibility=false;
-  if(Services.appinfo.OS==='WINNT'){win.__souluStartupPresentation.native=cloak(win,true);win.__souluStartupCloaked=true;}
-  else win.docShell.treeOwner.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIBaseWindow).visibility=false;
   win.__souluStartupHidden=true;
-  // A timeout must never expose Firefox chrome or an uncomposed Soulu frame.
-  win.__souluStartupRevealTimer=win.setTimeout(()=>{if(win.document.documentElement.hasAttribute('soulu-ui-ready'))revealStartup(win);else console.error('Soulu frontend initialization timed out');},8000);
- }catch(error){win.__souluStartupPresentation.error=String(error);console.error('Soulu initial presentation',String(error));}
+  // Use the early native Show path. Never wait for a GPU layer/actor acknowledgement.
+  win.__souluStartupRevealTimer=win.setTimeout(()=>{
+   if(win.Soulu?.ready)revealStartup(win);
+   else console.error('Soulu initialization did not finish');
+  },8000);
+ }catch(error){win.__souluStartupPresentation.error=String(error);console.error(error);}
 }
 export function revealStartup(win){
- if(!win.__souluStartupHidden||win.__souluStartupRevealing)return;
- win.__souluStartupRevealing=true;
+ if(!win.__souluStartupHidden||win.closed)return;
  win.clearTimeout(win.__souluStartupRevealTimer);
- // AppWindow must be allowed to create its backing surface only after Soulu
- // is ready. Its first Show() resets DWMWA_CLOAK, so reapply it synchronously.
- win.docShell.treeOwner.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIBaseWindow).visibility=true;
- if(win.__souluStartupCloaked)cloak(win,true);
- const present=()=>{
-  if(!win.__souluStartupHidden)return;
-  try{
-   if(win.__souluStartupCloaked){cloak(win,false);win.__souluStartupCloaked=false;}
-   else win.docShell.treeOwner.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIBaseWindow).visibility=true;
-   taskbarPending(win,false);
-   win.__souluStartupHidden=false;win.__souluStartupPresentation.presentedAt=Date.now();win.focus();win.dispatchEvent(new win.Event('SouluPresented'));
-  }catch(error){console.error(error);}
- };
- // Flush the real remote UI's layer transaction once. DOM readiness alone
- // does not mean that WebRender has received the file process's controls.
- (async()=>{
-  // Empty automatic startup peers must not be presented as extra windows.
-  const lifetime=ChromeUtils.importESModule('chrome://soulu/content/lifecycle.sys.mjs');
-  lifetime.consolidateAutomaticStart(win);
-  if(win.closed)return;
-  const frame=win.document.getElementById('soulu-shell-frame');
-  const remote=frame?.frameLoader?.remoteTab;
-  if(!remote)throw Error('Soulu UI process is not available');
-  remote.renderLayers=true;
-  await frame.browsingContext.currentWindowGlobal.getActor('SouluApp').sendQuery('preparePresentation');
-  if(!remote.hasLayers)await new Promise((resolve,reject)=>{
-   const ready=()=>{if(!remote.hasLayers)return;win.removeEventListener('MozLayerTreeReady',ready);win.clearTimeout(timer);resolve();};
-   win.addEventListener('MozLayerTreeReady',ready);
-   const timer=win.setTimeout(()=>{win.removeEventListener('MozLayerTreeReady',ready);reject(Error('Soulu compositor did not receive UI layers'));},3000);
-   ready();
-  });
-  win.windowUtils.updateLayerTree();
-  // Hidden windows may never receive rAF; compositor has already acknowledged layers.
-  await new Promise(resolve=>ChromeUtils.importESModule('resource://gre/modules/Timer.sys.mjs').setTimeout(resolve,0));
-  win.windowUtils.updateLayerTree();
-  // Do not block the UI thread on DwmFlush: GPU/driver stalls can create a
-  // Windows ghost window. Gecko layer acknowledgement is the presentation gate.
-  win.__souluStartupPresentation.layersReadyAt=Date.now();present();
- })().catch(error=>{win.__souluStartupPresentation.error=String(error);win.__souluStartupRevealing=false;console.error(error);if(!win.closed)win.__souluStartupRevealTimer=win.setTimeout(()=>revealStartup(win),1000);});
+ ChromeUtils.importESModule('chrome://soulu/content/lifecycle.sys.mjs').consolidateAutomaticStart(win);
+ if(win.closed)return;
+ try{
+  win.document.title='Soulu';
+  win.docShell.treeOwner.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIBaseWindow).visibility=true;
+  taskbarPending(win,false);
+  win.__souluStartupHidden=false;
+  win.__souluStartupPresentation.presentedAt=Date.now();
+  win.focus();win.dispatchEvent(new win.Event('SouluPresented'));
+ }catch(error){win.__souluStartupPresentation.error=String(error);console.error(error);}
 }
-
