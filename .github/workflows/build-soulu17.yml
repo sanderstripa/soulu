@@ -108,3 +108,5 @@ jobs:
 # Defer heavy background initialization until paint, without hiding the window.
 
 # Native focus validates the executable file identity, including Windows short paths.
+
+# The GUI recovery fixture has no console, without forcing its form hidden.

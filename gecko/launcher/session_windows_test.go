@@ -18,11 +18,11 @@ func TestProfilesHaveIndependentSessionLocks(t *testing.T){
 func TestClosedHungSessionIsRecoveredWithoutKillingVisibleWindows(t *testing.T){
  profile:=t.TempDir();job,e:=newSessionJob(profile);if e!=nil{t.Fatal(e)};defer job.Close()
  command:=`Add-Type -AssemblyName System.Windows.Forms;$f=New-Object System.Windows.Forms.Form;$f.Text='Soulu session test';[void]$f.ShowDialog();Start-Sleep -Seconds 300`
- cmd:=exec.Command("powershell.exe","-NoProfile","-Command",command);cmd.SysProcAttr=&syscall.SysProcAttr{HideWindow:true};if e=cmd.Start();e!=nil{t.Fatal(e)}
+ cmd:=exec.Command("powershell.exe","-NoProfile","-Command",command);cmd.SysProcAttr=&syscall.SysProcAttr{CreationFlags:0x08000000};if e=cmd.Start();e!=nil{t.Fatal(e)}
  if e=job.Assign(cmd.Process.Pid);e!=nil{cmd.Process.Kill();cmd.Wait();t.Fatal(e)}
  done:=make(chan struct{});go func(){cmd.Wait();close(done)}()
  events:=make(chan string,10);go job.watch(done,400*time.Millisecond,func(s string){events<-s})
- select{case stage:=<-events:if stage!="visible"{t.Fatal(stage)};case <-time.After(20*time.Second):t.Fatal("test window was not visible")}
+ select{case stage:=<-events:if stage!="visible"{t.Fatal(stage)};case <-time.After(20*time.Second):active,err:=job.active();t.Fatalf("test window was not visible: active=%d err=%v windows=%v",active,err,job.windows())}
  time.Sleep(900*time.Millisecond);select{case <-done:t.Fatal("visible window was terminated");default:}
  if e=writeSessionRecord(profile,job);e!=nil{t.Fatal(e)};exe,_:=os.Executable();if !activateSession(profile,exe){t.Fatal("native focus fallback failed")}
  other:=t.TempDir();data,_:=os.ReadFile(filepath.Join(profile,"soulu-session.json"));os.WriteFile(filepath.Join(other,"soulu-session.json"),data,0600);if activateSession(other,exe){t.Fatal("another profile was activated")}
