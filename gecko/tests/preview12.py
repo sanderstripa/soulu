@@ -1,7 +1,7 @@
 """Requested Soul regressions against the production application surface."""
 from pathlib import Path
 source=Path(__file__).with_name('preview4.py').read_text().split('\ntry:\n start()',1)[0]
-source=source.replace("exec(compile(source,", "source=source.replace(\"else:command=[str(binary),*headless\",\"else:command=[str(binary),'-app',str(binary.parent/'application.ini'),*headless\")\nexec(compile(source,")
+source=source.replace("exec(compile(source,", "source=source.replace(\"else:command=[str(binary),*headless\",\"else:command=[str(binary),'-app',str(binary.parent/'browser/application.ini'),*headless\")\nexec(compile(source,")
 exec(compile(source,str(Path(__file__).with_name('preview4.py')),'exec'),globals())
 import sqlite3
 report={'passed':False,'checks':{}}

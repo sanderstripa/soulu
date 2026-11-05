@@ -45,6 +45,6 @@ func main(){exe,e:=os.Executable();if e!=nil{fail(e.Error())};base:=filepath.Dir
  // Native remoting never crosses profile or installed-Firefox boundaries.
  if last==syscall.Errno(183){for i:=0;i<100;i++{if forward(profile,address,private){return};time.Sleep(100*time.Millisecond)};fail("The profile is starting or busy. Try again shortly.")}
  if len(args)>0&&args[0]=="--private"{args=append([]string{"-private-window"},args[1:]...)}
- cmd:=exec.Command(filepath.Join(base,"engine","SoulEngine.exe"),append([]string{"-app",filepath.Join(base,"engine","application.ini"),"-no-remote","-profile",profile},args...)...);cmd.Dir=base;if e=cmd.Start();e!=nil{fail(e.Error())};cmd.Wait()
+ cmd:=exec.Command(filepath.Join(base,"engine","SoulEngine.exe"),append([]string{"-app",filepath.Join(base,"engine","browser","application.ini"),"-no-remote","-profile",profile},args...)...);cmd.Dir=base;if e=cmd.Start();e!=nil{fail(e.Error())};cmd.Wait()
 }
 
