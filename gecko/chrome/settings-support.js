@@ -15,3 +15,4 @@
  new MutationObserver(annotate).observe(document.getElementById('sectionContent'),{childList:true});document.addEventListener('change',()=>setTimeout(annotate,0),true);
  const open=()=>{if(window.souluBrowserImport)window.souluBrowserImport.open=()=>browserShell.browserImport('native');};open();
 })();
+(()=>{const apply=()=>{const city=document.getElementById('homeWeatherCity'),mode=document.getElementById('homeWeatherMode');if(city&&mode){city.disabled=mode.value!=='configured';city.setAttribute('aria-disabled',String(city.disabled));}};new MutationObserver(apply).observe(document.getElementById('sectionContent'),{childList:true,subtree:true});document.addEventListener('change',apply);apply();})();

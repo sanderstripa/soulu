@@ -12,12 +12,17 @@ Soulu.dispatch=async(action,payload,source)=>{
   const c=structuredClone(shared.config);
   if(['en','ru'].includes(payload.language))c.settings.language=payload.language;
   if(['system','light','dark'].includes(payload.theme))c.settings.theme=payload.theme;
+  if(typeof payload.weatherLocation==='boolean'){c.rules.sites['soulu://home']={...(c.rules.sites['soulu://home']||{}),geolocation:payload.weatherLocation?0:2};}
   if(typeof payload.adblock==='boolean'){c.rules.blocking.enabled=payload.adblock;current.privacyApplied=true;}
   if(typeof payload.askPermissions==='boolean'){for(const k of ['camera','microphone','geolocation','notifications'])c.rules.defaults[k]=payload.askPermissions?1:2;current.privacyApplied=true;}
   c.onboarding=current;const result=await base('settings.save',c,source);if(!result.ok)throw Error(result.error);return {flow:current,settings:shared.config.settings,rules:shared.config.rules};
  }
  if(action==='onboarding.import'){current.importOpened=true;await save();return Soulu.dispatch('browser.import.native',null,source);}
- if(action==='onboarding.vpn'){Soulu.settings('vpn');return true;}
+ if(action==='onboarding.vpn'){
+ const link=String(payload?.link||'').trim();if(!/^vless:\/\/|^sudoku:\/\//.test(link)||link.length>16384)throw Error('Введите ключ VLESS или Sudoku.');
+ const c=structuredClone(shared.config),id=Services.uuid.generateUUID().toString();c.vpn.profiles.push({id,name:String(payload.name||'VPN'),link});c.vpn.defaultProfileId=id;
+ const result=await base('settings.save',c,source);if(!result.ok)throw Error(result.error);return {ok:true};
+ }
  if(action==='onboarding.default')return Soulu.dispatch('settings.defaultBrowser',null,source);
  if(action==='onboarding.finish'){current.done=true;current.skipped=!!payload?.skip;await save();Soulu.native.navigate('soulu://home');return true;}
  throw Error('Unknown welcome action');

@@ -2,8 +2,8 @@
 (()=>{
  function section(value){if(/addons/.test(value||''))return 'extensions';if(/logins/.test(value||''))return 'passwords';return /privacy|permission/i.test(value||'')?'sites':/search/i.test(value||'')?'search':'general';}
  window.openPreferences=(pane)=>Soulu.settings(section(pane));
- const switchTab=window.switchToTabHavingURI;if(switchTab)window.switchToTabHavingURI=function(uri,...args){if(/^about:(?:preferences|settings|addons|logins)(?:[?#]|$)/i.test(typeof uri==='string'?uri:uri?.spec||'')){Soulu.settings(section(typeof uri==='string'?uri:uri.spec));return true;}return switchTab.call(this,uri,...args);};
+ const switchTab=window.switchToTabHavingURI;if(switchTab)window.switchToTabHavingURI=function(uri,...args){if(/^about:(?:preferences|settings|logins)(?:[?#]|$)/i.test(typeof uri==='string'?uri:uri?.spec||'')){Soulu.settings(section(typeof uri==='string'?uri:uri.spec));return true;}return switchTab.call(this,uri,...args);};
  const original=window.openTrustedLinkIn;
- window.openTrustedLinkIn=function(url,where,params){if(/^about:(?:preferences|settings|addons|logins)(?:[?#]|$)/i.test(String(url))){Soulu.settings(section(String(url)));return;}return original.call(this,url,where,params);};
- gBrowser.addTabsProgressListener({onLocationChange(browser,_progress,_request,location){if(!/^about:(?:preferences|settings|addons|logins)(?:[?#]|$)/i.test(location.spec))return;browser.stop();browser.loadURI(Services.io.newURI(Soulu.native.homeURL),{triggeringPrincipal:Services.scriptSecurityManager.getSystemPrincipal()});Soulu.settings(section(location.spec));}});
+ window.openTrustedLinkIn=function(url,where,params){if(/^about:(?:preferences|settings|logins)(?:[?#]|$)/i.test(String(url))){Soulu.settings(section(String(url)));return;}return original.call(this,url,where,params);};
+ gBrowser.addTabsProgressListener({onLocationChange(browser,_progress,_request,location){if(!/^about:(?:preferences|settings|logins)(?:[?#]|$)/i.test(location.spec))return;browser.stop();browser.loadURI(Services.io.newURI(Soulu.native.homeURL),{triggeringPrincipal:Services.scriptSecurityManager.getSystemPrincipal()});Soulu.settings(section(location.spec));}});
 })();

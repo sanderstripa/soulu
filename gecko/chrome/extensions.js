@@ -56,7 +56,7 @@ async function showPopup(extension,api,url,rectangle,tab,ticket){
  try{await current.browserReady;if(ticket!==epoch||tab!==gBrowser.selectedTab||!extension.canAccessWindow(window)||current.destroyed){if(!current.destroyed)current.closePopup();return {open:false};}panel.openPopup(node,'after_end',0,0,false,false);await current.browserLoaded;return {open:true};}catch(error){closePopup();throw error;}
 }
 Soulu.dispatch=async(action,payload,source)=>{
- if(action==='browser.extensions.manage'){checkProfile(payload);Soulu.settings('extensions');return true;}
+ if(action==='browser.extensions.manage'){checkProfile(payload);await window.BrowserAddonUI.openAddonsMgr('addons://list/extension');return true;}
  if(action==='browser.extensions.list'){if(payload?.profile!==undefined)checkProfile(payload);return list();}
  if(action==='browser.extensions.setEnabled'){checkProfile(payload);if(!source?.gesture||Date.now()-source.gesture.at>2000)throw Error('Нажмите переключатель расширения.');const addon=await AddonManager.getAddonByID(payload.id);if(!addon||addon.isSystem||addon.isBuiltin||addon.hidden)throw Error('Расширение недоступно.');payload.enabled?await addon.enable():await addon.disable();schedule();return list();}
  if(action==='browser.extensions.pin'){checkProfile(payload);const {extension,api}=native(payload.id);if(!extension||!api||!extension.canAccessWindow(window))throw Error('Расширение недоступно.');CustomizableUI.addWidgetToArea(api.id,payload.pinned?CustomizableUI.AREA_NAVBAR:CustomizableUI.AREA_ADDONS);schedule();return list();}

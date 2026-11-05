@@ -11,16 +11,16 @@ window.souluOpenImport=async()=>{
  const close=button('Закрыть',()=>modal.close()),start=button('Импортировать',async()=>{
   const types=[...fields.querySelectorAll('input:checked')].map(n=>n.value);if(!types.length){status.textContent='Выберите данные для импорта.';return;}
   start.disabled=select.disabled=true;fields.disabled=true;close.disabled=true;status.textContent='Перенос данных…';
-  try{const result=await invoke('browser.import.run',{id:select.value,types});status.textContent=result.ok?'Импорт завершён. Данные сохранены в Soulu.':'Импорт завершён частично. Не удалось перенести: '+result.results.filter(r=>!r.success).map(r=>available.find(s=>s.id===select.value)?.types.find(t=>t.key===r.type)?.label||r.type).join(', ');}
+  try{const result=await invoke('browser.import.run',{id:select.value,types});if(result.ok){completed.add(select.value);select.selectedOptions[0].textContent+=' — OK';start.textContent='OK';}status.textContent=result.ok?'Импорт завершён. Данные сохранены в Soulu.':'Импорт завершён частично. Не удалось перенести: '+result.results.filter(r=>!r.success).map(r=>available.find(s=>s.id===select.value)?.types.find(t=>t.key===r.type)?.label||r.type).join(', ');}
   catch(e){status.textContent=e.message;}
-  finally{start.disabled=select.disabled=false;fields.disabled=false;close.disabled=false;}
+  finally{start.disabled=completed.has(select.value);select.disabled=false;fields.disabled=false;close.disabled=false;}
  });start.id='soulu-import-start';start.className='primary';start.disabled=true;
  const file=button('Закладки из HTML…',async()=>{try{const r=await invoke('browser.import.filePicker','bookmarks');status.textContent=r.canceled?'Отменено':'Закладки импортированы.';}catch(e){status.textContent=e.message;}});
  const passwords=button('Пароли из CSV…',async()=>{try{const r=await invoke('browser.import.filePicker','passwords');status.textContent=r.canceled?'Отменено':`Добавлено паролей: ${r.added||0}. Обновлено: ${r.modified||0}. Ошибок: ${r.failed||0}.`;}catch(e){status.textContent=e.message;}});
  actions.append(file,passwords,close,start);modal.append(title,description,select,fields,el('p','Если исходный браузер защищает пароли от прямого переноса, экспортируйте их в CSV и выберите «Пароли из CSV…».'),status,actions);document.body.append(modal);
- modal.addEventListener('close',()=>modal.remove(),{once:true});modal.addEventListener('cancel',e=>{if(close.disabled)e.preventDefault();});modal.showModal();let available=[];
+ modal.addEventListener('close',()=>modal.remove(),{once:true});modal.addEventListener('cancel',e=>{if(close.disabled)e.preventDefault();});modal.showModal();let available=[];const completed=new Set();
  try{available=(await invoke('browser.import.sources')).sources;for(const row of available)select.append(new Option(row.name+' — '+row.profile,row.id));
-  const render=()=>{fields.replaceChildren();for(const type of available.find(s=>s.id===select.value)?.types||[]){const row=el('label'),n=el('input');n.type='checkbox';n.value=type.key;n.checked=true;row.append(n,document.createTextNode(type.label));fields.append(row);}start.disabled=!available.length;};select.onchange=render;render();status.textContent=available.length?'Выберите данные и нажмите «Импортировать».':'Браузеры с доступными данными не найдены. Можно импортировать закладки из HTML и пароли из CSV.';
+  const render=()=>{fields.replaceChildren();for(const type of available.find(s=>s.id===select.value)?.types||[]){const row=el('label'),n=el('input');n.type='checkbox';n.value=type.key;n.checked=true;row.append(n,document.createTextNode(type.label));fields.append(row);}start.disabled=!available.length||completed.has(select.value);start.textContent=completed.has(select.value)?'OK':'Импортировать';};select.onchange=render;render();status.textContent=available.length?'Выберите данные и нажмите «Импортировать».':'Браузеры с доступными данными не найдены. Можно импортировать закладки из HTML и пароли из CSV.';
  }catch(e){status.textContent=e.message;}
 };
 window.addEventListener('SouluEmit',e=>{try{if(JSON.parse(e.detail).name==='openImport')window.souluOpenImport();}catch{}});
