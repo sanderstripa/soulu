@@ -95,3 +95,5 @@ jobs:
 # Verify native automatic add-on routing and themed control painting.
 
 # Theme choices use Soulu buttons, without a platform menulist surface.
+
+# Include shell settings polling in the resolved system theme path.

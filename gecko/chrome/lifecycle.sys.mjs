@@ -5,8 +5,8 @@ async function stopOwnedServices(){
  const state=applicationState;if(!state)return;
  try{state.remote?.socket.close();}catch{}
  const helper=state.helper;state.helper=null;
- if(helper){try{await helper.stdin.close();}catch{}
-  let exited=false;const ended=helper.wait().then(()=>{exited=true;},()=>{exited=true;});
+ if(helper){
+  let exited=false;const ended=(async()=>{try{await helper.stdin.close();}catch{}await helper.wait();})().then(()=>{exited=true;},()=>{exited=true;});
   await Promise.race([ended,new Promise(resolve=>setTimeout(resolve,1500))]);
   if(!exited){try{helper.kill();}catch{}}
  }
