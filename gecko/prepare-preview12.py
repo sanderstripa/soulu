@@ -44,16 +44,20 @@ ini=configparser.ConfigParser();ini.optionxform=str;ini.read(runtime/'applicatio
 with (runtime/'application.ini').open('w') as f:ini.write(f)
 # Hide stock browser chrome in the document itself, before any startup script.
 archive=runtime/'browser/omni.ja';temporary=archive.with_suffix('.tmp')
-with zipfile.ZipFile(archive) as src,zipfile.ZipFile(temporary,'w',compression=zipfile.ZIP_DEFLATED) as dst:
- for info in src.infolist():
-  data=src.read(info.filename)
-  if info.filename.endswith('browser.xhtml'):
-   text=data.decode();import re;match=re.search(r'</(?:html:)?head>',text);assert match;at=match.start();text=text[:at]+'<html:style>#navigator-toolbox,#titlebar,#sidebar-main{display:none!important}</html:style>'+text[at:];data=text.encode()
-  dst.writestr(info,data)
-temporary.replace(archive)
+expanded=out/'browser-resources';subprocess.run(['7z','x',str(archive),'-o'+str(expanded),'-y'],check=True,stdout=subprocess.DEVNULL)
+for p in expanded.rglob('browser.xhtml'):
+ text=p.read_text(encoding='utf-8');import re;match=re.search(r'</(?:html:)?head>',text);assert match;at=match.start();p.write_text(text[:at]+'<html:style>#navigator-toolbox,#titlebar,#sidebar-main{display:none!important}</html:style>'+text[at:],encoding='utf-8')
+with zipfile.ZipFile(temporary,'w',compression=zipfile.ZIP_DEFLATED) as dst:
+ for p in expanded.rglob('*'):
+  if p.is_file():dst.write(p,p.relative_to(expanded).as_posix())
+temporary.replace(archive);shutil.rmtree(expanded)
+
 for p in (runtime/'soulu/chrome').rglob('*'):
  if p.is_file() and p.suffix in ['.js','.mjs','.html','.css','.ftl','.properties'] and 'third_party' not in p.parts:
   text=p.read_text(encoding='utf-8');text=text.replace('Soulu Gecko','Soul').replace('SouluGecko','Soul').replace('Soulu.Gecko','Soul').replace('Добро пожаловать в Soulu','Добро пожаловать в Soul').replace('Welcome to Soulu','Welcome to Soul').replace('Мастер Gecko','Мастер Soul');p.write_text(text,encoding='utf-8')
 shutil.copyfile(root/'gecko/chrome/home-permission-ui.js',runtime/'soulu/chrome/ui/home-permission-ui.js')
 p=runtime/'soulu/chrome/ui/home.html';p.write_text(p.read_text(encoding='utf-8').replace('</body>','<script src="home-permission-ui.js"></script></body>'),encoding='utf-8')
 build.update(name='Soul 0.12.0 Preview');(out/'BUILD.json').write_text(json.dumps(build,indent=2))
+
+for name in ['branding/brand.properties','locales/ru/branding/brand.ftl','locales/en-US/branding/brand.ftl']:
+ p=runtime/'soulu/chrome'/name;p.write_text(p.read_text(encoding='utf-8').replace('Soulu','Soul'),encoding='utf-8')
