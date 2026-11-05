@@ -119,3 +119,5 @@ jobs:
 # Set profile startup policy before native SessionStore initialization.
 
 # Present the consolidated initial window and exclude obsolete base executables.
+
+# Attach lifecycle acceptance to the surviving initial browser window.
