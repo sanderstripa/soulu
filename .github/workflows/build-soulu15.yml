@@ -107,3 +107,5 @@ jobs:
 # Construct Unicode link fixtures with native filesystem rename after COM saves.
 
 # Native close clicks use client coordinates, excluding maximized resize borders.
+
+# First-use dwell covers the deferred background startup work before closure.

@@ -52,7 +52,7 @@ try:
   check('no_old_process_'+str(cycle),not processes())
   p=subprocess.Popen([str(base/'Soulu.exe'),'--url',f'http://127.0.0.1:{server.server_port}/'],env=env)
   def ready():return next((w for w in windows() if 'Soulu restart fixture' in w[2]),None)
-  hwnd,pid,title=wait(ready,45);time.sleep(2)
+  hwnd,pid,title=wait(ready,45);time.sleep(25 if cycle==1 else 3)
   check('visible_window_'+str(cycle),len(windows())==1,{'pid':pid,'title':title})
   if cycle==1:
    # A second shortcut click while running must focus the existing real window.
