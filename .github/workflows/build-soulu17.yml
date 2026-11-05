@@ -110,3 +110,5 @@ jobs:
 # Native focus validates the executable file identity, including Windows short paths.
 
 # The GUI recovery fixture has no console, without forcing its form hidden.
+
+# Session recovery uses a real Win32 fixture with no PowerShell UI dependency.

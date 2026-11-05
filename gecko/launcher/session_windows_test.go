@@ -1,6 +1,6 @@
 //go:build windows
 package main
-import("os";"os/exec";"path/filepath";"syscall";"testing";"time";"unsafe")
+import("os";"os/exec";"runtime";"path/filepath";"syscall";"testing";"time";"unsafe")
 func TestExistingUnownedMutexDoesNotBlockRestart(t *testing.T){
  profile:=t.TempDir();name,_:=syscall.UTF16PtrFromString(sessionMutexName(profile));h,_,e:=kernelSession.NewProc("CreateMutexW").Call(0,0,uintptr(unsafe.Pointer(name)));if h==0{t.Fatal(e)};defer syscall.CloseHandle(syscall.Handle(h))
  guard,forwarded,e:=acquireSession(profile,func()bool{return false},time.Second);if e!=nil||forwarded{t.Fatal(e,forwarded)};guard.Close()
@@ -17,8 +17,7 @@ func TestProfilesHaveIndependentSessionLocks(t *testing.T){
 }
 func TestClosedHungSessionIsRecoveredWithoutKillingVisibleWindows(t *testing.T){
  profile:=t.TempDir();job,e:=newSessionJob(profile);if e!=nil{t.Fatal(e)};defer job.Close()
- command:=`Add-Type -AssemblyName System.Windows.Forms;$f=New-Object System.Windows.Forms.Form;$f.Text='Soulu session test';[void]$f.ShowDialog();Start-Sleep -Seconds 300`
- cmd:=exec.Command("powershell.exe","-NoProfile","-Command",command);cmd.SysProcAttr=&syscall.SysProcAttr{CreationFlags:0x08000000};if e=cmd.Start();e!=nil{t.Fatal(e)}
+ cmd:=exec.Command(os.Args[0],"-test.run=^TestJobWindowProcess$");cmd.Env=append(os.Environ(),"SOULU_JOB_WINDOW_TEST=1");cmd.Stdout=os.Stdout;cmd.Stderr=os.Stderr;cmd.SysProcAttr=&syscall.SysProcAttr{CreationFlags:0x08000000};if e=cmd.Start();e!=nil{t.Fatal(e)}
  if e=job.Assign(cmd.Process.Pid);e!=nil{cmd.Process.Kill();cmd.Wait();t.Fatal(e)}
  done:=make(chan struct{});go func(){cmd.Wait();close(done)}()
  events:=make(chan string,10);go job.watch(done,400*time.Millisecond,func(s string){events<-s})
@@ -29,4 +28,17 @@ func TestClosedHungSessionIsRecoveredWithoutKillingVisibleWindows(t *testing.T){
  for _,hwnd:=range job.windows(){userSession.NewProc("PostMessageW").Call(hwnd,0x10,0,0)}
  select{case <-done:case <-time.After(10*time.Second):t.Fatal("closed hung session was not recovered")}
  select{case stage:=<-events:if stage!="recover-closed-session"{t.Fatal(stage)};case <-time.After(time.Second):t.Fatal("recovery not recorded")}
+}
+
+// A real Win32 window followed by an intentionally lingering process. No
+// PowerShell/.NET desktop-mode or startup-show settings are involved.
+func TestJobWindowProcess(t *testing.T){
+ if os.Getenv("SOULU_JOB_WINDOW_TEST")!="1"{return}
+ runtime.LockOSThread();defer runtime.UnlockOSThread()
+ class,_:=syscall.UTF16PtrFromString("STATIC");title,_:=syscall.UTF16PtrFromString("Soulu session test")
+ hwnd,_,e:=userSession.NewProc("CreateWindowExW").Call(0,uintptr(unsafe.Pointer(class)),uintptr(unsafe.Pointer(title)),0x10cf0000,100,100,420,180,0,0,0,0)
+ if hwnd==0{t.Fatal(e)}
+ var msg struct{Window uintptr;Message uint32;WParam,LParam uintptr;Time uint32;X,Y int32;Private uint32}
+ for{ok,_,_:=userSession.NewProc("GetMessageW").Call(uintptr(unsafe.Pointer(&msg)),0,0,0);if int32(ok)<=0{break};userSession.NewProc("TranslateMessage").Call(uintptr(unsafe.Pointer(&msg)));userSession.NewProc("DispatchMessageW").Call(uintptr(unsafe.Pointer(&msg)))}
+ time.Sleep(300*time.Second)
 }
