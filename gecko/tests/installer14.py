@@ -138,8 +138,10 @@ try:
   subprocess.run(['powershell.exe','-NoProfile','-Command',fixture_script],check=True)
   localized=[programs/'Приватный просмотр.lnk',programs/'Приватный просмотр (2).lnk']
   for index,link in enumerate(localized):
-   script="$s=New-Object -ComObject WScript.Shell;$l=$s.CreateShortcut('"+str(link).replace("'","''")+"');$l.TargetPath='"+str(local/'Programs/Soulu/engine/private_browsing.exe').replace("'","''")+"';$l.Arguments='-private-window';$l.Save()"
+   ascii_link=programs/('fixture-private-'+str(index)+'.lnk')
+   script="$s=New-Object -ComObject WScript.Shell;$l=$s.CreateShortcut('"+str(ascii_link).replace("'","''")+"');$l.TargetPath='"+str(local/'Programs/Soulu/engine/private_browsing.exe').replace("'","''")+"';$l.Arguments='-private-window';$l.Save()"
    subprocess.run(['powershell.exe','-NoProfile','-EncodedCommand',base64.b64encode(script.encode('utf-16le')).decode('ascii')],check=True)
+   ascii_link.replace(link)
 
 
   # Reproduce Preview 8 uninstall leftovers from the user's failed installation.
