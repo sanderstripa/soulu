@@ -111,3 +111,5 @@ jobs:
 # First-use dwell covers the deferred background startup work before closure.
 
 # All own version markers, including inherited source markers, identify Preview 15.
+
+# Preserve existing private-window focus when the last normal window is closed.
