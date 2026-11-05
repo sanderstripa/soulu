@@ -42,10 +42,21 @@ function cloak(win,enabled){
  if(Number(result)!==0)throw Error('DWM cloak failed: '+result);
  const get=library('dwmapi.dll').declare('DwmGetWindowAttribute',abi,ctypes.int32_t,ctypes.uintptr_t,ctypes.uint32_t,ctypes.voidptr_t,ctypes.uint32_t),observed=ctypes.uint32_t();const status=get(handle(win),14,observed.address(),ctypes.uint32_t.size);return {setStatus:Number(result),getStatus:Number(status),observed:Number(observed.value)};
 }
+// A hidden/cloaked composing window must not get a transient taskbar button.
+function taskbarPending(win,pending){
+ if(Services.appinfo.OS!=='WINNT')return;
+ const abi=ctypes.winapi_abi||ctypes.default_abi,user=library('user32.dll');
+ const get=user.declare('GetWindowLongW',abi,ctypes.long,ctypes.uintptr_t,ctypes.int);
+ const set=user.declare('SetWindowLongW',abi,ctypes.long,ctypes.uintptr_t,ctypes.int,ctypes.long);
+ const hwnd=handle(win),style=Number(get(hwnd,-20));
+ if(pending){win.__souluOriginalExStyle??=style;set(hwnd,-20,(style|0x80)&~0x40000);}
+ else if(win.__souluOriginalExStyle!==undefined)set(hwnd,-20,win.__souluOriginalExStyle);
+}
 export function prepareStartup(win){
  if(win.__souluStartupHidden)return;
  win.__souluStartupPresentation={preparedAt:Date.now()};
  try{
+  taskbarPending(win,true);
   win.docShell.treeOwner.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIBaseWindow).visibility=false;
   if(Services.appinfo.OS==='WINNT'){win.__souluStartupPresentation.native=cloak(win,true);win.__souluStartupCloaked=true;}
   else win.docShell.treeOwner.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIBaseWindow).visibility=false;
@@ -67,6 +78,7 @@ export function revealStartup(win){
   try{
    if(win.__souluStartupCloaked){cloak(win,false);win.__souluStartupCloaked=false;}
    else win.docShell.treeOwner.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIBaseWindow).visibility=true;
+   taskbarPending(win,false);
    win.__souluStartupHidden=false;win.__souluStartupPresentation.presentedAt=Date.now();win.focus();win.dispatchEvent(new win.Event('SouluPresented'));
   }catch(error){console.error(error);}
  };
@@ -76,7 +88,6 @@ export function revealStartup(win){
   // Empty automatic startup peers must not be presented as extra windows.
   const lifetime=ChromeUtils.importESModule('chrome://soulu/content/lifecycle.sys.mjs');
   lifetime.consolidateAutomaticStart(win);
-  if(win.closed)return;
   if(win.closed)return;
   const frame=win.document.getElementById('soulu-shell-frame');
   const remote=frame?.frameLoader?.remoteTab;
@@ -90,11 +101,12 @@ export function revealStartup(win){
    ready();
   });
   win.windowUtils.updateLayerTree();
-  await new Promise(resolve=>win.requestAnimationFrame(()=>win.requestAnimationFrame(resolve)));
+  // Hidden windows may never receive rAF; compositor has already acknowledged layers.
+  await new Promise(resolve=>ChromeUtils.importESModule('resource://gre/modules/Timer.sys.mjs').setTimeout(resolve,0));
   win.windowUtils.updateLayerTree();
   // Do not block the UI thread on DwmFlush: GPU/driver stalls can create a
   // Windows ghost window. Gecko layer acknowledgement is the presentation gate.
   win.__souluStartupPresentation.layersReadyAt=Date.now();present();
- })().catch(error=>{win.__souluStartupPresentation.error=String(error);console.error(error);});
+ })().catch(error=>{win.__souluStartupPresentation.error=String(error);win.__souluStartupRevealing=false;console.error(error);if(!win.closed)win.__souluStartupRevealTimer=win.setTimeout(()=>revealStartup(win),1000);});
 }
 

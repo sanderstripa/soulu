@@ -1,6 +1,20 @@
 /* Process lifetime belongs to the application, not a closing window global. */
 const {setTimeout,clearTimeout}=ChromeUtils.importESModule('resource://gre/modules/Timer.sys.mjs');
-let registered=false,timer=null,quitting=false;
+let registered=false,timer=null,quitting=false,applicationState;
+async function stopOwnedServices(){
+ const state=applicationState;if(!state)return;
+ try{state.remote?.socket.close();}catch{}
+ const helper=state.helper;state.helper=null;
+ if(helper){try{await helper.stdin.close();}catch{}
+  let exited=false;const ended=helper.wait().then(()=>{exited=true;},()=>{exited=true;});
+  await Promise.race([ended,new Promise(resolve=>setTimeout(resolve,1500))]);
+  if(!exited){try{helper.kill();}catch{}}
+ }
+}
+export async function closeWindow(win,shared){
+ await shared.saveQueue;win.close();
+}
+
 const observer={observe(_subject,topic){
  if(topic==='quit-application-granted'){quitting=true;if(timer)clearTimeout(timer);return;}
  if(quitting)return;
@@ -9,10 +23,11 @@ const observer={observe(_subject,topic){
   if([...Services.wm.getEnumerator('navigator:browser')].some(win=>!win.closed))return;
   // eForceQuit still performs normal XPCOM/profile shutdown; with every browser
   // window already closed there is no remaining window whose close can be vetoed.
-  Services.startup.quit(Ci.nsIAppStartup.eForceQuit);
+  stopOwnedServices().finally(()=>Services.startup.quit(Ci.nsIAppStartup.eForceQuit));
  },50);
 }};
 export function ensureApplicationLifetime(win,shared){
+ applicationState=shared;
  if(!shared.initialWindow||shared.initialWindow.closed)shared.initialWindow=win;
  // Native add-on startup code uses the trusted link helpers. Route its
  // automatic pages to the already initialized window before creating a peer.

@@ -18,7 +18,7 @@ import (
  "time"
  "unsafe"
 )
-func fail(s string){p,_:=syscall.UTF16PtrFromString(s);t,_:=syscall.UTF16PtrFromString("Soulu 0.13.0 Preview");syscall.NewLazyDLL("user32.dll").NewProc("MessageBoxW").Call(0,uintptr(unsafe.Pointer(p)),uintptr(unsafe.Pointer(t)),16);os.Exit(1)}
+func fail(s string){p,_:=syscall.UTF16PtrFromString(s);t,_:=syscall.UTF16PtrFromString("Soulu 0.14.0 Preview");syscall.NewLazyDLL("user32.dll").NewProc("MessageBoxW").Call(0,uintptr(unsafe.Pointer(p)),uintptr(unsafe.Pointer(t)),16);os.Exit(1)}
 func hidden(cmd *exec.Cmd) *exec.Cmd {cmd.SysProcAttr=&syscall.SysProcAttr{HideWindow:true};return cmd}
 func webURL(s string)bool{u,e:=url.Parse(s);return len(s)<=8192&&e==nil&&(u.Scheme=="http"||u.Scheme=="https")&&u.Host!=""&&u.User==nil}
 func register(exe,id string)error{
