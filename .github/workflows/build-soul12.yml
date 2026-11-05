@@ -18,6 +18,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 1
+      - name: Cancel superseded Preview 12 checks
+        shell: pwsh
+        run: |
+          $runs = gh run list --workflow build-soul12.yml --branch gecko-preview --limit 30 --json databaseId,status | ConvertFrom-Json
+          foreach ($old in $runs) { if ([long]$old.databaseId -lt [long]$env:GITHUB_RUN_ID -and $old.status -in @('in_progress','queued')) { gh run cancel $old.databaseId } }
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -78,6 +83,8 @@ jobs:
           python -c "import json,pathlib; paths=['preview12.json','installer12.json']; assert all(json.loads((pathlib.Path('soul12-checks')/p).read_text())['passed'] for p in paths)"
           if ($LASTEXITCODE) { throw 'Acceptance reports not green' }
           (Get-FileHash Soul-0.12.0-Preview-Setup-win64.exe -Algorithm SHA256).Hash.ToLowerInvariant() + '  Soul-0.12.0-Preview-Setup-win64.exe' | Set-Content SHA256SUMS.txt
+          $branchHead = gh api repos/sanderstripa/soulu/git/ref/heads/gecko-preview --jq '.object.sha'
+          if ($branchHead.Trim() -ne $env:GITHUB_SHA) { throw 'A newer source revision superseded this build' }
           gh release create soul-preview-12 Soul-0.12.0-Preview-Setup-win64.exe Soul-0.12.0-Preview-Setup-win64.exe.build.json SHA256SUMS.txt soul12-checks/preview12.json soul12-checks/installer12.json --target $env:GITHUB_SHA --title 'Soul 0.12.0 Preview' --notes-file gecko/docs/PREVIEW12-RESULTS.md
           if ($LASTEXITCODE) { throw 'Release publication failed' }
 
@@ -102,3 +109,5 @@ jobs:
 # Avoid re-triggering the add-on document observer with an unchanged title.
 
 # Close the reopened browser through the actual Windows close button path.
+
+# Keep last-window shutdown in a module that survives the closing window global.
