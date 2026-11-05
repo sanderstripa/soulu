@@ -113,3 +113,5 @@ jobs:
 # Keep last-window shutdown in a module that survives the closing window global.
 
 # Open exactly one explicit application start window outside session-restore mode.
+
+# Check the real extension-manager button from Settings and close its overlay.
