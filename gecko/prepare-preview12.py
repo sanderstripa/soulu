@@ -3,6 +3,9 @@ import hashlib,json,pathlib,shutil,subprocess
 root=pathlib.Path(__file__).resolve().parents[1];out=root/'gecko-out';runtime=out/'runtime'
 assert (out/'BUILD.json').is_file(), 'Preview 8 build artifact missing'
 build=json.loads((out/'BUILD.json').read_text());assert build['name']=='Soulu Gecko Preview 8',build
+# The base archive's old launcher must not be shipped beside Soul.exe.
+for obsolete in out.glob('*.exe'):obsolete.unlink()
+for name in ['soulu-gecko-manifest.json','gecko-manifest.json']:(out/name).unlink(missing_ok=True)
 # Never run the Mozilla installer. Reuse the exact already-extracted Preview 8
 # runtime and auxiliary components; only Soulu resources/launcher are updated.
 for p in (root/'gecko/chrome').rglob('*'):
@@ -73,3 +76,7 @@ for name in ['branding/brand.properties','locales/ru/branding/brand.ftl','locale
 
 # Unpackaged desktop applications use the browser's network geolocation provider.
 with (runtime/'defaults/pref/autoconfig.js').open('a',encoding='utf-8') as f:f.write('\npref("geo.provider.ms-windows-location",false);')
+
+# Product document titles and labels use the installed product name.
+for p in (runtime/'soulu/chrome/ui').glob('*.html'):
+ p.write_text(p.read_text(encoding='utf-8').replace('Soulu Gecko','Soul').replace('Soulu','Soul'),encoding='utf-8')

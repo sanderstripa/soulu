@@ -141,6 +141,7 @@ try:
    evaluate(ws,'document.getElementById("settingsButton").click();document.getElementById("ru").click();document.getElementById("dark").click();true');version(ws,'settings');capture(ws,'installer-settings.png')
    evaluate(ws,'document.getElementById("accept").click();true');wait(lambda:evaluate(ws,'document.body.dataset.stage==="installing"'));version(ws,'installing');capture(ws,'installer-progress.png')
    wait(lambda:finished(ws),120);version(ws,'finish');capture(ws,'installer-finish.png')
+   check('only_current_product_launchers_are_installed',sorted(p.name for p in destination.glob('*.exe'))==['Soul.exe','Uninstall Soul.exe'])
    check('installed_engine_and_uninstaller_exist',(destination/'Soul.exe').is_file() and (destination/'engine/xul.dll').is_file() and (destination/'Uninstall Soul.exe').is_file())
    check('installer_does_not_change_system_proxy',proxy_snapshot()==original_proxy)
    recording,recorder,observed=watch_launch(destination)
