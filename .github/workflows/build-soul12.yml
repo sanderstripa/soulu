@@ -83,3 +83,5 @@ jobs:
 # Exercise the renamed application entry point and repair ownership marker.
 
 # Verify live weather and absence of new Firefox registrations.
+
+# Run direct-engine tests with the same application.ini as Soul.exe.

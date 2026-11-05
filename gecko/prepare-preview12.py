@@ -61,7 +61,7 @@ with zipfile.ZipFile(io.BytesIO(normalized)) as src,zipfile.ZipFile(temporary,'w
 temporary.replace(archive)
 for p in (runtime/'soulu/chrome').rglob('*'):
  if p.is_file() and p.suffix in ['.js','.mjs','.html','.css','.ftl','.properties'] and 'third_party' not in p.parts:
-  text=p.read_text(encoding='utf-8');text=text.replace('Soulu Gecko','Soul').replace('SouluGecko','Soul').replace('Soulu.Gecko','Soul').replace('Добро пожаловать в Soulu','Добро пожаловать в Soul').replace('Welcome to Soulu','Welcome to Soul').replace('Мастер Gecko','Мастер Soul');p.write_text(text,encoding='utf-8')
+  text=p.read_text(encoding='utf-8');text=text.replace('Soulu Gecko','Soul').replace('SouluGecko','Soul').replace('Soulu.Gecko','Soul').replace('Добро пожаловать в Soulu','Добро пожаловать в Soul').replace('Welcome to Soulu','Welcome to Soul').replace('Мастер Gecko','Мастер Soul').replace('в Soulu','в Soul').replace('Soulu браузером','Soul браузером').replace('Soulu the default','Soul the default').replace('Открыть Soulu','Открыть Soul');p.write_text(text,encoding='utf-8')
 shutil.copyfile(root/'gecko/chrome/home-permission-ui.js',runtime/'soulu/chrome/ui/home-permission-ui.js')
 p=runtime/'soulu/chrome/ui/home.html';p.write_text(p.read_text(encoding='utf-8').replace('</body>','<script src="home-permission-ui.js"></script></body>'),encoding='utf-8')
 build.update(name='Soul 0.12.0 Preview');(out/'BUILD.json').write_text(json.dumps(build,indent=2))
