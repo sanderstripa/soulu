@@ -77,3 +77,5 @@ jobs:
           if ($LASTEXITCODE) { throw 'Release publication failed' }
 
 # Normalize the Mozilla optimized archive before early chrome styling.
+
+# Reconstruct the optimized central directory without altering file offsets.

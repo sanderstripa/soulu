@@ -110,6 +110,10 @@ try:
    import psutil
    return not psutil.pid_exists(pid)
   wait(exited,30);m=None
+  reopened=subprocess.Popen([str(destination/'Soul.exe')],env=env)
+  wait(listening,60);again=Marionette('127.0.0.1',port=mp);again.start_session();again.set_context('chrome');again.timeout.script=60
+  check('launcher_reopens_after_normal_close',wait(lambda:again.execute_script('return !!window.Soulu?.ready&&Soulu.config.onboarding.done')))
+  again.execute_script('window.close();');reopened.wait(timeout=30)
   # A partially removed install is still recognized by its ownership manifest.
   (destination/'Soul.exe').unlink()
   with setup(exe,env) as (ws,process):

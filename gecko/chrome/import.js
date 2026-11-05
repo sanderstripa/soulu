@@ -15,8 +15,8 @@ async function discover(){
    const profiles=await migrator.getSourceProfiles();
    for(const profile of profiles?.length?profiles:[null]){
     const mask=await migrator.getMigrateData(profile),types=Object.keys(labels).filter(type=>mask&MigrationUtils.resourceTypes[type]);if(!types.length)continue;
-    const id=Services.uuid.generateUUID().toString();sources.set(id,{migrator,profile,mask});
-    result.push({id,name:names[key]||key.replace(/firefox/ig,'Soulu'),profile:profile?.name||profile?.id||'Основной',types:types.map(key=>({key,label:labels[key]}))});
+    const id=Services.uuid.generateUUID().toString();const sourceKey=key+":"+(profile?.id||"default");sources.set(id,{migrator,profile,mask,sourceKey});
+    result.push({id,completed:!!shared.config.importedSources?.[sourceKey],name:names[key]||key.replace(/firefox/ig,'Soulu'),profile:profile?.name||profile?.id||'Основной',types:types.map(key=>({key,label:labels[key]}))});
    }
   }catch(error){console.error('Soulu import source',key,String(error));}
  }
@@ -34,6 +34,7 @@ Soulu.dispatch=async(action,payload,source)=>{
  busy=true;const results=[];
  try{
   await entry.migrator.migrate(mask,false,entry.profile,(type,success,detail,available)=>{results.push({type:Object.keys(labels).find(k=>MigrationUtils.resourceTypes[k]===type),success:!!success,available});});
+  if(results.length&&results.every(r=>r.success)){(shared.config.importedSources??={})[entry.sourceKey]=Date.now();await Soulu.backend.save();}
   await Soulu.bookmarks('invalidate');await Soulu.dispatch('browser.bookmarks.get');
   return {ok:results.length>0&&results.every(r=>r.success),results};
  }finally{busy=false;}

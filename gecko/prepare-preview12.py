@@ -44,14 +44,21 @@ ini=configparser.ConfigParser();ini.optionxform=str;ini.read(runtime/'applicatio
 with (runtime/'application.ini').open('w') as f:ini.write(f)
 # Hide stock browser chrome in the document itself, before any startup script.
 archive=runtime/'browser/omni.ja';temporary=archive.with_suffix('.tmp')
-expanded=out/'browser-resources';subprocess.run(['7z','x',str(archive),'-o'+str(expanded),'-y'],check=True,stdout=subprocess.DEVNULL)
-for p in expanded.rglob('browser.xhtml'):
- text=p.read_text(encoding='utf-8');import re;match=re.search(r'</(?:html:)?head>',text);assert match;at=match.start();p.write_text(text[:at]+'<html:style>#navigator-toolbox,#titlebar,#sidebar-main{display:none!important}</html:style>'+text[at:],encoding='utf-8')
-with zipfile.ZipFile(temporary,'w',compression=zipfile.ZIP_DEFLATED) as dst:
- for p in expanded.rglob('*'):
-  if p.is_file():dst.write(p,p.relative_to(expanded).as_posix())
-temporary.replace(archive);shutil.rmtree(expanded)
-
+# Mozilla optimized JARs place the central directory before file data.
+# Append a conventional directory/EOCD without moving any local file offsets.
+import struct,io
+raw=archive.read_bytes();begin=raw.find(b'PK\x01\x02');assert begin>=0
+end=begin;count=0
+while raw[end:end+4]==b'PK\x01\x02':
+ name,extra,comment=struct.unpack_from('<HHH',raw,end+28);end+=46+name+extra+comment;count+=1
+central=raw[begin:end];normalized=raw+central+struct.pack('<4s4H2IH',b'PK\x05\x06',0,0,count,count,len(central),len(raw),0)
+with zipfile.ZipFile(io.BytesIO(normalized)) as src,zipfile.ZipFile(temporary,'w',compression=zipfile.ZIP_DEFLATED) as dst:
+ for info in src.infolist():
+  data=src.read(info.filename)
+  if info.filename.endswith('browser.xhtml'):
+   text=data.decode();import re;match=re.search(r'</(?:html:)?head>',text);assert match;at=match.start();data=(text[:at]+'<html:style>#navigator-toolbox,#titlebar,#sidebar-main{display:none!important}</html:style>'+text[at:]).encode()
+  dst.writestr(info.filename,data)
+temporary.replace(archive)
 for p in (runtime/'soulu/chrome').rglob('*'):
  if p.is_file() and p.suffix in ['.js','.mjs','.html','.css','.ftl','.properties'] and 'third_party' not in p.parts:
   text=p.read_text(encoding='utf-8');text=text.replace('Soulu Gecko','Soul').replace('SouluGecko','Soul').replace('Soulu.Gecko','Soul').replace('Добро пожаловать в Soulu','Добро пожаловать в Soul').replace('Welcome to Soulu','Welcome to Soul').replace('Мастер Gecko','Мастер Soul');p.write_text(text,encoding='utf-8')
