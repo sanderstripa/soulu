@@ -50,6 +50,10 @@ try:
  check('automatic_weather_disables_city',ui('return document.getElementById("homeWeatherMode").value==="automatic"&&document.getElementById("homeWeatherCity").disabled','settings'))
  ui('const n=document.getElementById("homeWeatherMode");n.value="configured";n.dispatchEvent(new Event("change",{bubbles:true}));return true;','settings')
  check('manual_weather_enables_city',wait(lambda:ui('return !document.getElementById("homeWeatherCity").disabled','settings')))
+ # Exercise the shipping network stack against the actual public weather service.
+ run('Soulu.config.settings.homeWeatherMode="configured";Soulu.config.settings.homeWeatherCity="Yekaterinburg";return true;')
+ live=call('home.weather')
+ check('live_weather_service_returns_temperature',live.get('status')=='ready' and isinstance(live.get('current',{}).get('temperature_2m'),(int,float)),live)
  report['passed']=True
 except Exception as e:
  report['error']=str(e)

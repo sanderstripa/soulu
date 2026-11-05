@@ -23,6 +23,28 @@ def proxy_snapshot():
    try:values[name]=winreg.QueryValueEx(key,name)
    except FileNotFoundError:values[name]=None
  return values
+def firefox_registrations():
+ result={}
+ for hive,label in [(winreg.HKEY_CURRENT_USER,'user'),(winreg.HKEY_LOCAL_MACHINE,'machine')]:
+  for path in [r'Software\Microsoft\Windows\CurrentVersion\Uninstall',r'Software\Clients\StartMenuInternet',r'Software\RegisteredApplications']:
+   try:
+    with winreg.OpenKey(hive,path) as k:
+     index=0
+     while True:
+      try:
+       if path.endswith('RegisteredApplications'):name,value,kind=winreg.EnumValue(k,index);entry=(name,str(value))
+       else:
+        name=winreg.EnumKey(k,index);entry=(name,)
+        with winreg.OpenKey(k,name) as child:
+         for field in ['DisplayName','InstallLocation','UninstallString']:
+          try:entry+= (str(winreg.QueryValueEx(child,field)[0]),)
+          except OSError:pass
+       if any('firefox' in v.lower() for v in entry):result[label+path+name]=entry
+       index+=1
+      except OSError:break
+   except OSError:pass
+ return result
+original_firefox=firefox_registrations()
 def port():
  with socket.socket() as s:s.bind(('127.0.0.1',0));return s.getsockname()[1]
 def command(ws,method,params=None):
@@ -98,6 +120,9 @@ try:
    with socket.create_connection(('127.0.0.1',mp),timeout=.2):return True
   wait(listening,60);m=Marionette('127.0.0.1',port=mp);m.start_session();m.set_context('chrome');m.timeout.script=60
   wait(lambda:m.execute_script('return !!window.Soulu?.ready&&!window.__souluStartupHidden&&document.documentElement.hasAttribute("soulu-ui-ready")'))
+  check('engine_application_identity_is_soul',m.execute_script('return Services.appinfo.name')=='Soul')
+  check('no_new_firefox_os_registration',firefox_registrations()==original_firefox)
+  check('payload_has_no_firefox_installer_tools',not any(p.name.lower() in ['firefox.exe','helper.exe','default-browser-agent.exe','maintenanceservice_installer.exe'] for p in destination.rglob('*.exe')))
   check('first_installed_launch_uses_own_engine',pathlib.Path(m.execute_script('return Services.dirsvc.get("GreD",Ci.nsIFile).path')).resolve()==(destination/'engine').resolve())
   check('first_installed_launch_has_one_browser_window',m.execute_script('return [...Services.wm.getEnumerator("navigator:browser")].length')==1)
   check('installer_choices_apply_only_to_new_profile',m.execute_script('return Soulu.config.settings.theme==="dark"&&Soulu.config.settings.language==="ru"'))

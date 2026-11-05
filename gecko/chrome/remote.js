@@ -15,4 +15,4 @@ IOUtils.writeJSON(file,{port:socket.port,token},{tmpPath:file+'.tmp'}).then(()=>
 const observer={observe(){socket.close();for(const t of connections)t.close(Cr.NS_ERROR_ABORT);IOUtils.remove(file,{ignoreAbsent:true}).catch(()=>{});Services.obs.removeObserver(observer,'quit-application-granted');}};Services.obs.addObserver(observer,'quit-application-granted');
 })();
 
-Services.obs.addObserver({observe(){window.setTimeout(()=>{if(![...Services.wm.getEnumerator('navigator:browser')].some(w=>!w.closed))Services.startup.quit(Ci.nsIAppStartup.eAttemptQuit);},0);}},'domwindowclosed');
+Services.obs.addObserver({observe(){Services.tm.dispatchToMainThread(()=>{if(![...Services.wm.getEnumerator('navigator:browser')].some(w=>!w.closed))Services.startup.quit(Ci.nsIAppStartup.eAttemptQuit);});}},'domwindowclosed');

@@ -81,3 +81,5 @@ jobs:
 # Reconstruct the optimized central directory without altering file offsets.
 
 # Exercise the renamed application entry point and repair ownership marker.
+
+# Verify live weather and absence of new Firefox registrations.

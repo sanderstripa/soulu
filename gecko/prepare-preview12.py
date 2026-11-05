@@ -9,7 +9,7 @@ for p in (root/'gecko/chrome').rglob('*'):
  if p.is_file():
   target=runtime/'soulu/chrome'/p.relative_to(root/'gecko/chrome');target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(p,target)
 shutil.copyfile(root/'gecko/soulu.cfg',runtime/'soulu.cfg')
-for source,target in [('integration-ui.js','integration-ui.js'),('onboarding-ui.js','onboarding.js')]:shutil.copyfile(root/'gecko/chrome'/source,runtime/'soulu/chrome/ui'/target)
+for source,target in [('integration-ui.js','integration-ui.js'),('onboarding-ui.js','onboarding.js'),('settings-support.js','settings-support.js')]:shutil.copyfile(root/'gecko/chrome'/source,runtime/'soulu/chrome/ui'/target)
 for page in ['onboarding.html','settings.html']:
  p=runtime/'soulu/chrome/ui'/page;text=p.read_text(encoding='utf-8');text=text.replace('</body>','<script src="import-ui.js"></script></body>');p.write_text(text,encoding='utf-8')
 shutil.copyfile(root/'gecko/chrome/import-ui.js',runtime/'soulu/chrome/ui/import-ui.js')
