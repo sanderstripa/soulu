@@ -91,3 +91,5 @@ jobs:
           if ($branchHead.Trim() -ne $env:GITHUB_SHA) { throw 'A newer source revision superseded this build' }
           gh release create soulu-preview-13 Soulu-0.13.0-Preview-Setup-win64.exe Soulu-0.13.0-Preview-Setup-win64.exe.build.json SHA256SUMS.txt soulu13-checks/preview13.json soulu13-checks/installer13.json --target $env:GITHUB_SHA --title 'Soulu 0.13.0 Preview' --prerelease --notes-file gecko/docs/PREVIEW13-RESULTS.md
           if ($LASTEXITCODE) { throw 'Release publication failed' }
+
+# Verify native automatic add-on routing and themed control painting.

@@ -32,7 +32,7 @@ try:
  (out/'import-complete.png').write_bytes(base64.b64decode(m.screenshot()))
  ui('document.getElementById("soulu-import-close").click();document.querySelector("#actions .primary").click();return true;','page');wait(lambda:ui('return document.getElementById("counter").textContent.startsWith("3")','page'))
  ui('const s=document.querySelector("#controls select");s.value="dark";s.dispatchEvent(new Event("change"));return true;','page');wait(lambda:ui('return document.body.dataset.theme==="dark"','page'))
- check('dark_theme_control_readable',ui('const s=document.querySelector("#controls select"),c=getComputedStyle(s);return c.backgroundColor!=="rgb(255, 255, 255)"&&c.color!==c.backgroundColor&&getComputedStyle(document.body).colorScheme==="dark";','page'))
+ check('dark_theme_control_readable',ui('const s=document.querySelector("#controls select"),c=getComputedStyle(s);return c.appearance==="none"&&c.backgroundColor==="rgb(48, 51, 55)"&&c.color!==c.backgroundColor&&getComputedStyle(document.body).colorScheme==="dark";','page'))
  (out/'welcome-dark.png').write_bytes(base64.b64decode(m.screenshot()))
  ui('document.querySelector("#actions .primary").click();return true;','page');wait(lambda:ui('return document.getElementById("counter").textContent.startsWith("4")','page'))
  ui('document.querySelector("#controls input[type=checkbox]").click();return true;','page');wait(lambda:chrome('return Soulu.config.rules.sites["soulu://home"]?.geolocation===0'))

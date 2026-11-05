@@ -188,7 +188,10 @@ try:
   def manager_consolidated():
    if not live_reopened_window():return False
    return again.execute_script('const wins=[...Services.wm.getEnumerator("navigator:browser")].filter(w=>!w.closed);return wins.length===1&&[...gBrowser.tabs].some(t=>t.linkedBrowser.currentURI.spec==="about:addons");')
-  check('automatic_extension_window_becomes_tab',wait(manager_consolidated,45))
+  try:check('automatic_extension_window_becomes_tab',wait(manager_consolidated,45))
+  except Exception:
+   print(again.execute_script('return [...Services.wm.getEnumerator("navigator:browser")].map(w=>({closed:w.closed,ready:!!w.Soulu?.ready,hidden:!!w.__souluStartupHidden,error:w.__souluStartupPresentation?.error,input:w.Soulu?.backend?.shared.initialUserInput,owner:w.Soulu?.backend?.shared.initialWindow===w,tabs:[...w.gBrowser.tabs].map(t=>t.linkedBrowser.currentURI.spec)}))'),flush=True)
+   raise
   windows=again.execute_script('return [...Services.wm.getEnumerator("navigator:browser")].filter(w=>!w.closed).map(w=>({uri:w.document.documentURI,ready:!!w.Soulu?.ready,title:w.document.title,hidden:!!w.__souluStartupHidden,startupError:w.Soulu?.startupWindowError||null,startupMode:w.Soulu?.config.settings.startupMode,tabs:[...w.gBrowser.tabs].map(t=>t.linkedBrowser.currentURI.spec)}));');check('reopened_browser_has_one_window',len(windows)==1,windows)
   second_pid=again.execute_script('return Services.appinfo.processID');second_handle=int(again.execute_script('return String(window.docShell.treeOwner.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIBaseWindow).nativeHandle)'),16);C.windll.user32.PostMessageW(C.c_void_p(second_handle),0x0010,0,0);reopened.wait(timeout=30)
   check('reopened_browser_process_exits_normally',wait(lambda:not psutil.pid_exists(second_pid),30))

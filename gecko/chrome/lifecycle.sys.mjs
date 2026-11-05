@@ -14,6 +14,18 @@ const observer={observe(_subject,topic){
 }};
 export function ensureApplicationLifetime(win,shared){
  if(!shared.initialWindow||shared.initialWindow.closed)shared.initialWindow=win;
+ // Native add-on startup code uses the trusted link helpers. Route its
+ // automatic pages to the already initialized window before creating a peer.
+ for(const name of ['openTrustedLinkIn','openLinkIn']){
+  const original=win[name];if(typeof original!=='function')continue;
+  win[name]=function(url,where,...args){
+   const owner=shared.initialWindow;
+   if(where==='window'&&!shared.initialUserInput&&owner&&!owner.closed&&owner.gBrowser&&/^(?:about:addons(?:[?#]|$)|moz-extension:\/\/)/.test(String(url))){
+    const target=owner[name];return (owner===win?original:target).call(owner,url,'tab',...args);
+   }
+   return original.call(this,url,where,...args);
+  };
+ }
  const interacted=event=>{if(event.isTrusted)shared.initialUserInput=true;};
  win.addEventListener('mousedown',interacted,true);win.addEventListener('keydown',interacted,true);
  if(registered)return;registered=true;Services.obs.addObserver(observer,'domwindowclosed');Services.obs.addObserver(observer,'quit-application-granted');}
