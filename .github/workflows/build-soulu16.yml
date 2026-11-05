@@ -98,3 +98,5 @@ jobs:
 
 
 # Verify the updater version by importing the generated module.
+
+# Defer heavy background initialization until paint, without hiding the window.

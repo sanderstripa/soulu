@@ -11,7 +11,7 @@ async function presentsWithoutGPU(root){
  const source=chrome(root,'window-controls.sys.mjs');
  const program=source.slice(source.indexOf('export function prepareStartup(')).replaceAll('export function ','function ');
  const native={visible:false,cloaked:false,queries:0};
- const win={closed:false,Soulu:{ready:true},__souluStartupPresentation:{},setTimeout(){return 1;},clearTimeout(){},focus(){},Event:class{},dispatchEvent(){},document:{documentElement:{hasAttribute(){return true;}},getElementById(){return {frameLoader:{remoteTab:{renderLayers:false,hasLayers:false}},browsingContext:{currentWindowGlobal:{getActor(){return {sendQuery(){native.queries++;return new Promise(()=>{});}};}}}};}}};
+ const win={closed:false,Soulu:{ready:true},__souluStartupPresentation:{},setTimeout(){return 1;},clearTimeout(){},focus(){},requestAnimationFrame(fn){fn();},Event:class{},dispatchEvent(){},document:{documentElement:{hasAttribute(){return true;}},getElementById(){return {frameLoader:{remoteTab:{renderLayers:false,hasLayers:false}},browsingContext:{currentWindowGlobal:{getActor(){return {sendQuery(){native.queries++;return new Promise(()=>{});}};}}}};}}};
  win.docShell={treeOwner:{QueryInterface(){return {getInterface(){return {set visibility(value){native.visible=value;}};}};}}};
  const timers={setTimeout(fn){return 1;},clearTimeout(){}};
  const context={win,console,Date,Promise,Ci:{nsIInterfaceRequestor:1,nsIBaseWindow:2},Services:{appinfo:{OS:'WINNT'}},taskbarPending(){},cloak(_win,enabled){native.cloaked=enabled;return {};},ChromeUtils:{importESModule(uri){return uri.includes('lifecycle')?{consolidateAutomaticStart(){}}:timers;}}};

@@ -69,6 +69,9 @@ export function revealStartup(win){
   taskbarPending(win,false);
   win.__souluStartupHidden=false;
   win.__souluStartupPresentation.presentedAt=Date.now();
-  win.focus();win.dispatchEvent(new win.Event('SouluPresented'));
+  win.focus();
+  // Background native filter compilation stays after the first visible paint.
+  // These frames never gate native window visibility.
+  win.requestAnimationFrame(()=>win.requestAnimationFrame(()=>{if(!win.closed)win.dispatchEvent(new win.Event('SouluPresented'));}));
  }catch(error){win.__souluStartupPresentation.error=String(error);console.error(error);}
 }
