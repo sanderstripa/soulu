@@ -115,3 +115,5 @@ jobs:
 # Open exactly one explicit application start window outside session-restore mode.
 
 # Check the real extension-manager button from Settings and close its overlay.
+
+# Set profile startup policy before native SessionStore initialization.
