@@ -168,12 +168,17 @@ $ownedRoots=@($env:SOULU_LINK_ROOT,(Join-Path $env:LOCALAPPDATA 'Programs\Soulu'
 foreach($root in $roots){
  foreach($item in (Get-ChildItem -LiteralPath $root -Filter *.lnk -File -Recurse -ErrorAction SilentlyContinue)){
   $link=$shell.CreateShortcut($item.FullName)
+  if(!$link.TargetPath -and $item.BaseName -match 'private|\u043f\u0440\u0438\u0432\u0430\u0442'){
+   # WSH can return an empty target for a localized shortcut filename.
+   $copy=Join-Path ([IO.Path]::GetTempPath()) (([guid]::NewGuid().ToString('N'))+'.lnk')
+   try{[IO.File]::Copy($item.FullName,$copy);$link=$shell.CreateShortcut($copy)}finally{[IO.File]::Delete($copy)}
+  }
   $target=[Environment]::ExpandEnvironmentVariables([string]$link.TargetPath)
   $privateEngine='(?i)(?:^|[\\/])(?:Soul|Soulu|SouluGecko)[\\/]engine[\\/]private_browsing\.exe$'
   $legacy=$target.StartsWith((Join-Path $env:LOCALAPPDATA 'Programs\Soul\'),[StringComparison]::OrdinalIgnoreCase)
   $owned=$ownedRoots | Where-Object {$_ -and $target.StartsWith(($_.TrimEnd('\')+'\'),[StringComparison]::OrdinalIgnoreCase)}
   $remove=$legacy -or ($target -match $privateEngine) -or ($owned -and $link.Arguments -match '(?:^|\s)--?private(?:-window)?(?:\s|$)')
-  if(!$remove -and $link.Arguments -match '(?:^|\s)--?private(?:-window)?(?:\s|$)'){
+  if(!$remove -and !$target){
    # A broken link may resolve to an empty/short path. Its LinkInfo and
    # StringData still carry the original ANSI or Unicode target.
    $raw=[IO.File]::ReadAllBytes($item.FullName)

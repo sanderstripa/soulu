@@ -158,6 +158,7 @@ try:
    check('stale_firefox_private_shortcut_removed',not stale.exists())
    check('unrelated_private_shortcut_preserved',foreign.exists());foreign.unlink()
    for remaining in (p for p in localized if p.exists()):
+    print("Unresolved fixture",remaining.name,remaining.read_bytes().hex(),flush=True)
     script="$l=(New-Object -ComObject WScript.Shell).CreateShortcut('"+str(remaining).replace("'","''")+"');Write-Output $l.TargetPath;Write-Output $l.Arguments"
     subprocess.run(['powershell.exe','-NoProfile','-EncodedCommand',base64.b64encode(script.encode('utf-16le')).decode('ascii')])
    check('both_localized_private_shortcuts_removed',not any(p.exists() for p in localized))
