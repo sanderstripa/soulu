@@ -61,7 +61,7 @@ jobs:
           ./gecko/installer/build.ps1 -BuildDir gecko-out -OutFile Soulu-0.18.0-Preview-Setup-win64.exe
           if ($LASTEXITCODE) { throw 'Installer build failed' }
           if ((Get-Item Soulu-0.18.0-Preview-Setup-win64.exe).VersionInfo.ProductVersion -ne '0.18.0.0') { throw 'Installer version mismatch' }
-      - name: Verify clean installation, first launch, upgrade and removal
+      - name: Verify installed toolbar, incognito, twelve restarts, upgrade and removal
         if: ${{ !cancelled() && steps.installer.outcome == 'success' }}
         run: python gecko/tests/installer18.py Soulu-0.18.0-Preview-Setup-win64.exe soulu18-checks
       - uses: actions/upload-artifact@v4

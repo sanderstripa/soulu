@@ -183,6 +183,11 @@ try:
   check('equal_or_older_release_not_offered',m.execute_script('const make=n=>({draft:false,tag_name:"soulu-preview-"+n,assets:[{id:n,name:"Soulu-0."+n+".0-Preview-Setup-win64.exe",size:1,digest:"sha256:"+"a".repeat(64),browser_download_url:"https://github.com/sanderstripa/soulu/releases/download/soulu-preview-"+n+"/Soulu-0."+n+".0-Preview-Setup-win64.exe"}]});return Soulu.updateCandidate([make(17)])===null&&Soulu.updateCandidate([make(16)])===null&&Soulu.updateCandidate([make(19)])!==null;'))
   (out/'installed-first-launch.png').write_bytes(base64.b64decode(m.screenshot()))
   result=m.execute_async_script('const done=arguments[arguments.length-1];(async()=>{const {PlacesUtils}=ChromeUtils.importESModule("resource://gre/modules/PlacesUtils.sys.mjs");await PlacesUtils.bookmarks.insert({parentGuid:PlacesUtils.bookmarks.toolbarGuid,url:"https://example.org/preview18-persistence",title:"Preview 17 installer persistence"});Soulu.config.onboarding={done:true,step:6};await Soulu.backend.save();return true;})().then(done,e=>done({error:String(e)}));');check('real_bookmark_saved_before_upgrade',result is True)
+  m.execute_script('Soulu.dispatch("browser.newIncognito");return true;')
+  private_window='[...Services.wm.getEnumerator("navigator:browser")].find(w=>w.Soulu?.ready && w.Soulu.backend.isPrivate)'
+  check('incognito_uses_soulu_shell',wait(lambda:m.execute_script('const w='+private_window+';return !!w?.document.documentElement.hasAttribute("soulu-ui-ready")')))
+  m.execute_script('const w='+private_window+';w.close();return true;')
+  wait(lambda:m.execute_script('return [...Services.wm.getEnumerator("navigator:browser")].length===1'))
   helper=m.execute_async_script('const done=arguments[arguments.length-1];Soulu.dispatch("browser.components.manage",{component:"xray",operation:"status"}).then(()=>done(!!Soulu.backend.shared.helper),e=>done({error:String(e)}));')
   check('native_vpn_helper_started_before_close',helper is True,helper)
   pid=m.execute_script('return Services.appinfo.processID')

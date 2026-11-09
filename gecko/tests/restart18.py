@@ -44,7 +44,7 @@ class Site(http.server.BaseHTTPRequestHandler):
  def log_message(self,*a):pass
 server=http.server.ThreadingHTTPServer(('127.0.0.1',0),Site);threading.Thread(target=server.serve_forever,daemon=True).start()
 root=pathlib.Path(tempfile.mkdtemp(prefix='soulu-native-restart-'));profile=root/'Soulu/Profiles/default';profile.mkdir(parents=True)
-(profile/'soulu-settings.json').write_text(json.dumps({'settings':{'theme':'light','language':'ru','startupMode':'soulu','mattePanel':False},'onboarding':{'done':True,'step':6},'vpn':{'profiles':[]}}))
+(profile/'soulu-settings.json').write_text(json.dumps({'settings':{'theme':'light','language':'ru','startupMode':'custom','startupUrl':f'http://127.0.0.1:{server.server_port}/','mattePanel':False},'onboarding':{'done':True,'step':6},'vpn':{'profiles':[]}}))
 env=dict(os.environ,LOCALAPPDATA=str(root))
 for key in ['MOZ_MARIONETTE','MOZ_REMOTE_ALLOW_SYSTEM_ACCESS','SOULU_GECKO_TEST']:env.pop(key,None)
 # Reproduce the old existence-vs-ownership trap: the object exists, but no thread owns it.
@@ -56,7 +56,8 @@ assert retained
 try:
  for cycle in range(1,13):
   check('no_old_process_'+str(cycle),not processes())
-  p=subprocess.Popen([str(base/'Soulu.exe'),'--url',f'http://127.0.0.1:{server.server_port}/'],env=env)
+  args=['--url',f'http://127.0.0.1:{server.server_port}/'] if cycle<=3 else []
+  p=subprocess.Popen([str(base/'Soulu.exe'),*args],env=env)
   def ready():return next((w for w in windows() if 'Soulu restart fixture' in w[2]),None)
   hwnd,pid,title=wait(ready,45);time.sleep(25 if cycle==1 else 3)
   check('visible_window_'+str(cycle),len(windows())==1,{'pid':pid,'title':title})

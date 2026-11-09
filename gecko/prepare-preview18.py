@@ -89,8 +89,16 @@ with zipfile.ZipFile(bundle) as source, zipfile.ZipFile(temporary,'w',zipfile.ZI
         elif name.endswith('/branding/brand.ftl'):
             locale = name.split('/')[-3]
             data = (chrome/'locales'/locale/'branding/brand.ftl').read_bytes()
+        private_page = root/'gecko/private-page'/PurePosixPath(name).name
+        if name.startswith('chrome/browser/content/browser/') and private_page.is_file():
+            data = private_page.read_bytes()
         target.writestr(name,data)
 temporary.replace(bundle)
 for name in ['firefox.VisualElementsManifest.xml','private_browsing.VisualElementsManifest.xml','firefox.exe.sig']:
     (out/'engine'/name).unlink(missing_ok=True)
 shutil.copyfile(root/'gecko/chrome/early.css',chrome/'early.css')
+patch(ui/'navigation.js','if(entered){closeEditor(false);closeMenu();}render();',"""if(entered){closeEditor(false);closeMenu();}render();
+ if(entered&&!matchMedia('(prefers-reduced-motion:reduce)').matches){
+  overview.animate([{opacity:0,transform:'translateY(6px)'},{opacity:1,transform:'none'}],{duration:180,easing:'ease-out'});
+ }
+""")
