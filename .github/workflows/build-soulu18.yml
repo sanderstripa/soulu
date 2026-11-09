@@ -2,7 +2,7 @@ name: Build and publish Soulu 0.18.0 Preview
 on:
   push:
     branches: [gecko-preview]
-    paths: ['.github/workflows/build-soulu18.yml']
+    paths: ['.github/workflows/build-soulu18.yml','gecko/**']
 permissions:
   contents: write
 concurrency:

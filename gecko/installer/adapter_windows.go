@@ -162,7 +162,27 @@ func (a *Adapter) Install(o core.Options) error {
 	}
 	exe := filepath.Join(dir, "Soulu.exe")
 	icon := filepath.Join(dir,"engine","soulu","chrome","ui","soulu-app-icon.ico")
- cleanupLinks:=`$shell=New-Object -ComObject WScript.Shell;$roots=@([Environment]::GetFolderPath('Programs'),[Environment]::GetFolderPath('Desktop'),[Environment]::GetFolderPath('CommonPrograms'));foreach($r in $roots){Get-ChildItem -LiteralPath $r -Filter *.lnk -File -Recurse -ErrorAction SilentlyContinue|ForEach-Object{$link=$shell.CreateShortcut($_.FullName);$target=$link.TargetPath;$owned=@($env:SOULU_LINK_ROOT,(Join-Path $env:LOCALAPPDATA 'Programs\Soulu'),(Join-Path $env:LOCALAPPDATA 'Programs\Soul'),(Join-Path $env:LOCALAPPDATA 'Programs\SouluGecko')) | Where-Object {$_ -and $target.StartsWith(($_.TrimEnd('\')+'\'),[StringComparison]::OrdinalIgnoreCase)};$private=$owned -and (([IO.Path]::GetFileName($target) -ieq 'private_browsing.exe') -or ($link.Arguments -match '(?:^|\s)--?private(?:-window)?(?:\s|$)'));$old=$target.StartsWith((Join-Path $env:LOCALAPPDATA 'Programs\Soul\'),[StringComparison]::OrdinalIgnoreCase);if($private -or $old){Remove-Item -LiteralPath $_.FullName -Force}}};`
+ cleanupLinks := `$shell=New-Object -ComObject WScript.Shell
+$roots=@([Environment]::GetFolderPath('Programs'),[Environment]::GetFolderPath('Desktop'),[Environment]::GetFolderPath('CommonPrograms'))
+$ownedRoots=@($env:SOULU_LINK_ROOT,(Join-Path $env:LOCALAPPDATA 'Programs\Soulu'),(Join-Path $env:LOCALAPPDATA 'Programs\Soul'),(Join-Path $env:LOCALAPPDATA 'Programs\SouluGecko'))
+foreach($root in $roots){
+ foreach($item in (Get-ChildItem -LiteralPath $root -Filter *.lnk -File -Recurse -ErrorAction SilentlyContinue)){
+  $link=$shell.CreateShortcut($item.FullName)
+  $target=[Environment]::ExpandEnvironmentVariables([string]$link.TargetPath)
+  $privateEngine='(?i)(?:^|[\\/])(?:Soul|Soulu|SouluGecko)[\\/]engine[\\/]private_browsing\.exe$'
+  $legacy=$target.StartsWith((Join-Path $env:LOCALAPPDATA 'Programs\Soul\'),[StringComparison]::OrdinalIgnoreCase)
+  $owned=$ownedRoots | Where-Object {$_ -and $target.StartsWith(($_.TrimEnd('\')+'\'),[StringComparison]::OrdinalIgnoreCase)}
+  $remove=$legacy -or ($target -match $privateEngine) -or ($owned -and $link.Arguments -match '(?:^|\s)--?private(?:-window)?(?:\s|$)')
+  if(!$remove -and $link.Arguments -match '(?:^|\s)--?private(?:-window)?(?:\s|$)'){
+   # A broken link may resolve to an empty/short path. Its LinkInfo and
+   # StringData still carry the original ANSI or Unicode target.
+   $raw=[IO.File]::ReadAllBytes($item.FullName)
+   $pattern='(?i)[\\/](?:Soul|Soulu|SouluGecko)[\\/]engine[\\/]private_browsing\.exe'
+   $remove=([Text.Encoding]::ASCII.GetString($raw) -match $pattern) -or ([Text.Encoding]::Unicode.GetString($raw) -match $pattern) -or ($raw.Length -gt 1 -and [Text.Encoding]::Unicode.GetString($raw,1,$raw.Length-1) -match $pattern)
+  }
+  if($remove){Remove-Item -LiteralPath $item.FullName -Force}
+ }
+}`
  cleanupLinks = "$env:SOULU_LINK_ROOT='" + strings.ReplaceAll(dir, "'", "''") + "';" + cleanupLinks
  if err=core.PowerShell(cleanupLinks);err!=nil{return err}
 	if err = core.Shortcuts("Soulu", dir, "Soulu.exe", strings.TrimPrefix(icon, dir+string(os.PathSeparator)), "", o.Desktop, o.StartMenu); err != nil {
