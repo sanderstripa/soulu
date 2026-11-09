@@ -98,8 +98,8 @@ func activateSession(profile,exe string)bool{
  var info sessionRecord;if json.Unmarshal(data,&info)!=nil||info.Leader<1||!strings.HasPrefix(info.Job,`Local\Soulu.Session.`+profileKey(profile)+"."){return false}
  if !sameSessionExecutable(imagePath(info.Leader),exe){return false}
  wide,_:=syscall.UTF16PtrFromString(info.Job);h,_,_:=kernelSession.NewProc("OpenJobObjectW").Call(4,0,uintptr(unsafe.Pointer(wide)));if h==0{return false};j:=&sessionJob{handle:syscall.Handle(h),name:info.Job};defer j.Close()
- wins:=j.windows();if len(wins)==0{return false};hwnd:=wins[0]
- userSession.NewProc("ShowWindowAsync").Call(hwnd,9);userSession.NewProc("SetForegroundWindow").Call(hwnd);return true
+ var hwnd uintptr;for _,win:=range j.windows(){if sessionWindowReady(win){hwnd=win;break}};if hwnd==0{return false}
+ if iconic,_,_:=userSession.NewProc("IsIconic").Call(hwnd);iconic!=0{userSession.NewProc("ShowWindowAsync").Call(hwnd,9)};userSession.NewProc("SetForegroundWindow").Call(hwnd);return true
 }
 
 func(j *sessionJob)active()(uint32,error){

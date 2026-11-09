@@ -42,3 +42,11 @@
 }
 
 @-moz-document url("about:addons"){addon-card[addon-id="vot-ext@firefox"]{display:none!important}}
+
+@-moz-document url("chrome://browser/content/browser.xhtml") {
+ :root:not([soulu-ui-ready]) #soulu-shell-frame {visibility:hidden!important}
+ :root:not([soulu-ui-ready])::after {
+  content:"Soulu";position:fixed;inset:0;display:grid;place-items:center;
+  pointer-events:none;color:CanvasText;font:500 24px system-ui;
+ }
+}

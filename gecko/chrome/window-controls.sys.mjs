@@ -33,45 +33,20 @@ export function isDefault(){
  return ['http','https'].every(scheme=>{let key;try{key=Cc['@mozilla.org/windows-registry-key;1'].createInstance(Ci.nsIWindowsRegKey);key.open(Ci.nsIWindowsRegKey.ROOT_KEY_CURRENT_USER,'Software\\Microsoft\\Windows\\Shell\\Associations\\UrlAssociations\\'+scheme+'\\UserChoice',Ci.nsIWindowsRegKey.ACCESS_READ);return key.readStringValue('ProgId')==='Soulu.URL';}catch{return false;}finally{key?.close();}});
 }
 
-// Keep only the initial taskbar suppression; native window visibility owns presentation.
-// A hidden/cloaked composing window must not get a transient taskbar button.
-function taskbarPending(win,pending){
- if(Services.appinfo.OS!=='WINNT')return;
- const abi=ctypes.winapi_abi||ctypes.default_abi,user=library('user32.dll');
- const get=user.declare('GetWindowLongW',abi,ctypes.long,ctypes.uintptr_t,ctypes.int);
- const set=user.declare('SetWindowLongW',abi,ctypes.long,ctypes.uintptr_t,ctypes.int,ctypes.long);
- const hwnd=handle(win),style=Number(get(hwnd,-20));
- if(pending){win.__souluOriginalExStyle??=style;set(hwnd,-20,(style|0x80)&~0x40000);}
- else if(win.__souluOriginalExStyle!==undefined)set(hwnd,-20,win.__souluOriginalExStyle);
+// Windows owns initial presentation and taskbar animations. The early chrome
+// stylesheet paints the Soulu surface while the content actor initializes.
+export function prepareStartup(win) {
+ if (win.__souluStartupPresentation) return;
+ win.document.title = 'Soulu';
+ win.__souluStartupPresentation = {preparedAt: Date.now(), mode: 'native'};
 }
-export function prepareStartup(win){
- if(win.__souluStartupHidden)return;
- win.__souluStartupPresentation={preparedAt:Date.now(),mode:'native'};
- try{
-  taskbarPending(win,true);
-  win.docShell.treeOwner.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIBaseWindow).visibility=false;
-  win.__souluStartupHidden=true;
-  // Use the early native Show path. Never wait for a GPU layer/actor acknowledgement.
-  win.__souluStartupRevealTimer=win.setTimeout(()=>{
-   if(win.Soulu?.ready)revealStartup(win);
-   else console.error('Soulu initialization did not finish');
-  },8000);
- }catch(error){win.__souluStartupPresentation.error=String(error);console.error(error);}
-}
-export function revealStartup(win){
- if(!win.__souluStartupHidden||win.closed)return;
- win.clearTimeout(win.__souluStartupRevealTimer);
+export function revealStartup(win) {
+ if (win.closed || win.__souluStartupPresentation?.presentedAt) return;
+ prepareStartup(win);
  ChromeUtils.importESModule('chrome://soulu/content/lifecycle.sys.mjs').consolidateAutomaticStart(win);
- if(win.closed)return;
- try{
-  win.document.title='Soulu';
-  win.docShell.treeOwner.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIBaseWindow).visibility=true;
-  taskbarPending(win,false);
-  win.__souluStartupHidden=false;
-  win.__souluStartupPresentation.presentedAt=Date.now();
-  win.focus();
-  // Background native filter compilation stays after the first visible paint.
-  // These frames never gate native window visibility.
-  win.requestAnimationFrame(()=>win.requestAnimationFrame(()=>{if(!win.closed)win.dispatchEvent(new win.Event('SouluPresented'));}));
- }catch(error){win.__souluStartupPresentation.error=String(error);console.error(error);}
+ if (win.closed) return;
+ win.__souluStartupPresentation.presentedAt = Date.now();
+ win.requestAnimationFrame(() => win.requestAnimationFrame(() => {
+  if (!win.closed) win.dispatchEvent(new win.Event('SouluPresented'));
+ }));
 }

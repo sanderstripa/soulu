@@ -11,7 +11,7 @@ const {PlacesUtils}=ChromeUtils.importESModule('resource://gre/modules/PlacesUti
 const {PrivateBrowsingUtils}=ChromeUtils.importESModule('resource://gre/modules/PrivateBrowsingUtils.sys.mjs');
 const profile=PathUtils.profileDir, settingsFile=PathUtils.join(profile,'soulu-settings.json');
 const isPrivate=PrivateBrowsingUtils.isWindowPrivate(window);
-const defaults={settings:{language:'ru',theme:'system',layout:'adaptive',mattePanel:false,showExtensions:false,homeShowFavorites:true,showSidebar:true,showBack:true,showHome:false,showFavorites:true,showNewTab:true,showDownloads:true,vpnToolbarVisible:true,addressPosition:'center',bookmarksBarMode:'never',bookmarksBarPosition:'hidden',startupMode:'soulu',newTabMode:'soulu',homeMode:'soulu',homeProvider:'google',homeWeatherMode:'automatic',homeWeatherUnits:'celsius',homeFavoriteIds:[],saveHistory:true,historyGroupDays:true,readerTheme:'light',askDownloadLocation:false,freezeBackgroundTabs:false,memorySaver:false,searchEngine:'google',openStartPageAfterLastTab:true,performanceMode:'balanced',backgroundTabTimeout:'300'},rules:{defaults:{geolocation:1,camera:1,microphone:1,notifications:1,sound:0,popups:2,downloads:1},sites:{},blocking:{enabled:true,sites:{}}},vpn:{profiles:[],defaultProfileId:'',directDomains:''},reader:{theme:'light',font:'sans',size:18,width:0,spacing:1.5},profile:PathUtils.filename(profile)};
+const defaults={settings:{language:'ru',theme:'system',layout:'adaptive',mattePanel:false,showExtensions:false,homeShowFavorites:true,showSidebar:true,showBack:true,showHome:false,showFavorites:true,showNewTab:true,showDownloads:true,vpnToolbarVisible:false,addressPosition:'center',bookmarksBarMode:'never',bookmarksBarPosition:'hidden',startupMode:'soulu',newTabMode:'soulu',homeMode:'soulu',homeProvider:'google',homeWeatherMode:'automatic',homeWeatherUnits:'celsius',homeFavoriteIds:[],saveHistory:true,historyGroupDays:true,readerTheme:'light',askDownloadLocation:false,freezeBackgroundTabs:false,memorySaver:false,searchEngine:'google',openStartPageAfterLastTab:true,performanceMode:'balanced',backgroundTabTimeout:'300'},rules:{defaults:{geolocation:1,camera:1,microphone:1,notifications:1,sound:0,popups:2,downloads:1},sites:{},blocking:{enabled:true,sites:{}}},vpn:{profiles:[],defaultProfileId:'',directDomains:''},reader:{theme:'light',font:'sans',size:18,width:0,spacing:1.5},profile:PathUtils.filename(profile)};
 const {state:shared}=ChromeUtils.importESModule('chrome://soulu/content/shared.sys.mjs');
 if(!shared.config)shared.config=structuredClone(defaults);
 const windows=()=>[...Services.wm.getEnumerator('navigator:browser')];
@@ -145,7 +145,7 @@ async function dispatch(action,payload,source){
  case 'browser.bookmarks.remove':await PlacesUtils.bookmarks.remove(payload);return bookmarks();
  case 'browser.bookmarks.open':return open(payload);
  case 'browser.sites.get':return shared.config.rules;
- case 'browser.sites.blocking':shared.config.rules.blocking.enabled=!!payload;await save();apply();return shared.config.rules;
+ case 'browser.sites.blocking':shared.config.rules.blocking.enabled=!!payload;try{await save();}catch(error){console.error('Soulu settings preserved:',error);}apply();return shared.config.rules;
  case 'browser.profile.create':{const id=Services.uuid.generateUUID().toString().replace(/[{}]/g,'');const path=PathUtils.join(PathUtils.parent(profile),id);await IOUtils.makeDirectory(path,{permissions:0o700});await IOUtils.writeJSON(PathUtils.join(path,'soulu-profile.json'),{name:String(payload).slice(0,160)});return {id};}
  case 'browser.profile.switch':{
   if(!/^[\w-]{1,64}$/.test(payload))throw Error('Invalid profile');
@@ -189,12 +189,30 @@ async function initialize(){
  try{Soulu.components=await IOUtils.readJSON(PathUtils.join(Services.dirsvc.get('GreD',Ci.nsIFile).path,'soulu','vpn','components.json'));}catch{}
  Services.scriptloader.loadSubScript('chrome://soulu/content/translations.js',window);
  const nativeWindow=ChromeUtils.importESModule('chrome://soulu/content/window-controls.sys.mjs');try{nativeWindow.brand(window);}catch(error){console.error(error);}
- await save();apply();timing('applied');
+ try{await save();}catch(error){console.error('Soulu settings preserved:',error);}apply();timing('applied');
  Services.scriptloader.loadSubScript('chrome://soulu/content/integration.js',window);
  Services.scriptloader.loadSubScript('chrome://soulu/content/page-glass.js',window);
  Services.scriptloader.loadSubScript('chrome://soulu/content/settings-routing.js',window);
+ // An early actor can time out while a large profile is loading. Give the
+ // toolbar a fresh actor once the backend is available, preserving every tab.
+ let retries=0;
+ const recoverShell=()=>{
+  if(window.closed||document.documentElement.hasAttribute('soulu-ui-ready'))return;
+  const frame=document.getElementById('soulu-shell-frame');
+  if(frame && retries++<2){
+   frame.reload();
+   window.setTimeout(recoverShell,20000);
+  }
+ };
+ window.setTimeout(recoverShell,20000);
  window.Soulu.ready=true;timing('ready');window.dispatchEvent(new Event('SouluBackendReady'));
 }
-initialize().catch(console.error);
+initialize().catch(error=>{
+ console.error('Soulu startup',error);
+ const panel=document.createElementNS('http://www.w3.org/1999/xhtml','div');
+ panel.style.cssText='position:fixed;inset:0;z-index:20000;padding:48px;background:Canvas;color:CanvasText;font:16px system-ui';
+ panel.textContent='Soulu · Не удалось загрузить интерфейс. '+String(error);
+ document.documentElement.append(panel);
+});
 })();
 

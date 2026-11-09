@@ -34,7 +34,30 @@ let lastHomeState='';function notify(){if(pending)return;pending=requestAnimatio
 function surface(){geometry();return snapshot();}
 const originalEmit=Soulu._emit;Soulu._emit=(name,value)=>{originalEmit(name,value);send(name,value);if(name==='settings'){notify();for(const tab of validTabs())if(tab.linkedBrowser.currentURI.spec===homeURL)emitTo(tab.linkedBrowser,homeState());}};
 function makeFrame(id,url){const node=document.createXULElement('browser');node.id=id;node.setAttribute('type','content');node.setAttribute('remote','true');node.setAttribute('remoteType','file');node.setAttribute('disablehistory','true');node.setAttribute('transparent','true');node.setAttribute('src',url);node.setAttribute('aria-label',id==='soulu-shell-frame'?'Панель Soulu':'Настройки Soulu');document.documentElement.append(node);return node;}
-function animateSettings(open){const epoch=++settingsEpoch;settingsAnimation?.cancel();settingsFrame.hidden=shade.hidden=false;settingsFrame.style.visibility='visible';const reduced=matchMedia('(prefers-reduced-motion:reduce)').matches;settingsAnimation=settingsFrame.animate(open?[{transform:'translate(-50%,-24px)',opacity:0},{transform:'translate(-50%,0)',opacity:1}]:[{transform:'translate(-50%,0)',opacity:1},{transform:'translate(-50%,-24px)',opacity:0}],{duration:reduced?60:190,easing:'cubic-bezier(.22,1,.36,1)',fill:'both'});shade.animate(open?[{opacity:0},{opacity:1}]:[{opacity:1},{opacity:0}],{duration:reduced?60:190,fill:'both'});settingsAnimation.finished.then(()=>{if(epoch!==settingsEpoch)return;if(!open){Soulu.settingsRequested=false;settingsFrame.hidden=shade.hidden=true;selected().focus();}settingsAnimation.cancel();settingsAnimation=null;notify();},()=>{});}
+let shadeAnimation;
+function animateSettings(open) {
+ const epoch=++settingsEpoch;
+ const from = settingsAnimation ? getComputedStyle(settingsFrame) : null;
+ const start = from ? {transform:from.transform,opacity:from.opacity} : null;
+ const shadeStart = shadeAnimation ? getComputedStyle(shade).opacity : (open ? 0 : 1);
+ settingsAnimation?.cancel();
+ shadeAnimation?.cancel();
+ settingsFrame.hidden=shade.hidden=false;
+ settingsFrame.style.visibility='visible';
+ const shown={transform:'translate(-50%,0)',opacity:1};
+ const hidden={transform:'translate(-50%,-100%)',opacity:0};
+ const options={duration:matchMedia('(prefers-reduced-motion:reduce)').matches?0:220,
+  easing:'cubic-bezier(.22,1,.36,1)',fill:'both'};
+ settingsAnimation=settingsFrame.animate([start || (open?hidden:shown),open?shown:hidden],options);
+ shadeAnimation=shade.animate([{opacity:shadeStart},{opacity:open?1:0}],options);
+ settingsAnimation.finished.then(()=>{
+  if(epoch!==settingsEpoch)return;
+  if(!open){settingsFrame.hidden=shade.hidden=true;selected().focus();}
+  settingsAnimation.cancel();shadeAnimation.cancel();
+  settingsAnimation=shadeAnimation=null;
+  notify();
+ },()=>{});
+}
 function prepareSettings(){if(settingsFrame)return;shade=document.createElementNS(H,'div');shade.id='soulu-settings-shade';shade.addEventListener('click',()=>closeSettings());document.documentElement.append(shade);settingsFrame=makeFrame('soulu-settings-frame',appURL+'settings.html?host=overlay');settingsFrame.style.visibility='hidden';settingsFrame.hidden=shade.hidden=true;}
 function settings(section){Soulu.settingsRequested=true;pendingSection=section||null;prepareSettings();{shade.hidden=settingsFrame.hidden=false;if(settingsReady)actorSend(settingsFrame,'openSection',section||'');if(settingsReady)animateSettings(true);}settingsFrame.focus();notify();}
 function closeSettings(){Soulu.settingsRequested=false;pendingSection=null;if(settingsFrame&&!settingsFrame.hidden)animateSettings(false);}
