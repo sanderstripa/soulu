@@ -29,10 +29,10 @@ func register(exe,id string)error{
  // Windows retains control of the protected UserChoice associations.
  return hidden(exec.Command("rundll32.exe","url.dll,FileProtocolHandler","ms-settings:defaultapps?registeredAppUser=Soulu")).Start()
 }
-func forward(profile,address string,private bool)bool{
+func forward(profile,engine,address string,private bool)bool{
  data,e:=os.ReadFile(filepath.Join(profile,"soulu-remote.json"));if e!=nil||len(data)>1024{return false}
- var info struct{Port int `json:"port"`;Token string `json:"token"`};if json.Unmarshal(data,&info)!=nil||info.Port<1||info.Port>65535||len(info.Token)!=64{return false}
- c,e:=net.DialTimeout("tcp",fmt.Sprintf("127.0.0.1:%d",info.Port),250*time.Millisecond);if e!=nil{return false};defer c.Close();c.SetDeadline(time.Now().Add(500*time.Millisecond));json.NewEncoder(c).Encode(map[string]any{"token":info.Token,"url":address,"private":private});line,e:=bufio.NewReader(io.LimitReader(c,1024)).ReadString('\n');return e==nil&&strings.TrimSpace(line)=="ok"
+ var info struct{PID int `json:"pid"`;Port int `json:"port"`;Token string `json:"token"`};if json.Unmarshal(data,&info)!=nil||info.Port<1||info.Port>65535||len(info.Token)!=64{return false}
+ c,e:=net.DialTimeout("tcp",fmt.Sprintf("127.0.0.1:%d",info.Port),250*time.Millisecond);if e!=nil{return false};defer c.Close();if info.PID>0&&sameSessionExecutable(imagePath(info.PID),engine){userSession.NewProc("AllowSetForegroundWindow").Call(uintptr(info.PID))};c.SetDeadline(time.Now().Add(500*time.Millisecond));json.NewEncoder(c).Encode(map[string]any{"token":info.Token,"url":address,"private":private});line,e:=bufio.NewReader(io.LimitReader(c,1024)).ReadString('\n');return e==nil&&strings.TrimSpace(line)=="ok"
 }
 func main(){exe,e:=os.Executable();if e!=nil{fail(e.Error())};base:=filepath.Dir(exe);args:=os.Args[1:];if len(args)>0&&args[0]=="--register-default"{id:="default";if len(args)==3&&args[1]=="--profile"{id=args[2]}else if len(args)!=1{fail("Invalid registration arguments")};if !regexp.MustCompile(`^[a-zA-Z0-9_-]{1,64}$`).MatchString(id){fail("Invalid profile identifier")};if e=register(exe,id);e!=nil{fail(e.Error())};return}
  id:="default";if len(args)>=2&&args[0]=="--profile"{id=args[1];args=args[2:]}
@@ -42,7 +42,7 @@ func main(){exe,e:=os.Executable();if e!=nil{fail(e.Error())};base:=filepath.Dir
  sessionLog(profile,"request")
  tryForward:=func()bool{
   if address==""&&!private&&len(args)==0&&activateSession(profile,exe){sessionLog(profile,"activated-native-window");return true}
-  if (address!=""||len(args)==0||private)&&forward(profile,address,private){sessionLog(profile,"forwarded");return true}
+  if (address!=""||len(args)==0||private)&&forward(profile,filepath.Join(base,"engine","SouluEngine.exe"),address,private){sessionLog(profile,"forwarded");return true}
   return false
  }
  if tryForward(){return}
