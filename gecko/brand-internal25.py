@@ -1,6 +1,7 @@
 """Brand native documents without changing security handlers or engine namespaces."""
 from pathlib import Path
-import base64,json,re,zipfile
+import base64,io,json,re,zipfile
+from PIL import Image
 root=Path(__file__).resolve().parents[1];engine=root/'gecko-out/engine'
 # Force policy on existing profiles as well as new installations.
 bootstrap=engine/'soulu.cfg'
@@ -27,8 +28,11 @@ for archive in [engine/'omni.ja',engine/'browser/omni.ja']:
  with zipfile.ZipFile(archive) as source,zipfile.ZipFile(temp,'w',zipfile.ZIP_DEFLATED) as target:
   for name in source.namelist():
    data=source.read(name);changes=[]
-   if '/illustrations/' in name and (Path(name).name.startswith('kit-') or Path(name).name in {'no-connection.svg','security-error.svg','error-malformed-url.svg'}):
+   if name.endswith('.svg') and (re.search(r'(?:firefox|mozilla|fox(?:y)?[-.]|[-/]fox[-.]|kit-)',Path(name).name,re.I) or ('/illustrations/' in name and Path(name).name in {'no-connection.svg','security-error.svg','error-malformed-url.svg'})):
     data=logo_svg;changes.append('replaced mascot with Soulu petals')
+   if name.endswith(('.png','.webp')) and re.search(r'(?:firefox|mozilla|fox[-.]|[-/]fox[-.])',Path(name).name,re.I):
+    old=Image.open(io.BytesIO(data));art=Image.open(engine/'soulu/chrome/ui/browser-icon.png').convert('RGBA');art.thumbnail(old.size,Image.Resampling.LANCZOS)
+    canvas=Image.new('RGBA',old.size);canvas.alpha_composite(art,((old.width-art.width)//2,(old.height-art.height)//2));output=io.BytesIO();canvas.save(output,format='WEBP' if name.endswith('.webp') else 'PNG');data=output.getvalue();changes.append('Soulu raster branding')
    if '/branding/' in name and name.endswith('.svg'):
     if 'wordmark' in name:
      data=b'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 50"><text x="0" y="38" font-family="Inter, sans-serif" font-size="40" fill="context-fill">Soulu</text></svg>'

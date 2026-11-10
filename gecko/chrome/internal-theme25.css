@@ -18,6 +18,8 @@
  --text-color:light-dark(#242628,#e6e7e9)!important;
  --in-content-page-background:light-dark(#fcfcfd,#202124)!important;
  --in-content-page-color:light-dark(#242628,#e6e7e9)!important;
+ --theme-selection-background:#0671ff!important;
+ --theme-focus-outline-color:#0671ff!important;
  --border-radius-medium:10px!important;
 }
 @font-face{font-family:Inter;src:url("chrome://soulu/content/ui/fonts/Inter.ttf");font-weight:100 900}
