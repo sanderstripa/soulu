@@ -72,7 +72,7 @@ patch(ui/'renderer.js','function reconcileClassicTabs(','''function souluTabExit
 }
 function reconcileClassicTabs(''')
 for path in (out/'engine').rglob('*.exe'):
-    if path.name.lower() in {'private_browsing.exe','firefox.exe','default-browser-agent.exe','maintenanceservice_installer.exe'}:
+    if path.name.lower() in {'private_browsing.exe','firefox.exe','helper.exe','default-browser-agent.exe','maintenanceservice_installer.exe'}:
         path.unlink()
 build = json.loads((out/'BUILD.json').read_text(encoding='utf-8'))
 assert build['name'] == 'Soulu 0.17.0 Preview'
