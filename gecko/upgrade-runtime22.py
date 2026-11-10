@@ -21,3 +21,17 @@ for k in ['Name','Vendor','RemotingName']:ini['App'][k]='Soulu'
 for target in [fresh/'application.ini',fresh/'browser/application.ini']:
     with target.open('w') as f:ini.write(f,space_around_delimiters=False)
 shutil.rmtree(engine);shutil.move(str(fresh),engine)
+# Normalize Mozilla's optimized JAR index while retaining all file offsets.
+import struct,zipfile,io
+for archive in [engine/'omni.ja',engine/'browser/omni.ja']:
+    raw=archive.read_bytes();begin=raw.find(b'PK\x01\x02');assert begin>=0
+    end=begin;count=0
+    while raw[end:end+4]==b'PK\x01\x02':
+        name,extra,comment=struct.unpack_from('<HHH',raw,end+28)
+        end+=46+name+extra+comment;count+=1
+    central=raw[begin:end]
+    normalized=raw+central+struct.pack('<4s4H2IH',b'PK\x05\x06',0,0,count,count,len(central),len(raw),0)
+    temporary=archive.with_suffix('.normal')
+    with zipfile.ZipFile(io.BytesIO(normalized)) as source,zipfile.ZipFile(temporary,'w',zipfile.ZIP_DEFLATED) as target:
+        for name in source.namelist():target.writestr(name,source.read(name))
+    temporary.replace(archive)
