@@ -65,5 +65,5 @@ body .bookmarks-menu {
 @media (forced-colors: active) { .bookmark-scroll-thumb { display: none; } }
 
 /* Match the rightmost caption glyph inset to the left sidebar glyph. */
-.classic-navigation-right { padding-right: 8px !important; }
-.compact-toolbar-surface { padding-right: 8px !important; }
+.classic-navigation-right { padding-right: max(0px, calc(8px + (var(--toolbar-target) - var(--caption-target)) / 2)) !important; }
+.compact-toolbar-surface { padding-right: max(0px, calc(8px + (var(--toolbar-target) - var(--caption-target)) / 2)) !important; }
