@@ -97,7 +97,7 @@ try:
  check('same_profile_preserved',bool(json.loads((profile/'soulu-settings.json').read_text())['onboarding']['done']))
  report['passed']=True
 except Exception as e:
- report['error']=str(e);report['remaining']=[{'pid':p.pid,'exe':p.exe()} for p in processes()];report['windows']=windows();ImageGrab.grab().save(out/'failure.png')
+ report['error']=str(e);report['remaining']=[{'pid':p.pid,'exe':p.exe(),'cmd':p.cmdline()} for p in processes()];report['windows']=windows();ImageGrab.grab().save(out/'failure.png')
  if not baseline:raise
 finally:
  C.windll.kernel32.CloseHandle(retained)
