@@ -1,13 +1,13 @@
 {
-  "version": "159.0",
+  "version": "160.0",
   "archives": {
     "win64": {
-      "path": "win64/ru/Firefox Setup 159.0.exe",
-      "sha256": "d5d2d468fed4cd6e74335d0b72142d1b193709f6ecc40ed1ff4c5fa0686f4348"
+      "path": "win64/ru/Firefox Setup 160.0.exe",
+      "sha256": "9aca6af4a633546ce9908894d735b0518c36b6a54f108566e517225983cf5173"
     },
     "linux-x86_64": {
-      "path": "linux-x86_64/en-US/firefox-159.0.tar.xz",
-      "sha256": "54536fcd120af484d4c56272a5a1cf4af57b9c713d1a3b1e775da192dd541fcd"
+      "path": "linux-x86_64/en-US/firefox-160.0.tar.xz",
+      "sha256": "fde774e9757c8878534c05ec210db592bf6a1b244c57941ffb2e364c04f35fcd"
     }
   },
   "ublock": {
