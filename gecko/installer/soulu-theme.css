@@ -88,3 +88,12 @@ input:checked + .switch { background: var(--button); border-color: var(--button)
 @media(prefers-reduced-motion:reduce) {
   .tools button::before { transition: none; }
 }
+
+/* Text actions retain a clean background while exposing hover and focus. */
+.text-button:hover:not(:disabled) {
+  background: transparent !important;
+  filter: none;
+  color: var(--text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

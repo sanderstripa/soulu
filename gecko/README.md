@@ -1,8 +1,8 @@
-# Soulu Preview 1.160.23
+# Soulu Preview 1.160.24
 
 The primary Soulu implementation uses Gecko 160.0 on Windows x64.
 
-Install Soulu-1.160.23-Preview-Setup-win64.exe from the normal GitHub release.
+Install Soulu-1.160.24-Preview-Setup-win64.exe from the normal GitHub release.
 Program files are installed beneath %LOCALAPPDATA%/Programs/Soulu.
 Profiles remain beneath %LOCALAPPDATA%/Soulu/Profiles. Application data and engine update directories are redirected into the Soulu data tree.
 
@@ -11,7 +11,7 @@ The CEF implementation and its original build environment are preserved in cef-a
 
 ## Release build
 
-The workflow .github/workflows/build-soulu23.yml performs these operations.
+The workflow .github/workflows/build-soulu24.yml performs these operations.
 
 1. Restore the integrity-checked baseline application assets.
 2. Download and verify the complete official Gecko 160.0 runtime.

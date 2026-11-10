@@ -3,9 +3,9 @@
 
 Soulu is a Windows browser with its own interface, built-in VPN and ad blocking.
 
-**Current release — Soulu Preview 1.160.23**, powered by **Gecko 160.0**.
+**Current release — Soulu Preview 1.160.24**, powered by **Gecko 160.0**.
 
-[Download for Windows x64](https://github.com/sanderstripa/soulu/releases/tag/soulu-preview-1.160.23)
+[Download for Windows x64](https://github.com/sanderstripa/soulu/releases/tag/soulu-preview-1.160.24)
 
 ## Development
 
@@ -25,7 +25,7 @@ The Chromium/CEF implementation is preserved in [cef-archive](https://github.com
 
 ## Build and verification
 
-The release workflow is .github/workflows/build-soulu23.yml.
+The release workflow is .github/workflows/build-soulu24.yml.
 It assembles the pinned official Gecko runtime, applies Soulu chrome and branding, builds the Windows installer and verifies the installed application before publication.
 
 The release contains the Windows installer and SHA256SUMS.txt.

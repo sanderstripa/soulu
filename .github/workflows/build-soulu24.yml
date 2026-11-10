@@ -1,13 +1,13 @@
-name: Build and publish Soulu Preview 1.160.23
+name: Build and publish Soulu Preview 1.160.24
 on:
   push:
     branches: [gecko-preview, main]
-    paths: ['.github/workflows/build-soulu23.yml','gecko/**']
+    paths: ['.github/workflows/build-soulu24.yml','gecko/**']
 permissions:
   contents: write
   actions: read
 concurrency:
-  group: soulu-gecko-preview-23
+  group: soulu-gecko-preview-24
   cancel-in-progress: true
 jobs:
   windows:
@@ -34,15 +34,15 @@ jobs:
           gofmt -w main.go session_windows.go session_windows_test.go
           go test -v -count=1 .
           if ($LASTEXITCODE) { throw 'Launcher ownership checks failed' }
-      - name: Restore published Preview 17 and apply requested Preview 23 fixes
+      - name: Restore published Preview 17 and apply requested Preview 24 fixes
         id: assemble
         shell: pwsh
         run: |
           gh run download 42055551760 -n soulu17-verified-installer -D preview17-input
           if ($LASTEXITCODE) { throw 'Preview 17 download failed' }
           python -m pip install pillow
-          python gecko/prepare-preview23.py
-          if ($LASTEXITCODE) { throw 'Preview 23 assembly failed' }
+          python gecko/prepare-preview24.py
+          if ($LASTEXITCODE) { throw 'Preview 24 assembly failed' }
           Push-Location gecko/launcher
           go run github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.5.0 -64 -o rsrc.syso
           if ($LASTEXITCODE) { throw 'Launcher resources failed' }
@@ -51,52 +51,52 @@ jobs:
           Pop-Location
           python gecko/brand-engine.py
           if ($LASTEXITCODE) { throw 'Engine branding failed' }
-          New-Item -ItemType Directory -Force soulu23-checks | Out-Null
-          Copy-Item gecko-out/windows-brand-audit.json,gecko-out/default-bookmarks-audit.json soulu23-checks
+          New-Item -ItemType Directory -Force soulu24-checks | Out-Null
+          Copy-Item gecko-out/windows-brand-audit.json,gecko-out/default-bookmarks-audit.json soulu24-checks
           python -c "import json; r=json.load(open('gecko-out/windows-brand-audit.json')); assert r and all(x['iconGroupsMatchSoulu'] for x in r); assert json.load(open('gecko-out/default-bookmarks-audit.json'))['disabled']"
           if ($LASTEXITCODE) { throw 'Branding/default bookmark audit failed' }
           python -m pip install marionette_driver pillow psutil websocket-client
-          python gecko/tests/adblock-update.py gecko-out/engine/soulu/adblock/soulu_adblock.dll soulu23-checks/adblock-atomic.json
+          python gecko/tests/adblock-update.py gecko-out/engine/soulu/adblock/soulu_adblock.dll soulu24-checks/adblock-atomic.json
           if ($LASTEXITCODE) { throw 'Adblock atomic update verification failed' }
-      - name: Build Soulu Preview 1.160.23 installer
+      - name: Build Soulu Preview 1.160.24 installer
         id: installer
         if: ${{ !cancelled() && steps.assemble.outcome == 'success' }}
         shell: pwsh
         run: |
-          ./gecko/installer/build.ps1 -BuildDir gecko-out -OutFile Soulu-1.160.23-Preview-Setup-win64.exe
+          ./gecko/installer/build.ps1 -BuildDir gecko-out -OutFile Soulu-1.160.24-Preview-Setup-win64.exe
           if ($LASTEXITCODE) { throw 'Installer build failed' }
-          if ((Get-Item Soulu-1.160.23-Preview-Setup-win64.exe).VersionInfo.ProductVersion -ne '1.160.23.0') { throw 'Installer version mismatch' }
+          if ((Get-Item Soulu-1.160.24-Preview-Setup-win64.exe).VersionInfo.ProductVersion -ne '1.160.24.0') { throw 'Installer version mismatch' }
       - name: Verify installed toolbar, incognito, twelve restarts, upgrade and removal
         if: ${{ !cancelled() && steps.installer.outcome == 'success' }}
-        run: python gecko/tests/installer23.py Soulu-1.160.23-Preview-Setup-win64.exe soulu23-checks
+        run: python gecko/tests/installer24.py Soulu-1.160.24-Preview-Setup-win64.exe soulu24-checks
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: soulu23-evidence
-          path: soulu23-checks/
+          name: soulu24-evidence
+          path: soulu24-checks/
       - uses: actions/upload-artifact@v4
         with:
-          name: soulu23-verified-installer
+          name: soulu24-verified-installer
           path: |
-            Soulu-1.160.23-Preview-Setup-win64.exe
-            Soulu-1.160.23-Preview-Setup-win64.exe.build.json
-      - name: Publish tested Soulu Preview 1.160.23 installer
+            Soulu-1.160.24-Preview-Setup-win64.exe
+            Soulu-1.160.24-Preview-Setup-win64.exe.build.json
+      - name: Publish tested Soulu Preview 1.160.24 installer
         shell: pwsh
         run: |
-          python -c "import json,pathlib; paths=['restart18.json','installer23.json']; assert all(json.loads((pathlib.Path('soulu23-checks')/p).read_text())['passed'] for p in paths)"
+          python -c "import json,pathlib; paths=['restart18.json','installer24.json']; assert all(json.loads((pathlib.Path('soulu24-checks')/p).read_text())['passed'] for p in paths)"
           if ($LASTEXITCODE) { throw 'Acceptance reports not green' }
-          (Get-FileHash Soulu-1.160.23-Preview-Setup-win64.exe -Algorithm SHA256).Hash.ToLowerInvariant() + '  Soulu-1.160.23-Preview-Setup-win64.exe' | Set-Content SHA256SUMS.txt
+          (Get-FileHash Soulu-1.160.24-Preview-Setup-win64.exe -Algorithm SHA256).Hash.ToLowerInvariant() + '  Soulu-1.160.24-Preview-Setup-win64.exe' | Set-Content SHA256SUMS.txt
           $branchHead = gh api "repos/sanderstripa/soulu/git/ref/heads/$env:GITHUB_REF_NAME" --jq '.object.sha'
           if ($branchHead.Trim() -ne $env:GITHUB_SHA) { throw 'A newer source revision superseded this build' }
-          gh release view soulu-preview-1.160.23 --json tagName 2>$null
+          gh release view soulu-preview-1.160.24 --json tagName 2>$null
           if ($LASTEXITCODE -eq 0) {
-            gh release upload soulu-preview-1.160.23 Soulu-1.160.23-Preview-Setup-win64.exe SHA256SUMS.txt --clobber
+            gh release upload soulu-preview-1.160.24 Soulu-1.160.24-Preview-Setup-win64.exe SHA256SUMS.txt --clobber
             if ($LASTEXITCODE) { throw 'Release asset replacement failed' }
-            gh api -X PATCH repos/sanderstripa/soulu/git/refs/tags/soulu-preview-1.160.23 -f sha=$env:GITHUB_SHA -F force=true
+            gh api -X PATCH repos/sanderstripa/soulu/git/refs/tags/soulu-preview-1.160.24 -f sha=$env:GITHUB_SHA -F force=true
             if ($LASTEXITCODE) { throw 'Verified release tag update failed' }
-            gh release edit soulu-preview-1.160.23 --latest
+            gh release edit soulu-preview-1.160.24 --latest
           } else {
-            gh release create soulu-preview-1.160.23 Soulu-1.160.23-Preview-Setup-win64.exe SHA256SUMS.txt --target $env:GITHUB_SHA --title 'Soulu Preview 1.160.23' --notes 'Soulu Gecko for Windows x64. Restore the original blue petal icon, enlarge the home logo, and align installer typography, window controls and themes with Soulu.'
+            gh release create soulu-preview-1.160.24 Soulu-1.160.24-Preview-Setup-win64.exe SHA256SUMS.txt --target $env:GITHUB_SHA --title 'Soulu Preview 1.160.24' --notes 'Soulu Gecko for Windows x64. Fix installer text-action hover feedback, enlarge Windows icons, refresh shortcut icon resources and add the home-page logo toggle.'
           }
           if ($LASTEXITCODE) { throw 'Release publication failed' }
 

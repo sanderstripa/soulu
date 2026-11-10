@@ -1,3 +1,9 @@
+# Soulu Preview 1.160.24
+
+- Remove the rectangular hover background from installer text actions.
+- Enlarge the optical Windows icon variant and refresh Soulu-owned shortcut icons.
+- Add the Home logo toggle at the bottom of Startup and home. Center the search field when the logo is hidden.
+
 # Soulu Preview 1.160.23
 
 - Restore the original blue petal logo and enlarge its home-page presentation by 15 percent.
