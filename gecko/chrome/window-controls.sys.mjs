@@ -1,4 +1,5 @@
 // Native Windows drag, identical to the existing CEF WM_NCLBUTTONDOWN path.
+const {setTimeout:startupTimeout,clearTimeout:cancelStartupTimeout}=ChromeUtils.importESModule('resource://gre/modules/Timer.sys.mjs');
 const {ctypes}=ChromeUtils.importESModule('resource://gre/modules/ctypes.sys.mjs');
 let native;
 export function beginDrag(){if(Services.appinfo.OS!=='WINNT')return false;if(!native){const dll=ctypes.open('user32.dll'),abi=(ctypes.winapi_abi||ctypes.default_abi);native={dll,foreground:dll.declare('GetForegroundWindow',abi,ctypes.uintptr_t),pid:dll.declare('GetWindowThreadProcessId',abi,ctypes.uint32_t,ctypes.uintptr_t,ctypes.uint32_t.ptr),release:dll.declare('ReleaseCapture',abi,ctypes.bool),send:dll.declare('SendMessageW',abi,ctypes.intptr_t,ctypes.uintptr_t,ctypes.uint32_t,ctypes.uintptr_t,ctypes.intptr_t)};}const hwnd=native.foreground(),pid=ctypes.uint32_t();native.pid(hwnd,pid.address());if(pid.value!==Services.appinfo.processID)throw Error('The active window is not owned by Soulu');native.release();native.send(hwnd,0xA1,2,0);return true;}
@@ -46,7 +47,7 @@ function releaseStartup(win) {
    library('user32.dll').declare('ShowWindow',abi,ctypes.bool,ctypes.uintptr_t,ctypes.int)(handle(win),5);
   }catch(error){console.error('Soulu window presentation',error);}
  }
- win.clearTimeout(state.timeout);
+ cancelStartupTimeout(state.timeout);
 }
 export function prepareStartup(win) {
  if (win.__souluStartupPresentation) return;
@@ -60,17 +61,22 @@ export function prepareStartup(win) {
    const hwnd=handle(win);
    if(hwnd.isNull?.() || String(hwnd)==='0')throw Error('Window handle pending');
    const abi=ctypes.winapi_abi||ctypes.default_abi;
-   const set=library('dwmapi.dll').declare('DwmSetWindowAttribute',abi,
-    ctypes.long,ctypes.uintptr_t,ctypes.uint32_t,ctypes.int32_t.ptr,ctypes.uint32_t);
-   const flag=ctypes.int32_t(1);
-   if(set(hwnd,13,flag.address(),4)!==0)throw Error('Window composition pending');
-   state.uncloak=()=>{flag.value=0;set(hwnd,13,flag.address(),4);};
+
+   const user=library('user32.dll');
+   const get=user.declare('GetWindowLongW',abi,ctypes.long,ctypes.uintptr_t,ctypes.int);
+   const style=user.declare('SetWindowLongW',abi,ctypes.long,ctypes.uintptr_t,ctypes.int,ctypes.long);
+   const alpha=user.declare('SetLayeredWindowAttributes',abi,ctypes.bool,ctypes.uintptr_t,ctypes.uint32_t,ctypes.uint8_t,ctypes.uint32_t);
+   const previous=get(hwnd,-20);
+   style(hwnd,-20,previous|0x80000);
+   if(!alpha(hwnd,0,0,2)){style(hwnd,-20,previous);throw Error('Window opacity pending');}
+   state.uncloak=()=>{alpha(hwnd,0,255,2);style(hwnd,-20,previous);};
+
   } catch(error) {
-   if(Date.now()-state.preparedAt<10000)win.setTimeout(cloak,16);
+   if(Date.now()-state.preparedAt<10000)startupTimeout(cloak,16);
   }
  };
  cloak();
- state.timeout=win.setTimeout(()=>releaseStartup(win),10000);
+ state.timeout=startupTimeout(()=>releaseStartup(win),3000);
 
 }
 export function revealStartup(win) {
