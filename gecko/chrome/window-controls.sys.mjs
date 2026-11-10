@@ -5,7 +5,7 @@ export function beginDrag(){if(Services.appinfo.OS!=='WINNT')return false;if(!na
 
 const libraries=new Map();
 function library(name){if(!libraries.has(name))libraries.set(name,ctypes.open(name));return libraries.get(name);}
-function handle(win){const raw=win.docShell.treeOwner.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIBaseWindow).nativeHandle;return ctypes.uintptr_t(ctypes.UInt64(String(raw)));}
+function handle(win){const raw=win.docShell.treeOwner.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIBaseWindow).nativeHandle;const value=String(raw);return ctypes.uintptr_t(ctypes.UInt64(/^0x/i.test(value)?value:'0x'+value));}
 let iconHandles;
 export function brand(win){
  if(Services.appinfo.OS!=='WINNT')return;
