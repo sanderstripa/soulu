@@ -46,7 +46,7 @@ for archive in [engine/'omni.ja',engine/'browser/omni.ja']:
    if name.endswith(('/in-content/common.css','/aboutNetError.css')):
     data+=('\n'+style).encode();changes.append('Soulu native palette and error artwork')
    # Only human-readable translations; never alter resource IDs, URLs or licenses.
-   if ('/localization/' in '/'+name or name.startswith('localization/')) and name.endswith(('.ftl','.properties')) and '/license' not in name.lower() and '/aboutRights' not in name:
+   if ('/localization/' in '/'+name or name.startswith('localization/')) and name.endswith(('.ftl','.properties')) and not any(part in name.lower() for part in ['license','rights','credits']):
     text=data.decode('utf-8');lines=[]
     for line in text.splitlines(keepends=True):
      if (not line.lstrip().startswith(('#','!')) and '=' in line) or line.startswith((' ','\t')):
