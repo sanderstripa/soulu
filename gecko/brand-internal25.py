@@ -28,6 +28,11 @@ for archive in [engine/'omni.ja',engine/'browser/omni.ja']:
  with zipfile.ZipFile(archive) as source,zipfile.ZipFile(temp,'w',zipfile.ZIP_DEFLATED) as target:
   for name in source.namelist():
    data=source.read(name);changes=[]
+   if name.endswith('/LocalModeMappings.sys.mjs'):
+    text=data.decode();before='return `firefox${originIndex == 0 ? "" : originIndex}.localhost`;'
+    assert before in text
+    text=text.replace(before,'return `soulu${originIndex == 0 ? "" : originIndex}.localhost`;').replace('/firefox(?<origin_index>', '/(?:firefox|soulu)(?<origin_index>')
+    data=text.encode();changes.append('Soulu local-development origin; legacy mappings preserved')
    if name.endswith('.svg') and (re.search(r'(?:firefox|mozilla|fox(?:y)?[-.]|[-/]fox[-.]|kit-)',Path(name).name,re.I) or ('/illustrations/' in name and Path(name).name in {'no-connection.svg','security-error.svg','error-malformed-url.svg'})):
     data=logo_svg;changes.append('replaced mascot with Soulu petals')
    if name.endswith(('.png','.webp')) and re.search(r'(?:firefox|mozilla|fox[-.]|[-/]fox[-.])',Path(name).name,re.I):
