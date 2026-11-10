@@ -35,3 +35,19 @@ for archive in [engine/'omni.ja',engine/'browser/omni.ja']:
     with zipfile.ZipFile(io.BytesIO(normalized)) as source,zipfile.ZipFile(temporary,'w',zipfile.ZIP_DEFLATED) as target:
         for name in source.namelist():target.writestr(name,source.read(name))
     temporary.replace(archive)
+
+# Override cached engine directory keys before application services start.
+bootstrap=engine/'soulu.cfg'
+source=bootstrap.read_text(encoding='utf-8')
+injection="""
+  const local=Cc['@mozilla.org/file/local;1'].createInstance(Ci.nsIFile);
+  local.initWithPath(Services.env.get('LOCALAPPDATA'));local.append('Soulu');
+  for(const [key,leaf] of [['UAppData','ApplicationData'],['ULocalAppData','ApplicationData'],['UpdRootD','Updates'],['OldUpdRootD','Updates']]){
+    const directory=local.clone();directory.append(leaf);
+    if(!directory.exists())directory.create(Ci.nsIFile.DIRECTORY_TYPE,0o700);
+    try{Services.dirsvc.undefine(key);}catch{}
+    Services.dirsvc.set(key,directory);
+  }
+"""
+source=source.replace('  const app = Services.dirsvc.get',injection+'\n  const app = Services.dirsvc.get')
+bootstrap.write_text(source,encoding='utf-8')

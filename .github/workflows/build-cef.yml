@@ -28,18 +28,6 @@ on:
         required: false
         default: false
         type: boolean
-  push:
-    branches: [codex/chrome-extensions-settings, main, codex/settings-overlay, codex/cef-stable-update, codex/beta-motion, codex/beta-typography, codex/beta-toolbar, codex/beta-adblock, codex/beta-site-reader, codex/menu-translate, codex/home-final, codex/window-polish, codex/browser-import-validation, codex/classic-responsive-implementation, codex/adaptive-toolbar]
-    tags: [beta-1.0.76]
-    paths:
-      - "cef/**"
-      - "installer/**"
-      - "scripts/**"
-      - "ui/**"
-      - "geometry.json"
-      - "typography.json"
-      - "vpn/**"
-      - ".github/workflows/build-cef.yml"
 
 permissions:
   contents: write

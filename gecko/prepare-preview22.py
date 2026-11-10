@@ -36,7 +36,7 @@ chrome = out / 'engine/soulu/chrome'
 ui = chrome / 'ui'
 for name in ['browser.js','window-controls.sys.mjs','shell-host.js','build-info.sys.mjs','updates.js']:
     source = (root / 'gecko/chrome' / name).read_text(encoding='utf-8')
-    (chrome / name).write_text(re.sub(r'0\.(?:13|14)\.0 Preview','1.160.22 Preview',source),encoding='utf-8')
+    (chrome / name).write_text(re.sub(r'0\.(?:13|14)\.0 Preview','Preview 1.160.22',source),encoding='utf-8')
 for path in chrome.rglob('*'):
     if path.suffix in {'.js','.html','.mjs'} and 'third_party' not in path.parts:
         source = path.read_text(encoding='utf-8')
