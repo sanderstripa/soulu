@@ -37,9 +37,15 @@ export function isDefault(){
 // stylesheet paints the Soulu surface while the content actor initializes.
 function releaseStartup(win) {
  const state = win.__souluStartupPresentation;
- if (!state?.uncloak) return;
- state.uncloak();
+ if (!state) return;
+ state.uncloak?.();
  state.uncloak = null;
+ if(Services.appinfo.OS==='WINNT'){
+  try{
+   const abi=ctypes.winapi_abi||ctypes.default_abi;
+   library('user32.dll').declare('ShowWindow',abi,ctypes.bool,ctypes.uintptr_t,ctypes.int)(handle(win),5);
+  }catch(error){console.error('Soulu window presentation',error);}
+ }
  win.clearTimeout(state.timeout);
 }
 export function prepareStartup(win) {
@@ -47,17 +53,25 @@ export function prepareStartup(win) {
  win.document.title = 'Soulu';
  const state = win.__souluStartupPresentation = {preparedAt: Date.now(), mode: 'native'};
  if (Services.appinfo.OS !== 'WINNT') return;
- try {
-  const hwnd = handle(win);
-  const abi = ctypes.winapi_abi || ctypes.default_abi;
-  const set = library('dwmapi.dll').declare('DwmSetWindowAttribute', abi,
-   ctypes.long, ctypes.uintptr_t, ctypes.uint32_t, ctypes.int32_t.ptr, ctypes.uint32_t);
-  const flag = ctypes.int32_t(1);
-  if (set(hwnd, 13, flag.address(), 4) !== 0) return;
-  state.uncloak = () => { flag.value = 0; set(hwnd, 13, flag.address(), 4); };
-  // A slow actor or suspended compositor must always leave a usable window.
-  state.timeout = win.setTimeout(() => releaseStartup(win), 1800);
- } catch (error) { console.error('Soulu first frame', error); }
+
+ const cloak = () => {
+  if(win.closed || state.presentedAt || state.uncloak) return;
+  try {
+   const hwnd=handle(win);
+   if(hwnd.isNull?.() || String(hwnd)==='0')throw Error('Window handle pending');
+   const abi=ctypes.winapi_abi||ctypes.default_abi;
+   const set=library('dwmapi.dll').declare('DwmSetWindowAttribute',abi,
+    ctypes.long,ctypes.uintptr_t,ctypes.uint32_t,ctypes.int32_t.ptr,ctypes.uint32_t);
+   const flag=ctypes.int32_t(1);
+   if(set(hwnd,13,flag.address(),4)!==0)throw Error('Window composition pending');
+   state.uncloak=()=>{flag.value=0;set(hwnd,13,flag.address(),4);};
+  } catch(error) {
+   if(Date.now()-state.preparedAt<10000)win.setTimeout(cloak,16);
+  }
+ };
+ cloak();
+ state.timeout=win.setTimeout(()=>releaseStartup(win),10000);
+
 }
 export function revealStartup(win) {
  if (win.closed || win.__souluStartupPresentation?.presentedAt) return;
@@ -65,9 +79,17 @@ export function revealStartup(win) {
  ChromeUtils.importESModule('chrome://soulu/content/lifecycle.sys.mjs').consolidateAutomaticStart(win);
  if (win.closed) return;
  win.__souluStartupPresentation.presentedAt = Date.now();
- win.requestAnimationFrame(() => win.requestAnimationFrame(() => {
-  if (win.closed) return;
+
+ const flush = async () => {
+  try {
+   const frame=win.document.getElementById('soulu-shell-frame');
+   await frame?.browsingContext?.currentWindowGlobal?.getActor('SouluApp').sendQuery('preparePresentation');
+   win.document.documentElement.getBoundingClientRect();
+   win.windowUtils.updateLayerTree();
+  } catch(error) { console.error('Soulu initial paint',error); }
+  if(win.closed)return;
   releaseStartup(win);
   win.dispatchEvent(new win.Event('SouluPresented'));
- }));
+ };
+ win.setTimeout(flush,0);
 }

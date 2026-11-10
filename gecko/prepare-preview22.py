@@ -31,16 +31,17 @@ for match in re.finditer(b'PK\x05\x06', raw):
 else:
     raise ValueError('Preview 17 payload missing')
 
+subprocess.run(['python',str(root/'gecko/upgrade-runtime22.py')],check=True)
 chrome = out / 'engine/soulu/chrome'
 ui = chrome / 'ui'
 for name in ['browser.js','window-controls.sys.mjs','shell-host.js','build-info.sys.mjs']:
     source = (root / 'gecko/chrome' / name).read_text(encoding='utf-8')
-    (chrome / name).write_text(re.sub(r'0\.(?:13|14)\.0 Preview','0.21.0 Preview',source),encoding='utf-8')
+    (chrome / name).write_text(re.sub(r'0\.(?:13|14)\.0 Preview','0.22.0 Preview',source),encoding='utf-8')
 for path in chrome.rglob('*'):
     if path.suffix in {'.js','.html','.mjs'} and 'third_party' not in path.parts:
         source = path.read_text(encoding='utf-8')
         if '0.17.0' in source:
-            path.write_text(source.replace('0.17.0','0.21.0'),encoding='utf-8')
+            path.write_text(source.replace('0.17.0','0.22.0'),encoding='utf-8')
 def patch(path, before, after):
     source = path.read_text(encoding='utf-8')
     if before not in source:
@@ -75,7 +76,8 @@ for path in (out/'engine').rglob('*.exe'):
         path.unlink()
 build = json.loads((out/'BUILD.json').read_text(encoding='utf-8'))
 assert build['name'] == 'Soulu 0.17.0 Preview'
-build.update(name='Soulu 0.21.0 Preview',base_preview=17,soulu_source=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip())
+build.update(firefox='160.0',mozilla_archive='https://archive.mozilla.org/pub/firefox/releases/160.0/win64/ru/Firefox Setup 160.0.exe',mozilla_sha256='9aca6af4a633546ce9908894d735b0518c36b6a54f108566e517225983cf5173')
+build.update(name='Soulu 0.22.0 Preview',base_preview=17,soulu_source=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip())
 (out/'BUILD.json').write_text(json.dumps(build,indent=2),encoding='utf-8')
 
 patch(ui/'renderer.js','mattePanel:true','mattePanel:false,showExtensions:false,showHome:false')
@@ -85,15 +87,24 @@ patch(ui/'settings.js','[{opacity:.94},{opacity:1}]',"[{opacity:reduced?1:0.6,tr
 # Apply the product strings at their native resource locations before the first
 # window loads, including native dialogs opened outside the browser window.
 bundle = out/'engine/browser/omni.ja'
+subprocess.run(['python',str(root/'gecko/prepare-icons22.py')],check=True)
 temporary = bundle.with_suffix('.new')
 with zipfile.ZipFile(bundle) as source, zipfile.ZipFile(temporary,'w',zipfile.ZIP_DEFLATED) as target:
     for name in source.namelist():
         data = source.read(name)
-        if name.endswith('/branding/brand.properties'):
+        if name.endswith('default-bookmarks.html'):
+            data=b'<!DOCTYPE NETSCAPE-Bookmark-file-1><TITLE>Bookmarks</TITLE><DL><p></DL><p>'
+        elif name.endswith('/branding/brand.properties'):
             data = (chrome/'branding/brand.properties').read_bytes()
         elif name.endswith('/branding/brand.ftl'):
             locale = name.split('/')[-3]
             data = (chrome/'locales'/locale/'branding/brand.ftl').read_bytes()
+        if '/branding/' in name and name.endswith('.png'):
+            from PIL import Image
+            old_image=Image.open(io.BytesIO(data))
+            output=io.BytesIO()
+            Image.open(root/'gecko/chrome/branding/soulu-wave.png').resize(old_image.size,Image.Resampling.LANCZOS).save(output,format='PNG')
+            data=output.getvalue()
         private_page = root/'gecko/private-page'/PurePosixPath(name).name
         if name.startswith('chrome/browser/content/browser/') and private_page.is_file():
             data = private_page.read_bytes()
@@ -161,3 +172,15 @@ with (chrome/'early.css').open('a',encoding='utf-8') as css:
 """)
 with (ui/'typography.css').open('a',encoding='utf-8') as css:
     css.write('\n@font-face{font-family:Inter;src:url("fonts/Inter.ttf");font-weight:100 900;font-display:block}\n')
+
+patch(ui/'settings.js',"[['Soulu',state.update?.soulu],['Движок',state.update?.gecko],['Xray',state.update?.xray],['Sudoku',state.update?.sudoku],['Adblock',state.update?.adblock]]",
+      "[['Soulu',state.update?.soulu],['Gecko',state.update?.gecko]]")
+patch(ui/'settings.js',"old.updates.groups.push(group('Компоненты VPN'",
+      "old.updates.groups[0].ru='Браузер';old.updates.groups[0].en='Browser';old.updates.groups[0].rows[0].ru='Soulu и Gecko';old.updates.groups[0].rows[0].en='Soulu and Gecko';old.updates.groups.push(group('Adblock','Adblock',[{key:'adblockManager',type:'adblockManager',ru:'Блокировка рекламы',en:'Ad blocking'}]));old.updates.groups.push(group('Компоненты VPN'")
+patch(ui/'settings.js',"if(r.type==='extensionCatalog'){","if(r.type==='adblockManager'){n.classList.add('long');const host=el('div');host.dataset.adblockManager='true';n.append(host);card.append(n);continue;}if(r.type==='extensionCatalog'){")
+shutil.copyfile(root/'gecko/chrome/adblock-about.js',ui/'adblock-about.js')
+patch(ui/'settings.html','</head>','<script defer src="adblock-about.js"></script></head>')
+# Bootstrap readiness can precede the first remote surface composite.
+# Flush both UI and host paint before revealing the native window.
+
+subprocess.run(['python',str(root/'gecko/prepare-icons22.py')],check=True)

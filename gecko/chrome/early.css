@@ -42,3 +42,9 @@
 }
 
 @-moz-document url("about:addons"){addon-card[addon-id="vot-ext@firefox"]{display:none!important}}
+
+@-moz-document url("chrome://browser/content/browser.xhtml") {
+ :root:not([soulu-ui-ready]) { background-color:#f6f6f8!important;background-image:none!important; }
+ :root:not([soulu-ui-ready])::before {content:"";position:fixed;inset:0;background:#f6f6f8;z-index:2147483647;pointer-events:none;}
+ @media(prefers-color-scheme:dark){:root:not([soulu-ui-ready])::before{background:#08090b}}
+}

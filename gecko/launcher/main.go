@@ -18,7 +18,7 @@ import (
  "time"
  "unsafe"
 )
-func fail(s string){p,_:=syscall.UTF16PtrFromString(s);t,_:=syscall.UTF16PtrFromString("Soulu 0.21.0 Preview");syscall.NewLazyDLL("user32.dll").NewProc("MessageBoxW").Call(0,uintptr(unsafe.Pointer(p)),uintptr(unsafe.Pointer(t)),16);os.Exit(1)}
+func fail(s string){p,_:=syscall.UTF16PtrFromString(s);t,_:=syscall.UTF16PtrFromString("Soulu 0.22.0 Preview");syscall.NewLazyDLL("user32.dll").NewProc("MessageBoxW").Call(0,uintptr(unsafe.Pointer(p)),uintptr(unsafe.Pointer(t)),16);os.Exit(1)}
 func hidden(cmd *exec.Cmd) *exec.Cmd {cmd.SysProcAttr=&syscall.SysProcAttr{HideWindow:true};return cmd}
 func webURL(s string)bool{u,e:=url.Parse(s);return len(s)<=8192&&e==nil&&(u.Scheme=="http"||u.Scheme=="https")&&u.Host!=""&&u.User==nil}
 func register(exe,id string)error{
@@ -59,7 +59,7 @@ func main(){exe,e:=os.Executable();if e!=nil{fail(e.Error())};base:=filepath.Dir
  userFile:=filepath.Join(profile,"user.js");userData,readErr:=os.ReadFile(userFile);if readErr!=nil&&!os.IsNotExist(readErr){fail(readErr.Error())};policy:=regexp.MustCompile(`(?s)\n?// Soulu startup policy begin\n.*?// Soulu startup policy end\n?`);userData=policy.ReplaceAll(userData,nil);page:=1;restore:=false;if saved.Settings.StartupMode=="continue"{page=3;restore=true};block:=fmt.Sprintf("\n// Soulu startup policy begin\nuser_pref(\"browser.startup.page\",%d);\nuser_pref(\"browser.sessionstore.resume_from_crash\",%t);\nuser_pref(\"browser.sessionstore.resume_session_once\",false);\n// Soulu startup policy end\n",page,restore);if e=os.WriteFile(userFile,append(userData,[]byte(block)...),0600);e!=nil{fail(e.Error())}
  if len(args)==0{if saved.Settings.StartupMode!="continue"{home:=(&url.URL{Scheme:"file",Path:"/"+filepath.ToSlash(filepath.Join(base,"engine","soulu","chrome","ui","home.html"))}).String();if saved.Settings.StartupMode=="blank"{home="about:blank"};if saved.Settings.StartupMode=="custom"&&webURL(saved.Settings.StartupURL){home=saved.Settings.StartupURL};args=[]string{"-new-window",home}}}
  if len(args)>0&&args[0]=="--private"{args=append([]string{"-private-window"},args[1:]...)}
- cmd:=exec.Command(filepath.Join(base,"engine","SouluEngine.exe"),append([]string{"-app",filepath.Join(base,"engine","browser","application.ini"),"-no-remote","-profile",profile},args...)...);cmd.Dir=base
+ cmd:=exec.Command(filepath.Join(base,"engine","SouluEngine.exe"),append([]string{"-app",filepath.Join(base,"engine","browser","application.ini"),"-no-remote","-profile",profile},args...)...);cmd.Dir=base;cmd.SysProcAttr=&syscall.SysProcAttr{HideWindow:true}
  job,jobErr:=newSessionJob(profile);if jobErr!=nil{fail(jobErr.Error())};defer job.Close()
  if e=cmd.Start();e!=nil{fail(e.Error())}
  userSession.NewProc("AllowSetForegroundWindow").Call(uintptr(cmd.Process.Pid))

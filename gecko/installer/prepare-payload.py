@@ -4,4 +4,4 @@ import hashlib,json,sys
 root=Path(sys.argv[1]); manifest=root/'soulu-engine-manifest.json'
 manifest.unlink(missing_ok=True)
 files=[{'path':p.relative_to(root).as_posix(),'sha256':hashlib.sha256(p.read_bytes()).hexdigest()} for p in sorted(root.rglob('*')) if p.is_file()]
-manifest.write_text(json.dumps({'name':'Soulu 0.21.0 Preview','files':files},indent=2),encoding='utf-8')
+manifest.write_text(json.dumps({'name':'Soulu 0.22.0 Preview','files':files},indent=2),encoding='utf-8')
