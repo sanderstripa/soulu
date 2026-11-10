@@ -181,6 +181,8 @@ try:
   check('no_pending_taskbar_style_after_presentation',m.execute_script('return !window.__souluStartupHidden&&!!window.__souluStartupPresentation.presentedAt'))
   check('first_installed_launch_has_one_browser_window',m.execute_script('return [...Services.wm.getEnumerator("navigator:browser")].length')==1)
   check('installer_choices_apply_only_to_new_profile',m.execute_script('return Soulu.config.settings.theme==="dark"&&Soulu.config.settings.language==="ru"'))
+  paths=m.execute_script('const out={};for(const key of ["UAppData","ULocalAppData","UpdRootD"]){out[key]=Services.dirsvc.get(key,Ci.nsIFile).path;}return out;')
+  check('application_directories_belong_to_soulu',all('soulu' in p.lower() and 'mozilla' not in p.lower() and 'firefox' not in p.lower() for p in paths.values()),paths)
   check('runtime_really_is_160',m.execute_script('return Services.appinfo.platformVersion')=='160.0')
   check('default_toolbar',m.execute_script('const s=Soulu.config.settings;return s.layout==="adaptive"&&!s.mattePanel&&!s.showExtensions&&!s.showHome&&!s.vpnToolbarVisible'))
   check('first_installed_launch_version_is_preview22',m.execute_script('return document.documentElement.getAttribute("soulu-version")')=='Soulu Preview 1.160.22')

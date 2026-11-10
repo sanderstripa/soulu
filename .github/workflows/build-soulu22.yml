@@ -1,7 +1,7 @@
 name: Build and publish Soulu Preview 1.160.22
 on:
   push:
-    branches: [gecko-preview]
+    branches: [gecko-preview, main]
     paths: ['.github/workflows/build-soulu22.yml','gecko/**']
 permissions:
   contents: write
@@ -11,6 +11,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   windows:
+    if: "!contains(github.event.head_commit.message, '[verified-promotion]')"
     runs-on: windows-2025
     timeout-minutes: 35
     env:

@@ -176,7 +176,7 @@ with (ui/'typography.css').open('a',encoding='utf-8') as css:
 patch(ui/'settings.js',"[['Soulu',state.update?.soulu],['Движок',state.update?.gecko],['Xray',state.update?.xray],['Sudoku',state.update?.sudoku],['Adblock',state.update?.adblock]]",
       "[['Soulu',state.update?.soulu],['Gecko',state.update?.gecko]]")
 patch(ui/'settings.js',"old.updates.groups.push(group('Компоненты VPN'",
-      "old.updates.groups[0].ru='Браузер';old.updates.groups[0].en='Browser';old.updates.groups[0].rows[0].ru='Soulu и Gecko';old.updates.groups[0].rows[0].en='Soulu and Gecko';old.updates.groups.push(group('Adblock','Adblock',[{key:'adblockManager',type:'adblockManager',ru:'Блокировка рекламы',en:'Ad blocking'}]));old.updates.groups.push(group('Компоненты VPN'")
+      "old.updates.groups[0].ru='Браузер';old.updates.groups[0].en='Browser';old.updates.groups[0].rows[0].ru='Soulu и Gecko';old.updates.groups[0].rows[0].en='Soulu and Gecko';old.updates.groups.push(group('Adblock','Adblock',[row('adblockManager','Блокировка рекламы','Ad blocking','adblockManager')]));old.updates.groups.push(group('Компоненты VPN'")
 patch(ui/'settings.js',"if(r.type==='extensionCatalog'){","if(r.type==='adblockManager'){n.classList.add('long');const host=el('div');host.dataset.adblockManager='true';n.append(host);card.append(n);continue;}if(r.type==='extensionCatalog'){")
 shutil.copyfile(root/'gecko/chrome/adblock-about.js',ui/'adblock-about.js')
 patch(ui/'settings.html','</head>','<script defer src="adblock-about.js"></script></head>')
