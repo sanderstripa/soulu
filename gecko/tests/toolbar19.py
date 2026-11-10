@@ -18,6 +18,13 @@ def verify_toolbar(m, check, wait):
     for expected in range(2, 5):
         shell("document.getElementById('newTabButton').click();")
         wait(lambda: shell(count) == expected)
+    print('strip layout',shell("""
+        await new Promise(r=>setTimeout(r,700));
+        const nodes=[...document.querySelectorAll('.tabs-zone,#tabStrip,#tabStrip > [data-tab-id]')];
+        return JSON.stringify({size:[innerWidth,innerHeight],expanded:document.body.dataset.adaptiveExpanded,
+          nodes:nodes.map(n=>{const r=n.getBoundingClientRect(), s=getComputedStyle(n);
+            return [n.className,r.toJSON(),s.visibility,s.opacity,s.pointerEvents,document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.outerHTML.slice(0,200)]})});
+    """),flush=True)
     check('four_visible_clickable_tabs', wait(lambda: shell("""
         return [...document.querySelectorAll('#tabStrip > [data-tab-id]')].every(tab=>{
           const r=tab.getBoundingClientRect();
