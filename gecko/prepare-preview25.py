@@ -34,6 +34,8 @@ else:
 subprocess.run(['python',str(root/'gecko/upgrade-runtime22.py')],check=True)
 chrome = out / 'engine/soulu/chrome'
 ui = chrome / 'ui'
+for locale in ['ru','en-US']:
+    shutil.copyfile(root/'gecko/chrome/locales'/locale/'branding/brand.ftl',chrome/'locales'/locale/'branding/brand.ftl')
 for name in ['browser.js','window-controls.sys.mjs','shell-host.js','build-info.sys.mjs','updates.js']:
     source = (root / 'gecko/chrome' / name).read_text(encoding='utf-8')
     (chrome / name).write_text(re.sub(r'0\.(?:13|14)\.0 Preview','Preview 1.160.25',source),encoding='utf-8')

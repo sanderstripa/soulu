@@ -5,4 +5,4 @@
 -brand-full-name = Soulu
 -brand-product-name = Soulu
 -vendor-short-name = Soulu
-trademarkInfo = Soulu uses Mozilla Gecko. See the included component licenses.
+trademarkInfo = Soulu uses Gecko. See the included component licenses.
