@@ -18,7 +18,7 @@ Get-ChildItem $adapter -Filter '*_test.go' | Remove-Item
 Copy-Item (Join-Path $PSScriptRoot 'payload_windows_test.go') $adapter
 Copy-Item (Join-Path $PSScriptRoot 'repair_windows_test.go') $adapter
 $product=Get-Content (Join-Path $core 'products/soulu.json') -Raw | ConvertFrom-Json
-$product.name='Soulu';$product.version='0.20.0-preview';$product.id='soulu';$product.engine='Soulu'
+$product.name='Soulu';$product.version='0.21.0-preview';$product.id='soulu';$product.engine='Soulu'
 $product | ConvertTo-Json | Set-Content (Join-Path $core 'products/soulu.json') -Encoding utf8
 Copy-Item (Join-Path $repo 'ui/branding/soulu-128.png') (Join-Path $core 'core/web/assets/icon.png') -Force
 $uiPath=Join-Path $core 'core/web/setup.js'
@@ -31,9 +31,9 @@ python (Join-Path $PSScriptRoot 'prepare-payload.py') $build
 if($LASTEXITCODE){throw 'Payload manifest failed'}
 Compress-Archive -Path (Join-Path $build '*') -DestinationPath (Join-Path $adapter 'payload.zip') -CompressionLevel Optimal
 $version=Get-Content (Join-Path $repo 'gecko/launcher/versioninfo.json') -Raw | ConvertFrom-Json
-$version.StringFileInfo.FileDescription='Soulu 0.20.0 Preview Setup'
+$version.StringFileInfo.FileDescription='Soulu 0.21.0 Preview Setup'
 $version.StringFileInfo.InternalName='SoulSetup'
-$version.StringFileInfo.OriginalFilename='Soulu-0.20.0-Preview-Setup-win64.exe'
+$version.StringFileInfo.OriginalFilename='Soulu-0.21.0-Preview-Setup-win64.exe'
 $version.IconPath=(Join-Path $repo 'ui/soulu-installer-icon.ico')
 $version | Add-Member -NotePropertyName ManifestPath -NotePropertyValue (Join-Path $core 'products/soulu.manifest')
 $version | ConvertTo-Json -Depth 10 | Set-Content (Join-Path $core 'versioninfo.json') -Encoding utf8NoBOM
@@ -43,13 +43,13 @@ Push-Location $core
 try{
  gofmt -w adapters/soulu/adapter_windows.go adapters/soulu/payload_windows_test.go
  $oldTest=$env:CONNECT_INSTALLER_CI_TEST;$env:CONNECT_INSTALLER_CI_TEST='1'
- go test -ldflags '-X connect-installer.local/core/products.VersionOverride=0.20.0-preview' ./core ./installprefs ./products ./adapters/soulu
+ go test -ldflags '-X connect-installer.local/core/products.VersionOverride=0.21.0-preview' ./core ./installprefs ./products ./adapters/soulu
  $testExit=$LASTEXITCODE;$env:CONNECT_INSTALLER_CI_TEST=$oldTest
  if($testExit){throw 'Installer component tests failed'}
  go run github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.5.0 -64 -o cmd/soulu/resources_windows_amd64.syso
  if($LASTEXITCODE){throw 'Installer version/icon resources failed'}
- go build -tags production -trimpath -buildvcs=false -ldflags '-s -w -H windowsgui -X connect-installer.local/core/products.VersionOverride=0.20.0-preview' -o $output ./cmd/soulu
+ go build -tags production -trimpath -buildvcs=false -ldflags '-s -w -H windowsgui -X connect-installer.local/core/products.VersionOverride=0.21.0-preview' -o $output ./cmd/soulu
  if($LASTEXITCODE){throw 'Installer compilation failed'}
- [ordered]@{name='Soulu 0.20.0 Preview';version='0.20.0-preview';coreCommit=$coreCommit;sourceCommit=(git -C $repo rev-parse HEAD).Trim();installerSHA256=(Get-FileHash $output -Algorithm SHA256).Hash.ToLowerInvariant();payloadSHA256=(Get-FileHash adapters/soulu/payload.zip -Algorithm SHA256).Hash.ToLowerInvariant()} | ConvertTo-Json | Set-Content "$output.build.json" -Encoding utf8
+ [ordered]@{name='Soulu 0.21.0 Preview';version='0.21.0-preview';coreCommit=$coreCommit;sourceCommit=(git -C $repo rev-parse HEAD).Trim();installerSHA256=(Get-FileHash $output -Algorithm SHA256).Hash.ToLowerInvariant();payloadSHA256=(Get-FileHash adapters/soulu/payload.zip -Algorithm SHA256).Hash.ToLowerInvariant()} | ConvertTo-Json | Set-Content "$output.build.json" -Encoding utf8
 }finally{Pop-Location}
 

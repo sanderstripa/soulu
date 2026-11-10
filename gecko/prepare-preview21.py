@@ -35,12 +35,12 @@ chrome = out / 'engine/soulu/chrome'
 ui = chrome / 'ui'
 for name in ['browser.js','window-controls.sys.mjs','shell-host.js','build-info.sys.mjs']:
     source = (root / 'gecko/chrome' / name).read_text(encoding='utf-8')
-    (chrome / name).write_text(re.sub(r'0\.(?:13|14)\.0 Preview','0.20.0 Preview',source),encoding='utf-8')
+    (chrome / name).write_text(re.sub(r'0\.(?:13|14)\.0 Preview','0.21.0 Preview',source),encoding='utf-8')
 for path in chrome.rglob('*'):
     if path.suffix in {'.js','.html','.mjs'} and 'third_party' not in path.parts:
         source = path.read_text(encoding='utf-8')
         if '0.17.0' in source:
-            path.write_text(source.replace('0.17.0','0.20.0'),encoding='utf-8')
+            path.write_text(source.replace('0.17.0','0.21.0'),encoding='utf-8')
 def patch(path, before, after):
     source = path.read_text(encoding='utf-8')
     if before not in source:
@@ -75,7 +75,7 @@ for path in (out/'engine').rglob('*.exe'):
         path.unlink()
 build = json.loads((out/'BUILD.json').read_text(encoding='utf-8'))
 assert build['name'] == 'Soulu 0.17.0 Preview'
-build.update(name='Soulu 0.20.0 Preview',base_preview=17,soulu_source=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip())
+build.update(name='Soulu 0.21.0 Preview',base_preview=17,soulu_source=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip())
 (out/'BUILD.json').write_text(json.dumps(build,indent=2),encoding='utf-8')
 
 patch(ui/'renderer.js','mattePanel:true','mattePanel:false,showExtensions:false,showHome:false')
@@ -134,3 +134,30 @@ patch(ui/'select-control.js','menu.showPopover();position();','''
  menu.showPopover();position();''')
 with (ui/'select-control.css').open('a', encoding='utf-8') as css:
     css.write('\n.soulu-select-menu .soulu-select-option {font:inherit;letter-spacing:inherit;padding:6px 12px}\n')
+
+# Pin the bundled interface font and verify the bytes before packaging.
+import urllib.request
+font_url = 'https://raw.githubusercontent.com/google/fonts/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/inter/'
+font_data = urllib.request.urlopen(font_url+'Inter%5Bopsz,wght%5D.ttf',timeout=60).read()
+assert hashlib.sha256(font_data).hexdigest() == '29160a80ff49ddcab2c97711247e08b1fab27a484a329ce8b813d820dc559031'
+(ui/'fonts/Inter.ttf').write_bytes(font_data)
+(ui/'fonts/Inter-OFL.txt').write_bytes(urllib.request.urlopen(font_url+'OFL.txt',timeout=30).read())
+# Convert every owned application document, including VPN, onboarding and menus.
+for path in chrome.rglob('*'):
+    if path.suffix not in {'.css','.js','.mjs','.html','.json'} or 'third_party' in path.parts:
+        continue
+    source = path.read_text(encoding='utf-8')
+    for weight in ['Regular','Medium','SemiBold']:
+        source = source.replace('Onest-'+weight+'.ttf','Inter.ttf')
+    source = source.replace('Onest','Inter')
+    path.write_text(source,encoding='utf-8')
+# Variable Inter supplies real weights throughout the interface.
+with (chrome/'early.css').open('a',encoding='utf-8') as css:
+    css.write("""
+@-moz-document url-prefix("chrome://"), url-prefix("about:") {
+ @font-face{font-family:Inter;src:url("chrome://soulu/content/ui/fonts/Inter.ttf");font-weight:100 900}
+ :root,body,button,input,select,textarea,menu,menuitem,menucaption,menulist,label,description,.menu-text,.menu-iconic-text{font-family:Inter,"Segoe UI Emoji","Segoe UI Symbol",sans-serif!important}
+}
+""")
+with (ui/'typography.css').open('a',encoding='utf-8') as css:
+    css.write('\n@font-face{font-family:Inter;src:url("fonts/Inter.ttf");font-weight:100 900;font-display:block}\n')

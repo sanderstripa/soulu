@@ -1,13 +1,13 @@
-name: Build and publish Soulu 0.20.0 Preview
+name: Build and publish Soulu 0.21.0 Preview
 on:
   push:
     branches: [gecko-preview]
-    paths: ['.github/workflows/build-soulu20.yml','gecko/**']
+    paths: ['.github/workflows/build-soulu21.yml','gecko/**']
 permissions:
   contents: write
   actions: read
 concurrency:
-  group: soulu-gecko-preview-20
+  group: soulu-gecko-preview-21
   cancel-in-progress: true
 jobs:
   windows:
@@ -33,14 +33,14 @@ jobs:
           gofmt -w main.go session_windows.go session_windows_test.go
           go test -v -count=1 .
           if ($LASTEXITCODE) { throw 'Launcher ownership checks failed' }
-      - name: Restore published Preview 17 and apply requested Preview 20 fixes
+      - name: Restore published Preview 17 and apply requested Preview 21 fixes
         id: assemble
         shell: pwsh
         run: |
           gh run download 42055551760 -n soulu17-verified-installer -D preview17-input
           if ($LASTEXITCODE) { throw 'Preview 17 download failed' }
-          python gecko/prepare-preview20.py
-          if ($LASTEXITCODE) { throw 'Preview 20 assembly failed' }
+          python gecko/prepare-preview21.py
+          if ($LASTEXITCODE) { throw 'Preview 21 assembly failed' }
           Push-Location gecko/launcher
           go run github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.5.0 -64 -o rsrc.syso
           if ($LASTEXITCODE) { throw 'Launcher resources failed' }
@@ -49,42 +49,42 @@ jobs:
           Pop-Location
           python gecko/brand-engine.py
           if ($LASTEXITCODE) { throw 'Engine branding failed' }
-          New-Item -ItemType Directory -Force soulu20-checks | Out-Null
-          Copy-Item gecko-out/windows-brand-audit.json,gecko-out/default-bookmarks-audit.json soulu20-checks
+          New-Item -ItemType Directory -Force soulu21-checks | Out-Null
+          Copy-Item gecko-out/windows-brand-audit.json,gecko-out/default-bookmarks-audit.json soulu21-checks
           python -c "import json; r=json.load(open('gecko-out/windows-brand-audit.json')); assert r and all(x['iconGroupsMatchSoulu'] for x in r); assert json.load(open('gecko-out/default-bookmarks-audit.json'))['disabled']"
           if ($LASTEXITCODE) { throw 'Branding/default bookmark audit failed' }
           python -m pip install marionette_driver pillow psutil websocket-client
-      - name: Build Soulu 0.20.0 Preview installer
+      - name: Build Soulu 0.21.0 Preview installer
         id: installer
         if: ${{ !cancelled() && steps.assemble.outcome == 'success' }}
         shell: pwsh
         run: |
-          ./gecko/installer/build.ps1 -BuildDir gecko-out -OutFile Soulu-0.20.0-Preview-Setup-win64.exe
+          ./gecko/installer/build.ps1 -BuildDir gecko-out -OutFile Soulu-0.21.0-Preview-Setup-win64.exe
           if ($LASTEXITCODE) { throw 'Installer build failed' }
-          if ((Get-Item Soulu-0.20.0-Preview-Setup-win64.exe).VersionInfo.ProductVersion -ne '0.20.0.0') { throw 'Installer version mismatch' }
+          if ((Get-Item Soulu-0.21.0-Preview-Setup-win64.exe).VersionInfo.ProductVersion -ne '0.21.0.0') { throw 'Installer version mismatch' }
       - name: Verify installed toolbar, incognito, twelve restarts, upgrade and removal
         if: ${{ !cancelled() && steps.installer.outcome == 'success' }}
-        run: python gecko/tests/installer20.py Soulu-0.20.0-Preview-Setup-win64.exe soulu20-checks
+        run: python gecko/tests/installer21.py Soulu-0.21.0-Preview-Setup-win64.exe soulu21-checks
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: soulu20-evidence
-          path: soulu20-checks/
+          name: soulu21-evidence
+          path: soulu21-checks/
       - uses: actions/upload-artifact@v4
         with:
-          name: soulu20-verified-installer
+          name: soulu21-verified-installer
           path: |
-            Soulu-0.20.0-Preview-Setup-win64.exe
-            Soulu-0.20.0-Preview-Setup-win64.exe.build.json
-      - name: Publish tested Soulu 0.20.0 Preview installer
+            Soulu-0.21.0-Preview-Setup-win64.exe
+            Soulu-0.21.0-Preview-Setup-win64.exe.build.json
+      - name: Publish tested Soulu 0.21.0 Preview installer
         shell: pwsh
         run: |
-          python -c "import json,pathlib; paths=['restart18.json','installer20.json']; assert all(json.loads((pathlib.Path('soulu20-checks')/p).read_text())['passed'] for p in paths)"
+          python -c "import json,pathlib; paths=['restart18.json','installer21.json']; assert all(json.loads((pathlib.Path('soulu21-checks')/p).read_text())['passed'] for p in paths)"
           if ($LASTEXITCODE) { throw 'Acceptance reports not green' }
-          (Get-FileHash Soulu-0.20.0-Preview-Setup-win64.exe -Algorithm SHA256).Hash.ToLowerInvariant() + '  Soulu-0.20.0-Preview-Setup-win64.exe' | Set-Content SHA256SUMS.txt
+          (Get-FileHash Soulu-0.21.0-Preview-Setup-win64.exe -Algorithm SHA256).Hash.ToLowerInvariant() + '  Soulu-0.21.0-Preview-Setup-win64.exe' | Set-Content SHA256SUMS.txt
           $branchHead = gh api repos/sanderstripa/soulu/git/ref/heads/gecko-preview --jq '.object.sha'
           if ($branchHead.Trim() -ne $env:GITHUB_SHA) { throw 'A newer source revision superseded this build' }
-          gh release create soulu-preview-20 Soulu-0.20.0-Preview-Setup-win64.exe Soulu-0.20.0-Preview-Setup-win64.exe.build.json SHA256SUMS.txt soulu20-checks/restart18.json soulu20-checks/installer20.json --target $env:GITHUB_SHA --title 'Soulu Preview 0.20.0' --prerelease --notes 'Soulu Gecko for Windows x64. Improve startup window presentation and activation, tab close buttons, dropdown typography and bookmark scrolling.'
+          gh release create soulu-preview-21 Soulu-0.21.0-Preview-Setup-win64.exe Soulu-0.21.0-Preview-Setup-win64.exe.build.json SHA256SUMS.txt soulu21-checks/restart18.json soulu21-checks/installer21.json --target $env:GITHUB_SHA --title 'Soulu Preview 0.21.0' --prerelease --notes 'Soulu Gecko for Windows x64. Improve startup window presentation and activation, tab close buttons, dropdown typography and bookmark scrolling.'
           if ($LASTEXITCODE) { throw 'Release publication failed' }
 
 
