@@ -1,5 +1,5 @@
 
-.bookmarks-menu {
+body .bookmarks-menu {
   box-sizing: border-box;
   width: min(276px, 100vw);
 }
