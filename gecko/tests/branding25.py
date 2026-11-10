@@ -2,6 +2,7 @@
 import base64,json
 
 def verify_branding(m,check,wait,out):
+    print('chatbot preferences',m.execute_script('return ["browser.ml.chat.enabled","browser.ml.chat.menu","browser.ml.chat.page","browser.ml.chat.shortcuts"].map(p=>[p,Services.prefs.getBoolPref(p),Services.prefs.prefIsLocked(p)]);'),flush=True)
     check('chatbot_disabled_on_profile',m.execute_script('return ["browser.ml.chat.enabled","browser.ml.chat.menu","browser.ml.chat.page","browser.ml.chat.shortcuts"].every(p=>Services.prefs.getBoolPref(p)===false&&Services.prefs.prefIsLocked(p));'))
     check('website_ua_compatibility',m.execute_script('const s=Services.prefs.getStringPref("general.useragent.override");return s.includes("Firefox/160.0")&&s.includes("Soulu/1.160.25");'))
     # Verify the packaged illustration bytes, not just a hidden image in one page.
