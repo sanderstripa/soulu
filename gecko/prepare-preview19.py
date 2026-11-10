@@ -112,3 +112,10 @@ patch(ui/'navigation.js','renderMenu();menuSearch.focus();','renderMenu();')
 shutil.copyfile(root/'ui/settings-components.js',ui/'settings-components.js')
 with (ui/'gecko-frontend.css').open('a',encoding='utf-8') as css:
     css.write((root/'gecko/chrome/navigation-fixes.css').read_text(encoding='utf-8'))
+
+# The new native tab briefly has about:blank before the home document commits.
+# Never populate address suggestions with this transient startup URI.
+patch(ui/'renderer.js',"input.value=state.page?.url==='soulu://home'?'':state.page?.url||'';",
+      "input.value=['soulu://home','about:blank'].includes(state.page?.url)?'':state.page?.url||'';")
+patch(ui/'renderer.js',"if(input&&state.page?.url==='soulu://home'){",
+      "if(input&&['soulu://home','about:blank'].includes(state.page?.url)){")
