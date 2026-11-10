@@ -126,7 +126,7 @@ def capture(ws,name):
  data=command(ws,'Page.captureScreenshot',{'format':'png','captureBeyondViewport':False});(out/name).write_bytes(base64.b64decode(data['data']))
 def version(ws,stage):
  check('only_soulu_brand_'+stage,not evaluate(ws,'/firefox/i.test(document.body.innerText)'))
- value=evaluate(ws,'document.getElementById("version").textContent');check('version_visible_'+stage,'0.22.0-preview' in value and evaluate(ws,'document.getElementById("version").getBoundingClientRect().height>0'),value)
+ value=evaluate(ws,'document.getElementById("version").textContent');check('version_visible_'+stage,'1.160.22' in value and evaluate(ws,'document.getElementById("version").getBoundingClientRect().height>0'),value)
 try:
  with tempfile.TemporaryDirectory(prefix='Soulu installer acceptance ') as temporary:
   root=pathlib.Path(temporary);local=root/'userdata';profile=local/'Soulu/Profiles/default';legacy_profile=local/'Soul/Profiles/default';legacy_profile.mkdir(parents=True);mp=port()
@@ -183,9 +183,9 @@ try:
   check('installer_choices_apply_only_to_new_profile',m.execute_script('return Soulu.config.settings.theme==="dark"&&Soulu.config.settings.language==="ru"'))
   check('runtime_really_is_160',m.execute_script('return Services.appinfo.platformVersion')=='160.0')
   check('default_toolbar',m.execute_script('const s=Soulu.config.settings;return s.layout==="adaptive"&&!s.mattePanel&&!s.showExtensions&&!s.showHome&&!s.vpnToolbarVisible'))
-  check('first_installed_launch_version_is_preview22',m.execute_script('return document.documentElement.getAttribute("soulu-version")')=='Soulu 0.22.0 Preview')
+  check('first_installed_launch_version_is_preview22',m.execute_script('return document.documentElement.getAttribute("soulu-version")')=='Soulu Preview 1.160.22')
   check('first_installed_launch_shows_soulu_welcome',m.execute_script('return gBrowser.selectedBrowser.currentURI.spec.endsWith("/onboarding.html")'))
-  check('equal_or_older_release_not_offered',m.execute_script('const make=n=>({draft:false,tag_name:"soulu-preview-"+n,assets:[{id:n,name:"Soulu-0."+n+".0-Preview-Setup-win64.exe",size:1,digest:"sha256:"+"a".repeat(64),browser_download_url:"https://github.com/sanderstripa/soulu/releases/download/soulu-preview-"+n+"/Soulu-0."+n+".0-Preview-Setup-win64.exe"}]});return Soulu.updateCandidate([make(22)])===null&&Soulu.updateCandidate([make(18)])===null&&Soulu.updateCandidate([make(23)])!==null;'))
+  check('semantic_release_order',m.execute_script('const make=v=>{const tag="soulu-preview-"+v,name="Soulu-"+v+"-Preview-Setup-win64.exe";return {draft:false,tag_name:tag,assets:[{id:1,name,size:1,digest:"sha256:"+"a".repeat(64),browser_download_url:"https://github.com/sanderstripa/soulu/releases/download/"+tag+"/"+name}]};};return Soulu.updateCandidate([make("1.160.22")])===null && Soulu.updateCandidate([make("1.160.21")])===null && Soulu.updateCandidate([make("1.160.23")])!==null && Soulu.updateCandidate([make("1.161.1")])!==null;'))
   (out/'installed-first-launch.png').write_bytes(base64.b64decode(m.screenshot()))
   result=m.execute_async_script('const done=arguments[arguments.length-1];(async()=>{const {PlacesUtils}=ChromeUtils.importESModule("resource://gre/modules/PlacesUtils.sys.mjs");await PlacesUtils.bookmarks.insert({parentGuid:PlacesUtils.bookmarks.toolbarGuid,url:"https://example.org/preview22-persistence",title:"Preview 17 installer persistence"});Soulu.config.onboarding={done:true,step:6};await Soulu.backend.save();return true;})().then(done,e=>done({error:String(e)}));');check('real_bookmark_saved_before_upgrade',result is True)
   from toolbar19 import verify_toolbar
@@ -238,7 +238,7 @@ try:
    version(ws,'upgrade');evaluate(ws,'document.getElementById("primary").click();true');wait(lambda:finished(ws),120);evaluate(ws,'document.getElementById("launch").checked=false;document.getElementById("done").click();true');process.wait(timeout=20)
   settings=json.loads((profile/'soulu-settings.json').read_text());check('upgrade_keeps_existing_profile_settings',settings['settings']['theme']=='dark' and settings['onboarding']['done'])
   with contextlib.closing(sqlite3.connect(profile/'places.sqlite')) as db:check('upgrade_keeps_real_bookmarks',db.execute('select count(*) from moz_bookmarks where title=?',('Preview 17 installer persistence',)).fetchone()[0]==1)
-  with winreg.OpenKey(winreg.HKEY_CURRENT_USER,r'Software\Microsoft\Windows\CurrentVersion\Uninstall\Soulu') as key:check('windows_installed_apps_has_correct_version',winreg.QueryValueEx(key,'DisplayVersion')[0]=='0.22.0-preview')
+  with winreg.OpenKey(winreg.HKEY_CURRENT_USER,r'Software\Microsoft\Windows\CurrentVersion\Uninstall\Soulu') as key:check('windows_installed_apps_has_correct_version',winreg.QueryValueEx(key,'DisplayVersion')[0]=='1.160.22')
   subprocess.run([sys.executable,str(pathlib.Path(__file__).with_name('restart18.py')),str(destination),str(out)],check=True)
   uninstaller=destination/'Uninstall Soulu.exe'
   with setup(uninstaller,env,True) as (ws,process):

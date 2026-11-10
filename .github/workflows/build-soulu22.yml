@@ -1,4 +1,4 @@
-name: Build and publish Soulu 0.22.0 Preview
+name: Build and publish Soulu Preview 1.160.22
 on:
   push:
     branches: [gecko-preview]
@@ -57,17 +57,17 @@ jobs:
           python -m pip install marionette_driver pillow psutil websocket-client
           python gecko/tests/adblock-update.py gecko-out/engine/soulu/adblock/soulu_adblock.dll soulu22-checks/adblock-atomic.json
           if ($LASTEXITCODE) { throw 'Adblock atomic update verification failed' }
-      - name: Build Soulu 0.22.0 Preview installer
+      - name: Build Soulu Preview 1.160.22 installer
         id: installer
         if: ${{ !cancelled() && steps.assemble.outcome == 'success' }}
         shell: pwsh
         run: |
-          ./gecko/installer/build.ps1 -BuildDir gecko-out -OutFile Soulu-0.22.0-Preview-Setup-win64.exe
+          ./gecko/installer/build.ps1 -BuildDir gecko-out -OutFile Soulu-1.160.22-Preview-Setup-win64.exe
           if ($LASTEXITCODE) { throw 'Installer build failed' }
-          if ((Get-Item Soulu-0.22.0-Preview-Setup-win64.exe).VersionInfo.ProductVersion -ne '0.22.0.0') { throw 'Installer version mismatch' }
+          if ((Get-Item Soulu-1.160.22-Preview-Setup-win64.exe).VersionInfo.ProductVersion -ne '1.160.22.0') { throw 'Installer version mismatch' }
       - name: Verify installed toolbar, incognito, twelve restarts, upgrade and removal
         if: ${{ !cancelled() && steps.installer.outcome == 'success' }}
-        run: python gecko/tests/installer22.py Soulu-0.22.0-Preview-Setup-win64.exe soulu22-checks
+        run: python gecko/tests/installer22.py Soulu-1.160.22-Preview-Setup-win64.exe soulu22-checks
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -77,17 +77,17 @@ jobs:
         with:
           name: soulu22-verified-installer
           path: |
-            Soulu-0.22.0-Preview-Setup-win64.exe
-            Soulu-0.22.0-Preview-Setup-win64.exe.build.json
-      - name: Publish tested Soulu 0.22.0 Preview installer
+            Soulu-1.160.22-Preview-Setup-win64.exe
+            Soulu-1.160.22-Preview-Setup-win64.exe.build.json
+      - name: Publish tested Soulu Preview 1.160.22 installer
         shell: pwsh
         run: |
           python -c "import json,pathlib; paths=['restart18.json','installer22.json']; assert all(json.loads((pathlib.Path('soulu22-checks')/p).read_text())['passed'] for p in paths)"
           if ($LASTEXITCODE) { throw 'Acceptance reports not green' }
-          (Get-FileHash Soulu-0.22.0-Preview-Setup-win64.exe -Algorithm SHA256).Hash.ToLowerInvariant() + '  Soulu-0.22.0-Preview-Setup-win64.exe' | Set-Content SHA256SUMS.txt
+          (Get-FileHash Soulu-1.160.22-Preview-Setup-win64.exe -Algorithm SHA256).Hash.ToLowerInvariant() + '  Soulu-1.160.22-Preview-Setup-win64.exe' | Set-Content SHA256SUMS.txt
           $branchHead = gh api repos/sanderstripa/soulu/git/ref/heads/gecko-preview --jq '.object.sha'
           if ($branchHead.Trim() -ne $env:GITHUB_SHA) { throw 'A newer source revision superseded this build' }
-          gh release create soulu-preview-22 Soulu-0.22.0-Preview-Setup-win64.exe SHA256SUMS.txt --target $env:GITHUB_SHA --title 'Soulu Preview 0.22.0' --prerelease --notes 'Soulu Gecko for Windows x64. Gecko 160.0, blue wave product icon, symmetrical caption controls, Adblock filter updates and startup presentation fixes.'
+          gh release create soulu-preview-1.160.22 Soulu-1.160.22-Preview-Setup-win64.exe SHA256SUMS.txt --target $env:GITHUB_SHA --title 'Soulu Preview 1.160.22' --notes 'Soulu Gecko for Windows x64. Gecko 160.0, blue wave product icon, symmetrical caption controls, Adblock filter updates and startup presentation fixes.'
           if ($LASTEXITCODE) { throw 'Release publication failed' }
 
 
