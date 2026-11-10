@@ -42,7 +42,7 @@ body .bookmarks-menu {
   stroke-linecap: round;
 }
 .bookmark-scroll-area { position: relative; flex: 1; min-height: 0; }
-.bookmark-scroll-area > .bookmark-tree { height: 100%; box-sizing: border-box; }
+.bookmark-scroll-area > .bookmark-tree { position: absolute; inset: 0; box-sizing: border-box; }
 @media (forced-colors: none) {
   .bookmark-scroll-area > .bookmark-tree { scrollbar-width: none; }
   .bookmark-scroll-area[data-overflow] > .bookmark-tree { padding-inline-end: 12px; }

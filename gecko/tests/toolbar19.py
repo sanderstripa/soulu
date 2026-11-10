@@ -56,19 +56,22 @@ def verify_toolbar(m, check, wait):
         const r=search.getBoundingClientRect(), p=panel.getBoundingClientRect();
         return !panel.hidden && r.width>0 && r.left>=p.left && r.right<=p.right && p.width<=276 && document.activeElement!==search;
     """)))
-    check('rounded_bookmark_thumb_tracks_scrolling', shell("""
+    geometry = shell("""
         const tree=document.querySelector('.bookmarks-menu .bookmark-tree');
         const thumb=tree.parentElement.querySelector('.bookmark-scroll-thumb');
-        const filler=document.createElement('div');
-        filler.style.height='3000px';
-        tree.append(filler);
+        const sheet=new document.defaultView.CSSStyleSheet();
+        sheet.replaceSync('.bookmarks-menu .bookmark-tree::after{content:"";display:block;height:3000px}');
+        document.adoptedStyleSheets.push(sheet);
         try {
             await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
             tree.scrollTop=tree.scrollHeight;
             await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
-            return thumb.offsetHeight>=24 && !thumb.hidden && tree.scrollTop>0 &&
-                parseFloat(getComputedStyle(thumb,'::before').borderRadius)>0 &&
-                Math.abs(tree.getBoundingClientRect().bottom-thumb.getBoundingClientRect().bottom)<1;
-        } finally { filler.remove(); tree.scrollTop=0; }
-    """))
+            return JSON.stringify({size:thumb.offsetHeight,hidden:thumb.hidden,top:tree.scrollTop,
+                radius:parseFloat(getComputedStyle(thumb,'::before').borderRadius),
+                delta:tree.getBoundingClientRect().bottom-thumb.getBoundingClientRect().bottom});
+        } finally { document.adoptedStyleSheets=document.adoptedStyleSheets.filter(s=>s!==sheet);tree.scrollTop=0; }
+    """)
+    g=json.loads(geometry)
+    check('rounded_bookmark_thumb_tracks_scrolling', g['size']>=24 and not g['hidden'] and
+          g['top']>0 and g['radius']>0 and abs(g['delta'])<=1, g)
     shell("document.getElementById('sidebarButton').click();")
