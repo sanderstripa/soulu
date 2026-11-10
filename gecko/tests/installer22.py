@@ -190,6 +190,8 @@ try:
   result=m.execute_async_script('const done=arguments[arguments.length-1];(async()=>{const {PlacesUtils}=ChromeUtils.importESModule("resource://gre/modules/PlacesUtils.sys.mjs");await PlacesUtils.bookmarks.insert({parentGuid:PlacesUtils.bookmarks.toolbarGuid,url:"https://example.org/preview22-persistence",title:"Preview 17 installer persistence"});Soulu.config.onboarding={done:true,step:6};await Soulu.backend.save();return true;})().then(done,e=>done({error:String(e)}));');check('real_bookmark_saved_before_upgrade',result is True)
   from toolbar19 import verify_toolbar
   verify_toolbar(m,check,wait)
+  from about22 import verify_about
+  verify_about(m,check,wait)
   m.execute_script('Soulu.dispatch("browser.newIncognito");return true;')
   private_window='[...Services.wm.getEnumerator("navigator:browser")].find(w=>w.Soulu?.ready && w.Soulu.backend.isPrivate)'
   check('incognito_uses_soulu_shell',wait(lambda:m.execute_script('const w='+private_window+';return !!w?.document.documentElement.hasAttribute("soulu-ui-ready")')))
