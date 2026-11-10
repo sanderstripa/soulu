@@ -1,3 +1,12 @@
+# Soulu Preview 1.160.25
+
+- Native error artwork and built-in page accents use Soulu branding and Inter.
+- Inherited chatbot integration and its context-menu shortcuts are disabled on existing and new profiles.
+- Standard Gecko User-Agent compatibility token restored: fixes the basic Google HTML response. Soulu remains the product identifier.
+- Logo-free home layout centers the search form in the available page viewport, including resized windows.
+- Security/certificate checks, tab animations, profiles and VPN behavior are retained.
+- Engine namespaces, compatibility tokens and required third-party license notices remain intact.
+
 # Soulu Preview 1.160.24
 
 - Remove the rectangular hover background from installer text actions.

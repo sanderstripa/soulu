@@ -36,12 +36,12 @@ chrome = out / 'engine/soulu/chrome'
 ui = chrome / 'ui'
 for name in ['browser.js','window-controls.sys.mjs','shell-host.js','build-info.sys.mjs','updates.js']:
     source = (root / 'gecko/chrome' / name).read_text(encoding='utf-8')
-    (chrome / name).write_text(re.sub(r'0\.(?:13|14)\.0 Preview','Preview 1.160.24',source),encoding='utf-8')
+    (chrome / name).write_text(re.sub(r'0\.(?:13|14)\.0 Preview','Preview 1.160.25',source),encoding='utf-8')
 for path in chrome.rglob('*'):
     if path.suffix in {'.js','.html','.mjs'} and 'third_party' not in path.parts:
         source = path.read_text(encoding='utf-8')
         if '0.17.0' in source:
-            path.write_text(source.replace('0.17.0','1.160.24'),encoding='utf-8')
+            path.write_text(source.replace('0.17.0','1.160.25'),encoding='utf-8')
 def patch(path, before, after):
     source = path.read_text(encoding='utf-8')
     if before not in source:
@@ -77,7 +77,7 @@ for path in (out/'engine').rglob('*.exe'):
 build = json.loads((out/'BUILD.json').read_text(encoding='utf-8'))
 assert build['name'] == 'Soulu 0.17.0 Preview'
 build.update(firefox='160.0',mozilla_archive='https://archive.mozilla.org/pub/firefox/releases/160.0/win64/ru/Firefox Setup 160.0.exe',mozilla_sha256='9aca6af4a633546ce9908894d735b0518c36b6a54f108566e517225983cf5173')
-build.update(name='Soulu Preview 1.160.24',base_preview=17,soulu_source=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip())
+build.update(name='Soulu Preview 1.160.25',base_preview=17,soulu_source=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip())
 (out/'BUILD.json').write_text(json.dumps(build,indent=2),encoding='utf-8')
 
 patch(ui/'renderer.js','mattePanel:true','mattePanel:false,showExtensions:false,showHome:false')
@@ -195,4 +195,6 @@ patch(ui/'home.css','#logo{width:76px;height:76px','#logo{width:87.4px;height:87
 patch(ui/'settings.js',"old.tabs.id='startup';","old.tabs.groups.push(group('Главная страница','Home page',[row('homeShowLogo','Показывать логотип Soulu','Show Soulu logo','toggle')]));old.tabs.id='startup';")
 patch(ui/'home.js','function apply(next){state=next;','function apply(next){state=next;document.body.classList.toggle("home-without-logo",next.homeShowLogo===false);document.getElementById("logo").hidden=next.homeShowLogo===false;')
 with (ui/'home.css').open('a',encoding='utf-8') as css:
-    css.write("\nbody.home-without-logo main{top:50%;gap:0}body.home-without-logo #logo{display:none}\n")
+    css.write("\nbody.home-without-logo main{position:fixed;inset:0;width:auto;transform:none;display:grid;place-items:center;gap:0}body.home-without-logo .search-anchor{width:min(700px,calc(100vw - 48px))}body.home-without-logo #logo{display:none}\n")
+
+subprocess.run(["python",str(root/"gecko/brand-internal25.py")],check=True)

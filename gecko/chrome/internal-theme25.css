@@ -1,0 +1,32 @@
+/* Soulu native surfaces. Security warnings and their actions remain intact. */
+:root {
+ --color-accent-primary:#0671ff!important;
+ --color-accent-primary-hover:#0065e6!important;
+ --color-accent-primary-active:#0059cc!important;
+ --in-content-primary-button-background:#0671ff!important;
+ --in-content-primary-button-background-hover:#0065e6!important;
+ --in-content-primary-button-background-active:#0059cc!important;
+ --button-background-color-primary:#0671ff!important;
+ --button-background-color-primary-hover:#0065e6!important;
+ --button-text-color-primary:#fff!important;
+ --link-color:#0671ff!important;--link-color-hover:#0065e6!important;
+ --link-color-active:#0059cc!important;--link-color-visited:#0671ff!important;
+ --in-content-link-color:#0671ff!important;
+ --focus-outline-color:#0671ff!important;
+ --background-color-canvas:light-dark(#fcfcfd,#202124)!important;
+ --background-color-box:light-dark(#f3f4f5,#28292d)!important;
+ --text-color:light-dark(#242628,#e6e7e9)!important;
+ --in-content-page-background:light-dark(#fcfcfd,#202124)!important;
+ --in-content-page-color:light-dark(#242628,#e6e7e9)!important;
+ --border-radius-medium:10px!important;
+}
+@font-face{font-family:Inter;src:url("chrome://soulu/content/ui/fonts/Inter.ttf");font-weight:100 900}
+:root,body,button,input,select,textarea{font-family:Inter,"Segoe UI",sans-serif!important}
+/* Replace decorative fox artwork only; retain warning and certificate icons. */
+body.neterror .img-container img,body.certerror .img-container img{
+ content:url("chrome://soulu/content/ui/browser-icon.png")!important;
+ object-fit:contain!important;width:140px!important;height:140px!important;
+}
+body.neterror,body.certerror{background:light-dark(#fcfcfd,#202124)!important;color:light-dark(#242628,#e6e7e9)!important}
+body.neterror .title,body.certerror .title{background-image:none!important}
+#context-ask-chat,#context-chatbot,#context-ask-chat-submenu{display:none!important}
