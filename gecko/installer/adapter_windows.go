@@ -194,7 +194,8 @@ foreach($root in $roots){
 		return err
 	}
  // Use a new icon resource path for this release to invalidate Explorer caches.
- refreshIcons := `$shell=New-Object -ComObject WScript.Shell
+ refreshIcons := `Add-Type -TypeDefinition 'using System;using System.Text;using System.Runtime.InteropServices;public static class SouluIconRefresh{[DllImport("shell32.dll")]public static extern void SHChangeNotify(uint id,uint flags,IntPtr first,IntPtr second);[DllImport("kernel32.dll",CharSet=CharSet.Unicode)]public static extern uint GetLongPathName(string path,StringBuilder buffer,uint size);public static string Expand(string path){var buffer=new StringBuilder(32768);return GetLongPathName(path,buffer,(uint)buffer.Capacity)>0?buffer.ToString():path;}}'
+$shell=New-Object -ComObject WScript.Shell
 $roots=@([Environment]::GetFolderPath('Desktop'),[Environment]::GetFolderPath('Programs'),(Join-Path $env:APPDATA 'Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar'))
 $exe=$env:SOULU_SHORTCUT_EXE
 $icon=$env:SOULU_SHORTCUT_ICON
@@ -202,13 +203,12 @@ foreach($root in $roots){
  foreach($item in (Get-ChildItem -LiteralPath $root -Filter *.lnk -Recurse -File -ErrorAction SilentlyContinue)){
   $link=$shell.CreateShortcut($item.FullName)
   $target=[Environment]::ExpandEnvironmentVariables([string]$link.TargetPath)
-  if($target -and $target.Equals($exe,[StringComparison]::OrdinalIgnoreCase)){
+  if($target -and [SouluIconRefresh]::Expand($target).Equals([SouluIconRefresh]::Expand($exe),[StringComparison]::OrdinalIgnoreCase)){
    $link.IconLocation=$icon+',0'
    $link.Save()
   }
  }
 }
-Add-Type -TypeDefinition 'using System;using System.Runtime.InteropServices;public static class SouluIconRefresh{[DllImport("shell32.dll")]public static extern void SHChangeNotify(uint id,uint flags,IntPtr first,IntPtr second);}'
 [SouluIconRefresh]::SHChangeNotify(0x08000000,0,[IntPtr]::Zero,[IntPtr]::Zero)
 `
  refreshIcons = "$env:SOULU_SHORTCUT_EXE='" + strings.ReplaceAll(exe,"'","''") + "';$env:SOULU_SHORTCUT_ICON='" + strings.ReplaceAll(icon,"'","''") + "';" + refreshIcons

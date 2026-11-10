@@ -166,7 +166,10 @@ try:
    evaluate(ws,'document.getElementById("settingsButton").click();document.getElementById("ru").click();document.getElementById("dark").click();true');version(ws,'settings');presentation(ws,'dark');hover_text_action(ws,'back','dark');capture(ws,'installer-settings.png')
    evaluate(ws,'document.getElementById("accept").click();true');wait(lambda:evaluate(ws,'document.body.dataset.stage==="installing"'));version(ws,'installing');capture(ws,'installer-progress.png')
    wait(lambda:finished(ws),120);version(ws,'finish');capture(ws,'installer-finish.png')
-   icon_script="$shell=New-Object -ComObject WScript.Shell;$roots=@([Environment]::GetFolderPath('Desktop'),[Environment]::GetFolderPath('Programs'));foreach($r in $roots){Get-ChildItem -LiteralPath $r -Filter Soulu.lnk -Recurse -ErrorAction SilentlyContinue|ForEach-Object{$link=$shell.CreateShortcut($_.FullName);if($link.TargetPath -eq '"+str(destination/'Soulu.exe').replace("'","''")+"'){$link.IconLocation}}}"
+   long_buffer=C.create_unicode_buffer(32768)
+   C.windll.kernel32.GetLongPathNameW(str(destination/'Soulu.exe'),long_buffer,len(long_buffer))
+   long_exe=long_buffer.value or str(destination/'Soulu.exe')
+   icon_script="$shell=New-Object -ComObject WScript.Shell;$roots=@([Environment]::GetFolderPath('Desktop'),[Environment]::GetFolderPath('Programs'));foreach($r in $roots){Get-ChildItem -LiteralPath $r -Filter Soulu.lnk -Recurse -ErrorAction SilentlyContinue|ForEach-Object{$link=$shell.CreateShortcut($_.FullName);if($link.TargetPath -eq '"+long_exe.replace("'","''")+"'){$link.IconLocation}}}"
    icon_output=subprocess.check_output(['powershell.exe','-NoProfile','-Command',icon_script],text=True)
    locations=[line.strip() for line in icon_output.splitlines() if line.strip()]
    check('desktop_and_start_links_use_fresh_icon',len(locations)>=2 and all('soulu-app-1.160.24.ico' in line for line in locations),locations)
