@@ -1,3 +1,9 @@
+# Soulu Preview 1.160.23
+
+- Restore the original blue petal logo and enlarge its home-page presentation by 15 percent.
+- Apply Inter typography, Soulu light and dark palettes, and matching caption glyphs to the installer.
+- Preserve Gecko 160.0 and the existing browser behavior.
+
 # Soulu Preview 1.160.22
 
 - Promote Gecko to the primary implementation and preserve CEF in the cef-archive branch.

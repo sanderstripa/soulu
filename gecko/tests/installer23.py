@@ -124,9 +124,15 @@ def finished(ws):
  return stage=='finish'
 def capture(ws,name):
  data=command(ws,'Page.captureScreenshot',{'format':'png','captureBeyondViewport':False});(out/name).write_bytes(base64.b64decode(data['data']))
+def presentation(ws, theme):
+ check('installer_inter_loaded_'+theme, evaluate(ws,'(async()=>{const faces=await document.fonts.load("400 14px Inter");return faces.length>0&&document.fonts.check("400 14px Inter")&&getComputedStyle(document.body).fontFamily.startsWith("Inter");})()'))
+ expected='rgb(252, 252, 253)' if theme=='light' else 'rgb(32, 33, 36)'
+ check('installer_browser_palette_'+theme,evaluate(ws,'getComputedStyle(document.body).backgroundColor')==expected)
+ check('installer_browser_caption_glyphs_'+theme,evaluate(ws,'document.querySelector("#minimize svg path").getAttribute("d")==="M4.5 12h15"&&document.querySelector("#close svg path").getAttribute("d")==="m4 4 8 8m0-8-8 8"'))
+ check('installer_caption_centers_'+theme,evaluate(ws,'["minimize","close"].every(id=>{const b=document.getElementById(id).getBoundingClientRect(),g=document.querySelector("#"+id+" svg").getBoundingClientRect();return Math.abs((b.left+b.right-g.left-g.right)/2)<0.6&&Math.abs((b.top+b.bottom-g.top-g.bottom)/2)<0.6;})'))
 def version(ws,stage):
  check('only_soulu_brand_'+stage,not evaluate(ws,'/firefox/i.test(document.body.innerText)'))
- value=evaluate(ws,'document.getElementById("version").textContent');check('version_visible_'+stage,'1.160.22' in value and evaluate(ws,'document.getElementById("version").getBoundingClientRect().height>0'),value)
+ value=evaluate(ws,'document.getElementById("version").textContent');check('version_visible_'+stage,'1.160.23' in value and evaluate(ws,'document.getElementById("version").getBoundingClientRect().height>0'),value)
 try:
  with tempfile.TemporaryDirectory(prefix='Soulu installer acceptance ') as temporary:
   root=pathlib.Path(temporary);local=root/'userdata';profile=local/'Soulu/Profiles/default';legacy_profile=local/'Soul/Profiles/default';legacy_profile.mkdir(parents=True);mp=port()
@@ -151,8 +157,8 @@ try:
   (destination/'engine/old/empty').mkdir(parents=True)
   (destination/'Uninstall Soulu.exe').write_bytes(b'legacy leftover')
   with setup(exe,env) as (ws,process):
-   version(ws,'welcome');capture(ws,'installer-welcome.png');check('default_installation_is_separate_gecko_folder',evaluate(ws,'document.getElementById("path").value')==str(destination))
-   evaluate(ws,'document.getElementById("settingsButton").click();document.getElementById("ru").click();document.getElementById("dark").click();true');version(ws,'settings');capture(ws,'installer-settings.png')
+   version(ws,'welcome');presentation(ws,'light');capture(ws,'installer-welcome.png');check('default_installation_is_separate_gecko_folder',evaluate(ws,'document.getElementById("path").value')==str(destination))
+   evaluate(ws,'document.getElementById("settingsButton").click();document.getElementById("ru").click();document.getElementById("dark").click();true');version(ws,'settings');presentation(ws,'dark');capture(ws,'installer-settings.png')
    evaluate(ws,'document.getElementById("accept").click();true');wait(lambda:evaluate(ws,'document.body.dataset.stage==="installing"'));version(ws,'installing');capture(ws,'installer-progress.png')
    wait(lambda:finished(ws),120);version(ws,'finish');capture(ws,'installer-finish.png')
    check('stale_firefox_private_shortcut_removed',not stale.exists())
@@ -185,9 +191,9 @@ try:
   check('application_directories_belong_to_soulu',all('soulu' in p.lower() and 'mozilla' not in p.lower() and 'firefox' not in p.lower() for p in paths.values()),paths)
   check('runtime_really_is_160',m.execute_script('return Services.appinfo.platformVersion')=='160.0')
   check('default_toolbar',m.execute_script('const s=Soulu.config.settings;return s.layout==="adaptive"&&!s.mattePanel&&!s.showExtensions&&!s.showHome&&!s.vpnToolbarVisible'))
-  check('first_installed_launch_version_is_preview22',m.execute_script('return document.documentElement.getAttribute("soulu-version")')=='Soulu Preview 1.160.22')
+  check('first_installed_launch_version_is_preview22',m.execute_script('return document.documentElement.getAttribute("soulu-version")')=='Soulu Preview 1.160.23')
   check('first_installed_launch_shows_soulu_welcome',m.execute_script('return gBrowser.selectedBrowser.currentURI.spec.endsWith("/onboarding.html")'))
-  check('semantic_release_order',m.execute_script('const make=v=>{const tag="soulu-preview-"+v,name="Soulu-"+v+"-Preview-Setup-win64.exe";return {draft:false,tag_name:tag,assets:[{id:1,name,size:1,digest:"sha256:"+"a".repeat(64),browser_download_url:"https://github.com/sanderstripa/soulu/releases/download/"+tag+"/"+name}]};};return Soulu.updateCandidate([make("1.160.22")])===null && Soulu.updateCandidate([make("1.160.21")])===null && Soulu.updateCandidate([make("1.160.23")])!==null && Soulu.updateCandidate([make("1.161.1")])!==null;'))
+  check('semantic_release_order',m.execute_script('const make=v=>{const tag="soulu-preview-"+v,name="Soulu-"+v+"-Preview-Setup-win64.exe";return {draft:false,tag_name:tag,assets:[{id:1,name,size:1,digest:"sha256:"+"a".repeat(64),browser_download_url:"https://github.com/sanderstripa/soulu/releases/download/"+tag+"/"+name}]};};return Soulu.updateCandidate([make("1.160.23")])===null && Soulu.updateCandidate([make("1.160.21")])===null && Soulu.updateCandidate([make("1.160.24")])!==null && Soulu.updateCandidate([make("1.161.1")])!==null;'))
   (out/'installed-first-launch.png').write_bytes(base64.b64decode(m.screenshot()))
   result=m.execute_async_script('const done=arguments[arguments.length-1];(async()=>{const {PlacesUtils}=ChromeUtils.importESModule("resource://gre/modules/PlacesUtils.sys.mjs");await PlacesUtils.bookmarks.insert({parentGuid:PlacesUtils.bookmarks.toolbarGuid,url:"https://example.org/preview22-persistence",title:"Preview 17 installer persistence"});Soulu.config.onboarding={done:true,step:6};await Soulu.backend.save();return true;})().then(done,e=>done({error:String(e)}));');check('real_bookmark_saved_before_upgrade',result is True)
   from toolbar19 import verify_toolbar
@@ -240,7 +246,7 @@ try:
    version(ws,'upgrade');evaluate(ws,'document.getElementById("primary").click();true');wait(lambda:finished(ws),120);evaluate(ws,'document.getElementById("launch").checked=false;document.getElementById("done").click();true');process.wait(timeout=20)
   settings=json.loads((profile/'soulu-settings.json').read_text());check('upgrade_keeps_existing_profile_settings',settings['settings']['theme']=='dark' and settings['onboarding']['done'])
   with contextlib.closing(sqlite3.connect(profile/'places.sqlite')) as db:check('upgrade_keeps_real_bookmarks',db.execute('select count(*) from moz_bookmarks where title=?',('Preview 17 installer persistence',)).fetchone()[0]==1)
-  with winreg.OpenKey(winreg.HKEY_CURRENT_USER,r'Software\Microsoft\Windows\CurrentVersion\Uninstall\Soulu') as key:check('windows_installed_apps_has_correct_version',winreg.QueryValueEx(key,'DisplayVersion')[0]=='1.160.22')
+  with winreg.OpenKey(winreg.HKEY_CURRENT_USER,r'Software\Microsoft\Windows\CurrentVersion\Uninstall\Soulu') as key:check('windows_installed_apps_has_correct_version',winreg.QueryValueEx(key,'DisplayVersion')[0]=='1.160.23')
   subprocess.run([sys.executable,str(pathlib.Path(__file__).with_name('restart18.py')),str(destination),str(out)],check=True)
   uninstaller=destination/'Uninstall Soulu.exe'
   with setup(uninstaller,env,True) as (ws,process):
@@ -249,5 +255,5 @@ try:
   check('uninstall_cleans_own_executable_and_empty_engine_tree',wait(lambda:not destination.exists(),20))
   report['passed']=True
 except Exception as e:report['error']=str(e);raise
-finally:(out/'installer22.json').write_text(json.dumps(report,indent=2,ensure_ascii=False),encoding='utf-8')
+finally:(out/'installer23.json').write_text(json.dumps(report,indent=2,ensure_ascii=False),encoding='utf-8')
 

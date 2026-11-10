@@ -36,12 +36,12 @@ chrome = out / 'engine/soulu/chrome'
 ui = chrome / 'ui'
 for name in ['browser.js','window-controls.sys.mjs','shell-host.js','build-info.sys.mjs','updates.js']:
     source = (root / 'gecko/chrome' / name).read_text(encoding='utf-8')
-    (chrome / name).write_text(re.sub(r'0\.(?:13|14)\.0 Preview','Preview 1.160.22',source),encoding='utf-8')
+    (chrome / name).write_text(re.sub(r'0\.(?:13|14)\.0 Preview','Preview 1.160.23',source),encoding='utf-8')
 for path in chrome.rglob('*'):
     if path.suffix in {'.js','.html','.mjs'} and 'third_party' not in path.parts:
         source = path.read_text(encoding='utf-8')
         if '0.17.0' in source:
-            path.write_text(source.replace('0.17.0','1.160.22'),encoding='utf-8')
+            path.write_text(source.replace('0.17.0','1.160.23'),encoding='utf-8')
 def patch(path, before, after):
     source = path.read_text(encoding='utf-8')
     if before not in source:
@@ -77,7 +77,7 @@ for path in (out/'engine').rglob('*.exe'):
 build = json.loads((out/'BUILD.json').read_text(encoding='utf-8'))
 assert build['name'] == 'Soulu 0.17.0 Preview'
 build.update(firefox='160.0',mozilla_archive='https://archive.mozilla.org/pub/firefox/releases/160.0/win64/ru/Firefox Setup 160.0.exe',mozilla_sha256='9aca6af4a633546ce9908894d735b0518c36b6a54f108566e517225983cf5173')
-build.update(name='Soulu Preview 1.160.22',base_preview=17,soulu_source=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip())
+build.update(name='Soulu Preview 1.160.23',base_preview=17,soulu_source=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip())
 (out/'BUILD.json').write_text(json.dumps(build,indent=2),encoding='utf-8')
 
 patch(ui/'renderer.js','mattePanel:true','mattePanel:false,showExtensions:false,showHome:false')
@@ -87,7 +87,7 @@ patch(ui/'settings.js','[{opacity:.94},{opacity:1}]',"[{opacity:reduced?1:0.6,tr
 # Apply the product strings at their native resource locations before the first
 # window loads, including native dialogs opened outside the browser window.
 bundle = out/'engine/browser/omni.ja'
-subprocess.run(['python',str(root/'gecko/prepare-icons22.py')],check=True)
+subprocess.run(['python',str(root/'gecko/prepare-icons23.py')],check=True)
 temporary = bundle.with_suffix('.new')
 with zipfile.ZipFile(bundle) as source, zipfile.ZipFile(temporary,'w',zipfile.ZIP_DEFLATED) as target:
     for name in source.namelist():
@@ -103,7 +103,7 @@ with zipfile.ZipFile(bundle) as source, zipfile.ZipFile(temporary,'w',zipfile.ZI
             from PIL import Image
             old_image=Image.open(io.BytesIO(data))
             output=io.BytesIO()
-            Image.open(root/'gecko/chrome/branding/soulu-wave.png').resize(old_image.size,Image.Resampling.LANCZOS).save(output,format='PNG')
+            Image.open(root/'gecko/chrome/branding/soulu-petals.png').resize(old_image.size,Image.Resampling.LANCZOS).save(output,format='PNG')
             data=output.getvalue()
         private_page = root/'gecko/private-page'/PurePosixPath(name).name
         if name.startswith('chrome/browser/content/browser/') and private_page.is_file():
@@ -183,6 +183,11 @@ patch(ui/'settings.html','</head>','<script defer src="adblock-about.js"></scrip
 # Bootstrap readiness can precede the first remote surface composite.
 # Flush both UI and host paint before revealing the native window.
 
-subprocess.run(['python',str(root/'gecko/prepare-icons22.py')],check=True)
+subprocess.run(['python',str(root/'gecko/prepare-icons23.py')],check=True)
 
 shutil.copyfile(root/'gecko/chrome/updates.js',chrome/'updates.js')
+
+# Enlarge the visible home-page mark by 15 percent at each existing breakpoint.
+patch(ui/'home.css','#logo{width:112px;height:112px;','#logo{width:128.8px;height:128.8px;')
+patch(ui/'home.css','#logo{width:100px;height:100px;','#logo{width:115px;height:115px;')
+patch(ui/'home.css','#logo{width:76px;height:76px;','#logo{width:87.4px;height:87.4px;')
