@@ -1,0 +1,72 @@
+name: Finish Preview 5 registration and native backdrop checks
+on:
+  push:
+    branches: [gecko-preview]
+    paths: ['.github/workflows/package-gecko5.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  windows:
+    runs-on: windows-2025
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: sanderstripa/soulu
+      PYTHONUTF8: 1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Reuse successful final checks and byte-identical executable components
+        shell: pwsh
+        run: |
+          gh run download 41700314952 -n gecko5-build-inputs -D gecko-out
+          gh run download 41700314952 -n gecko5-targeted-evidence -D base-evidence
+          gh run download 41702994349 -n gecko5-final-evidence -D verified-final
+          python gecko/tests/prepare5-final.py
+          if ($LASTEXITCODE -ne 0) { throw 'Binary/resource overlay verification failed' }
+          python -c "import json,pathlib; p=pathlib.Path('verified-final'); assert all(json.loads((p/n).read_text(encoding='utf-8'))['passed'] for n in ['preview5.json','speech5.json','visual-comparison.json'])"
+          if ($LASTEXITCODE -ne 0) { throw 'Passed final reports missing' }
+          Copy-Item verified-final/preview5.json gecko-out/
+          Copy-Item verified-final/speech5.json gecko-out/
+          Copy-Item verified-final/visual-comparison.json gecko-out/
+          New-Item -ItemType Directory -Force gecko-out/visual-evidence | Out-Null
+          Copy-Item verified-final/*.png gecko-out/visual-evidence/
+      - name: Install only the required test dependencies
+        run: python -m pip install marionette_driver pillow psutil websocket-client
+      - name: Reuse successful native checks without rerunning them
+        shell: pwsh
+        run: |
+          gh run download 41705161180 -n gecko5-package-evidence -D gecko5-package
+          python -c "import json,pathlib; p=pathlib.Path('gecko5-package'); assert all(json.loads((p/n).read_text(encoding='utf-8'))['passed'] for n in ['mica-final5.json','windows-final5.json'])"
+          if ($LASTEXITCODE -ne 0) { throw 'Native reports must pass' }
+      - name: Package the final ZIP and verify extracted launch
+        shell: pwsh
+        run: |
+          Copy-Item gecko5-package/*.json gecko-out/
+          Copy-Item gecko5-package/*.png gecko-out/visual-evidence/
+          Compress-Archive -Path gecko-out/* -DestinationPath Soulu-Gecko-Preview-5-win64.zip -CompressionLevel Optimal
+          python gecko/tests/zip_smoke.py Soulu-Gecko-Preview-5-win64.zip gecko5-zip
+          if ($LASTEXITCODE -ne 0) { throw 'Extracted ZIP launch failed' }
+          (Get-FileHash Soulu-Gecko-Preview-5-win64.zip -Algorithm SHA256).Hash.ToLowerInvariant() + '  Soulu-Gecko-Preview-5-win64.zip' | Set-Content SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gecko5-zip-evidence
+          path: gecko5-zip/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Soulu-Gecko-Preview-5-final
+          path: |
+            Soulu-Gecko-Preview-5-win64.zip
+            SHA256SUMS.txt
+      - name: Publish verified Preview 5 ZIP
+        shell: pwsh
+        run: |
+          gh release create gecko-preview-5 Soulu-Gecko-Preview-5-win64.zip SHA256SUMS.txt gecko5-zip/zip-smoke.json --target $env:GITHUB_SHA --title "Soulu Gecko Preview 5" --prerelease --notes-file gecko/docs/PREVIEW5-RESULTS.md
+          if ($LASTEXITCODE -ne 0) { throw 'Release publication failed' }

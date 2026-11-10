@@ -1,0 +1,119 @@
+name: Soulu Gecko Preview 5 targeted Windows checks
+on:
+  push:
+    branches: [gecko-preview]
+    paths: ['.github/workflows/build-gecko5.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: soulu-gecko5
+  cancel-in-progress: false
+jobs:
+  windows:
+    runs-on: windows-2025
+    timeout-minutes: 40
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: sanderstripa/soulu
+      PYTHONUTF8: 1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.x'
+      - name: Assemble pinned Gecko and original UI
+        run: python gecko/build.py --platform win64 --output gecko-out
+      - name: Keep accepted VPN and Rust binaries unchanged
+        shell: pwsh
+        run: |
+          gh release download gecko-preview-4-update-1 -p Soulu-Gecko-Preview-4-Update-1-win64.zip -D base
+          if ((Get-FileHash base/Soulu-Gecko-Preview-4-Update-1-win64.zip -Algorithm SHA256).Hash.ToLowerInvariant() -cne 'ec112d4bf74542507f502bd805862c396f94c690c54dcaee20708642c674f934') { throw 'Base checksum mismatch' }
+          Expand-Archive base/Soulu-Gecko-Preview-4-Update-1-win64.zip base/expanded
+          Copy-Item base/expanded/runtime/soulu/vpn gecko-out/runtime/soulu/vpn -Recurse
+          Copy-Item base/expanded/runtime/soulu/adblock gecko-out/runtime/soulu/adblock -Recurse
+      - name: Build the Soulu launcher with the original icon
+        shell: pwsh
+        run: |
+          Push-Location gecko/launcher
+          gofmt -w main.go
+          go run github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.5.0 -64 -o rsrc.syso
+          if ($LASTEXITCODE -ne 0) { throw 'Icon resource failed' }
+          go build -trimpath -ldflags '-s -w -H=windowsgui' -o ../../gecko-out/Soulu.exe .
+          if ($LASTEXITCODE -ne 0) { throw 'Launcher failed' }
+          Pop-Location
+      - uses: actions/cache/restore@v4
+        id: whisper-cache
+        with:
+          path: speech-build/_deps
+          key: win64-whisper-4979e04-portable-mt-v1
+      - name: Build the isolated offline recognizer and preserve its pinned model
+        shell: pwsh
+        run: |
+          python gecko/speech/prepare.py
+          python scripts/prepare-home-speech.py
+          cmake -S gecko/speech -B speech-build -A x64
+          if ($LASTEXITCODE -ne 0) { throw 'Speech configure failed' }
+          cmake --build speech-build --config Release --parallel 4
+          if ($LASTEXITCODE -ne 0) { throw 'Speech helper failed' }
+          New-Item -ItemType Directory -Force gecko-out/runtime/soulu/speech | Out-Null
+          Copy-Item speech-build/Release/SouluSpeech.exe gecko-out/runtime/soulu/speech/
+          Copy-Item ui/speech/ggml-tiny.bin gecko-out/runtime/soulu/speech/
+          Copy-Item speech-build/_deps/soulu_whisper-src/LICENSE gecko-out/runtime/soulu/speech/WHISPER-LICENSE.txt
+      - uses: actions/cache/save@v4
+        if: always() && steps.whisper-cache.outputs.cache-hit != 'true'
+        with:
+          path: speech-build/_deps
+          key: win64-whisper-4979e04-portable-mt-v1
+      - name: Bundle the unchanged signed Firefox VOT extension
+        run: python gecko/prepare-vot.py gecko-out
+      - name: Install test dependencies
+        run: python -m pip install marionette_driver pillow psutil websocket-client numpy soundfile
+      - name: Check changed browser components
+        id: corrected
+        continue-on-error: true
+        run: python gecko/tests/preview5.py gecko-out/runtime/firefox.exe gecko5-checks
+      - name: Check real local RU and EN recognition
+        id: speech
+        continue-on-error: true
+        run: python gecko/tests/speech5.py gecko-out/runtime/soulu/speech/SouluSpeech.exe gecko5-checks/speech5.json
+      - name: Check signed VOT and Windows integration
+        id: native
+        continue-on-error: true
+        run: python gecko/tests/optional5.py gecko-out/runtime/firefox.exe gecko5-optional
+      - name: Check directly related native extension behavior
+        id: extensions
+        continue-on-error: true
+        run: python gecko/tests/extensions.py gecko-out/runtime/firefox.exe gecko5-extensions
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gecko5-build-inputs
+          path: gecko-out/
+          compression-level: 1
+      - name: Require all changed-component gates
+        shell: pwsh
+        run: |
+          if ('${{ steps.corrected.outcome }}' -ne 'success' -or '${{ steps.speech.outcome }}' -ne 'success' -or '${{ steps.native.outcome }}' -ne 'success' -or '${{ steps.extensions.outcome }}' -ne 'success') { throw 'A targeted component check failed; passed reports remain reusable' }
+      - name: Save candidate and evidence without publishing an unfinished release
+        shell: pwsh
+        run: |
+          Copy-Item gecko/docs gecko-out/docs -Recurse
+          Copy-Item gecko5-checks/preview5.json gecko-out/
+          Compress-Archive -Path gecko-out/* -DestinationPath Soulu-Gecko-Preview-5-candidate-win64.zip -CompressionLevel Optimal
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gecko5-targeted-evidence
+          path: |
+            gecko5-checks/
+            gecko5-extensions/
+            gecko5-optional/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Soulu-Gecko-Preview-5-candidate
+          path: Soulu-Gecko-Preview-5-candidate-win64.zip

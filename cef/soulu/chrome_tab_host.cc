@@ -2,7 +2,6 @@
 #include <algorithm>
 #include <set>
 #include <cwchar>
-#include <commctrl.h>
 #include "include/cef_cookie.h"
 #include "include/cef_task.h"
 #include "include/base/cef_logging.h"
@@ -63,7 +62,7 @@ class Host final:public ChromeTabHost,public CefWindowDelegate,public CefBrowser
     auto browser=view_?view_->GetBrowser():nullptr;
     return !browser||browser->GetHost()->TryCloseBrowser();
   }
-  void OnWindowDestroyed(CefRefPtr<CefWindow>) override{UnhookActionPopup();toolbar_=nullptr;view_=nullptr;window_=nullptr;}
+  void OnWindowDestroyed(CefRefPtr<CefWindow>) override{toolbar_=nullptr;view_=nullptr;window_=nullptr;}
   bool OnPopupBrowserViewCreated(CefRefPtr<CefBrowserView>,CefRefPtr<CefBrowserView> popup,bool devtools) override{
     if(devtools)return false;
     CefRefPtr<Host> host=new Host(parent_,popup_ready_);host->view_=popup;
@@ -127,38 +126,8 @@ class Host final:public ChromeTabHost,public CefWindowDelegate,public CefBrowser
     }
     return TRUE;
   }
-  CefRect ActionBounds(int width,int height){
-    POINT anchor={anchor_.x+anchor_.width,anchor_.y+anchor_.height};ClientToScreen(parent_,&anchor);
-    POINT origin={0,0};ClientToScreen(parent_,&origin);
-    MONITORINFO monitor={sizeof(monitor)};GetMonitorInfoW(MonitorFromPoint(anchor,MONITOR_DEFAULTTONEAREST),&monitor);
-    const auto& work=monitor.rcWork;const int dpi=GetDpiForWindow(parent_);
-    width=std::clamp(width,1,std::min(MulDiv(800,dpi,96),static_cast<int>(work.right-work.left)));
-    height=std::clamp(height,1,std::min(MulDiv(600,dpi,96),static_cast<int>(work.bottom-work.top)));
-    int x=anchor.x-width;if(x<origin.x)x=anchor.x-anchor_.width;
-    return CefRect(std::clamp<int>(x,work.left,work.right-width),
-      std::clamp<int>(anchor.y+MulDiv(6,dpi,96),work.top,work.bottom-height),width,height);
-  }
-  static LRESULT CALLBACK ActionProc(HWND hwnd,UINT message,WPARAM wp,LPARAM lp,UINT_PTR,DWORD_PTR data){
-    CefRefPtr<Host> self=reinterpret_cast<Host*>(data);
-    if(message==WM_WINDOWPOSCHANGING){
-      auto* pos=reinterpret_cast<WINDOWPOS*>(lp);RECT current={};GetWindowRect(hwnd,&current);
-      const auto bounds=self->ActionBounds((pos->flags&SWP_NOSIZE)?current.right-current.left:pos->cx,
-        (pos->flags&SWP_NOSIZE)?current.bottom-current.top:pos->cy);
-      pos->x=bounds.x;pos->y=bounds.y;pos->cx=bounds.width;pos->cy=bounds.height;
-      if(bounds.x==current.left&&bounds.y==current.top)pos->flags|=SWP_NOMOVE;
-      else pos->flags&=~SWP_NOMOVE;
-      if(bounds.width==current.right-current.left&&bounds.height==current.bottom-current.top)pos->flags|=SWP_NOSIZE;
-      else pos->flags&=~SWP_NOSIZE;
-    }
-    if(message==WM_NCDESTROY)self->UnhookActionPopup();
-    return DefSubclassProc(hwnd,message,wp,lp);
-  }
-  void UnhookActionPopup(){
-    if(popup_hooked_&&action_popup_)RemoveWindowSubclass(action_popup_,ActionProc,reinterpret_cast<UINT_PTR>(this));
-    popup_hooked_=false;
-  }
   void DismissActionPopup(){
-    ++popup_generation_;UnhookActionPopup();
+    ++popup_generation_;
     if(action_popup_&&IsWindow(action_popup_))PostMessageW(action_popup_,WM_CLOSE,0,0);
     action_popup_=nullptr;
   }
@@ -167,16 +136,22 @@ class Host final:public ChromeTabHost,public CefWindowDelegate,public CefBrowser
     if(!action_popup_){
       EnumThreadWindows(GetCurrentThreadId(),FindActionPopup,reinterpret_cast<LPARAM>(this));
       if(!action_popup_){if(GetTickCount64()>=popup_deadline_)return;}
-      else {
-        popup_started_=GetTickCount64();
-        popup_hooked_=SetWindowSubclass(action_popup_,ActionProc,reinterpret_cast<UINT_PTR>(this),reinterpret_cast<DWORD_PTR>(this))!=FALSE;
-      }
-    }else if(!IsWindow(action_popup_)||!IsWindowVisible(action_popup_)){UnhookActionPopup();action_popup_=nullptr;if(GetTickCount64()>=popup_deadline_)return;}
+      else {popup_started_=GetTickCount64();}
+    }else if(!IsWindow(action_popup_)||!IsWindowVisible(action_popup_)){action_popup_=nullptr;if(GetTickCount64()>=popup_deadline_)return;}
     if(action_popup_){
       RECT bounds={};GetWindowRect(action_popup_,&bounds);
-      const auto position=ActionBounds(bounds.right-bounds.left,bounds.bottom-bounds.top);
-      if(bounds.left!=position.x||bounds.top!=position.y||bounds.right-bounds.left!=position.width||bounds.bottom-bounds.top!=position.height)
-        SetWindowPos(action_popup_,HWND_TOP,position.x,position.y,position.width,position.height,SWP_NOACTIVATE);
+      POINT anchor={anchor_.x+anchor_.width,anchor_.y+anchor_.height};
+      ClientToScreen(parent_,&anchor);
+      MONITORINFO monitor={sizeof(monitor)};GetMonitorInfoW(MonitorFromPoint(anchor,MONITOR_DEFAULTTONEAREST),&monitor);
+      const auto& work=monitor.rcWork;const int scale=GetDpiForWindow(parent_);
+      // Chromium computes the extension's preferred size. Only cap it at the
+      // same 800x600 DIP action limits; never stretch it to the tab viewport.
+      const int width=std::min<int>({static_cast<int>(bounds.right-bounds.left),MulDiv(800,scale,96),static_cast<int>(work.right-work.left)});
+      const int height=std::min<int>({static_cast<int>(bounds.bottom-bounds.top),MulDiv(600,scale,96),static_cast<int>(work.bottom-work.top)});
+      const int x=std::clamp<int>(anchor.x-width,work.left,work.right-width);
+      const int y=std::clamp<int>(anchor.y+MulDiv(6,scale,96),work.top,work.bottom-height);
+      if(bounds.left!=x||bounds.top!=y||bounds.right-bounds.left!=width||bounds.bottom-bounds.top!=height)
+        SetWindowPos(action_popup_,HWND_TOP,x,y,width,height,SWP_NOACTIVATE);
       const bool down=MouseDown();POINT mouse={};GetCursorPos(&mouse);GetWindowRect(action_popup_,&bounds);
       const auto foreground=GetForegroundWindow();
       // Child Chrome widgets do not receive normal top-level deactivation
@@ -191,7 +166,7 @@ class Host final:public ChromeTabHost,public CefWindowDelegate,public CefBrowser
     CefRefPtr<Host> self=this;CefPostDelayedTask(TID_UI,new Task([self,generation]{self->WatchActionPopup(generation);}),30);
   }
   CefRect anchor_;std::set<HWND> existing_popups_;HWND action_popup_=nullptr;
-  unsigned popup_generation_=0;ULONGLONG popup_deadline_=0,popup_started_=0;bool mouse_down_=false,popup_hooked_=false;
+  unsigned popup_generation_=0;ULONGLONG popup_deadline_=0,popup_started_=0;bool mouse_down_=false;
   struct NativeFocusTarget {HWND window=nullptr;LONGLONG area=0;};
   static BOOL CALLBACK FindRenderer(HWND window,LPARAM data){
     wchar_t name[64]={};GetClassNameW(window,name,64);

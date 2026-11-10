@@ -20,3 +20,19 @@ ui/speech/ggml-tiny.bin
 
 /.connect-installer-source/
 /.tmp/
+
+# Local Gecko runtime downloads and generated packages
+/gecko-cache/
+/gecko-out/
+/gecko-linux/
+/gecko-acceptance/
+/gecko-smoke.log
+/gecko-preview-1.zip
+
+/gecko-local/
+/local-preview3-check/
+/gecko3-acceptance/
+/gecko/launcher/*.syso
+
+/gecko/launcher/soulu-icon.rc
+/gecko/launcher/soulu-icon.res

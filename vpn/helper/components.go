@@ -349,8 +349,10 @@ func extractComponent(archive []byte, exe string) (map[string][]byte, error) {
 	return files, nil
 }
 func manageComponent(r object) (object, error) {
+ directClient:=httpClient
+ defer func(){httpClient=directClient}()
 	if boolean(r, "proxy") {
-		proxy, _ := url.Parse("socks5://127.0.0.1:17890")
+		proxy, _ := url.Parse(fmt.Sprintf("socks5://127.0.0.1:%d",proxyPort))
 		transport := http.DefaultTransport.(*http.Transport).Clone()
 		transport.Proxy = http.ProxyURL(proxy)
 		copy := *httpClient

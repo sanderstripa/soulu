@@ -1,0 +1,31 @@
+name: Publish verified Preview 11
+on:
+  push:
+    branches: [gecko-preview]
+    paths: ['.github/workflows/publish-gecko11.yml']
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish:
+    runs-on: windows-2025
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: sanderstripa/soulu
+      PYTHONUTF8: 1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - shell: pwsh
+        run: |
+          gh run download 41933332929 -n gecko11-verified-installer -D package
+          if ($LASTEXITCODE) { throw 'Installer download failed' }
+          gh run download 41933332929 -n gecko11-evidence -D evidence
+          if ($LASTEXITCODE) { throw 'Evidence download failed' }
+          python -c "import pathlib,json,hashlib; assert all(json.loads((pathlib.Path('evidence')/p).read_text(encoding='utf-8'))['passed'] for p in ['weather11.json','bookmarks11.json','installer11.json']); p=pathlib.Path('package/Soulu-Gecko-Preview-11-Setup-win64.exe'); b=json.loads(pathlib.Path(str(p)+'.build.json').read_text(encoding='utf-8-sig')); assert b['sourceCommit']=='7504103ea794f64e9f1a4ad04cd26f7adb941968' and b['installerSHA256']==hashlib.sha256(p.read_bytes()).hexdigest()"
+          if ($LASTEXITCODE) { throw 'Evidence validation failed' }
+          (Get-FileHash package/Soulu-Gecko-Preview-11-Setup-win64.exe -Algorithm SHA256).Hash.ToLowerInvariant() + '  Soulu-Gecko-Preview-11-Setup-win64.exe' | Set-Content package/SHA256SUMS.txt
+          gh release create gecko-preview-11 package/Soulu-Gecko-Preview-11-Setup-win64.exe package/Soulu-Gecko-Preview-11-Setup-win64.exe.build.json package/SHA256SUMS.txt evidence/weather11.json evidence/bookmarks11.json evidence/installer11.json --target 7504103ea794f64e9f1a4ad04cd26f7adb941968 --title 'Soulu Gecko Preview 11' --notes-file gecko/docs/PREVIEW11-RESULTS.md
+          if ($LASTEXITCODE) { throw 'Publication failed' }

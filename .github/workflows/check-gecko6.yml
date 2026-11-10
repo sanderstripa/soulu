@@ -1,0 +1,38 @@
+name: Check final Home, sidebar and geometry corrections against Preview 5 Windows binaries
+on:
+  push:
+    branches: [gecko-preview]
+    paths: ['.github/workflows/check-gecko6.yml']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  targeted:
+    runs-on: windows-2025
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: sanderstripa/soulu
+      PYTHONUTF8: 1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Reuse accepted Preview 5 binary components
+        shell: pwsh
+        run: |
+          gh run download 41706847641 -n Soulu-Gecko-Preview-5-final -D accepted
+          Expand-Archive accepted/Soulu-Gecko-Preview-5-win64.zip gecko-out
+          python gecko/tests/overlay6.py
+          if ($LASTEXITCODE -ne 0) { throw 'Resource overlay failed' }
+          python -m pip install marionette_driver pillow psutil websocket-client
+      - name: Run only changed Home and UI scenarios
+        run: python gecko/tests/preview6.py gecko-out/runtime/firefox.exe gecko6-checks
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gecko6-targeted-evidence
+          path: gecko6-checks/

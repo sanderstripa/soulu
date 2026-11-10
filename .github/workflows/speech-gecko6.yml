@@ -1,0 +1,46 @@
+name: Measure optimized local RU and EN speech inference
+on:
+  push:
+    branches: [gecko-preview]
+    paths: ['.github/workflows/speech-gecko6.yml']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  speech:
+    runs-on: windows-2025
+    timeout-minutes: 25
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: sanderstripa/soulu
+      PYTHONUTF8: 1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/cache@v4
+        with:
+          path: speech-build/_deps
+          key: soulu-whisper-4979e04-windows
+      - name: Build only the modified speech helper
+        shell: pwsh
+        run: |
+          python gecko/speech/prepare.py
+          cmake -S gecko/speech -B speech-build -A x64
+          if ($LASTEXITCODE -ne 0) { throw 'Speech configuration failed' }
+          cmake --build speech-build --config Release --parallel 4
+          if ($LASTEXITCODE -ne 0) { throw 'Speech build failed' }
+          gh run download 41706847641 -n Soulu-Gecko-Preview-5-final -D accepted
+          Expand-Archive accepted/Soulu-Gecko-Preview-5-win64.zip accepted/runtime
+          New-Item -ItemType Directory -Force speech-out | Out-Null
+          Copy-Item speech-build/Release/SouluSpeech.exe speech-out/
+          Copy-Item accepted/runtime/runtime/soulu/speech/ggml-tiny.bin speech-out/
+          python -m pip install numpy soundfile
+      - name: Confirm actual Russian and English recognition and measure duration
+        run: python gecko/tests/speech5.py speech-out/SouluSpeech.exe speech-out/speech6.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gecko6-speech-candidate
+          path: speech-out/

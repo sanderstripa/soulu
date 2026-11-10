@@ -1,0 +1,103 @@
+name: Build and publish Soulu 0.14.0 Preview
+on:
+  push:
+    branches: [gecko-preview]
+    paths: ['.github/workflows/build-soulu14.yml']
+permissions:
+  contents: write
+  actions: write
+jobs:
+  windows:
+    runs-on: windows-2025
+    timeout-minutes: 35
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: sanderstripa/soulu
+      PYTHONUTF8: 1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Cancel superseded Preview 14 checks
+        shell: pwsh
+        run: |
+          $runs = gh run list --workflow build-soulu14.yml --branch gecko-preview --limit 30 --json databaseId,status | ConvertFrom-Json
+          foreach ($old in $runs) { if ([long]$old.databaseId -lt [long]$env:GITHUB_RUN_ID -and $old.status -in @('in_progress','queued')) { gh run cancel $old.databaseId } }
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.x'
+      - name: Restore published Preview 13 and apply requested Preview 14 fixes
+        id: assemble
+        shell: pwsh
+        run: |
+          $run = gh run view 42001335917 --json conclusion,headSha | ConvertFrom-Json
+          if ($run.conclusion -ne 'success' -or $run.headSha -ne '9646fbd462c0657147981ef976881f62701b27d5') { throw 'Preview 12 provenance mismatch' }
+          gh run download 42001335917 -n soulu13-verified-installer -D preview13-input
+          if ($LASTEXITCODE) { throw 'Verified Preview 12 download failed' }
+          python gecko/prepare-preview14.py
+          if ($LASTEXITCODE) { throw 'Preview 14 assembly failed' }
+          Push-Location gecko/launcher
+          go run github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.5.0 -64 -o rsrc.syso
+          if ($LASTEXITCODE) { throw 'Launcher resources failed' }
+          go build -trimpath -ldflags '-s -w -H=windowsgui' -o ../../gecko-out/Soulu.exe .
+          if ($LASTEXITCODE) { throw 'Launcher compilation failed' }
+          Pop-Location
+          python gecko/brand-engine.py
+          if ($LASTEXITCODE) { throw 'Engine branding failed' }
+          New-Item -ItemType Directory -Force soulu14-checks | Out-Null
+          Copy-Item gecko-out/windows-brand-audit.json,gecko-out/default-bookmarks-audit.json soulu14-checks
+          python -c "import json; r=json.load(open('gecko-out/windows-brand-audit.json')); assert r and all(x['iconGroupsMatchSoulu'] for x in r); assert json.load(open('gecko-out/default-bookmarks-audit.json'))['disabled']"
+          if ($LASTEXITCODE) { throw 'Branding/default bookmark audit failed' }
+          python -m pip install marionette_driver pillow psutil websocket-client
+      - name: Verify requested welcome, extensions and restart scenarios
+        run: python gecko/tests/preview14.py gecko-out/engine/SouluEngine.exe soulu14-checks
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: soulu14-browser-evidence
+          path: soulu14-checks/
+      - name: Build Soulu 0.14.0 Preview installer
+        id: installer
+        if: ${{ !cancelled() && steps.assemble.outcome == 'success' }}
+        shell: pwsh
+        run: |
+          ./gecko/installer/build.ps1 -BuildDir gecko-out -OutFile Soulu-0.14.0-Preview-Setup-win64.exe
+          if ($LASTEXITCODE) { throw 'Installer build failed' }
+          if ((Get-Item Soulu-0.14.0-Preview-Setup-win64.exe).VersionInfo.ProductVersion -ne '0.14.0.0') { throw 'Installer version mismatch' }
+      - name: Verify clean installation, first launch, upgrade and removal
+        if: ${{ !cancelled() && steps.installer.outcome == 'success' }}
+        run: python gecko/tests/installer14.py Soulu-0.14.0-Preview-Setup-win64.exe soulu14-checks
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: soulu14-evidence
+          path: soulu14-checks/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: soulu14-verified-installer
+          path: |
+            Soulu-0.14.0-Preview-Setup-win64.exe
+            Soulu-0.14.0-Preview-Setup-win64.exe.build.json
+      - name: Publish tested Soulu 0.14.0 Preview installer
+        shell: pwsh
+        run: |
+          python -c "import json,pathlib; paths=['preview14.json','installer14.json']; assert all(json.loads((pathlib.Path('soulu14-checks')/p).read_text())['passed'] for p in paths)"
+          if ($LASTEXITCODE) { throw 'Acceptance reports not green' }
+          (Get-FileHash Soulu-0.14.0-Preview-Setup-win64.exe -Algorithm SHA256).Hash.ToLowerInvariant() + '  Soulu-0.14.0-Preview-Setup-win64.exe' | Set-Content SHA256SUMS.txt
+          $branchHead = gh api repos/sanderstripa/soulu/git/ref/heads/gecko-preview --jq '.object.sha'
+          if ($branchHead.Trim() -ne $env:GITHUB_SHA) { throw 'A newer source revision superseded this build' }
+          gh release create soulu-preview-14 Soulu-0.14.0-Preview-Setup-win64.exe Soulu-0.14.0-Preview-Setup-win64.exe.build.json SHA256SUMS.txt soulu14-checks/preview14.json soulu14-checks/installer14.json --target $env:GITHUB_SHA --title 'Soulu 0.14.0 Preview' --prerelease --notes-file gecko/docs/PREVIEW14-RESULTS.md
+          if ($LASTEXITCODE) { throw 'Release publication failed' }
+
+# Verify native automatic add-on routing and themed control painting.
+
+# Theme choices use Soulu buttons, without a platform menulist surface.
+
+# Include shell settings polling in the resolved system theme path.
+
+# Unicode shortcut fixtures use the PowerShell UTF-16 command transport.
+
+# Construct Unicode link fixtures with native filesystem rename after COM saves.

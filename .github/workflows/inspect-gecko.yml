@@ -1,0 +1,46 @@
+name: Inspect Gecko acceptance evidence
+on:
+  push:
+    branches: [gecko-preview]
+    paths: ['.github/workflows/inspect-gecko.yml']
+permissions:
+  actions: read
+  contents: read
+jobs:
+  evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: sanderstripa/soulu
+    steps:
+      - name: Wait for the tested Windows run
+        run: |
+          python - <<'PY'
+          import json,os,time,urllib.request
+          for _ in range(150):
+            request=urllib.request.Request('https://api.github.com/repos/sanderstripa/soulu/actions/runs/41581624301',headers={'Authorization':'Bearer '+os.environ['GH_TOKEN']})
+            run=json.load(urllib.request.urlopen(request))
+            if run['status']=='completed':
+              print('WINDOWS_CONCLUSION',run['conclusion']);break
+            time.sleep(10)
+          else:raise SystemExit('Windows run still active')
+          PY
+      - name: Download isolated test evidence
+        run: gh run download 41581624301 -n gecko-acceptance -D evidence
+      - name: Display reports and screenshot data for review
+        run: |
+          python - <<'PY'
+          import pathlib,base64
+          root=pathlib.Path('evidence')
+          for p in root.glob('*.json'):
+            print('REPORT',p.name,p.read_text(encoding='utf-8'))
+          for p in root.glob('*comparison.png'):
+            print('IMAGE_BEGIN:'+p.name)
+            print(base64.b64encode(p.read_bytes()).decode())
+            print('IMAGE_END')
+          if (root/'youtube.png').exists():
+            print('IMAGE_BEGIN:youtube.png')
+            print(base64.b64encode((root/'youtube.png').read_bytes()).decode())
+            print('IMAGE_END')
+          PY

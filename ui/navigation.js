@@ -22,8 +22,8 @@
   const bookmarkProfile=()=>state.incognito?'__incognito__':state.activeProfileId;
   async function persist(next,profile=bookmarkProfile()){if(busy)throw Error('Дождитесь сохранения');busy=true;try{const saved=await api.replaceBookmarks(next,profile);if(bookmarkProfile()===profile){rows=saved;render();}return saved;}finally{busy=false;}}
   const updatePopover=()=>{const open=Boolean(document.querySelector('.bookmark-context'));shield.hidden=!(open||editor);return api.setPopover(open,'bookmarks');};
-  const closeMenu=()=>{pane='list';menu.hidden=true;api.setBookmarksSidebar(false);document.querySelector('.bookmark-context')?.remove();updatePopover();api.setSuggestionsHeight(0);};
-  async function openMenu(id=0,editor=false){await api.setOverview(false);rows=await api.getBookmarks();parent=id;manage=editor;pane='list';query='';menuSearch.value='';menu.hidden=false;await api.setBookmarksSidebar(true);await updatePopover();renderMenu();menuSearch.focus();}
+  let menuEpoch=0;const closeMenu=async()=>{const epoch=++menuEpoch;if(!menu.hidden){const motion=menu.animate([{opacity:1,transform:'translateX(0)'},{opacity:0,transform:'translateX(-10px)'}],{duration:matchMedia('(prefers-reduced-motion:reduce)').matches?0:150,easing:'ease-out'});try{await motion.finished;}catch{}if(epoch!==menuEpoch)return;}pane='list';menu.hidden=true;api.setBookmarksSidebar(false);document.querySelector('.bookmark-context')?.remove();updatePopover();api.setSuggestionsHeight(0);};
+  async function openMenu(id=0,editor=false){++menuEpoch;await api.setOverview(false);rows=await api.getBookmarks();parent=id;manage=editor;pane='list';query='';menuSearch.value='';menu.hidden=false;menu.animate([{opacity:0,transform:'translateX(-10px)'},{opacity:1,transform:'translateX(0)'}],{duration:matchMedia('(prefers-reduced-motion:reduce)').matches?0:180,easing:'cubic-bezier(.22,1,.36,1)'});await api.setBookmarksSidebar(true);await updatePopover();renderMenu();menuSearch.focus();}
   function icon(row){
     const n=el('span','bookmark-icon',row.type==='folder'?'▱':(row.title||row.url||'•').trim().slice(0,1).toLocaleUpperCase());
     if(row.type==='folder')return n;
@@ -31,7 +31,7 @@
     if(source){const im=el('img');im.src=source;im.alt='';im.referrerPolicy='no-referrer';im.onerror=()=>im.remove();n.append(im);}
     return n;
   }
-  function item(row,compact=false){const b=button('',()=>row.type==='folder'?openMenu(row.id,manage):(closeMenu(),api.openBookmark(row.url)));b.classList.add('bookmark-item');b.title=row.title||row.url;b.setAttribute('aria-label',b.title);b.append(icon(row),el('span','bookmark-label',row.title||row.url));if(compact&&(state.settings?.bookmarksIconsOnly||row.hideTitle))b.classList.add('icons-only');b.dataset.bookmarkId=String(row.id);b.draggable=false;b.onpointerdown=e=>{if(e.button===0){gesture={id:row.id,x:e.clientX,y:e.clientY,pointer:e.pointerId,node:b,active:false};b.setPointerCapture(e.pointerId);}};b.ondragstart=e=>{drag=row.id;e.dataTransfer.setData('text/plain',String(row.id));};b.ondragend=()=>{drag=0;};b.ondragover=e=>{if(drag)e.preventDefault();};b.ondrop=e=>{e.preventDefault();e.stopPropagation();move(drag,row).catch(err=>alert(err.message));};b.oncontextmenu=e=>{e.preventDefault();context(row,e);};return b;}
+  function item(row,compact=false){const b=button('',()=>row.type==='folder'?openMenu(row.id,manage):api.openBookmark(row.url));b.classList.add('bookmark-item');b.title=row.title||row.url;b.setAttribute('aria-label',b.title);b.append(icon(row),el('span','bookmark-label',row.title||row.url));if(compact&&(state.settings?.bookmarksIconsOnly||row.hideTitle))b.classList.add('icons-only');b.dataset.bookmarkId=String(row.id);b.draggable=!!window.cefQuery&&location.protocol==='file:';b.onpointerdown=e=>{if(!b.draggable&&e.button===0){gesture={id:row.id,x:e.clientX,y:e.clientY,pointer:e.pointerId,node:b,active:false};b.setPointerCapture(e.pointerId);}};b.ondragstart=e=>{drag=row.id;e.dataTransfer.setData('application/x-soulu-bookmark',String(row.id));e.dataTransfer.setData('text/plain',String(row.id));};b.ondragend=()=>{drag=0;};b.ondragover=e=>{if(drag)e.preventDefault();};b.ondrop=e=>{e.preventDefault();e.stopPropagation();move(drag,row).catch(err=>alert(err.message));};b.oncontextmenu=e=>{e.preventDefault();context(row,e);};return b;}
   // Internal pointer dragging also works in the native OSR shell, which does
   // not implement the operating system's HTML drag/drop protocol.
   let gesture=null, ghost=null, consumeClick=false;
@@ -78,6 +78,7 @@
   function closeEditor(restore=true){++editorGeneration;if(!editor)return;editor.remove();editor=null;api.setPopover(false,'bookmark-editor');updatePopover();if(restore&&editorReturn?.isConnected)editorReturn.focus();editorReturn=null;}
   async function edit(row=null,newFolder=false){
     closeEditor(false);
+    const requestGeneration=editorGeneration,current=await api.getState();if(requestGeneration!==editorGeneration)return;state=current;
     const key=profileKey(),profile=state.incognito?'__incognito__':state.activeProfileId,generation=editorGeneration;
     rows=await api.getBookmarks();
     if(profileKey()!==key||generation!==editorGeneration)return;
@@ -101,7 +102,7 @@
     const path=mark=>{const names=[mark.title];let id=mark.parentId,depth=0;while(id&&depth++<64){const folder=rows.find(r=>r.id===id);if(!folder)break;names.unshift(folder.title);id=folder.parentId;}return names.join(' / ');};
     for(const mark of rows.filter(r=>r.type==='folder'&&!excluded.has(r.id)))select.append(new Option(path(mark),String(mark.id)));
     select.value=String(existing?.parentId??parent??0);if(select.selectedIndex<0)select.value='0';place.append(select);box.append(place);
-    const favorite=el('input');favorite.type='checkbox';favorite.id='bookmarkHomeFavorite';favorite.checked=!!existing&&(state.homeFavoriteIds||[]).includes(existing.id);
+    const favorite=el('input');favorite.type='checkbox';favorite.id='bookmarkHomeFavorite';favorite.checked=!!existing&&(state.settings?.homeFavoriteIds||[]).includes(existing.id);
     if(!isFolder){const label=el('label','bookmark-editor-favorite');label.append(favorite,document.createTextNode(t('Избранное на Home','Home favorites')));box.append(label);}
     const error=el('p','bookmark-editor-error');error.setAttribute('role','alert');error.hidden=true;box.append(error);
     const footer=el('div','bookmark-editor-footer'),cancel=button(t('Отмена','Cancel'),()=>closeEditor()),save=button(t('Сохранить','Save'),()=>{});save.type='submit';footer.append(cancel,save);box.append(footer);

@@ -1,0 +1,69 @@
+
+body .bookmarks-menu {
+  box-sizing: border-box;
+  width: min(276px, 100vw);
+}
+.bookmarks-menu .navigation-search {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+.overview-caption > .bookmark-icon {
+  border-radius: 50%;
+  overflow: hidden;
+}
+.overview-card .overview-caption > button {
+  font: 400 21px/1 system-ui !important;
+}
+.overview-close svg {
+  width: 22px !important;
+  height: 22px !important;
+}
+
+#tabStrip .classic-tab:not(.pinned) .tab-action[data-close-tab],
+.compact-active-tab .tab-action[data-close-active],
+.overview-card .overview-caption > button {
+  display: inline-grid;
+  place-items: center;
+  padding: 0 !important;
+  box-sizing: border-box;
+}
+#tabStrip [data-close-tab] svg {
+  display: block;
+  margin: 0;
+}
+.overview-card .overview-caption > button svg {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.bookmark-scroll-area { position: relative; flex: 1; min-height: 0; }
+.bookmark-scroll-area > .bookmark-tree { position: absolute; inset: 0; box-sizing: border-box; }
+@media (forced-colors: none) {
+  .bookmark-scroll-area > .bookmark-tree { scrollbar-width: none; }
+  .bookmark-scroll-area[data-overflow] > .bookmark-tree { padding-inline-end: 12px; }
+}
+.bookmark-scroll-thumb {
+  position: absolute;
+  inset: 0 0 auto auto;
+  width: 12px;
+  touch-action: none;
+  user-select: none;
+}
+.bookmark-scroll-thumb::before {
+  content: '';
+  position: absolute;
+  inset: 0 3px;
+  border-radius: 999px;
+  background: color-mix(in srgb, currentColor 35%, transparent);
+}
+.bookmark-scroll-thumb:hover::before { background: color-mix(in srgb, currentColor 55%, transparent); }
+@media (forced-colors: active) { .bookmark-scroll-thumb { display: none; } }
+
+/* Match the rightmost caption glyph inset to the left sidebar glyph. */
+.classic-navigation-right { padding-right: max(0px, calc(8px + (var(--toolbar-target) - var(--caption-target)) / 2)) !important; }
+.compact-toolbar-surface { padding-right: max(0px, calc(8px + (var(--toolbar-target) - var(--caption-target)) / 2)) !important; }

@@ -1,0 +1,80 @@
+name: Final resource and Windows checks for Soulu Gecko Preview 5
+on:
+  push:
+    branches: [gecko-preview]
+    paths: ['.github/workflows/finalize-gecko5.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  windows:
+    runs-on: windows-2025
+    timeout-minutes: 25
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: sanderstripa/soulu
+      PYTHONUTF8: 1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Preserve successful component reports and exact compiled binaries
+        shell: pwsh
+        run: |
+          if ((gh api repos/sanderstripa/soulu/actions/runs/41700314952 --jq .head_sha) -ne 'a7624f9fbf951c81d9d72ed23244d7a8c1b892d7') { throw 'Wrong binary build source' }
+          gh run download 41700314952 -n gecko5-build-inputs -D gecko-out
+          gh run download 41700314952 -n gecko5-targeted-evidence -D base-evidence
+          python gecko/tests/prepare5-final.py
+          if ($LASTEXITCODE -ne 0) { throw 'Source/resource/binary gate failed' }
+      - name: Install focused test dependencies
+        run: python -m pip install marionette_driver pillow psutil websocket-client numpy soundfile
+      - name: Check changed Mica, welcome, geometry and hover behavior
+        id: corrected
+        continue-on-error: true
+        run: python gecko/tests/preview5.py gecko-out/runtime/firefox.exe gecko5-final
+      - name: Verify corrected Windows line-ending protocol with real RU and EN inference
+        id: speech
+        continue-on-error: true
+        run: python gecko/tests/speech5.py gecko-out/runtime/soulu/speech/SouluSpeech.exe gecko5-final/speech5.json
+      - name: Check remaining icon, launcher and per-user registration gates
+        id: native
+        continue-on-error: true
+        run: python gecko/tests/windows-final5.py gecko-out/runtime/firefox.exe gecko5-final
+      - name: Compare final UI against the real CEF release
+        id: visual
+        continue-on-error: true
+        run: python gecko/tests/visual-cef.py gecko-out/runtime/firefox.exe gecko5-final
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gecko5-final-evidence
+          path: gecko5-final/
+      - name: Require the targeted final gates
+        shell: pwsh
+        run: |
+          if ('${{ steps.corrected.outcome }}' -ne 'success' -or '${{ steps.speech.outcome }}' -ne 'success' -or '${{ steps.native.outcome }}' -ne 'success' -or '${{ steps.visual.outcome }}' -ne 'success') { throw 'A targeted final check failed' }
+      - name: Package once, then launch the actual extracted portable EXE
+        shell: pwsh
+        run: |
+          Copy-Item gecko5-final/*.json gecko-out/
+          New-Item -ItemType Directory -Force gecko-out/visual-evidence | Out-Null
+          Copy-Item gecko5-final/*.png gecko-out/visual-evidence/
+          Compress-Archive -Path gecko-out/* -DestinationPath Soulu-Gecko-Preview-5-win64.zip -CompressionLevel Optimal
+          python gecko/tests/zip_smoke.py Soulu-Gecko-Preview-5-win64.zip gecko5-zip
+          if ($LASTEXITCODE -ne 0) { throw 'Extracted ZIP failed to launch' }
+          (Get-FileHash Soulu-Gecko-Preview-5-win64.zip -Algorithm SHA256).Hash.ToLowerInvariant() + '  Soulu-Gecko-Preview-5-win64.zip' | Set-Content SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gecko5-zip-evidence
+          path: gecko5-zip/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Soulu-Gecko-Preview-5-final
+          path: |
+            Soulu-Gecko-Preview-5-win64.zip
+            SHA256SUMS.txt

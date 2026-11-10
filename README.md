@@ -1,108 +1,43 @@
-<p align="center">
-  <img src="ui/soulu-icon.png" width="150" alt="Soulu">
-</p>
-
+<p align="center"><img src="gecko/chrome/branding/soulu-wave.png" width="150" alt="Soulu"></p>
 <h1 align="center">Soulu</h1>
 
-<p align="center">
-  A Windows browser with its own interface, built-in VPN,
-  and a focus on compactness, privacy, and user control.
-</p>
+Soulu is a Windows browser with its own interface, built-in VPN and ad blocking.
 
----
+**Current release — Soulu Preview 1.160.22**, powered by **Gecko 160.0**.
 
-## Soulu
+[Download for Windows x64](https://github.com/sanderstripa/soulu/releases/tag/soulu-preview-1.160.22)
 
-Soulu is an experimental browser for Windows built on Chromium and CEF.
+## Development
 
-The project grew from the idea of creating a browser where the interface does not take up half of the screen, settings are located where you expect to find them, and VPN is part of the browser itself without interfering with the Windows system proxy.
+Gecko is the primary implementation starting with Soulu Preview 1.160.22.
+The default main branch contains the Gecko product. The gecko-preview branch preserves its development history.
 
-Soulu is currently in the Beta stage and is actively evolving.
+The Chromium/CEF implementation is preserved in [cef-archive](https://github.com/sanderstripa/soulu/tree/cef-archive), including source, build scripts and history. It remains available for future development and tests.
 
-## What already works
+## Features
 
-### Custom interface
+- Adaptive tabs, tab overview, bookmarks, history and profiles.
+- Inter typography and the blue wave Soulu icon throughout the product.
+- Built-in Xray and Sudoku VPN components.
+- Native adblock-rust request filtering and cosmetic filtering.
+- Independently downloadable filter lists. The native blocker core is updated with a tested browser release.
+- Voluntary downloads of verified Soulu updates.
 
-Soulu uses a compact top bar where tabs, the address bar, and the main actions are combined into a single space.
+## Build and verification
 
-Two interface modes are available:
+The release workflow is .github/workflows/build-soulu22.yml.
+It assembles the pinned official Gecko runtime, applies Soulu chrome and branding, builds the Windows installer and verifies the installed application before publication.
 
-**Main** — the expanding toolbar: the tab row appears with the second tab.
+The release contains the Windows installer and SHA256SUMS.txt.
+Test reports, screenshots and build metadata remain in GitHub Actions artifacts.
 
-**Compact** — the single-row toolbar.
+## Local data
 
-Light and dark themes are supported, as well as Windows-style frosted transparency.
+Soulu profiles live in %LOCALAPPDATA%/Soulu/Profiles.
+Soulu application data and update directories are redirected beneath %LOCALAPPDATA%/Soulu.
 
-### Chromium + CEF
+Existing directories named Mozilla can originate from older Soulu builds or other applications using Mozilla components. The installer preserves unrelated application data.
 
-The browser uses Chromium through Chromium Embedded Framework (CEF), while the native Soulu shell handles the window, interface, and Windows integration.
+## Licensing
 
-Soulu Beta 1.0.73 uses stable CEF 156.0.14 / Chromium 156.0.8078.48.
-See [CEF_UPGRADE.md](CEF_UPGRADE.md) for dependency provenance, runtime checks
-and the mandatory release gates.
-
-### Profiles
-
-Soulu supports separate profiles with independent:
-
-- cookies;
-- cache;
-- web sessions;
-- local site data.
-
-An incognito mode is also available.
-
-### Start page
-
-You can keep the new tab page blank or specify your own URL that Soulu will open on startup.
-
-### VPN
-
-Soulu includes its own built-in VPN layer.
-
-Xray and Sudoku configurations are supported.
-
-The VPN works inside Soulu and does not change the Windows system proxy settings.
-
-### Address bar
-
-The address bar combines URL input and search, and uses suggestions from history, bookmarks, open tabs, and the search engine.
-
-### History and browsing data
-
-Use **History** in the top-toolbar context menu or **Ctrl+H** to search and filter
-profile history, open visits and delete entries. **Ctrl+Shift+Delete** opens the
-clearing dialog. History supports six time ranges; cookies/site data and cache
-are explicitly cleared for all time. Private visits are never recorded.
-See [HISTORY.md](HISTORY.md) for backend details and limitations.
-
-### Native menus and local translation
-
-Browser menus share Soulu's native Onest menu surface, including web-page,
-link, image, media, editing, tab, bookmark and toolbar menus. It follows the
-browser theme, supports nested menus and keyboard navigation, and exposes
-labels and states to Windows accessibility services.
-
-Choose **Translate to Russian** in a page menu or use the translation button
-on a foreign-language page. Soulu Translate processes visible page text locally
-in a Bergamot WASM worker. The first use downloads the required Mozilla model;
-verified models are cached for offline use after a browser restart. Supported
-routes are English → Russian, Russian → English and German → English, with
-German → Russian through English. Unsupported routes are reported explicitly.
-
-**Show original** restores text without reloading. Form values, editable text
-and code are excluded. Always/never rules are saved per profile; private-tab
-rules are discarded when that private tab closes. Only model files are fetched
-from Mozilla's public model bucket; page text is not sent to a translation API.
-See [MENU_TRANSLATE.md](MENU_TRANSLATE.md) for architecture, provenance,
-limitations and verification commands.
-
-## Download
-
-The latest version is always available in the **Releases** section.
-
----
-
-Soulu is under active development.
-
-Some Beta features may change as the project evolves.
+Gecko and other bundled open-source components retain their licenses and notices. See the source and packaged license files.

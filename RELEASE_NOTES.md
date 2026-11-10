@@ -1,3 +1,14 @@
+# Soulu Preview 1.160.22
+
+- Promote Gecko to the primary implementation and preserve CEF in the cef-archive branch.
+- Update the engine to Gecko 160.0.
+- Introduce the blue wave product icon throughout the application and Windows installer.
+- Align right caption controls with the left toolbar inset.
+- Separate browser, Adblock and VPN component information in About Soulu.
+- Expose real filter downloads and atomic installation from the Adblock section. The native blocker core remains part of the tested browser build.
+- Revise first-window presentation and isolate engine application directories under Soulu.
+- Use the 1.engine.build version format and publish this Preview as a normal release.
+
 # Soulu Beta 1.0.76
 
 - Stabilize Chrome Views page bounds and skip redundant visibility/layout changes introduced with extension support.

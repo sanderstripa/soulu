@@ -1,0 +1,18 @@
+{
+  "version": "160.0",
+  "archives": {
+    "win64": {
+      "path": "win64/ru/Firefox Setup 160.0.exe",
+      "sha256": "9aca6af4a633546ce9908894d735b0518c36b6a54f108566e517225983cf5173"
+    },
+    "linux-x86_64": {
+      "path": "linux-x86_64/en-US/firefox-160.0.tar.xz",
+      "sha256": "fde774e9757c8878534c05ec210db592bf6a1b244c57941ffb2e364c04f35fcd"
+    }
+  },
+  "ublock": {
+    "version": "1.75.2",
+    "url": "https://addons.mozilla.org/firefox/downloads/file/5199068/ublock_origin-1.75.2.xpi",
+    "sha256": "b941eac9ac4b156edefa9273bdf5a313204919f751e1a86b8c81e254b9471599"
+  }
+}

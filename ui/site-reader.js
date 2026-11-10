@@ -63,7 +63,7 @@
     // The closed OSR viewport is only toolbar-height. Do not use that height
     // to move a newly opened surface above its anchor. CSS tracks the expanded
     // viewport and supplies scrolling for long/nested content.
-    const top = Math.max(toolbar + 8, rect.bottom + 8);
+    const top = Math.max(8, rect.bottom + 8);
     menu.style.left = `${Math.max(8, Math.min(rect.left, innerWidth - menu.offsetWidth - 8))}px`;
     menu.style.top = `${top}px`;
     menu.style.maxHeight = `max(0px, calc(100% - ${top + 8}px))`;

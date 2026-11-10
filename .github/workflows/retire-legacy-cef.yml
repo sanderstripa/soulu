@@ -1,7 +1,7 @@
 name: Retire legacy CEF build objects
 on:
   push:
-    branches: [main]
+    branches: [cef-retirement-disabled]
     paths: [".github/workflows/retire-legacy-cef.yml"]
   workflow_dispatch:
 permissions:

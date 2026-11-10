@@ -1,0 +1,45 @@
+name: Preview 11 weather and bookmarks regression checks
+on:
+  push:
+    branches: [gecko-preview]
+    paths: ['.github/workflows/check-gecko11-browser.yml']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  windows:
+    runs-on: windows-2025
+    timeout-minutes: 12
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: sanderstripa/soulu
+      PYTHONUTF8: 1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Reuse verified runtime and apply Preview 11 resources
+        shell: pwsh
+        run: |
+          gh run download 41834119852 -n gecko8-verified-build-inputs -D gecko-out
+          if ($LASTEXITCODE) { throw 'Base download failed' }
+          python gecko/prepare-preview11.py
+          if ($LASTEXITCODE) { throw 'Overlay failed' }
+          python -m pip install marionette_driver pillow psutil
+      - name: Verify automatic and configured weather with readable failures
+        env:
+          SOULU_GECKO11_PHASE: weather
+        run: python gecko/tests/preview11.py gecko-out/runtime/firefox.exe gecko11-checks
+      - name: Verify Mozilla folder deletion and cancellation
+        if: ${{ !cancelled() }}
+        env:
+          SOULU_GECKO11_PHASE: bookmarks
+        run: python gecko/tests/preview11.py gecko-out/runtime/firefox.exe gecko11-checks
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gecko11-browser-evidence
+          path: gecko11-checks/
+
+# Validate the non-window chrome geolocation service.

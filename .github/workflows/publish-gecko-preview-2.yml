@@ -1,0 +1,65 @@
+name: Publish Soulu Gecko Preview 2 review archive
+on:
+  push:
+    branches: [gecko-preview]
+    paths: ['.github/workflows/publish-gecko-preview-2.yml']
+permissions:
+  actions: read
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: sanderstripa/soulu
+    steps:
+      - name: Download the tested candidate without rebuilding it
+        run: |
+          gh run download 41581624301 -n Soulu-Gecko-Preview-2-win64 -D package
+          gh run download 41581624301 -n gecko-acceptance -D evidence
+      - name: Verify checksums and embedded test status
+        working-directory: package
+        run: |
+          sha256sum -c SHA256SUMS.txt
+          python - <<'PY'
+          import zipfile,json,pathlib
+          with zipfile.ZipFile('Soulu-Gecko-Preview-2-win64.zip') as z:
+            build=json.loads(z.read('BUILD.json'))
+            assert build['source_commit']=='2f9d81843c9a186a104026a1cbedd043d9303087', build
+            a=json.loads(z.read('acceptance.json'))
+            v=json.loads(z.read('visual-comparison.json'))
+            assert v['passed']
+            failures=[k for k,r in a['checks'].items() if not r['passed']]
+            assert failures==['youtube_public_video_playback'], failures
+            assert len(a['checks'])>=30
+            assert 'NOT FULLY VERIFIED' in z.read('VERIFICATION-STATUS.txt').decode()
+            print('Actual checks',len(a['checks']),'passed',sum(r['passed'] for r in a['checks'].values()),'failed',failures)
+          PY
+      - name: Publish explicitly incomplete prerelease
+        run: |
+          cat > notes.md <<'NOTES'
+          **Проверочная сборка. Задача полного переноса ещё не завершена.**
+          
+          Распакуйте весь ZIP и запустите Soulu Gecko Preview 2.exe. Windows x64; установщик не требуется.
+          
+          Используются исходные HTML/CSS/SVG/шрифты Soulu: адаптивная панель, Home, история, закладки, структура всех 12 разделов настроек. Сайты работают в штатных изолированных процессах Gecko с песочницей и аппаратным ускорением. Xray/Sudoku и Go-помощник включены. Блокировщик собран из исходного Rust-кода CEF с теми же списками фильтров.
+          
+          Windows-проверки подтвердили вкладки и адресную строку, реальное сетевое и косметическое блокирование, историю и закладки, сохранение настроек, NSS-шифрование VPN-ссылок, запуск VPN через интерфейс, настройки DNS/WebRTC, отдельный профиль запуска, инкогнито и применение/сброс разрешения сайта. Отдельные тесты проверили реальные локальные туннели Xray/Sudoku.
+          
+          **YouTube не проверен до успешного воспроизведения:** сайт потребовал входа для подтверждения «вы не бот» с адреса Windows CI. Этот тест остаётся неуспешным в acceptance.json; CI не объявлен полностью зелёным. Локальный тест видео подтвердил продолжение воспроизведения без изменения геометрии страницы при наведении на панель.
+          
+          Снимки сравнивают реальный Soulu CEF 1.0.76 и Gecko при клиентском размере 940×640. Это ограниченная проверка двух сценариев Home и главной страницы настроек, а не сертификация каждого состояния интерфейса, анимаций или DPI.
+          
+          Ограничения: полный CEF page-glass/матовый фон не воспроизведён; системные запросы разрешений Gecko отличаются. Перевод страниц/YouTube, CEF-режим чтения, голосовой поиск, CRX, CEF-режимы заморозки вкладок и автообновление списков блокировщика пока недоступны. Firefox-расширения открываются через штатный менеджер; полная интеграция их кнопок в панель Soulu ещё не проверена. Автоматическое определение города для погоды не перенесено. Физический GPU, высокие DPI и внешние VPN-сервисы не проверялись.
+          
+          Данные: %LOCALAPPDATA%\SouluGecko\Profiles. Профили Soulu CEF и установленного Firefox не изменяются. Изменения находятся только в gecko-preview.
+          
+          Собранный и проверенный исходный код: 2f9d81843c9a186a104026a1cbedd043d9303087. Тег публикации дополнительно содержит только служебные workflow проверки/публикации; архив не пересобирается.
+          
+          В ZIP включены BUILD.json, acceptance.json, visual-comparison.json, VERIFICATION-STATUS.txt и визуальные сравнения. SHA256SUMS.txt прилагается.
+          NOTES
+          if gh release view gecko-preview-2 >/dev/null 2>&1; then
+            echo 'Preview 2 already exists; refusing to overwrite'; exit 1
+          fi
+          gh release create gecko-preview-2 package/Soulu-Gecko-Preview-2-win64.zip package/SHA256SUMS.txt evidence/acceptance.json evidence/visual-comparison.json evidence/youtube-diagnostic.json evidence/*comparison.png --target "$GITHUB_SHA" --title 'Soulu Gecko Preview 2' --prerelease --notes-file notes.md

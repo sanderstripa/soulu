@@ -1,0 +1,50 @@
+/* Loaded by AutoConfig before any browser window is created. */
+@-moz-document url-prefix("chrome://browser/content/") {
+ :root{background:#f6f6f8!important;--soulu-toolbar-height:68px;--soulu-surface-height:68px;}
+ @media(prefers-color-scheme:dark){:root{background:#08090b!important}}
+ :root#main-window#main-window #navigator-toolbox,#titlebar,#sidebar-main,#sidebar-box,#sidebar-splitter,#sidebar-launcher,#tab-notification-deck,#vertical-tabs-newtab-button{display:none!important;visibility:collapse!important;min-height:0!important;height:0!important}
+ #browser{border:0!important;margin-top:var(--soulu-toolbar-height)!important;min-height:0!important;flex:1!important;background:transparent!important}
+ :root:not([soulu-ui-ready]) #browser{visibility:hidden!important}
+ #tabbrowser-tabbox,#tabbrowser-tabpanels,#appcontent,.browserStack,.browserContainer,.browserSidebarContainer{min-height:0!important;border:0!important;outline:none!important;box-shadow:none!important;background:transparent!important;border-radius:0!important}
+}
+/* Retain native permission/password/migration logic; apply the Soulu palette. */
+@-moz-document url-prefix("chrome://browser/content/"),url("chrome://global/content/commonDialog.xhtml"),url("about:addons"),url("about:preferences") {
+ :root{--color-accent-primary:#0879e6!important;--color-accent-primary-hover:#066bce!important;--color-accent-primary-active:#055aac!important;--button-background-color-primary:#0879e6!important;--button-background-color-primary-hover:#066bce!important;--button-text-color-primary:#fff!important;--in-content-primary-button-background:#0879e6!important;--in-content-primary-button-background-hover:#066bce!important;--focus-outline-color:#0879e6!important;--border-radius-medium:10px!important;--arrowpanel-border-radius:14px!important;--font-size-root:13px!important}
+ @font-face{font-family:Onest;src:url("chrome://soulu/content/ui/fonts/Onest-Regular.ttf");font-weight:400}
+ .popup-notification-body,.popup-notification-footer{font-family:Onest,"Segoe UI",sans-serif!important;font-size:12px!important}
+ :is(button,toolbarbutton).primary{background-color:#0879e6!important;color:#fff!important}
+ #tabbrowser-tabbox,#tabbrowser-tabpanels{padding:0!important;margin:0!important;border-radius:0!important}
+}
+
+@-moz-document url-prefix("chrome://browser/content/migration/") {
+ body{font:13px/1.45 Onest,"Segoe UI",sans-serif!important;background:light-dark(#f6f6f8,#08090b)!important;color:light-dark(#191a1e,#eeeeef)!important;padding:16px!important}
+ migration-wizard::part(header){font-size:18px!important;line-height:1.35!important}
+ migration-wizard::part(profile-selector){border-color:light-dark(#d7d9df,#454850)!important;border-radius:12px!important}
+ migration-wizard::part(import-primary),migration-wizard::part(continue-primary){background:#0879e6!important;color:white!important;border-color:transparent!important;border-radius:10px!important}
+}
+/* The early USER sheet must release its opaque startup paint once Soulu is ready. */
+@-moz-document url("chrome://browser/content/browser.xhtml") {
+ :root[soulu-ui-ready]{background:#f6f6f8!important}
+ :root[soulu-ui-ready][soulu-dark]{background:#08090b!important}
+ :root[soulu-ui-ready][soulu-matte]{background:transparent!important}
+}
+
+@-moz-document url("chrome://browser/content/browser.xhtml") {
+ #browser,#tabbrowser-tabbox,#tabbrowser-tabpanels,.browserStack,.browserContainer,.browserSidebarContainer{background-color:#f6f6f8!important}
+ :root[soulu-dark] :is(#browser,#tabbrowser-tabbox,#tabbrowser-tabpanels,.browserStack,.browserContainer,.browserSidebarContainer){background-color:#08090b!important}
+}
+@-moz-document url-prefix("about:preferences") { :root{visibility:hidden!important} }
+@-moz-document url("chrome://browser/content/browser.xhtml") {
+ :root[soulu-page-glass] #browser{margin-top:0!important}
+}
+@-moz-document url("chrome://browser/content/browser.xhtml") {
+ #soulu-shell-frame{position:fixed;inset:0 0 auto;width:100%;height:var(--soulu-surface-height,68px);border:0;z-index:10000;background:transparent}
+}
+
+@-moz-document url("about:addons"){addon-card[addon-id="vot-ext@firefox"]{display:none!important}}
+
+@-moz-document url("chrome://browser/content/browser.xhtml") {
+ :root:not([soulu-ui-ready]) { background-color:#f6f6f8!important;background-image:none!important; }
+ :root:not([soulu-ui-ready])::before {content:"";position:fixed;inset:0;background:#f6f6f8;z-index:2147483647;pointer-events:none;}
+ @media(prefers-color-scheme:dark){:root:not([soulu-ui-ready])::before{background:#08090b}}
+}

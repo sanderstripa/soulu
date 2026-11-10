@@ -1,55 +1,18 @@
 {
-  "revision": 20261018,
-  "source": "ui/branding/soulu-master.svg",
-  "source_sha256": "3eb273158c4c5fd479fb10898ba1ce5d498f857c80d416043eac7fc5945bfae1",
+  "revision": 20261110,
+  "source": "gecko/chrome/branding/soulu-wave.png",
+  "source_sha256": "874cb0820384d08ae22903e82166ee8c0b6c2a72a38c4492e048c3b83089bf29",
   "png_sha256": {
-    "16": "50ba9c602eeb6ec978af889eab9befadd114226e61befb839c17660ee8409814",
-    "20": "fc70ec654aea9c5bd53fa073a70b66460680a9ade9750016d9c322e837905415",
-    "24": "25c9c6b4acd87a632ffaf34e9e41c55ccab993fa74c8f4f8e3b9826073204bad",
-    "32": "fa6bbad6fff23f512e5d78850cf26b6c4b195b30530f0ae60033baedf2064893",
-    "40": "3b5c4558b27ab0a12aa56673fa81301b0dfbf63bba84c9c222a05d60e012fc72",
-    "48": "a9f182a66f67af919b8f20c823d07c8c1087d51ed0e25e7d1f9e81a781e6553a",
-    "64": "5107d4432d2ebac3cc9cead0f48889d3bf74638a78feef94f55985f32045e414",
-    "128": "1fa92fc22608a60a2224f48b275a6ab1fdf24eb4ef3db3643dde84f39acbeab9",
-    "256": "6f5e111c1a9f818632675c8c6d8fff922fcf760687043a1a204bf7de4fd8605b",
-    "512": "8fda9605631b435737669ae1faa2e14ed2055f94393b2677105e2cf93b0c7384",
-    "1024": "dd0b2a1f0e1d3603ceb79eeefcebfd661323c90821e2218a26238a1336963935"
-  },
-  "sizes": [
-    16,
-    20,
-    24,
-    32,
-    40,
-    48,
-    64,
-    128,
-    256
-  ],
-  "png_sizes": [
-    16,
-    20,
-    24,
-    32,
-    40,
-    48,
-    64,
-    128,
-    256,
-    512,
-    1024
-  ],
-  "margin": "max(1px, round(size * 0.02)) per side",
-  "ico_sha256": "3fb4a1c2b2c72b4858b6bb473c9a5c3911848c3f052b2441dde23089f532459d",
-  "aliases": [
-    "soulu-icon.png",
-    "soulu-icon-new.png",
-    "browser-icon.png",
-    "soulu-icon.ico",
-    "soulu-app-icon.ico",
-    "soulu-installer-icon.ico",
-    "soulu-shortcut-icon.ico",
-    "browser-icon.ico",
-    "browser-app-icon.ico"
-  ]
+    "16": "65e8bce50818ed0ce68b192b0bdd34bd88bdd3f58867758de2c191885136f518",
+    "20": "aadcf297b31bf8faee890cda24329dcfb1c84c843943e41e3b2afe8135625b35",
+    "24": "3c70a1b32abce0f999da5d19420cdd0fb7d91efca1d4f0f0f087503c58d8cc99",
+    "32": "8a706c568fc2cc869eb1239b5ce19ecb204dfefce1b987ddb56799394d18eb5a",
+    "40": "be4e66355fc6d98e35f2cff41b7555f1da01f642575fe11b5be08f84bb204311",
+    "48": "822fedb14314bab47cf0e0483c435307fcb486845861fd76756a969a631e0c11",
+    "64": "ac7ffc054fbe844116c3f7e9a024afaddc2efed3ed84dee0948104d582aa2695",
+    "128": "265e2ebedc6e0658110bdd80938638a2718e1d9e8b22dd5d28b3808de08eae47",
+    "256": "6389f99348a549ebee929bee1ae5f2a571e96a4f20a30079aee98dfa4661514f",
+    "512": "e765630fee9972bf22c6d900b1033eae9c17a96a28c82ecffcfe73f5da976cac",
+    "1024": "c7742a1e10eb1ec8b10d7270272314b0f2cfc028a52c247d8a0738a90325f3f0"
+  }
 }
