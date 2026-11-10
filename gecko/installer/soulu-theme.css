@@ -23,6 +23,8 @@
 }
 :root[data-theme=dark] {
   --bg: #202124;
+  --button: #0671ff;
+  --inverse: #fff;
   --text: #e6e7e9;
   --muted: #9a9da3;
   --line: #35363b;

@@ -88,7 +88,16 @@ jobs:
           (Get-FileHash Soulu-1.160.23-Preview-Setup-win64.exe -Algorithm SHA256).Hash.ToLowerInvariant() + '  Soulu-1.160.23-Preview-Setup-win64.exe' | Set-Content SHA256SUMS.txt
           $branchHead = gh api "repos/sanderstripa/soulu/git/ref/heads/$env:GITHUB_REF_NAME" --jq '.object.sha'
           if ($branchHead.Trim() -ne $env:GITHUB_SHA) { throw 'A newer source revision superseded this build' }
-          gh release create soulu-preview-1.160.23 Soulu-1.160.23-Preview-Setup-win64.exe SHA256SUMS.txt --target $env:GITHUB_SHA --title 'Soulu Preview 1.160.23' --notes 'Soulu Gecko for Windows x64. Restore the original blue petal icon, enlarge the home logo, and align installer typography, window controls and themes with Soulu.'
+          gh release view soulu-preview-1.160.23 --json tagName 2>$null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload soulu-preview-1.160.23 Soulu-1.160.23-Preview-Setup-win64.exe SHA256SUMS.txt --clobber
+            if ($LASTEXITCODE) { throw 'Release asset replacement failed' }
+            gh api -X PATCH repos/sanderstripa/soulu/git/refs/tags/soulu-preview-1.160.23 -f sha=$env:GITHUB_SHA -F force=true
+            if ($LASTEXITCODE) { throw 'Verified release tag update failed' }
+            gh release edit soulu-preview-1.160.23 --latest
+          } else {
+            gh release create soulu-preview-1.160.23 Soulu-1.160.23-Preview-Setup-win64.exe SHA256SUMS.txt --target $env:GITHUB_SHA --title 'Soulu Preview 1.160.23' --notes 'Soulu Gecko for Windows x64. Restore the original blue petal icon, enlarge the home logo, and align installer typography, window controls and themes with Soulu.'
+          }
           if ($LASTEXITCODE) { throw 'Release publication failed' }
 
 

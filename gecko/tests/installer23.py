@@ -127,6 +127,7 @@ def capture(ws,name):
 def presentation(ws, theme):
  check('installer_inter_loaded_'+theme, evaluate(ws,'(async()=>{const faces=await document.fonts.load("400 14px Inter");return faces.length>0&&document.fonts.check("400 14px Inter")&&getComputedStyle(document.body).fontFamily.startsWith("Inter");})()'))
  expected='rgb(252, 252, 253)' if theme=='light' else 'rgb(32, 33, 36)'
+ check('installer_browser_accent_'+theme,evaluate(ws,'getComputedStyle(document.getElementById("primary")).backgroundColor')=='rgb(6, 113, 255)')
  check('installer_browser_palette_'+theme,evaluate(ws,'getComputedStyle(document.body).backgroundColor')==expected)
  check('installer_browser_caption_glyphs_'+theme,evaluate(ws,'document.querySelector("#minimize svg path").getAttribute("d")==="M4.5 12h15"&&document.querySelector("#close svg path").getAttribute("d")==="m4 4 8 8m0-8-8 8"'))
  check('installer_caption_centers_'+theme,evaluate(ws,'["minimize","close"].every(id=>{const b=document.getElementById(id).getBoundingClientRect(),g=document.querySelector("#"+id+" svg").getBoundingClientRect();return Math.abs((b.left+b.right-g.left-g.right)/2)<0.6&&Math.abs((b.top+b.bottom-g.top-g.bottom)/2)<0.6;})'))
