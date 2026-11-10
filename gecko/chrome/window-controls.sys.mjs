@@ -35,10 +35,29 @@ export function isDefault(){
 
 // Windows owns initial presentation and taskbar animations. The early chrome
 // stylesheet paints the Soulu surface while the content actor initializes.
+function releaseStartup(win) {
+ const state = win.__souluStartupPresentation;
+ if (!state?.uncloak) return;
+ state.uncloak();
+ state.uncloak = null;
+ win.clearTimeout(state.timeout);
+}
 export function prepareStartup(win) {
  if (win.__souluStartupPresentation) return;
  win.document.title = 'Soulu';
- win.__souluStartupPresentation = {preparedAt: Date.now(), mode: 'native'};
+ const state = win.__souluStartupPresentation = {preparedAt: Date.now(), mode: 'native'};
+ if (Services.appinfo.OS !== 'WINNT') return;
+ try {
+  const hwnd = handle(win);
+  const abi = ctypes.winapi_abi || ctypes.default_abi;
+  const set = library('dwmapi.dll').declare('DwmSetWindowAttribute', abi,
+   ctypes.long, ctypes.uintptr_t, ctypes.uint32_t, ctypes.int32_t.ptr, ctypes.uint32_t);
+  const flag = ctypes.int32_t(1);
+  if (set(hwnd, 13, flag.address(), 4) !== 0) return;
+  state.uncloak = () => { flag.value = 0; set(hwnd, 13, flag.address(), 4); };
+  // A slow actor or suspended compositor must always leave a usable window.
+  state.timeout = win.setTimeout(() => releaseStartup(win), 1800);
+ } catch (error) { console.error('Soulu first frame', error); }
 }
 export function revealStartup(win) {
  if (win.closed || win.__souluStartupPresentation?.presentedAt) return;
@@ -47,6 +66,8 @@ export function revealStartup(win) {
  if (win.closed) return;
  win.__souluStartupPresentation.presentedAt = Date.now();
  win.requestAnimationFrame(() => win.requestAnimationFrame(() => {
-  if (!win.closed) win.dispatchEvent(new win.Event('SouluPresented'));
+  if (win.closed) return;
+  releaseStartup(win);
+  win.dispatchEvent(new win.Event('SouluPresented'));
  }));
 }

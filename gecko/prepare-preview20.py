@@ -35,12 +35,12 @@ chrome = out / 'engine/soulu/chrome'
 ui = chrome / 'ui'
 for name in ['browser.js','window-controls.sys.mjs','shell-host.js','build-info.sys.mjs']:
     source = (root / 'gecko/chrome' / name).read_text(encoding='utf-8')
-    (chrome / name).write_text(re.sub(r'0\.(?:13|14)\.0 Preview','0.19.0 Preview',source),encoding='utf-8')
+    (chrome / name).write_text(re.sub(r'0\.(?:13|14)\.0 Preview','0.20.0 Preview',source),encoding='utf-8')
 for path in chrome.rglob('*'):
     if path.suffix in {'.js','.html','.mjs'} and 'third_party' not in path.parts:
         source = path.read_text(encoding='utf-8')
         if '0.17.0' in source:
-            path.write_text(source.replace('0.17.0','0.19.0'),encoding='utf-8')
+            path.write_text(source.replace('0.17.0','0.20.0'),encoding='utf-8')
 def patch(path, before, after):
     source = path.read_text(encoding='utf-8')
     if before not in source:
@@ -75,7 +75,7 @@ for path in (out/'engine').rglob('*.exe'):
         path.unlink()
 build = json.loads((out/'BUILD.json').read_text(encoding='utf-8'))
 assert build['name'] == 'Soulu 0.17.0 Preview'
-build.update(name='Soulu 0.19.0 Preview',base_preview=17,soulu_source=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip())
+build.update(name='Soulu 0.20.0 Preview',base_preview=17,soulu_source=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip())
 (out/'BUILD.json').write_text(json.dumps(build,indent=2),encoding='utf-8')
 
 patch(ui/'renderer.js','mattePanel:true','mattePanel:false,showExtensions:false,showHome:false')
@@ -119,3 +119,18 @@ patch(ui/'renderer.js',"input.value=state.page?.url==='soulu://home'?'':state.pa
       "input.value=['soulu://home','about:blank'].includes(state.page?.url)?'':state.page?.url||'';")
 patch(ui/'renderer.js',"if(input&&state.page?.url==='soulu://home'){",
       "if(input&&['soulu://home','about:blank'].includes(state.page?.url)){")
+
+patch(ui/'navigation.js', 'menu.append(menuHeading,menuSearch,contents,actions);',
+      (root/'gecko/chrome/bookmark-scroll.inc.js').read_text(encoding='utf-8'))
+patch(ui/'navigation.js', 'caption.append(icon(tab),title,close);', '''
+ close.innerHTML='<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 5L19 19M19 5L5 19"/></svg>';
+ caption.append(icon(tab),title,close);''')
+# The popover lives outside the setting row. Read the trigger's actual type
+# after layout so language, local theme and text scaling are respected.
+patch(ui/'select-control.js','menu.showPopover();position();','''
+ const type=getComputedStyle(button);
+ for(const key of ['fontFamily','fontSize','fontWeight','lineHeight','letterSpacing'])
+   menu.style[key]=type[key];
+ menu.showPopover();position();''')
+with (ui/'select-control.css').open('a', encoding='utf-8') as css:
+    css.write('\n.soulu-select-menu .soulu-select-option {font:inherit;letter-spacing:inherit;padding:6px 12px}\n')

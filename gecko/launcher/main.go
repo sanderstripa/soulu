@@ -18,7 +18,7 @@ import (
  "time"
  "unsafe"
 )
-func fail(s string){p,_:=syscall.UTF16PtrFromString(s);t,_:=syscall.UTF16PtrFromString("Soulu 0.19.0 Preview");syscall.NewLazyDLL("user32.dll").NewProc("MessageBoxW").Call(0,uintptr(unsafe.Pointer(p)),uintptr(unsafe.Pointer(t)),16);os.Exit(1)}
+func fail(s string){p,_:=syscall.UTF16PtrFromString(s);t,_:=syscall.UTF16PtrFromString("Soulu 0.20.0 Preview");syscall.NewLazyDLL("user32.dll").NewProc("MessageBoxW").Call(0,uintptr(unsafe.Pointer(p)),uintptr(unsafe.Pointer(t)),16);os.Exit(1)}
 func hidden(cmd *exec.Cmd) *exec.Cmd {cmd.SysProcAttr=&syscall.SysProcAttr{HideWindow:true};return cmd}
 func webURL(s string)bool{u,e:=url.Parse(s);return len(s)<=8192&&e==nil&&(u.Scheme=="http"||u.Scheme=="https")&&u.Host!=""&&u.User==nil}
 func register(exe,id string)error{
@@ -41,8 +41,9 @@ func main(){exe,e:=os.Executable();if e!=nil{fail(e.Error())};base:=filepath.Dir
  private:=len(args)>0&&args[0]=="--private";address:="";if len(args)>0&&args[0]=="--url"{if len(args)!=2{fail("Invalid external URL arguments")};address=args[1];if !webURL(address){fail("Only HTTP and HTTPS links are supported")};args=[]string{address}}
  sessionLog(profile,"request")
  tryForward:=func()bool{
+  if address==""&&!private&&len(args)==0&&activateSession(profile,exe){sessionLog(profile,"activated-native-window");return true}
   if (address!=""||len(args)==0||private)&&forward(profile,address,private){sessionLog(profile,"forwarded");return true}
-  if address==""&&!private&&len(args)==0&&activateSession(profile,exe){sessionLog(profile,"activated-native-window");return true};return false
+  return false
  }
  if tryForward(){return}
  guard,forwarded,lockErr:=acquireSession(profile,tryForward,45*time.Second);if lockErr!=nil{sessionLog(profile,"session-wait-failed");fail(lockErr.Error())};if forwarded{return};defer guard.Close()
@@ -61,6 +62,7 @@ func main(){exe,e:=os.Executable();if e!=nil{fail(e.Error())};base:=filepath.Dir
  cmd:=exec.Command(filepath.Join(base,"engine","SouluEngine.exe"),append([]string{"-app",filepath.Join(base,"engine","browser","application.ini"),"-no-remote","-profile",profile},args...)...);cmd.Dir=base
  job,jobErr:=newSessionJob(profile);if jobErr!=nil{fail(jobErr.Error())};defer job.Close()
  if e=cmd.Start();e!=nil{fail(e.Error())}
+ userSession.NewProc("AllowSetForegroundWindow").Call(uintptr(cmd.Process.Pid))
  if e=job.Assign(cmd.Process.Pid);e!=nil{_ = cmd.Process.Kill();_ = cmd.Wait();fail(e.Error())}
  if e=writeSessionRecord(profile,job);e!=nil{kernelSession.NewProc("TerminateJobObject").Call(uintptr(job.handle),0);_ = cmd.Wait();fail(e.Error())}
  sessionLog(profile,fmt.Sprintf("engine-start pid=%d",cmd.Process.Pid))

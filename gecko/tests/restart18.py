@@ -62,9 +62,14 @@ try:
   hwnd,pid,title=wait(ready,45);time.sleep(25 if cycle==1 else 3)
   check('visible_window_'+str(cycle),len(windows())==1,{'pid':pid,'title':title})
   if cycle==1:
+   user.GetForegroundWindow.restype=W.HWND
+   check('cold_launch_foreground', user.GetForegroundWindow()==hwnd)
+   user.ShowWindow(W.HWND(hwnd),6)
+   wait(lambda:user.IsIconic(W.HWND(hwnd)))
    remote=profile/'soulu-remote.json';saved_remote=remote.read_bytes();remote.write_text('{}')
    fallback=subprocess.Popen([str(base/'Soulu.exe')],env=env);fallback.wait(timeout=10)
    check('native_focus_without_loopback',len(windows())==1 and windows()[0][1]==pid and fallback.returncode==0)
+   check('shortcut_restores_foreground',wait(lambda:user.GetForegroundWindow()==hwnd and not user.IsIconic(W.HWND(hwnd))))
    remote.write_bytes(saved_remote)
    # A second shortcut click while running must focus the existing real window.
    second=subprocess.Popen([str(base/'Soulu.exe')],env=env);second.wait(timeout=15);check('existing_window_forwarded',len(windows())==1)

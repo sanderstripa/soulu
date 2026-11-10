@@ -78,7 +78,7 @@ func(j *sessionJob)watch(done <-chan struct{},grace time.Duration,record func(st
  for{select{case <-done:return;case <-tick.C:
   wins:=j.windows()
   if len(wins)>0{
-   if !seen{for _,hwnd:=range wins{if sessionWindowReady(hwnd){record("visible");seen=true;break}}}
+   if !seen{for _,hwnd:=range wins{if sessionWindowReady(hwnd){userSession.NewProc("SetForegroundWindow").Call(hwnd);record("visible");seen=true;break}}}
    last=time.Now();continue
   }
   // Never interrupt initial startup, a minimized window, or any visible dialog.
@@ -108,7 +108,12 @@ func(j *sessionJob)active()(uint32,error){
  if ok==0{return 0,e};return accounting.Active,nil
 }
 
+var dwmSession = syscall.NewLazyDLL("dwmapi.dll")
+
 func sessionWindowReady(hwnd uintptr)bool{
+ var cloaked uint32
+ dwmSession.NewProc("DwmGetWindowAttribute").Call(hwnd,14,uintptr(unsafe.Pointer(&cloaked)),4)
+ if cloaked!=0{return false}
  style,_,_:=userSession.NewProc("GetWindowLongW").Call(hwnd,uintptr(^uint32(19)))
  if uint32(style)&0x80!=0{return false}
  title:=make([]uint16,1024);userSession.NewProc("GetWindowTextW").Call(hwnd,uintptr(unsafe.Pointer(&title[0])),uintptr(len(title)))
