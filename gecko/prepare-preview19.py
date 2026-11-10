@@ -35,12 +35,12 @@ chrome = out / 'engine/soulu/chrome'
 ui = chrome / 'ui'
 for name in ['browser.js','window-controls.sys.mjs','shell-host.js','build-info.sys.mjs']:
     source = (root / 'gecko/chrome' / name).read_text(encoding='utf-8')
-    (chrome / name).write_text(re.sub(r'0\.(?:13|14)\.0 Preview','0.18.0 Preview',source),encoding='utf-8')
+    (chrome / name).write_text(re.sub(r'0\.(?:13|14)\.0 Preview','0.19.0 Preview',source),encoding='utf-8')
 for path in chrome.rglob('*'):
     if path.suffix in {'.js','.html','.mjs'} and 'third_party' not in path.parts:
         source = path.read_text(encoding='utf-8')
         if '0.17.0' in source:
-            path.write_text(source.replace('0.17.0','0.18.0'),encoding='utf-8')
+            path.write_text(source.replace('0.17.0','0.19.0'),encoding='utf-8')
 def patch(path, before, after):
     source = path.read_text(encoding='utf-8')
     if before not in source:
@@ -50,7 +50,12 @@ def patch(path, before, after):
 index = ui / 'index.html'
 index.write_text(index.read_text(encoding='utf-8').replace('data-matte="true"','data-matte="false"'),encoding='utf-8')
 patch(ui/'renderer.js','if(!wanted.has(id))node.remove();','if(!wanted.has(id)){souluTabExit(node);node.remove();}')
-patch(ui/'renderer.js','if(!node)node=next;',"""if(!node){node=next;if(!matchMedia('(prefers-reduced-motion:reduce)').matches)node.animate([{opacity:0,transform:'translateY(6px)'},{opacity:1,transform:'none'}],{duration:170});}""")
+patch(ui/'renderer.js','if(container.children[index]!==node)container.insertBefore(node,container.children[index]||null);',"""
+    const entering = !node.isConnected;
+    if(container.children[index]!==node)container.insertBefore(node,container.children[index]||null);
+    if(entering && !matchMedia('(prefers-reduced-motion:reduce)').matches){
+      node.animate([{opacity:0,transform:'translateY(6px)'},{opacity:1,transform:'none'}],{duration:170});
+    }""")
 patch(ui/'renderer.js','function reconcileClassicTabs(','''function souluTabExit(node) {
   if(matchMedia('(prefers-reduced-motion:reduce)').matches)return;
   const r=node.getBoundingClientRect();
@@ -70,7 +75,7 @@ for path in (out/'engine').rglob('*.exe'):
         path.unlink()
 build = json.loads((out/'BUILD.json').read_text(encoding='utf-8'))
 assert build['name'] == 'Soulu 0.17.0 Preview'
-build.update(name='Soulu 0.18.0 Preview',base_preview=17,soulu_source=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip())
+build.update(name='Soulu 0.19.0 Preview',base_preview=17,soulu_source=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip())
 (out/'BUILD.json').write_text(json.dumps(build,indent=2),encoding='utf-8')
 
 patch(ui/'renderer.js','mattePanel:true','mattePanel:false,showExtensions:false,showHome:false')
@@ -102,3 +107,8 @@ patch(ui/'navigation.js','if(entered){closeEditor(false);closeMenu();}render();'
   overview.animate([{opacity:0,transform:'translateY(6px)'},{opacity:1,transform:'none'}],{duration:180,easing:'ease-out'});
  }
 """)
+
+patch(ui/'navigation.js','renderMenu();menuSearch.focus();','renderMenu();')
+shutil.copyfile(root/'ui/settings-components.js',ui/'settings-components.js')
+with (ui/'gecko-frontend.css').open('a',encoding='utf-8') as css:
+    css.write((root/'gecko/chrome/navigation-fixes.css').read_text(encoding='utf-8'))

@@ -1,0 +1,22 @@
+
+.bookmarks-menu {
+  box-sizing: border-box;
+  width: min(276px, 100vw);
+}
+.bookmarks-menu .navigation-search {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+.overview-caption > .bookmark-icon {
+  border-radius: 50%;
+  overflow: hidden;
+}
+.overview-card .overview-caption > button {
+  font: 400 21px/1 system-ui !important;
+}
+.overview-close svg {
+  width: 22px !important;
+  height: 22px !important;
+}
