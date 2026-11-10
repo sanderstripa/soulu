@@ -5,6 +5,7 @@ on:
     paths: ['.github/workflows/build-soulu19.yml','gecko/**']
 permissions:
   contents: write
+  actions: read
 concurrency:
   group: soulu-gecko-preview-19
   cancel-in-progress: true
@@ -36,7 +37,7 @@ jobs:
         id: assemble
         shell: pwsh
         run: |
-          gh release download soulu-preview-17 -p 'Soulu-0.17.0-Preview-Setup-win64.exe' -D preview17-input
+          gh run download 42055551760 -n soulu17-verified-installer -D preview17-input
           if ($LASTEXITCODE) { throw 'Preview 17 download failed' }
           python gecko/prepare-preview19.py
           if ($LASTEXITCODE) { throw 'Preview 19 assembly failed' }
@@ -83,8 +84,6 @@ jobs:
           (Get-FileHash Soulu-0.19.0-Preview-Setup-win64.exe -Algorithm SHA256).Hash.ToLowerInvariant() + '  Soulu-0.19.0-Preview-Setup-win64.exe' | Set-Content SHA256SUMS.txt
           $branchHead = gh api repos/sanderstripa/soulu/git/ref/heads/gecko-preview --jq '.object.sha'
           if ($branchHead.Trim() -ne $env:GITHUB_SHA) { throw 'A newer source revision superseded this build' }
-          gh release edit soulu-preview-18 --title 'Soulu Preview 0.18.0'
-          if ($LASTEXITCODE) { throw 'Preview 18 title correction failed' }
           gh release create soulu-preview-19 Soulu-0.19.0-Preview-Setup-win64.exe Soulu-0.19.0-Preview-Setup-win64.exe.build.json SHA256SUMS.txt soulu19-checks/restart18.json soulu19-checks/installer19.json --target $env:GITHUB_SHA --title 'Soulu Preview 0.19.0' --prerelease --notes 'Soulu Gecko for Windows x64. Fix tab strip rendering, bookmark search, overview controls and installed VPN component actions.'
           if ($LASTEXITCODE) { throw 'Release publication failed' }
 
