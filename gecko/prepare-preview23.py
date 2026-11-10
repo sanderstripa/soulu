@@ -189,5 +189,5 @@ shutil.copyfile(root/'gecko/chrome/updates.js',chrome/'updates.js')
 
 # Enlarge the visible home-page mark by 15 percent at each existing breakpoint.
 patch(ui/'home.css','#logo{width:112px;height:112px;','#logo{width:128.8px;height:128.8px;')
-patch(ui/'home.css','#logo{width:100px;height:100px;','#logo{width:115px;height:115px;')
-patch(ui/'home.css','#logo{width:76px;height:76px;','#logo{width:87.4px;height:87.4px;')
+patch(ui/'home.css','#logo{width:100px;height:100px','#logo{width:115px;height:115px')
+patch(ui/'home.css','#logo{width:76px;height:76px','#logo{width:87.4px;height:87.4px')
