@@ -202,6 +202,7 @@ try:
   paths=m.execute_script('const out={};for(const key of ["UAppData","ULocalAppData","UpdRootD"]){out[key]=Services.dirsvc.get(key,Ci.nsIFile).path;}return out;')
   check('application_directories_belong_to_soulu',all('soulu' in p.lower() and 'mozilla' not in p.lower() and 'firefox' not in p.lower() for p in paths.values()),paths)
   check('runtime_really_is_160',m.execute_script('return Services.appinfo.platformVersion')=='160.0')
+  check('windows_autostart_disabled',m.execute_script('return ["browser.startup.windowsLaunchOnLogin.defaultEnabled","browser.startup.windowsLaunchOnLogin.enabled","toolkit.winRegisterApplicationRestart"].every(p=>Services.prefs.prefIsLocked(p)&&Services.prefs.getBoolPref(p)===false)'))
   check('default_toolbar',m.execute_script('const s=Soulu.config.settings;return s.layout==="adaptive"&&!s.mattePanel&&!s.showExtensions&&!s.showHome&&!s.vpnToolbarVisible'))
   check('first_installed_launch_version_is_preview22',m.execute_script('return document.documentElement.getAttribute("soulu-version")')=='Soulu Preview 1.160.27')
   check('first_installed_launch_shows_soulu_welcome',m.execute_script('return gBrowser.selectedBrowser.currentURI.spec.endsWith("/onboarding.html")'))

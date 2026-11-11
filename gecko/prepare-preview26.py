@@ -10,7 +10,7 @@ import subprocess
 import zipfile
 
 root = Path(__file__).resolve().parents[1]
-archive = root / 'preview17-input/Soulu-0.17.0-Preview-x64.exe'
+archive = root / 'preview17-input/Soulu-0.17.0-Preview-Setup-win64.exe'
 out = root / 'gecko-out'
 raw = archive.read_bytes()
 assert hashlib.sha256(raw).hexdigest() == '1e45862d00e9b05f9785e21915cc1d7c284c010f9343e6885edb1ffb6b3e8a56'

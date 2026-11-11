@@ -84,7 +84,7 @@ func verifyGecko(raw []byte) error {
  entries:=map[string]*zip.File{};for _,f:=range zr.File{if _,ok:=entries[f.Name];ok{return fmt.Errorf("duplicate archive entry")};entries[f.Name]=f}
  manifest:=entries["soulu-engine-manifest.json"];if manifest==nil{return fmt.Errorf("Gecko integrity manifest missing")}
  r,err:=manifest.Open();if err!=nil{return err};var m struct{Name string `json:"name"`; Files []struct{Path string `json:"path"`;SHA string `json:"sha256"`} `json:"files"`};err=json.NewDecoder(io.LimitReader(r,4<<20)).Decode(&m);r.Close();if err!=nil{return err}
- if m.Name!="Soulu Preview 1.160.26"||len(m.Files)<10{return fmt.Errorf("unexpected Gecko payload")}
+ if m.Name!="Soulu Preview 1.160.27"||len(m.Files)<10{return fmt.Errorf("unexpected Gecko payload")}
  checked:=map[string]bool{}
  for _,item:=range m.Files{if len(item.SHA)!=64||checked[item.Path]{return fmt.Errorf("invalid manifest entry")};f:=entries[item.Path];if f==nil||f.FileInfo().IsDir(){return fmt.Errorf("missing Gecko component: %s",item.Path)};r,e:=f.Open();if e!=nil{return e};h:=sha256.New();_,e=io.Copy(h,r);r.Close();if e!=nil{return e};if !strings.EqualFold(hex.EncodeToString(h.Sum(nil)),item.SHA){return fmt.Errorf("Gecko component hash mismatch: %s",item.Path)};checked[item.Path]=true}
  for name,f:=range entries{if !f.FileInfo().IsDir()&&name!="soulu-engine-manifest.json"&&!checked[name]{return fmt.Errorf("unverified file: %s",name)}}
@@ -213,7 +213,7 @@ foreach($root in $roots){
 `
  refreshIcons = "$env:SOULU_SHORTCUT_EXE='" + strings.ReplaceAll(exe,"'","''") + "';$env:SOULU_SHORTCUT_ICON='" + strings.ReplaceAll(icon,"'","''") + "';" + refreshIcons
  if err=core.PowerShell(refreshIcons);err!=nil{return err}
-	if err = setReg(uninstallKey, map[string]string{"DisplayName": "Soulu Preview 1.160.26", "DisplayVersion": products.Version("soulu"), "Publisher": "Soulu", "InstallLocation": dir, "DisplayIcon": icon, "UninstallString": `"` + filepath.Join(dir, "Uninstall Soulu.exe") + `" --uninstall`}); err != nil {
+	if err = setReg(uninstallKey, map[string]string{"DisplayName": "Soulu Preview 1.160.27", "DisplayVersion": products.Version("soulu"), "Publisher": "Soulu", "InstallLocation": dir, "DisplayIcon": icon, "UninstallString": `"` + filepath.Join(dir, "Uninstall Soulu.exe") + `" --uninstall`}); err != nil {
 		return err
 	}
  // Register this isolated product without changing Windows UserChoice.
@@ -233,6 +233,7 @@ foreach($root in $roots){
  // Retire only the verified Preview 12 application, preserving its moved profiles.
  legacyBuild,legacyErr:=os.ReadFile(filepath.Join(legacyDir,"BUILD.json"));var legacy struct{Name string `json:"name"`;Channel string `json:"channel"`};if legacyErr==nil&&json.Unmarshal(legacyBuild,&legacy)==nil&&legacy.Name=="Soul 0.12.0 Preview"&&legacy.Channel=="gecko-preview"{if err=core.RemoveOwned(legacyDir,"soul","Soul.exe");err!=nil{return err};_ = os.Remove(filepath.Join(legacyDir,"Uninstall Soul.exe"));dirs:=[]string{};_ = filepath.WalkDir(legacyDir,func(path string,item os.DirEntry,e error)error{if e==nil&&item.IsDir(){dirs=append(dirs,path)};return nil});for i:=len(dirs)-1;i>=0;i--{_ = os.Remove(dirs[i])};_ = registry.DeleteKey(registry.CURRENT_USER,`Software\Microsoft\Windows\CurrentVersion\Uninstall\Soul`);if key,e:=registry.OpenKey(registry.CURRENT_USER,`Software\RegisteredApplications`,registry.SET_VALUE);e==nil{_ = key.DeleteValue("Soul");key.Close()};_ = setReg(`Software\Classes\Soul.URL\shell\open\command`,map[string]string{"":`"`+exe+`" --url "%1"`});_ = setReg(`Software\Classes\Soul.URL\DefaultIcon`,map[string]string{"":exe+",0"})}
  prefs:=filepath.Join(os.Getenv("LOCALAPPDATA"),"Soulu","install-preferences.json");if err=os.MkdirAll(filepath.Dir(prefs),0700);err!=nil{return err};options,_:=json.Marshal(map[string]string{"language":o.Language,"theme":o.Theme});if err=core.AtomicWrite(prefs,options);err!=nil{return err}
+	if err = removeLoginStartup(dir); err != nil { return err }
 	// All profile, theme, language, history and extension data remain untouched.
 	a.dir = dir
 	a.installed = true
@@ -255,3 +256,20 @@ func (a *Adapter) Remove() error {
 }
 
 
+
+// Remove our existing login registration without touching Firefox or other apps.
+func removeLoginStartup(dir string) error {
+ for _,path := range []string{`Software\Microsoft\Windows\CurrentVersion\Run`, `Software\Microsoft\Windows\CurrentVersion\RunOnce`} {
+  key,err:=registry.OpenKey(registry.CURRENT_USER,path,registry.QUERY_VALUE|registry.SET_VALUE)
+  if err==registry.ErrNotExist {continue}; if err!=nil{return err}
+  names,err:=key.ReadValueNames(-1);if err!=nil{key.Close();return err}
+  for _,name:=range names {
+   command,_,e:=key.GetStringValue(name);if e!=nil{continue}
+   args,e:=windows.DecomposeCommandLine(command);if e!=nil||len(args)==0{continue}
+   target:=filepath.Clean(os.ExpandEnv(args[0]))
+   if strings.EqualFold(target,filepath.Join(dir,"Soulu.exe"))||strings.EqualFold(target,filepath.Join(dir,"engine","SouluEngine.exe")) {
+    if e=key.DeleteValue(name);e!=nil{key.Close();return e}
+   }
+  };key.Close()
+ };return core.PowerShell(`$ErrorActionPreference='Stop';$targets=@(`+core.QuotePS(filepath.Join(dir,"Soulu.exe"))+`,`+core.QuotePS(filepath.Join(dir,"engine","SouluEngine.exe"))+`);$shell=New-Object -ComObject WScript.Shell;foreach($item in (Get-ChildItem -LiteralPath ([Environment]::GetFolderPath('Startup')) -Filter *.lnk -ErrorAction SilentlyContinue)){$target=$shell.CreateShortcut($item.FullName).TargetPath;if($targets -contains $target){Remove-Item -LiteralPath $item.FullName -Force}}`)
+}
