@@ -13,7 +13,7 @@ function candidate(releases){
   const version=modern?modern.slice(1).map(Number):[0,+legacy[1],+(legacy[2]||0)];
   if(!newer(version,current))continue;
   const stem=modern?'Soulu-'+version.join('.')+'-Preview':`Soulu-0.${version[1]}.${version[2]}-Preview`;
-  const asset=r.assets?.find(a=>a.name===stem+'-Setup-win64.exe')||r.assets?.find(a=>a.name===stem+'-win64.zip');
+  const asset=r.assets?.find(a=>a.name===stem+'-x64.exe')||r.assets?.find(a=>a.name===stem+'-Setup-win64.exe')||r.assets?.find(a=>a.name===stem+'-win64.zip');
   if(!asset||asset.size<=0||asset.size>450*1024*1024||!/^sha256:[a-f0-9]{64}$/.test(asset.digest||''))continue;
   const name=asset.name,expected='https://github.com/sanderstripa/soulu/releases/download/'+r.tag_name+'/'+name;
   if(asset.browser_download_url!==expected)continue;
