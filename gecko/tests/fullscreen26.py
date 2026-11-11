@@ -18,6 +18,7 @@ def verify_fullscreen(m,check,wait,out):
    handles=set(m.window_handles)
    m.execute_script('gBrowser.selectedTab=gBrowser.addTrustedTab(arguments[0]);return true;',script_args=[f'http://127.0.0.1:{outer.server_port}{path}'])
    added=wait(lambda:list(set(m.window_handles)-handles));m.switch_to_window(added[0]);m.set_context('chrome')
+   wait(lambda:m.execute_script('return !Soulu.snapshot().adaptiveToolbar.active;'))
    baseline=m.execute_script('const r=document.getElementById("browser").getBoundingClientRect();return {top:r.top,tabs:gBrowser.tabs.length};')
    check('normal_toolbar_space_'+label,baseline['top']>0,baseline)
    m.set_context('content');wait(lambda:m.execute_script('return document.readyState==="complete";'))
@@ -32,6 +33,7 @@ def verify_fullscreen(m,check,wait,out):
    (out/('fullscreen-'+label+'.png')).write_bytes(base64.b64decode(m.screenshot()))
    # Exiting via the native browser controller exercises the same path as Escape.
    m.execute_script('document.exitFullscreen();return true;')
+   check('native_dom_fullscreen_exited_'+label,wait(lambda:m.execute_script('return !document.documentElement.hasAttribute("inDOMFullscreen");')))
    check('fullscreen_exit_restores_toolbar_'+label,wait(lambda:m.execute_script('const r=document.getElementById("browser").getBoundingClientRect();return !document.documentElement.hasAttribute("inDOMFullscreen")&&Math.abs(r.top-arguments[0])<1&&getComputedStyle(document.getElementById("soulu-shell-frame")).display!=="none";',script_args=[baseline['top']])))
    check('fullscreen_keeps_tabs_'+label,m.execute_script('return gBrowser.tabs.length')==baseline['tabs'])
    m.execute_script('gBrowser.removeTab(gBrowser.selectedTab,{animate:false});return true;');m.switch_to_window(previous);m.set_context('chrome')
