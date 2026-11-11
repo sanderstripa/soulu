@@ -14,7 +14,7 @@ inject='''
   // Site compatibility, not product branding. Retain standard Gecko tokens.
   for(const name of ['general.useragent.override','general.useragent.compatMode.firefox']){try{Services.prefs.unlockPref(name);}catch{}}
   Services.prefs.clearUserPref('general.useragent.compatMode.firefox');Services.prefs.getDefaultBranch('').setBoolPref('general.useragent.compatMode.firefox',true);
-  Services.prefs.clearUserPref('general.useragent.override');Services.prefs.getDefaultBranch('').setStringPref('general.useragent.override','Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:160.0) Gecko/20100101 Firefox/160.0 Soulu/1.160.25');
+  Services.prefs.clearUserPref('general.useragent.override');Services.prefs.getDefaultBranch('').setStringPref('general.useragent.override','Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:160.0) Gecko/20100101 Firefox/160.0 Soulu/1.160.26');
   Services.prefs.lockPref('general.useragent.override');
 '''
 s=s.replace('  const app = Services.dirsvc.get',inject+'\n  const app = Services.dirsvc.get');bootstrap.write_text(s,encoding='utf-8')

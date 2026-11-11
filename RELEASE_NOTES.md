@@ -1,3 +1,9 @@
+# Soulu Preview 1.160.26
+
+- Remove the reserved toolbar space and hide shell overlays during native DOM fullscreen, including iframe video players.
+- Restore the toolbar and its previous geometry automatically on fullscreen exit.
+- Keep ordinary browser fullscreen, tab animations, window maximization and normal layouts unchanged.
+
 # Soulu Preview 1.160.25
 
 - Native error artwork and built-in page accents use Soulu branding and Inter.

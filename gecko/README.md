@@ -1,8 +1,8 @@
-# Soulu Preview 1.160.25
+# Soulu Preview 1.160.26
 
 The primary Soulu implementation uses Gecko 160.0 on Windows x64.
 
-Install Soulu-1.160.25-Preview-Setup-win64.exe from the normal GitHub release.
+Install Soulu-1.160.26-Preview-Setup-win64.exe from the normal GitHub release.
 Program files are installed beneath %LOCALAPPDATA%/Programs/Soulu.
 Profiles remain beneath %LOCALAPPDATA%/Soulu/Profiles. Application data and engine update directories are redirected into the Soulu data tree.
 
