@@ -4,7 +4,7 @@ import base64,json
 def verify_branding(m,check,wait,out):
     print('chatbot preferences',m.execute_script('return ["browser.ml.chat.enabled","browser.ml.chat.menu","browser.ml.chat.page","browser.ml.chat.shortcuts"].map(p=>[p,Services.prefs.getBoolPref(p),Services.prefs.prefIsLocked(p)]);'),flush=True)
     check('chatbot_disabled_on_profile',m.execute_script('return ["browser.ml.chat.enabled","browser.ml.chat.menu","browser.ml.chat.page","browser.ml.chat.shortcuts"].every(p=>Services.prefs.getBoolPref(p)===false&&Services.prefs.prefIsLocked(p));'))
-    check('website_ua_compatibility',m.execute_script('const s=Services.prefs.getStringPref("general.useragent.override");return s.includes("Firefox/160.0")&&s.includes("Soulu/1.160.26");'))
+    check('website_ua_compatibility',m.execute_script('const s=Services.prefs.getStringPref("general.useragent.override");const {version}=ChromeUtils.importESModule("chrome://soulu/content/build-info.sys.mjs");return s.includes("Firefox/160.0")&&s.includes("Soulu/"+version.join("."));'))
     # Verify the packaged illustration bytes, not just a hidden image in one page.
     result=m.execute_async_script('const done=arguments[arguments.length-1];(async()=>{const uri="chrome://global/skin/illustrations/no-connection.svg";const r=await fetch(uri);const text=await r.text();return text.includes("data:image/png;base64,");})().then(done,e=>done({error:String(e)}));')
     check('native_fox_resource_replaced',result is True,result)
