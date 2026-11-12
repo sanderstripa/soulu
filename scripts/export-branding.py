@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SIZES = (16, 20, 24, 32, 40, 48, 64, 128, 256)
 PNG_ALIASES = ('soulu-icon.png', 'soulu-icon-new.png', 'browser-icon.png')
 ICO_ALIASES = ('soulu-icon.ico', 'soulu-app-icon.ico', 'soulu-installer-icon.ico',
-               'soulu-shortcut-icon.ico', 'browser-icon.ico', 'browser-app-icon.ico')
+               'soulu-shortcut-icon.ico', 'browser-icon.ico', 'browser-app-icon.ico', 'soulu-app-1.160.24.ico', 'soulu-app-1.160.29.ico')
 
 def export(source):
     image = Image.open(source).convert('RGBA')
@@ -54,7 +54,7 @@ def export(source):
     ico = struct.pack('<HHH', 0, 1, len(chunks)) + b''.join(entries) + b''.join(data for _, data in chunks)
     for alias in ICO_ALIASES:
         (ROOT / 'ui' / alias).write_bytes(ico)
-    manifest = {'revision': 20261018, 'source': 'ui/branding/soulu-master.svg',
+    manifest = {'revision': 20261113, 'source': 'ui/branding/soulu-master.svg',
                 'source_sha256': hashlib.sha256((ROOT / 'ui/branding/soulu-master.svg').read_text(encoding='utf-8').encode('utf-8')).hexdigest(),
                 'png_sha256': {str(size): hashlib.sha256((destination / f'soulu-{size}.png').read_bytes()).hexdigest() for size in (*SIZES, 512, 1024)},
                 'sizes': list(SIZES), 'png_sizes': [*SIZES, 512, 1024],

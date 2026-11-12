@@ -1,4 +1,23 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
-<title>Soulu blue petal icon</title>
-<image width="1024" height="1024" href="../browser-icon.png"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1254 1254">
+ <defs>
+  <linearGradient id="base" x1=".15" y1=".85" x2=".85" y2=".1"><stop stop-color="#00329b"/><stop offset=".55" stop-color="#0051c9"/><stop offset="1" stop-color="#0072ef"/></linearGradient>
+  <linearGradient id="rim" x1=".1" y1=".2" x2=".75" y2=".9"><stop stop-color="#8bdcff"/><stop offset=".26" stop-color="#34adff"/><stop offset=".55" stop-color="#0074f6"/><stop offset="1" stop-color="#0047c4"/></linearGradient>
+  <linearGradient id="card3" x1=".15" y1="0" x2=".85" y2=".9"><stop stop-color="#47bbff"/><stop offset=".28" stop-color="#0088ff"/><stop offset="1" stop-color="#00349f"/></linearGradient>
+  <linearGradient id="card2" x1=".08" y1="0" x2=".9" y2=".95"><stop stop-color="#68caff"/><stop offset=".35" stop-color="#168fff"/><stop offset="1" stop-color="#0044be"/></linearGradient>
+  <linearGradient id="card1" x1="0" y1="0" x2=".9" y2="1"><stop stop-color="#b3ebfb"/><stop offset=".22" stop-color="#65c5fb"/><stop offset=".6" stop-color="#1988fa"/><stop offset="1" stop-color="#0054d2"/></linearGradient>
+  <linearGradient id="front" x1=".12" y1=".8" x2=".9" y2=".3"><stop stop-color="#0069ed"/><stop offset=".36" stop-color="#3baaff"/><stop offset=".65" stop-color="#99def8"/><stop offset="1" stop-color="#31a3ff"/></linearGradient>
+  <clipPath id="circle"><circle cx="627" cy="627" r="600"/></clipPath>
+ </defs>
+ <g clip-path="url(#circle)">
+  <circle cx="627" cy="627" r="600" fill="url(#base)"/>
+  <path d="M176 1022C61 858 103 597 235 394C434 91 759-27 981 129C765-71 430 1 218 212C-39 467-29 803 176 1022Z" fill="url(#rim)"/>
+  <path d="M414 478V467Q414 373 500 343L878 242Q1003 209 1082 283Q1139 337 1139 420V843L874 1103H414Z" fill="#65c7ff"/>
+  <path d="M414 480V470Q414 376 502 346L879 245Q1004 212 1081 286Q1137 340 1137 421V843L874 1103H414Z" fill="url(#card3)"/>
+  <path d="M283 623V588Q283 490 386 464L819 376Q925 353 985 422Q1023 466 1023 532V968L758 1178H283Z" fill="#82d6ff"/>
+  <path d="M283 626V591Q283 493 387 467L819 379Q925 356 984 425Q1021 468 1021 533V968L758 1178H283Z" fill="url(#card2)"/>
+  <path d="M145 938L139 731Q134 607 268 574L724 515Q819 502 870 568Q912 619 912 692V1078L688 1200H325Z" fill="#b8ecff"/>
+  <path d="M146 939L140 734Q135 610 270 577L725 518Q819 505 869 571Q910 622 910 694V1078L688 1200H325Z" fill="url(#card1)"/>
+  <path d="M176 1022C320 1226 695 1117 911 970C1126 823 1238 602 1180 407C1302 727 1178 1044 909 1178C638 1316 337 1196 176 1022Z" fill="#87d7ff"/>
+  <path d="M176 1025C320 1229 695 1120 913 973C1128 826 1241 603 1181 407C1304 729 1179 1048 910 1181C637 1319 337 1199 176 1025Z" fill="url(#front)"/>
+ </g>
 </svg>
