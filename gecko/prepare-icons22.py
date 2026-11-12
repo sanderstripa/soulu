@@ -6,8 +6,8 @@ subprocess.run([sys.executable,str(root/'scripts/verify-branding.py')],check=Tru
 source=root/'ui';target=root/'gecko-out/engine/soulu/chrome/ui'
 if target.parent.exists():
  target.mkdir(exist_ok=True)
- for path in source.glob('*icon*'):
-  if path.is_file() and path.suffix in {'.png','.ico','.svg'}:shutil.copyfile(path,target/path.name)
+ for path in source.iterdir():
+  if path.is_file() and path.name in __import__('json').loads((source/'branding/manifest.json').read_text())['aliases'] + ['browser-icon.svg']:shutil.copyfile(path,target/path.name)
  shutil.copytree(source/'branding',target/'branding',dirs_exist_ok=True)
  for name in ['soulu-petals.png','soulu-wave.png']:
   dst=target.parent/'branding'/name;dst.parent.mkdir(exist_ok=True)
