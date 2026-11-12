@@ -158,6 +158,11 @@ try:
    ascii_link.replace(link)
 
 
+  pinned=pathlib.Path(os.environ['APPDATA'])/'Microsoft/Internet Explorer/Quick Launch/User Pinned/TaskBar/Soulu icon upgrade fixture.lnk'
+  pinned.parent.mkdir(parents=True,exist_ok=True)
+  script="$s=New-Object -ComObject WScript.Shell;$l=$s.CreateShortcut('"+str(pinned).replace("'","''")+"');$l.TargetPath='"+str(destination/'Soulu.exe').replace("'","''")+"';$l.IconLocation='shell32.dll,0';$l.Save()"
+  subprocess.run(['powershell.exe','-NoProfile','-Command',script],check=True)
+
   # Reproduce Preview 8 uninstall leftovers from the user's failed installation.
   (destination/'engine/old/empty').mkdir(parents=True)
   (destination/'Uninstall Soulu.exe').write_bytes(b'legacy leftover')
@@ -218,21 +223,8 @@ try:
   expected=iconcheck.verify_assets()
   for binary in [destination/'Soulu.exe',destination/'Uninstall Soulu.exe',*list((destination/'engine').glob('*.exe'))]:
    iconcheck.verify_binary(binary,expected)
-  import ctypes as iconct
-  handles=[]
-  callback=iconct.WINFUNCTYPE(iconct.c_bool,iconct.c_void_p,iconct.c_void_p)
-  @callback
-  def find_icon_window(hwnd,param):
-   pid=iconct.c_ulong();iconct.windll.user32.GetWindowThreadProcessId(iconct.c_void_p(hwnd),iconct.byref(pid))
-   if iconct.windll.user32.IsWindowVisible(iconct.c_void_p(hwnd)):
-    try:
-     import psutil
-     if pathlib.Path(psutil.Process(pid.value).exe()).resolve()==(destination/'engine/SouluEngine.exe').resolve():handles.append(hwnd)
-    except (OSError,psutil.Error):pass
-   return True
-  iconct.windll.user32.EnumWindows(find_icon_window,0)
-  check('native_icon_window_found',bool(handles))
-  for hwnd in handles:iconcheck.verify_window(hwnd,expected)
+  hwnd=int(m.execute_script('return String(window.docShell.treeOwner.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIBaseWindow).nativeHandle)'),16)
+  iconcheck.verify_window(hwnd,expected)
   shell_script="[Environment]::GetFolderPath('Desktop');[Environment]::GetFolderPath('Programs');Join-Path $env:APPDATA 'Microsoft/Internet Explorer/Quick Launch/User Pinned/TaskBar'"
   icon_roots=subprocess.check_output(['powershell.exe','-NoProfile','-Command',shell_script],text=True).splitlines()
   shortcuts=[]
@@ -240,7 +232,8 @@ try:
    if pathlib.Path(directory).is_dir():
     for shortcut in pathlib.Path(directory).rglob('Soulu*.lnk'):
      iconcheck.verify_shortcut(shortcut,expected);shortcuts.append(str(shortcut))
-  check('shell_shortcuts_use_new_icon',len(shortcuts)>=2,shortcuts)
+  check('shell_shortcuts_use_new_icon',len(shortcuts)>=3 and str(pinned) in shortcuts,shortcuts)
+  pinned.unlink()
   check('all_installed_executable_icons_match_master',True)
   from toolbar19 import verify_toolbar
   verify_toolbar(m,check,wait)
@@ -309,3 +302,4 @@ try:
   report['passed']=True
 except Exception as e:report['error']=str(e);raise
 finally:(out/'installer26.json').write_text(json.dumps(report,indent=2,ensure_ascii=False),encoding='utf-8')
+
