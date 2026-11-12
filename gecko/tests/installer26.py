@@ -172,7 +172,7 @@ try:
    icon_script="$shell=New-Object -ComObject WScript.Shell;$roots=@([Environment]::GetFolderPath('Desktop'),[Environment]::GetFolderPath('Programs'));foreach($r in $roots){Get-ChildItem -LiteralPath $r -Filter Soulu.lnk -Recurse -ErrorAction SilentlyContinue|ForEach-Object{$link=$shell.CreateShortcut($_.FullName);if($link.TargetPath -eq '"+long_exe.replace("'","''")+"'){$link.IconLocation}}}"
    icon_output=subprocess.check_output(['powershell.exe','-NoProfile','-Command',icon_script],text=True)
    locations=[line.strip() for line in icon_output.splitlines() if line.strip()]
-   check('desktop_and_start_links_use_fresh_icon',len(locations)>=2 and all('soulu-app-1.160.24.ico' in line for line in locations),locations)
+   check('desktop_and_start_links_use_fresh_icon',len(locations)>=2 and all('soulu-app-1.160.29.ico' in line for line in locations),locations)
    check('stale_firefox_private_shortcut_removed',not stale.exists())
    check('unrelated_private_shortcut_preserved',foreign.exists());foreign.unlink()
    for remaining in (p for p in localized if p.exists()):
@@ -309,4 +309,3 @@ try:
   report['passed']=True
 except Exception as e:report['error']=str(e);raise
 finally:(out/'installer26.json').write_text(json.dumps(report,indent=2,ensure_ascii=False),encoding='utf-8')
-
