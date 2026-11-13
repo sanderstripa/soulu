@@ -16,7 +16,7 @@ jobs:
     timeout-minutes: 35
     env:
       GH_TOKEN: ${{ github.token }}
-      GH_REPO: sanderstripa/soulu
+      GH_REPO: ${{ github.repository }}
       PYTHONUTF8: 1
     steps:
       - uses: actions/checkout@v4
@@ -35,6 +35,8 @@ jobs:
           Push-Location ../..
           python scripts/verify-rebrand.py
           if ($LASTEXITCODE) { throw "Source identity audit failed" }
+          node gecko/tests/updates-repository.cjs
+          if ($LASTEXITCODE) { throw "Repository rename update regression failed" }
           node gecko/tests/settings-unicode.cjs
           Pop-Location
           if ($LASTEXITCODE) { throw "Settings Unicode regression failed" }
@@ -123,13 +125,13 @@ jobs:
           python -c "import json,pathlib; paths=['restart18.json','installer26.json']; assert all(json.loads((pathlib.Path('sona30-checks')/p).read_text())['passed'] for p in paths)"
           if ($LASTEXITCODE) { throw 'Acceptance reports not green' }
           (Get-FileHash Sona-1.160.31-Preview-x64.exe -Algorithm SHA256).Hash.ToLowerInvariant() + '  Sona-1.160.31-Preview-x64.exe' | Set-Content SHA256SUMS.txt
-          $branchHead = gh api "repos/sanderstripa/soulu/git/ref/heads/$env:GITHUB_REF_NAME" --jq '.object.sha'
+          $branchHead = gh api "repos/$env:GH_REPO/git/ref/heads/$env:GITHUB_REF_NAME" --jq '.object.sha'
           if ($branchHead.Trim() -ne $env:GITHUB_SHA) { throw 'A newer source revision superseded this build' }
           gh release view sona-preview-1.160.31 --json tagName 2>$null
           if ($LASTEXITCODE -eq 0) {
             gh release upload sona-preview-1.160.31 Sona-1.160.31-Preview-x64.exe SHA256SUMS.txt --clobber
             if ($LASTEXITCODE) { throw 'Release asset replacement failed' }
-            gh api -X PATCH repos/sanderstripa/soulu/git/refs/tags/sona-preview-1.160.31 -f sha=$env:GITHUB_SHA -F force=true
+            gh api -X PATCH "repos/$env:GH_REPO/git/refs/tags/sona-preview-1.160.31" -f sha=$env:GITHUB_SHA -F force=true
             if ($LASTEXITCODE) { throw 'Verified release tag update failed' }
             gh release edit sona-preview-1.160.31 --latest
           } else {

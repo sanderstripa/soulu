@@ -1,7 +1,7 @@
 /* Voluntary Gecko-channel release checks. Download/verify only; never replace live files. */
 (()=>{
 const {IOUtils,PathUtils}=Sona.backend,{Downloads}=ChromeUtils.importESModule('resource://gre/modules/Downloads.sys.mjs');
-let available=null,checkedAt=0,busy=false;const base=Sona.dispatch,{version:current,name:currentName}=ChromeUtils.importESModule('chrome://sona/content/build-info.sys.mjs'),repo='https://api.github.com/repos/sanderstripa/soulu';
+let available=null,checkedAt=0,busy=false;const base=Sona.dispatch,{version:current,name:currentName}=ChromeUtils.importESModule('chrome://sona/content/build-info.sys.mjs'),repositoryID=1367247790;let repositoryName='sanderstripa/soulu';
 function candidate(releases){
  const newer=(a,b)=>{for(let i=0;i<3;i++){if(a[i]!==b[i])return a[i]>b[i];}return false;};
  const choices=[];
@@ -15,14 +15,20 @@ function candidate(releases){
   const stem=modern?'Sona-'+version.join('.')+'-Preview':`Sona-0.${version[1]}.${version[2]}-Preview`;
   const asset=r.assets?.find(a=>a.name===stem+'-x64.exe')||r.assets?.find(a=>a.name===stem+'-Setup-win64.exe')||r.assets?.find(a=>a.name===stem+'-win64.zip');
   if(!asset||asset.size<=0||asset.size>450*1024*1024||!/^sha256:[a-f0-9]{64}$/.test(asset.digest||''))continue;
-  const name=asset.name,expected='https://github.com/sanderstripa/soulu/releases/download/'+r.tag_name+'/'+name;
+  const name=asset.name,expected='https://github.com/'+repositoryName+'/releases/download/'+r.tag_name+'/'+name;
   if(asset.browser_download_url!==expected)continue;
-  choices.push({id:asset.id,tag:r.tag_name,version,name,kind:name.endsWith('.exe')?'installer':'zip',size:asset.size,digest:asset.digest.slice(7),url:expected,notes:String(r.body||'').slice(0,5000),release:'https://github.com/sanderstripa/soulu/releases/tag/'+r.tag_name});
+  choices.push({id:asset.id,tag:r.tag_name,version,name,kind:name.endsWith('.exe')?'installer':'zip',size:asset.size,digest:asset.digest.slice(7),url:expected,notes:String(r.body||'').slice(0,5000),release:'https://github.com/'+repositoryName+'/releases/tag/'+r.tag_name});
  }
  return choices.sort((a,b)=>newer(a.version,b.version)?-1:newer(b.version,a.version)?1:0)[0]||null;
 }
 
-async function check(){const response=await fetch(repo+'/releases?per_page=50',{headers:{Accept:'application/vnd.github+json'},credentials:'omit',referrerPolicy:'no-referrer',signal:AbortSignal.timeout(15000)});if(!response.ok)throw Error('GitHub: HTTP '+response.status);const text=await response.text();if(text.length>3*1024*1024)throw Error('Слишком большой ответ GitHub');available=candidate(JSON.parse(text));checkedAt=Date.now();return {current:currentName,gecko:Services.appinfo.version,available};}
+async function check(){
+ const metadataResponse=await fetch('https://api.github.com/repositories/'+repositoryID,{headers:{Accept:'application/vnd.github+json'},credentials:'omit',referrerPolicy:'no-referrer',signal:AbortSignal.timeout(15000)});
+ if(!metadataResponse.ok)throw Error('GitHub: HTTP '+metadataResponse.status);
+ const metadata=await metadataResponse.json();
+ if(metadata.id!==repositoryID||!/^sanderstripa\/[a-z0-9_.-]+$/i.test(metadata.full_name||''))throw Error('Неподходящий репозиторий обновлений.');
+ repositoryName=metadata.full_name;
+ const response=await fetch('https://api.github.com/repos/'+repositoryName+'/releases?per_page=50',{headers:{Accept:'application/vnd.github+json'},credentials:'omit',referrerPolicy:'no-referrer',signal:AbortSignal.timeout(15000)});if(!response.ok)throw Error('GitHub: HTTP '+response.status);const text=await response.text();if(text.length>3*1024*1024)throw Error('Слишком большой ответ GitHub');available=candidate(JSON.parse(text));checkedAt=Date.now();return {current:currentName,gecko:Services.appinfo.version,available};}
 Sona.updateCandidate=candidate;
 Sona.dispatch=async(action,payload,source)=>{
  if(action==='browser.update.check')return check();
