@@ -49,7 +49,7 @@ jobs:
           path: |
             gecko-cache/adblock/target
             speech-build
-          key: sona-native-v1-${{ runner.os }}-${{ hashFiles('cef/sona/adblock/Cargo.lock', 'cef/sona/adblock/src/**', 'gecko/adblock-adapter.rs', 'gecko/speech/**') }}
+          key: sona-native-v1-${{ runner.os }}-${{ github.repository }}-${{ hashFiles('cef/sona/adblock/Cargo.lock', 'cef/sona/adblock/src/**', 'gecko/adblock-adapter.rs', 'gecko/speech/**') }}
       - name: Restore published Preview 17 and apply requested Preview 28 fixes
         id: assemble
         shell: pwsh
