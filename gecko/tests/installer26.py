@@ -119,6 +119,8 @@ def watch_launch(destination):
  return stopped,thread,observed
 def finished(ws):
  stage=evaluate(ws,'document.body.dataset.stage');
+ if evaluate(ws,'!!document.getElementById("failure")&&!document.getElementById("failure").hidden'):
+  capture(ws,'installer-error.png');message=evaluate(ws,'document.getElementById("error").innerText');report['error']=message;print('INSTALLER_ERROR',message,flush=True);raise SystemExit(message)
  if stage in ['error','failed']:
   capture(ws,'installer-error.png');raise RuntimeError(evaluate(ws,'document.body.innerText'))
  return stage=='finish'
@@ -148,6 +150,7 @@ try:
   (previous/'BUILD.json').write_text(json.dumps({'name':prior+' Preview 1.160.30','channel':'gecko-preview'}))
   (previous/'connect-installed-files.json').write_text(json.dumps({'product':prior.lower(),'files':[prior+'.exe','BUILD.json']}))
   preserved=bytes(range(256));(legacy_profile/'private-data-preservation.bin').write_bytes(preserved)
+  old_components=legacy_profile/(prior.lower()+'-vpn')/'Components';old_components.mkdir(parents=True);(old_components/'keep').write_bytes(preserved)
   with winreg.CreateKey(winreg.HKEY_CURRENT_USER,'Software\\'+prior) as key:winreg.SetValueEx(key,'InstallDir',0,winreg.REG_SZ,str(previous))
   (legacy_profile/'user.js').write_text(f'user_pref("remote.prefs.recommended",false);user_pref("marionette.port",{mp});',encoding='utf-8')
   env=dict(os.environ,LOCALAPPDATA=str(local),WEBVIEW2_USER_DATA_FOLDER=str(root/'installer-webview'),MOZ_MARIONETTE='1',MOZ_REMOTE_ALLOW_SYSTEM_ACCESS='1',SONA_GECKO_TEST='1')
@@ -203,6 +206,7 @@ try:
    check('both_localized_private_shortcuts_removed',not any(p.exists() for p in localized))
    check('preview12_profile_migrated',profile.exists() and not legacy_profile.exists())
    check('previous_private_data_preserved',(profile/'private-data-preservation.bin').read_bytes()==preserved)
+   check('previous_downloaded_vpn_components_preserved',(profile/'sona-vpn/Components/keep').read_bytes()==preserved and not (profile/(prior.lower()+'-vpn')).exists())
    check('previous_owned_installation_removed',not previous.exists())
    new_link=programs/'Sona migration fixture.lnk'
    check('previous_shortcut_identity_replaced',not old_link.exists() and new_link.exists())

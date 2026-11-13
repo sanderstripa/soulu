@@ -43,6 +43,13 @@ jobs:
           gofmt -w main.go session_windows.go session_windows_test.go
           go test -v -count=1 .
           if ($LASTEXITCODE) { throw 'Launcher ownership checks failed' }
+      - uses: actions/cache/restore@v4
+        id: native-cache
+        with:
+          path: |
+            gecko-cache/adblock/target
+            speech-build
+          key: sona-native-v1-${{ runner.os }}-${{ hashFiles('cef/sona/adblock/Cargo.lock', 'cef/sona/adblock/src/**', 'gecko/adblock-adapter.rs', 'gecko/speech/**') }}
       - name: Restore published Preview 17 and apply requested Preview 28 fixes
         id: assemble
         shell: pwsh
@@ -82,6 +89,13 @@ jobs:
           python -m pip install marionette_driver pillow psutil websocket-client
           python gecko/tests/adblock-update.py gecko-out/engine/sona/adblock/sona_adblock.dll sona30-checks/adblock-atomic.json
           if ($LASTEXITCODE) { throw 'Adblock atomic update verification failed' }
+      - uses: actions/cache/save@v4
+        if: ${{ always() && steps.assemble.outcome == 'success' && steps.native-cache.outputs.cache-hit != 'true' }}
+        with:
+          path: |
+            gecko-cache/adblock/target
+            speech-build
+          key: ${{ steps.native-cache.outputs.cache-primary-key }}
       - name: Verify all packaged executable and UI icon resources
         shell: pwsh
         run: |

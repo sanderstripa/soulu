@@ -104,6 +104,6 @@ $newName=$file.Name.Replace($oldName,'Sona');if($newName -ne $file.Name){$new=Jo
 		}
 	}
 	// Remove only prior product registrations; UserChoice remains Windows-owned.
-	script := `$ErrorActionPreference='Stop';$old=` + core.QuotePS(priorName) + `;foreach($path in @(('Software\Classes\'+$old+'.URL'),('Software\Clients\StartMenuInternet\'+$old),('Software\Microsoft\Windows\CurrentVersion\Uninstall\'+$old),('Software\'+$old))){$p='HKCU:\'+$path;if(Test-Path -LiteralPath $p){Remove-Item -LiteralPath $p -Recurse -Force}};Remove-ItemProperty -LiteralPath 'HKCU:\Software\RegisteredApplications' -Name $old -ErrorAction SilentlyContinue;`
+	script := `$ErrorActionPreference='Stop';$old=` + core.QuotePS(priorName) + `;foreach($path in @(('Software\Classes\'+$old+'.URL'),('Software\Clients\StartMenuInternet\'+$old),('Software\Microsoft\Windows\CurrentVersion\Uninstall\'+$old),('Software\'+$old))){$p='HKCU:\'+$path;if(Test-Path -LiteralPath $p){Remove-Item -LiteralPath $p -Recurse -Force}};Remove-ItemProperty -LiteralPath 'HKCU:\Software\RegisteredApplications' -Name $old -ErrorAction SilentlyContinue;exit 0;`
 	return core.PowerShell(script)
 }

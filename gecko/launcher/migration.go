@@ -57,6 +57,7 @@ func migrateProductData(local string) error {
 	}
 	old := strings.ToLower(priorName)
 	var paths []string
+	var directories []string
 	err := filepath.WalkDir(target, func(path string, item os.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -65,6 +66,9 @@ func migrateProductData(local string) error {
 			return fmt.Errorf("linked profile entry cannot be migrated: %s", path)
 		}
 		if item.IsDir() {
+			if strings.HasPrefix(item.Name(), old+"-") || strings.HasPrefix(item.Name(), priorName+"-") {
+				directories = append(directories, path)
+			}
 			return nil
 		}
 		if strings.HasPrefix(item.Name(), old+"-") || strings.HasPrefix(item.Name(), priorName+"-") {
@@ -134,6 +138,21 @@ func migrateProductData(local string) error {
 			}
 		} else if err = os.Rename(path, dest); err != nil {
 			return err
+		}
+	}
+	// Rename owned component/cache directories after their files, deepest first.
+	for i := len(directories) - 1; i >= 0; i-- {
+		source := directories[i]
+		name := filepath.Base(source)
+		next := strings.ReplaceAll(strings.ReplaceAll(name, old, "sona"), priorName, "Sona")
+		dest := filepath.Join(filepath.Dir(source), next)
+		if _, e := os.Stat(dest); e == nil {
+			return fmt.Errorf("component migration destination already exists: %s", dest)
+		} else if !os.IsNotExist(e) {
+			return e
+		}
+		if e := os.Rename(source, dest); e != nil {
+			return e
 		}
 	}
 	// Compiled chrome contains absolute paths and must be rebuilt for Sona.

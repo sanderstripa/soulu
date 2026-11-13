@@ -23,10 +23,16 @@ func TestMigrationPreservesPrivateData(t *testing.T) {
 	old := filepath.Join(root, string([]byte{115, 111, 117, 108, 117})+"-settings.json")
 	settings := []byte(`{"vpn":{"protected":"encrypted-unchanged"},"settings":{"theme":"dark","startupMode":"` + string([]byte{115, 111, 117, 108, 117}) + `"},"rules":{"sites":{"` + string([]byte{115, 111, 117, 108, 117}) + `.example":{"camera":0}}}}`)
 	os.WriteFile(old, settings, 0600)
+	component := filepath.Join(root, string([]byte{115, 111, 117, 108, 117})+"-vpn", "Components")
+	os.MkdirAll(component, 0700)
+	os.WriteFile(filepath.Join(component, "keep"), []byte("downloaded core"), 0600)
 	if e := migrateProductData(local); e != nil {
 		t.Fatal(e)
 	}
 	target := filepath.Join(local, "Sona", "Profiles", "default")
+	if data, e := os.ReadFile(filepath.Join(target, "sona-vpn", "Components", "keep")); e != nil || string(data) != "downloaded core" {
+		t.Fatal("downloaded VPN component was not migrated", e)
+	}
 	for name, data := range blobs {
 		got, e := os.ReadFile(filepath.Join(target, name))
 		if e != nil || !bytes.Equal(got, data) {
