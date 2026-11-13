@@ -275,5 +275,5 @@ func removeLoginStartup(dir string) error {
     if e=key.DeleteValue(name);e!=nil{key.Close();return e}
    }
   };key.Close()
- };return core.PowerShell(`$ErrorActionPreference='Stop';$targets=@(`+core.QuotePS(filepath.Join(dir,"Sona.exe"))+`,`+core.QuotePS(filepath.Join(dir,"engine","SonaEngine.exe"))+`);$shell=New-Object -ComObject WScript.Shell;foreach($item in (Get-ChildItem -LiteralPath ([Environment]::GetFolderPath('Startup')) -Filter *.lnk -ErrorAction SilentlyContinue)){$target=$shell.CreateShortcut($item.FullName).TargetPath;if($targets -contains $target){Remove-Item -LiteralPath $item.FullName -Force}}`)
+ };return core.PowerShell(`$ErrorActionPreference='Stop';$targets=@(`+core.QuotePS(filepath.Join(dir,"Sona.exe"))+`,`+core.QuotePS(filepath.Join(dir,"engine","SonaEngine.exe"))+`,`+core.QuotePS(filepath.Join(dir,priorName+".exe"))+`,`+core.QuotePS(filepath.Join(dir,"engine",priorName+"Engine.exe"))+`);$shell=New-Object -ComObject WScript.Shell;foreach($item in (Get-ChildItem -LiteralPath ([Environment]::GetFolderPath('Startup')) -Filter *.lnk -ErrorAction SilentlyContinue)){$target=$shell.CreateShortcut($item.FullName).TargetPath;if($targets -contains $target){Remove-Item -LiteralPath $item.FullName -Force}}`)
 }

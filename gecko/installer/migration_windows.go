@@ -14,7 +14,7 @@ import (
 
 func previousInstallations() []string {
 	local := os.Getenv("LOCALAPPDATA")
-	roots := []string{filepath.Join(local, "Programs", priorName)}
+	roots := []string{filepath.Join(local, "Programs", priorName), filepath.Join(local, "Programs", priorName+"Gecko")}
 	if k, e := registry.OpenKey(registry.CURRENT_USER, `Software\`+priorName, registry.QUERY_VALUE); e == nil {
 		if dir, _, e := k.GetStringValue("InstallDir"); e == nil && !strings.EqualFold(dir, roots[0]) {
 			roots = append(roots, dir)
@@ -76,7 +76,8 @@ $roots=@([Environment]::GetFolderPath('Desktop'),[Environment]::GetFolderPath('P
 foreach($root in $roots){foreach($file in (Get-ChildItem -LiteralPath $root -Filter *.lnk -Recurse -File -ErrorAction SilentlyContinue)){
 $link=$shell.CreateShortcut($file.FullName);$target=[Environment]::ExpandEnvironmentVariables([string]$link.TargetPath);
 if($target.StartsWith($old.TrimEnd('\')+'\',[StringComparison]::OrdinalIgnoreCase)){
-$link.TargetPath=$exe;$link.WorkingDirectory=[IO.Path]::GetDirectoryName($exe);$link.IconLocation=$icon+',0';$link.Description='Sona';$link.Save();
+# Build a fresh link so hidden properties cannot retain the former app identity.
+$tmp=Join-Path $file.DirectoryName (([guid]::NewGuid().ToString('N'))+'.lnk');$fresh=$shell.CreateShortcut($tmp);$fresh.TargetPath=$exe;$fresh.Arguments=$link.Arguments;$fresh.WorkingDirectory=[IO.Path]::GetDirectoryName($exe);$fresh.IconLocation=$icon+',0';$fresh.Description='Sona';$fresh.Save();Move-Item -LiteralPath $tmp -Destination $file.FullName -Force;
 $newName=$file.Name.Replace($oldName,'Sona');if($newName -ne $file.Name){$new=Join-Path $file.DirectoryName $newName;if(Test-Path -LiteralPath $new){Remove-Item -LiteralPath $file.FullName -Force}else{Move-Item -LiteralPath $file.FullName -Destination $new}}
 }}}`
 		if e := core.PowerShell(script); e != nil {

@@ -155,6 +155,14 @@ try:
   programs=pathlib.Path(os.environ['APPDATA'])/'Microsoft/Windows/Start Menu/Programs';programs.mkdir(parents=True,exist_ok=True);stale=programs/'Firefox Private Browsing.lnk'
   fixture_script="$s=New-Object -ComObject WScript.Shell;$l=$s.CreateShortcut('"+str(stale).replace("'","''")+"');$l.TargetPath='"+str(local/'Programs/Soul/engine/private_browsing.exe').replace("'","''")+"';$l.Save()"
   subprocess.run(['powershell.exe','-NoProfile','-Command',fixture_script],check=True)
+  old_link=programs/(prior+' migration fixture.lnk')
+  old_startup=pathlib.Path(os.environ['APPDATA'])/'Microsoft/Windows/Start Menu/Programs/Startup'/(prior+' migration fixture.lnk')
+  old_startup.parent.mkdir(parents=True,exist_ok=True)
+  for link in [old_link,old_startup]:
+   script="$s=New-Object -ComObject WScript.Shell;$l=$s.CreateShortcut('"+str(link).replace("'","''")+"');$l.TargetPath='"+str(previous/(prior+'.exe')).replace("'","''")+"';$l.Save()"
+   subprocess.run(['powershell.exe','-NoProfile','-Command',script],check=True)
+  runkey=r'Software\Microsoft\Windows\CurrentVersion\Run'
+  with winreg.CreateKey(winreg.HKEY_CURRENT_USER,runkey) as key:winreg.SetValueEx(key,prior+' migration fixture',0,winreg.REG_SZ,'"'+str(previous/(prior+'.exe'))+'"')
   foreign=programs/'Private Browsing (unrelated).lnk'
   foreign_script=fixture_script.replace(str(stale),str(foreign)).replace(str(local/'Programs/Soul/engine/private_browsing.exe'),str(root/'Other Browser/private_browsing.exe'))
   subprocess.run(['powershell.exe','-NoProfile','-Command',foreign_script],check=True)
@@ -196,6 +204,17 @@ try:
    check('preview12_profile_migrated',profile.exists() and not legacy_profile.exists())
    check('previous_private_data_preserved',(profile/'private-data-preservation.bin').read_bytes()==preserved)
    check('previous_owned_installation_removed',not previous.exists())
+   new_link=programs/'Sona migration fixture.lnk'
+   check('previous_shortcut_identity_replaced',not old_link.exists() and new_link.exists())
+   script="$l=(New-Object -ComObject WScript.Shell).CreateShortcut('"+str(new_link).replace("'","''")+"');Write-Output $l.TargetPath;Write-Output $l.Description"
+   link_data=subprocess.check_output(['powershell.exe','-NoProfile','-Command',script],text=True)
+   check('migrated_shortcut_points_to_sona',str(destination/'Sona.exe').lower() in link_data.lower() and 'Sona' in link_data);new_link.unlink()
+   check('previous_startup_shortcut_removed',not old_startup.exists())
+   try:
+    with winreg.OpenKey(winreg.HKEY_CURRENT_USER,runkey) as key:winreg.QueryValueEx(key,prior+' migration fixture');old_run=True
+   except FileNotFoundError:old_run=False
+   check('previous_autorun_removed',not old_run)
+
    try:
     with winreg.OpenKey(winreg.HKEY_CURRENT_USER,'Software\\'+prior):old_key=True
    except FileNotFoundError:old_key=False
