@@ -1,10 +1,10 @@
 (()=>{
  'use strict';
  const manage=payload=>new Promise((resolve,reject)=>window.cefQuery({request:JSON.stringify({action:'browser.components.manage',payload}),persistent:false,onSuccess:raw=>{try{const result=JSON.parse(raw);result.ok===false?reject(Error(result.error||'Component operation failed')):resolve(result)}catch(e){reject(e)}},onFailure:(_,message)=>reject(Error(message))}));
- function componentError(message){const t=window.souluSettings.t;if(message.includes('component response too large'))return t('Список выпусков превышает допустимый размер. Повторите проверку.','The release response exceeds its size limit. Retry the check.');if(/HTTP (403|429)/.test(message))return t('GitHub временно ограничил запросы. Повторите проверку позже.','GitHub temporarily limited requests. Retry later.');if(message.includes('HTTP 404'))return t('Указанный выпуск не найден в официальном репозитории.','The specified release was not found in the official repository.');return message;}
+ function componentError(message){const t=window.sonaSettings.t;if(message.includes('component response too large'))return t('Список выпусков превышает допустимый размер. Повторите проверку.','The release response exceeds its size limit. Retry the check.');if(/HTTP (403|429)/.test(message))return t('GitHub временно ограничил запросы. Повторите проверку позже.','GitHub temporarily limited requests. Retry later.');if(message.includes('HTTP 404'))return t('Указанный выпуск не найден в официальном репозитории.','The specified release was not found in the official repository.');return message;}
  function render(host){
   if(host.dataset.ready)return;host.dataset.ready='true';
-  const ui=window.souluSettings,{el,t,button}=ui;
+  const ui=window.sonaSettings,{el,t,button}=ui;
   for(const id of ['xray','sudoku']){
    const card=el('section',undefined,'component-card'),heading=el('h4',id==='xray'?'Xray':'Sudoku'),installed=el('p',t('Определение версии…','Reading installed version…'),'note'),latest=el('p','','note'),note=el('p','','note'),error=el('p','','note error'),actions=el('div',undefined,'component-actions'),select=el('select'),custom=el('input');
    select.setAttribute('aria-label',t('Версия компонента','Component release'));select.disabled=true;custom.type='text';custom.placeholder='v…';custom.hidden=true;custom.setAttribute('aria-label',t('Тег версии','Release tag'));
@@ -29,5 +29,5 @@
    manage({component:id,operation:'status'}).then(state).catch(e=>error.textContent=e.message);
   }
  }
- window.souluComponents={render};
+ window.sonaComponents={render};
 })();

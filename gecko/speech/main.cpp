@@ -1,4 +1,4 @@
-// Soulu CEF local speech component, isolated from the browser process.
+// Sona CEF local speech component, isolated from the browser process.
 #include <windows.h>
 #include <mmsystem.h>
 #include <bcrypt.h>

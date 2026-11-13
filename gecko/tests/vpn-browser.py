@@ -19,7 +19,7 @@ for engine in ['xray','sudoku']:
  else:
   key='ab'*32;cfg={'mode':'server','transport':'tcp','local_port':server_port,'key':key,'aead':'none','padding_min':5,'padding_max':15,'ascii':'prefer_entropy','enable_pure_downlink':True,'suspicious_action':'silent','httpmask':{'disable':True},'rule_urls':['global']}
   link='sudoku://'+b64.urlsafe_b64encode(json.dumps({'h':'127.0.0.1','p':server_port,'k':key,'e':'none','hd':True}).encode()).decode().rstrip('=')
- path=root/(engine+'-server.json');path.write_text(json.dumps(cfg),encoding='utf-8');engine_log=open(out/(engine+'-server.log'),'w');exe=binary.parent/'soulu/vpn'/engine/(engine+'.exe');command=[str(exe),*(['run','-config',str(path)] if engine=='xray' else ['-c',str(path)])];core=subprocess.Popen(command,stdout=engine_log,stderr=engine_log)
+ path=root/(engine+'-server.json');path.write_text(json.dumps(cfg),encoding='utf-8');engine_log=open(out/(engine+'-server.log'),'w');exe=binary.parent/'sona/vpn'/engine/(engine+'.exe');command=[str(exe),*(['run','-config',str(path)] if engine=='xray' else ['-c',str(path)])];core=subprocess.Popen(command,stdout=engine_log,stderr=engine_log)
  try:
   def listening():
    try:
@@ -28,12 +28,12 @@ for engine in ['xray','sudoku']:
   wait(listening,15)
   config=call('settings.begin');config['vpn']['profiles']=[{'id':engine,'name':'Local real-core fixture','link':link}];config['vpn']['defaultProfileId']=engine;config['vpn']['directDomains']='';assert call('settings.save',config)['ok']
   check(engine+'_connect_from_original_toolbar_bridge',ui('await vpn.send("connect");return (await vpn.send("status")).connected'))
-  port=chrome('return Soulu.backend.shared.socksPort')
+  port=chrome('return Sona.backend.shared.socksPort')
   check(engine+'_remote_dns_fail_closed_webrtc',chrome('return Services.prefs.getBoolPref("network.proxy.socks_remote_dns")&&!Services.prefs.getBoolPref("network.proxy.failover_direct")&&Services.prefs.getIntPref("network.proxy.type")===1&&!Services.prefs.getBoolPref("media.peerconnection.enabled")'))
   target=f'http://127.0.0.1:{server.server_port}/download-vpn-{engine}'
   info=run('let proxy=null;const observer={observe(channel){try{if(channel.QueryInterface(Ci.nsIHttpChannel).URI.spec==='+json.dumps(target)+'){const p=channel.QueryInterface(Ci.nsIProxiedChannel).proxyInfo;proxy=p?{type:p.type,host:p.host,port:p.port}:null;}}catch(e){proxy={error:String(e)};}}};Services.obs.addObserver(observer,"http-on-examine-response");try{const response=await fetch('+json.dumps(target)+',{cache:"no-store",signal:AbortSignal.timeout(15000)});return {text:await response.text(),proxy};}finally{Services.obs.removeObserver(observer,"http-on-examine-response");}')
-  check(engine+'_actual_gecko_socks_round_trip',info['text']=='soulu-download-fixture' and info['proxy'] and info['proxy'].get('port')==port,info)
-  helper_pid=chrome('return Soulu.backend.shared.helper.pid');clients=[p for p in psutil.Process(helper_pid).children(recursive=True) if p.name().lower()==engine+'.exe'];assert len(clients)==1;clients[0].kill();clients[0].wait(10)
+  check(engine+'_actual_gecko_socks_round_trip',info['text']=='sona-download-fixture' and info['proxy'] and info['proxy'].get('port')==port,info)
+  helper_pid=chrome('return Sona.backend.shared.helper.pid');clients=[p for p in psutil.Process(helper_pid).children(recursive=True) if p.name().lower()==engine+'.exe'];assert len(clients)==1;clients[0].kill();clients[0].wait(10)
   status=call('vpn.send',{'action':'status'});check(engine+'_core_failure_reported',status['state']=='error' and not status['connected'])
   blocked=run('try{await fetch('+json.dumps(target+'-after-failure')+',{cache:"no-store",signal:AbortSignal.timeout(5000)});return false;}catch(e){return true;}')
   check(engine+'_no_silent_direct_fallback',blocked and chrome('return Services.prefs.getIntPref("network.proxy.type")===1'))

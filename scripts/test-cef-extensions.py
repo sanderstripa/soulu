@@ -1,6 +1,6 @@
 """Install an unpacked MV3 fixture through the real Chromium folder picker.
 
-Verifies the Settings host, persistence and content scripts in normal Soulu tabs.
+Verifies the Settings host, persistence and content scripts in normal Sona tabs.
 No extension-debugging bypasses or installation-only mocks are used.
 """
 import ctypes
@@ -29,7 +29,7 @@ s = module('storage', 'test-cef-storage.py')
 p = module('platform', 'test-cef-platform.py')
 o = module('overlay', 'test-cef-settings-overlay.py')
 os.environ['NO_PROXY'] = 'localhost,127.0.0.1,::1'
-os.environ['SOULU_REGRESSION_SKIP_FIRST_RUN'] = '1'
+os.environ['SONA_REGRESSION_SKIP_FIRST_RUN'] = '1'
 s.DEBUG_PORT = s.free_port()
 s.BASE = f'http://127.0.0.1:{s.DEBUG_PORT}'
 
@@ -94,18 +94,18 @@ def main():
             process = None
 
     try:
-        with tempfile.TemporaryDirectory(prefix='soulu-extensions-', ignore_cleanup_errors=True) as temporary:
+        with tempfile.TemporaryDirectory(prefix='sona-extensions-', ignore_cleanup_errors=True) as temporary:
             root = Path(temporary)
             extension = root / 'fixture'
             extension.mkdir()
             (extension / 'manifest.json').write_text(json.dumps({
-                'manifest_version': 3, 'name': 'Soulu extension acceptance', 'version': '1.0',
+                'manifest_version': 3, 'name': 'Sona extension acceptance', 'version': '1.0',
                 'permissions': ['storage'],
                 'content_scripts': [{'matches': ['http://127.0.0.1/*'], 'js': ['content.js'], 'run_at': 'document_idle'}]
             }), encoding='utf-8')
-            (extension / 'content.js').write_text("chrome.storage.local.set({verified:true});document.documentElement.dataset.souluExtensionFixture='active';", encoding='utf-8')
+            (extension / 'content.js').write_text("chrome.storage.local.set({verified:true});document.documentElement.dataset.sonaExtensionFixture='active';", encoding='utf-8')
             env = dict(os.environ, LOCALAPPDATA=str(root / 'local'), APPDATA=str(root / 'roaming'),
-                       SOULU_UI_TEST_PORT=str(s.DEBUG_PORT), SOULU_REGRESSION_SKIP_FIRST_RUN='1')
+                       SONA_UI_TEST_PORT=str(s.DEBUG_PORT), SONA_REGRESSION_SKIP_FIRST_RUN='1')
 
             def start():
                 nonlocal process
@@ -115,14 +115,14 @@ def main():
                 s.evaluate(shell, 'browserShell.openSettingsWindow()')
                 settings = socket('/ui/settings.html')
                 wait(lambda: s.evaluate(settings, "document.body?.classList.contains('ready')"))
-                s.evaluate(settings, "souluSettings.openSection('extensions')")
+                s.evaluate(settings, "sonaSettings.openSection('extensions')")
                 manager = socket('chrome://extensions')
                 wait(lambda: s.evaluate(manager, "typeof window.chrome?.developerPrivate?.getExtensionsInfo==='function'"))
                 return shell, settings, manager
 
             shell, settings, manager = start()
-            if os.environ.get('SOULU_UI_HOTFIX') != '1':
-                check(s.evaluate(manager, 'typeof window.cefQuery') == 'undefined', 'Chrome surface has no Soulu bridge')
+            if os.environ.get('SONA_UI_HOTFIX') != '1':
+                check(s.evaluate(manager, 'typeof window.cefQuery') == 'undefined', 'Chrome surface has no Sona bridge')
                 s.evaluate(manager, 'chrome.developerPrivate.updateProfileConfiguration({inDeveloperMode:true})')
                 # Do not await a promise while the native file picker blocks the UI.
                 s.sequence += 1
@@ -158,15 +158,15 @@ def main():
                 s.evaluate(settings, "document.querySelector('.extension-controls button').click()")
                 manager = socket('chrome://extensions')
                 wait(lambda: s.evaluate(manager, "typeof window.chrome?.developerPrivate?.getExtensionsInfo==='function'"))
-                expression = "chrome.developerPrivate.getExtensionsInfo({includeDisabled:true,includeTerminated:true}).then(rows=>rows.find(r=>r.name==='Soulu extension acceptance')||null)"
+                expression = "chrome.developerPrivate.getExtensionsInfo({includeDisabled:true,includeTerminated:true}).then(rows=>rows.find(r=>r.name==='Sona extension acceptance')||null)"
                 installed = wait(lambda: s.evaluate(manager, expression))
                 check(bool(installed), 'Unpacked MV3 installation through native picker')
                 report['extensionId'] = installed['id']
-                s.evaluate(settings, 'souluSettingsRequestClose()')
+                s.evaluate(settings, 'sonaSettingsRequestClose()')
                 wait(lambda: not any('/ui/settings.html' in t.get('url', '') for t in s.targets()))
                 s.evaluate(shell, 'browserShell.openTab(' + json.dumps(url) + ')')
                 content = socket(url)
-                check(wait(lambda: s.evaluate(content, "document.documentElement.dataset.souluExtensionFixture==='active'")), 'Content script runs in an ordinary Chrome-style Soulu tab')
+                check(wait(lambda: s.evaluate(content, "document.documentElement.dataset.sonaExtensionFixture==='active'")), 'Content script runs in an ordinary Chrome-style Sona tab')
                 stop()
                 shell, settings, manager = start()
                 check(s.evaluate(manager, expression)['id'] == installed['id'], 'Installed extension persists after restart')
@@ -180,9 +180,9 @@ def main():
             s.evaluate(settings, "[...document.querySelectorAll('.extension-controls button')].find(b=>b.textContent==='Chrome Web Store').click()")
             wait(lambda: any('chromewebstore.google.com/' in t.get('url', '') for t in s.targets()))
             check(True, 'Store opens inside the embedded Chrome surface')
-            if os.environ.get('SOULU_TEST_STORE_INSTALL') == '1':
+            if os.environ.get('SONA_TEST_STORE_INSTALL') == '1':
                 store = socket('chromewebstore.google.com/')
-                if os.environ.get('SOULU_TEST_STORE_METADATA') == '1':
+                if os.environ.get('SONA_TEST_STORE_METADATA') == '1':
                     s.command(store, 'Emulation.setUserAgentOverride', {
                         'userAgent':s.evaluate(store,'navigator.userAgent'),
                         'userAgentMetadata':{
@@ -234,7 +234,7 @@ def main():
                 wait(lambda: s.evaluate(settings, '!!document.querySelector('+json.dumps(selector)+')'))
                 s.evaluate(settings, '(()=>{const pin=document.querySelector('+json.dumps(selector)+');pin.checked=true;pin.dispatchEvent(new Event("change",{bubbles:true}));return true})()')
                 wait(lambda: s.evaluate(shell, 'browserShell.extensions("list",'+json.dumps({'profile':profile})+').then(r=>r.items.some(e=>e.id==="'+bitwarden+'"&&e.pinned))'))
-                s.evaluate(settings, 'souluSettingsRequestClose()')
+                s.evaluate(settings, 'sonaSettingsRequestClose()')
                 wait(lambda: not any('/ui/settings.html' in t.get('url','') for t in s.targets()))
                 s.evaluate(shell, 'browserShell.openTab('+json.dumps(url)+')')
                 action_selector = '[data-extension-toolbar] [data-extension-id="' + bitwarden + '"]'
@@ -262,16 +262,16 @@ def main():
                 finally:
                     print('Bitwarden popup final:', s.evaluate(popup, '({url:location.href,ready:document.readyState,text:document.body.innerText.slice(0,5000),inputs:[...document.querySelectorAll("input")].map(e=>({type:e.type,name:e.name,visible:!!e.getClientRects().length,disabled:e.disabled}))})'), flush=True)
                     ImageGrab.grab().save(output.parent / 'bitwarden-popup.png')
-                check(len(s.evaluate(shell, 'browserShell.getState()')['tabs']) == count, 'Real Bitwarden opens its own action popup without a Soulu tab')
+                check(len(s.evaluate(shell, 'browserShell.getState()')['tabs']) == count, 'Real Bitwarden opens its own action popup without a Sona tab')
                 check(True, 'Bitwarden initializes its account login interface')
                 report['bitwardenPopupText'] = s.evaluate(popup, 'document.body.innerText.slice(0,3000)')
                 anchor=s.evaluate(shell,'(()=>{const r=[...document.querySelectorAll('+json.dumps(action_selector)+')].find(b=>b.getClientRects().length).getBoundingClientRect();return {x:r.x,bottom:r.bottom,scale:devicePixelRatio}})()')
-                host=wait(lambda:next(iter(o.windows(process.pid,'SouluBrowserWindow')),None));client=o.client_rect(host)
+                host=wait(lambda:next(iter(o.windows(process.pid,'SonaBrowserWindow')),None));client=o.client_rect(host)
                 def anchored():
                     geometry=s.evaluate(popup,'({x:screenX,y:screenY,width:outerWidth,height:outerHeight})')
                     report['bitwardenGeometry']=geometry;report['bitwardenAnchor']=anchor
                     return abs(geometry['y']-(client[1]/anchor['scale']+anchor['bottom']+6))<24 and geometry['width']<=800 and geometry['height']<=600
-                check(wait(anchored,5),'Real Bitwarden popup is sized and anchored below its Soulu button after onboarding')
+                check(wait(anchored,5),'Real Bitwarden popup is sized and anchored below its Sona button after onboarding')
                 ImageGrab.grab().save(output.parent / 'bitwarden-popup.png')
                 mouse.press(coords=(client[2]-40,client[3]-40));time.sleep(.1);mouse.release(coords=(client[2]-40,client[3]-40))
                 wait(lambda:not any('chrome-extension://'+bitwarden+'/popup/' in t.get('url','') for t in s.targets()))

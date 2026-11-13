@@ -25,8 +25,8 @@ def wait(fn,timeout=45):
   if value:return value
   time.sleep(.2)
  raise AssertionError('Public article timeout')
-with tempfile.TemporaryDirectory(prefix='soulu-reader-public-',ignore_cleanup_errors=True) as root:
- env=dict(os.environ,LOCALAPPDATA=root,SOULU_UI_TEST_PORT=str(s.DEBUG_PORT))
+with tempfile.TemporaryDirectory(prefix='sona-reader-public-',ignore_cleanup_errors=True) as root:
+ env=dict(os.environ,LOCALAPPDATA=root,SONA_UI_TEST_PORT=str(s.DEBUG_PORT))
  process=subprocess.Popen([sys.argv[1],'--no-proxy-server'],env=env)
  sockets=[]
  try:

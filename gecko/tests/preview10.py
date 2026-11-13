@@ -20,44 +20,44 @@ for relative,name in [('Google/Chrome/User Data','chrome'),('Microsoft/Edge/User
 def import_ui(code,target='page'):
  return ui(code,target)
 def close_import(target='page'):
- import_ui('document.getElementById("soulu-import").close();return true;',target)
+ import_ui('document.getElementById("sona-import").close();return true;',target)
 try:
  started=time.monotonic();start();elapsed=time.monotonic()-started
- wait(lambda:chrome('return !window.__souluStartupHidden'))
- timing=chrome('return {presentation:window.__souluStartupPresentation,timing:Soulu.startupTimings}')
+ wait(lambda:chrome('return !window.__sonaStartupHidden'))
+ timing=chrome('return {presentation:window.__sonaStartupPresentation,timing:Sona.startupTimings}')
  check('startup_under_seven_seconds',timing['timing']['functionalFirstFrameProcessAge']<7000,{'attachSeconds':elapsed,**timing})
- check('soulu_first_frame_no_firefox_toolbox',chrome('return getComputedStyle(document.getElementById("navigator-toolbox")).display==="none"&&document.documentElement.hasAttribute("soulu-ui-ready")'))
- check('complete_backend_not_dead_stub',chrome('return Soulu.ready&&!!Soulu.integrationKey&&!!Soulu.native'))
+ check('sona_first_frame_no_firefox_toolbox',chrome('return getComputedStyle(document.getElementById("navigator-toolbox")).display==="none"&&document.documentElement.hasAttribute("sona-ui-ready")'))
+ check('complete_backend_not_dead_stub',chrome('return Sona.ready&&!!Sona.integrationKey&&!!Sona.native'))
  # Point the native directory service at synthetic source profiles only.
  chrome('const d=Cc["@mozilla.org/file/local;1"].createInstance(Ci.nsIFile);d.initWithPath('+json.dumps(str(root/'environment'))+');try{Services.dirsvc.undefine("LocalAppData");}catch{}Services.dirsvc.set("LocalAppData",d);return true;')
  wait(lambda:ui('return location.pathname.endsWith("/onboarding.html")','page'))
  ui('document.querySelector("#actions button.primary").click();return true;','page')
  wait(lambda:ui('return document.getElementById("counter").textContent.startsWith("2")','page'))
  ui('document.querySelector("#controls button").click();return true;','page')
- check('welcome_button_opens_soulu_import',wait(lambda:import_ui('return [...document.querySelectorAll("#soulu-import-source option")].some(n=>n.textContent.includes("Chrome"));')))
+ check('welcome_button_opens_sona_import',wait(lambda:import_ui('return [...document.querySelectorAll("#sona-import-source option")].some(n=>n.textContent.includes("Chrome"));')))
  check('welcome_stays_on_import_step',ui('return document.getElementById("counter").textContent.startsWith("2")','page'))
  check('no_native_migration_or_preferences_window',chrome('return ![...Services.wm.getEnumerator(null)].some(w=>/migration\/|about:preferences/.test(w.document.documentURI))'))
  for label,brand in [('chrome','Chrome'),('edge','Edge')]:
-  check(label+'_source_detected',import_ui('return [...document.querySelectorAll("#soulu-import-source option")].some(n=>n.textContent.includes('+json.dumps(brand)+'));'))
-  import_ui('const s=document.getElementById("soulu-import-source");s.value=[...s.options].find(n=>n.textContent.includes('+json.dumps(brand)+')).value;s.dispatchEvent(new Event("change"));return true;')
-  detected=import_ui('return [...document.querySelectorAll("#soulu-import-types input")].map(n=>n.value);')
+  check(label+'_source_detected',import_ui('return [...document.querySelectorAll("#sona-import-source option")].some(n=>n.textContent.includes('+json.dumps(brand)+'));'))
+  import_ui('const s=document.getElementById("sona-import-source");s.value=[...s.options].find(n=>n.textContent.includes('+json.dumps(brand)+')).value;s.dispatchEvent(new Event("change"));return true;')
+  detected=import_ui('return [...document.querySelectorAll("#sona-import-types input")].map(n=>n.value);')
   check(label+'_profile_and_data_types_detected',all(k in detected for k in ['BOOKMARKS','HISTORY','FORMDATA']),detected)
-  import_ui('document.getElementById("soulu-import-start").click();return true;')
-  wait(lambda:import_ui('return !document.getElementById("soulu-import-start").disabled;'),45)
-  check(label+'_soulu_import_reports_success',import_ui('return document.getElementById("soulu-import-status").textContent==="Импорт завершён. Данные сохранены в Soulu.";'))
-  check(label+'_bookmarks_imported_through_soulu',any(x.get('url')=='https://'+label+'.migration.example.org/' for x in call('browser.bookmarks.get')))
+  import_ui('document.getElementById("sona-import-start").click();return true;')
+  wait(lambda:import_ui('return !document.getElementById("sona-import-start").disabled;'),45)
+  check(label+'_sona_import_reports_success',import_ui('return document.getElementById("sona-import-status").textContent==="Импорт завершён. Данные сохранены в Sona.";'))
+  check(label+'_bookmarks_imported_through_sona',any(x.get('url')=='https://'+label+'.migration.example.org/' for x in call('browser.bookmarks.get')))
   check(label+'_history_imported',bool(call('history.query',{'search':label+'.history.example.org'})['rows']))
   check(label+'_autofill_imported',run('const {FormHistory}=ChromeUtils.importESModule("resource://gre/modules/FormHistory.sys.mjs");return (await FormHistory.search(["fieldname","value"],{fieldname:'+json.dumps('fixture'+label)+'})).some(x=>x.value==="imported value");'))
  close_import()
  call('browser.settings.openWindow','profiles')
- wait(lambda:ui('return !!window.souluBrowserImport&&!!window.souluOpenImport','settings'))
- ui('window.souluBrowserImport.open();return true;','settings')
- check('settings_import_opens_soulu_dialog',wait(lambda:import_ui('return !!document.querySelector("#soulu-import-source option");','settings')))
- check('no_firefox_text_in_soulu_import',import_ui('return !/firefox/i.test(document.getElementById("soulu-import").textContent);','settings'))
+ wait(lambda:ui('return !!window.sonaBrowserImport&&!!window.sonaOpenImport','settings'))
+ ui('window.sonaBrowserImport.open();return true;','settings')
+ check('settings_import_opens_sona_dialog',wait(lambda:import_ui('return !!document.querySelector("#sona-import-source option");','settings')))
+ check('no_firefox_text_in_sona_import',import_ui('return !/firefox/i.test(document.getElementById("sona-import").textContent);','settings'))
  close_import('settings')
  # The native CSV path is the engine-supported fallback for protected passwords.
  csv=root/'passwords.csv';csv.write_text('url,username,password\nhttps://password.migration.example.org/,fixture-user,fixture-password\n')
- imported=run('return await Soulu.importFile("passwords",'+json.dumps(str(csv))+');')
+ imported=run('return await Sona.importFile("passwords",'+json.dumps(str(csv))+');')
  check('password_csv_reaches_native_nss',any(x['username']=='fixture-user' for x in call('browser.passwords.get')),imported)
  # Snapshot actual Windows registrations after browser startup.
  hits=[]
@@ -77,7 +77,7 @@ try:
  report['passed']=True
 except Exception as e:
  report['error']=str(e)
- try:report['importUI']=ui('return {message:document.getElementById("message")?.textContent,dialog:document.getElementById("soulu-import")?.innerText,scripts:[...document.scripts].map(s=>s.src)};','page');print('import_failure_UI',report['importUI'],flush=True)
+ try:report['importUI']=ui('return {message:document.getElementById("message")?.textContent,dialog:document.getElementById("sona-import")?.innerText,scripts:[...document.scripts].map(s=>s.src)};','page');print('import_failure_UI',report['importUI'],flush=True)
  except Exception:pass
  try:report['console']=chrome('return Services.console.getMessageArray().map(x=>x.message).slice(-40)')
  except Exception:pass

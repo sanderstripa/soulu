@@ -1,6 +1,6 @@
 {
   "revision": 20261113,
-  "source": "ui/branding/soulu-master.svg",
+  "source": "ui/branding/sona-master.svg",
   "source_sha256": "87bb9ce17e01fd0a2f45b86dba8aec3fa73143e4c74651343fada59d5b40aae4",
   "png_sha256": {
     "16": "37d9316276f51ac0295cde2ae092079a69899b373aed4284cef215172ada8e2a",
@@ -42,17 +42,17 @@
   "margin": "0px; full optical diameter at every resolution",
   "ico_sha256": "2b626aeb112cf3581bc8cf7a9ccad66319445ad82f6c58f5c6ec2c632e62de3a",
   "aliases": [
-    "soulu-icon.png",
-    "soulu-icon-new.png",
+    "sona-icon.png",
+    "sona-icon-new.png",
     "browser-icon.png",
-    "soulu-icon.ico",
-    "soulu-app-icon.ico",
-    "soulu-installer-icon.ico",
-    "soulu-shortcut-icon.ico",
+    "sona-icon.ico",
+    "sona-app-icon.ico",
+    "sona-installer-icon.ico",
+    "sona-shortcut-icon.ico",
     "browser-icon.ico",
     "browser-app-icon.ico",
-    "soulu-app-1.160.24.ico",
-    "soulu-app-1.160.29.ico",
-    "soulu-app-1.160.30.ico"
+    "sona-app-1.160.24.ico",
+    "sona-app-1.160.29.ico",
+    "sona-app-1.160.31.ico"
   ]
 }

@@ -1,4 +1,4 @@
-name: Final resource checks for Soulu Gecko Preview 4 Update 1
+name: Final resource checks for Sona Gecko Preview 4 Update 1
 on:
   push:
     branches: [gecko-preview]
@@ -27,7 +27,7 @@ jobs:
         run: |
           if ((gh api repos/sanderstripa/soulu/actions/runs/41663449503 --jq .conclusion) -ne 'success') { throw 'Base Windows acceptance failed' }
           if ((gh api repos/sanderstripa/soulu/actions/runs/41663449503 --jq .head_sha) -ne '23a4542a84f2c53772c7a3400e89a354c4138da3') { throw 'Wrong accepted base' }
-          gh run download 41663449503 -n Soulu-Gecko-Preview-4-Update-1 -D candidate
+          gh run download 41663449503 -n Sona-Gecko-Preview-4-Update-1 -D candidate
           python gecko/tests/prepare-update1-final.py
           if ($LASTEXITCODE -ne 0) { throw 'Resource overlay verification failed' }
       - name: Verify stable action buttons and real signed-extension popups
@@ -49,10 +49,10 @@ jobs:
       - name: Package and verify extracted launch
         shell: pwsh
         run: |
-          Compress-Archive -Path gecko-out/* -DestinationPath Soulu-Gecko-Preview-4-Update-1-win64.zip -CompressionLevel Optimal
-          python gecko/tests/zip_smoke.py Soulu-Gecko-Preview-4-Update-1-win64.zip gecko4-update1-final
+          Compress-Archive -Path gecko-out/* -DestinationPath Sona-Gecko-Preview-4-Update-1-win64.zip -CompressionLevel Optimal
+          python gecko/tests/zip_smoke.py Sona-Gecko-Preview-4-Update-1-win64.zip gecko4-update1-final
           if ($LASTEXITCODE -ne 0) { throw 'Final extracted ZIP launch failed' }
-          (Get-FileHash Soulu-Gecko-Preview-4-Update-1-win64.zip -Algorithm SHA256).Hash.ToLowerInvariant() + '  Soulu-Gecko-Preview-4-Update-1-win64.zip' | Set-Content SHA256SUMS.txt
+          (Get-FileHash Sona-Gecko-Preview-4-Update-1-win64.zip -Algorithm SHA256).Hash.ToLowerInvariant() + '  Sona-Gecko-Preview-4-Update-1-win64.zip' | Set-Content SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -60,7 +60,7 @@ jobs:
           path: gecko4-update1-final/
       - uses: actions/upload-artifact@v4
         with:
-          name: Soulu-Gecko-Preview-4-Update-1-final
+          name: Sona-Gecko-Preview-4-Update-1-final
           path: |
-            Soulu-Gecko-Preview-4-Update-1-win64.zip
+            Sona-Gecko-Preview-4-Update-1-win64.zip
             SHA256SUMS.txt

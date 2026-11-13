@@ -35,6 +35,6 @@
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', cancel);
   addEventListener('resize', cancel);
   addEventListener('pagehide', cancel);
-  window.souluMotion = Object.freeze({tokens, transaction, cancel,
+  window.sonaMotion = Object.freeze({tokens, transaction, cancel,
     get reduced() { return preference.matches; }, get activeCount() { return active.size; }});
 })();

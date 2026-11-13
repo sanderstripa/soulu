@@ -4,7 +4,7 @@ import base64, ctypes, hashlib, http.server, importlib.util, json, os, sqlite3, 
 from pathlib import Path
 spec=importlib.util.spec_from_file_location('storage',Path(__file__).with_name('test-cef-storage.py'))
 s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
-os.environ['NO_PROXY']='localhost,127.0.0.1,::1';os.environ['SOULU_REGRESSION_SKIP_FIRST_RUN']='1'
+os.environ['NO_PROXY']='localhost,127.0.0.1,::1';os.environ['SONA_REGRESSION_SKIP_FIRST_RUN']='1'
 checks=[]
 def check(ok,name):
     if not ok:raise AssertionError(name)
@@ -28,7 +28,7 @@ def main():
     exe=Path(sys.argv[1]).resolve();output=Path(sys.argv[2]).resolve();output.parent.mkdir(parents=True,exist_ok=True)
     s.DEBUG_PORT=s.free_port();s.BASE=f'http://127.0.0.1:{s.DEBUG_PORT}'
     server=http.server.ThreadingHTTPServer(('127.0.0.1',0),Handler);threading.Thread(target=server.serve_forever,daemon=True).start()
-    with tempfile.TemporaryDirectory(prefix='soulu-import-integration-',ignore_cleanup_errors=True) as temp:
+    with tempfile.TemporaryDirectory(prefix='sona-import-integration-',ignore_cleanup_errors=True) as temp:
         root=Path(temp);local=root/'local';roaming=root/'roaming';roaming.mkdir();source=local/'Google/Chrome/User Data/Default';source.mkdir(parents=True)
         url=f'http://127.0.0.1:{server.server_port}/fixture'
         (source/'Preferences').write_text('{}');(source.parent/'Local State').write_text('{"profile":{"info_cache":{"Default":{"name":"Synthetic import"}}}}')
@@ -50,7 +50,7 @@ def main():
         (beta/'AccountBookmarks').write_text(json.dumps({'roots':{'bookmark_bar':{'type':'folder','name':'Beta','children':[{'type':'url','name':'Beta fixture','url':url+'?beta'}]}}}))
         (beta/'Bookmarks').write_text(json.dumps({'roots':{key:{'type':'folder','name':title,'children':[]} for key,title in [('bookmark_bar','Bookmarks bar'),('other','Other bookmarks'),('synced','Mobile bookmarks')]}}))
         db(beta/'History',f"CREATE TABLE urls(id INTEGER,url TEXT,title TEXT); CREATE TABLE visits(url INTEGER,visit_time INTEGER); INSERT INTO urls VALUES(1,'{url}?beta','Beta'); INSERT INTO visits VALUES(1,13344473600123000);")
-        env=dict(os.environ,LOCALAPPDATA=str(local),APPDATA=str(roaming),SOULU_UI_TEST_PORT=str(s.DEBUG_PORT),SOULU_REGRESSION_SKIP_FIRST_RUN='1')
+        env=dict(os.environ,LOCALAPPDATA=str(local),APPDATA=str(roaming),SONA_UI_TEST_PORT=str(s.DEBUG_PORT),SONA_REGRESSION_SKIP_FIRST_RUN='1')
         connections=[];process=None;shell=None;settings=None
         def socket(fragment):
             def find():
@@ -88,9 +88,9 @@ def main():
             profile=call('createProfile',{'name':'Import target fixture'});other=profile['id'];check(s.evaluate(shell,'browserShell.getState()')['activeProfileId']=='personal','inline-profile-creation-does-not-switch-profile')
             result=call('run',payload);check(result['status']=='ok' and all(result['categories'][k]['imported']>0 for k in ('bookmarks','history','passwords','autofill','tabs')),'all-five-categories-import-through-native-settings-bridge')
             again=call('run',payload);print('Repeat synthetic import:',again,flush=True);check(all(r.get('imported',0)==0 for r in again['categories'].values()),'repeat-import-deduplicates-all-categories')
-            data=local/'Soulu/User Data';personal=data/'Profiles/personal';destination=data/'Profiles'/other
-            check(not (destination/'soulu-autofill.json').exists() and not (destination/'soulu-passwords.json').exists(),'existing-target-profile-isolation')
-            check(b'fixture@example.test' not in (personal/'soulu-autofill.json').read_bytes() and b'synthetic-import-only' not in (personal/'soulu-passwords.json').read_bytes(),'native-target-stores-encrypted')
+            data=local/'Sona/User Data';personal=data/'Profiles/personal';destination=data/'Profiles'/other
+            check(not (destination/'sona-autofill.json').exists() and not (destination/'sona-passwords.json').exists(),'existing-target-profile-isolation')
+            check(b'fixture@example.test' not in (personal/'sona-autofill.json').read_bytes() and b'synthetic-import-only' not in (personal/'sona-passwords.json').read_bytes(),'native-target-stores-encrypted')
             marks=s.evaluate(settings,'browserShell.getBookmarks()');check(any(r.get('parentId',0)>0 for r in marks) and len(marks)==3,'nested-bookmarks-visible-in-existing-bookmark-backend')
             check(digest(source)==before,'native-import-does-not-change-source-or-create-sidecars')
             bookmark_file=data/'bookmarks.json';bookmark_bytes=bookmark_file.read_bytes()
@@ -103,7 +103,7 @@ def main():
                 check(failed_bookmarks['status']=='error' and 'Bookmark write failed' in failed_bookmarks.get('message','') and failed_bookmarks['imported']==0 and failed_bookmarks.get('bookmarksImported',0)==0 and failed_bookmarks.get('foldersImported',0)==0,'bookmark-destination-failure-never-reports-unsaved-links-or-folders')
                 check(bookmark_file.read_bytes()==bookmark_bytes,'bookmark-destination-failure-preserves-existing-data')
             finally:kernel.CloseHandle(destination_lock)
-            original_web=(source/'Web Data').read_bytes();form_file=personal/'soulu-autofill.json';form_backup=form_file.with_suffix('.backup');encrypted_before=form_file.read_bytes()
+            original_web=(source/'Web Data').read_bytes();form_file=personal/'sona-autofill.json';form_backup=form_file.with_suffix('.backup');encrypted_before=form_file.read_bytes()
             with closing(sqlite3.connect(source/'Web Data',isolation_level=None)) as c:c.execute("INSERT INTO autofill VALUES('email','second@example.test')")
             form_file.rename(form_backup);form_file.mkdir()
             try:
@@ -121,7 +121,7 @@ def main():
                 @ctypes.WINFUNCTYPE(ctypes.c_bool,ctypes.c_void_p,ctypes.c_void_p)
                 def collect(hwnd,_):
                     pid=ctypes.c_ulong();user.GetWindowThreadProcessId(hwnd,ctypes.byref(pid));name=ctypes.create_unicode_buffer(80);user.GetClassNameW(hwnd,name,80)
-                    if pid.value==process.pid and name.value=='SouluMenuHost' and user.IsWindowVisible(hwnd):found.append(hwnd)
+                    if pid.value==process.pid and name.value=='SonaMenuHost' and user.IsWindowVisible(hwnd):found.append(hwnd)
                     return True
                 user.EnumWindows(collect,0);return found[0] if found else None
             tab=next(t for t in s.evaluate(shell,'browserShell.getState()')['tabs'] if t.get('url')==url);s.evaluate(shell,'browserShell.switchTab('+str(tab['id'])+')');content=socket('/fixture');s.command(content,'Page.bringToFront')
@@ -131,11 +131,11 @@ def main():
                     params=dict(type=event,**box)
                     if event!='mouseMoved':params.update(button='right',clickCount=1)
                     s.sequence+=1;content.send(json.dumps({'id':s.sequence,'method':'Input.dispatchMouseEvent','params':params}))
-                hwnd=wait(menu_window);rows=access.rows(hwnd);item=next(r for r in rows if 'Soulu' in r['label'])
+                hwnd=wait(menu_window);rows=access.rows(hwnd);item=next(r for r in rows if 'Sona' in r['label'])
                 # Confirm the command is exposed by the real native menu.
                 assert item['label']
                 # Host coordinates are screen-relative in accessibility, use keyboard
-                # End because the Fill from Soulu command is the final editable row.
+                # End because the Fill from Sona command is the final editable row.
                 user.PostMessageW(hwnd,0x100,0x23,0);user.PostMessageW(hwnd,0x100,0x0D,0)
                 def choices_ready():
                     hwnd=menu_window()
@@ -147,7 +147,7 @@ def main():
                 wait(lambda:s.evaluate(content,'document.querySelector('+json.dumps(selector)+').value')==expected)
             fill('input[name=email]','fixture@example.test');check(True,'native-imported-autofill-fills-page-field')
             fill('input[type=password]','synthetic-import-only','fixture');check(True,'native-imported-password-fills-same-origin-page-field')
-            s.evaluate(settings,'souluBrowserImport.open()');wait(lambda:s.evaluate(settings,"!!document.querySelector('dialog[open] #importFrom')"));check(s.evaluate(settings,"document.querySelectorAll('dialog[open]').length")==1,'real-CEF-compact-import-dialog')
+            s.evaluate(settings,'sonaBrowserImport.open()');wait(lambda:s.evaluate(settings,"!!document.querySelector('dialog[open] #importFrom')"));check(s.evaluate(settings,"document.querySelectorAll('dialog[open]').length")==1,'real-CEF-compact-import-dialog')
             s.evaluate(settings,"document.getElementById('importFrom').click();[...document.querySelectorAll('.import-option')].find(e=>e.textContent.includes('Chrome'))?.click()")
             wait(lambda:s.evaluate(settings,"!!document.querySelector('.import-category input[data-category=history]:enabled')"))
             wait(lambda:s.evaluate(settings,"(()=>{const d=document.getElementById('actionDialog');return d.scrollHeight<=d.clientHeight+1&&innerHeight>=620})()"))
@@ -169,8 +169,8 @@ def main():
             # Verify the imported link in the visible bookmark tree, and open
             # it through the actual bookmark button (not only an API count).
             check(any(r.get('url')==url+'?beta' for r in s.evaluate(settings,'browserShell.getBookmarks()')),'account-bookmark-url-present-in-native-destination')
-            s.evaluate(settings,'souluSettingsRequestClose()');wait(lambda:not s.evaluate(shell,'browserShell.getState().then(s=>s.settingsOverlayOpen)'))
-            s.evaluate(shell,'souluNavigation.openBookmarks()')
+            s.evaluate(settings,'sonaSettingsRequestClose()');wait(lambda:not s.evaluate(shell,'browserShell.getState().then(s=>s.settingsOverlayOpen)'))
+            s.evaluate(shell,'sonaNavigation.openBookmarks()')
             wait(lambda:s.evaluate(shell,"[...document.querySelectorAll('.bookmark-item')].some(b=>b.querySelector('.bookmark-label')?.textContent==='Beta')"))
             s.evaluate(shell,"[...document.querySelectorAll('.bookmark-item')].find(b=>b.querySelector('.bookmark-label')?.textContent==='Beta').click()")
             wait(lambda:s.evaluate(shell,"[...document.querySelectorAll('.bookmark-item')].some(b=>b.querySelector('.bookmark-label')?.textContent==='Beta fixture')"))

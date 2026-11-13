@@ -1,6 +1,6 @@
-/* Soulu import service. Only native data migrators run behind this interface. */
+/* Sona import service. Only native data migrators run behind this interface. */
 (()=>{
-const {shared,isPrivate}=Soulu.backend;
+const {shared,isPrivate}=Sona.backend;
 const {MigrationUtils}=ChromeUtils.importESModule('moz-src:///browser/components/migration/MigrationUtils.sys.mjs');
 const names={chrome:'Google Chrome','chrome-beta':'Google Chrome Beta',chromium:'Chromium','chromium-edge':'Microsoft Edge',brave:'Brave',opera:'Opera','opera-gx':'Opera GX',vivaldi:'Vivaldi',firefox:'Другой браузер Mozilla'};
 const labels={BOOKMARKS:'Закладки',HISTORY:'История',PASSWORDS:'Пароли',FORMDATA:'Автозаполнение',COOKIES:'Файлы cookie',SESSION:'Открытые вкладки',PAYMENT_METHODS:'Платёжные данные',EXTENSIONS:'Расширения',OTHERDATA:'Другие данные'};
@@ -16,14 +16,14 @@ async function discover(){
    for(const profile of profiles?.length?profiles:[null]){
     const mask=await migrator.getMigrateData(profile),types=Object.keys(labels).filter(type=>mask&MigrationUtils.resourceTypes[type]);if(!types.length)continue;
     const id=Services.uuid.generateUUID().toString();const sourceKey=key+":"+(profile?.id||"default");sources.set(id,{migrator,profile,mask,sourceKey});
-    result.push({id,completed:!!shared.config.importedSources?.[sourceKey],name:names[key]||key.replace(/firefox/ig,'Soulu'),profile:profile?.name||profile?.id||'Основной',types:types.map(key=>({key,label:labels[key]}))});
+    result.push({id,completed:!!shared.config.importedSources?.[sourceKey],name:names[key]||key.replace(/firefox/ig,'Sona'),profile:profile?.name||profile?.id||'Основной',types:types.map(key=>({key,label:labels[key]}))});
    }
-  }catch(error){console.error('Soulu import source',key,String(error));}
+  }catch(error){console.error('Sona import source',key,String(error));}
  }
  return {sources:result};
 }
-const base=Soulu.dispatch;
-Soulu.dispatch=async(action,payload,source)=>{
+const base=Sona.dispatch;
+Sona.dispatch=async(action,payload,source)=>{
  if(action==='browser.import.sources'||action==='browser.import.browsers'||action==='browser.import.native')return discover();
  if(action!=='browser.import.run')return base(action,payload,source);
  if(isPrivate)throw Error('Импорт недоступен в инкогнито.');
@@ -34,8 +34,8 @@ Soulu.dispatch=async(action,payload,source)=>{
  busy=true;const results=[];
  try{
   await entry.migrator.migrate(mask,false,entry.profile,(type,success,detail,available)=>{results.push({type:Object.keys(labels).find(k=>MigrationUtils.resourceTypes[k]===type),success:!!success,available});});
-  if(results.length&&results.every(r=>r.success)){(shared.config.importedSources??={})[entry.sourceKey]=Date.now();await Soulu.backend.save();}
-  await Soulu.bookmarks('invalidate');await Soulu.dispatch('browser.bookmarks.get');
+  if(results.length&&results.every(r=>r.success)){(shared.config.importedSources??={})[entry.sourceKey]=Date.now();await Sona.backend.save();}
+  await Sona.bookmarks('invalidate');await Sona.dispatch('browser.bookmarks.get');
   return {ok:results.length>0&&results.every(r=>r.success),results};
  }finally{busy=false;}
 };

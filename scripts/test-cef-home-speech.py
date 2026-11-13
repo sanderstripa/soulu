@@ -18,11 +18,11 @@ FIXTURES = [
 
 def main():
  exe=Path(sys.argv[1]).resolve();report=Path(sys.argv[2]).resolve();checks=[]
- with tempfile.TemporaryDirectory(prefix='soulu-speech-fixtures-') as root:
+ with tempfile.TemporaryDirectory(prefix='sona-speech-fixtures-') as root:
   folder=Path(root)
   for language,url,digest,expected in FIXTURES:
-   req=urllib.request.Request(url,headers={'User-Agent':'SouluRegression/1.0'})
-   local=os.environ.get('SOULU_SPEECH_FIXTURE_DIR')
+   req=urllib.request.Request(url,headers={'User-Agent':'SonaRegression/1.0'})
+   local=os.environ.get('SONA_SPEECH_FIXTURE_DIR')
    raw=(Path(local)/('ru-weather.ogg' if language=='ru' else 'jfk.wav')).read_bytes() if local else urllib.request.urlopen(req,timeout=30).read(2000000)
    assert hashlib.sha256(raw).hexdigest()==digest,'Public speech fixture integrity'
    source=folder/('source-'+language);source.write_bytes(raw)
@@ -31,7 +31,7 @@ def main():
    audio=np.concatenate([audio,np.zeros(8000)])
    assert len(audio)<=320000
    pcm=folder/(language+'.pcm');pcm.write_bytes((np.clip(audio,-1,1)*32767).astype('<i2').tobytes());text=folder/(language+'.txt')
-   env=dict(os.environ,SOULU_UI_TEST_PORT='9223',LOCALAPPDATA=root,APPDATA=root)
+   env=dict(os.environ,SONA_UI_TEST_PORT='9223',LOCALAPPDATA=root,APPDATA=root)
    # Shared Windows runners can still be scanning the freshly packed runtime.
    # Give this isolated correctness probe CPU priority; retain the application's
    # 60-second inference guard and all recognition assertions unchanged.

@@ -1,0 +1,3 @@
+#include "../resource.h"
+#define SONA_ICON_REVISION 44
+IDI_SONA ICON "../assets/ui/sona-icon.ico"

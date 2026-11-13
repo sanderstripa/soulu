@@ -6,10 +6,10 @@ spec=importlib.util.spec_from_file_location('test',repo/'scripts/test-cef-browse
 spec=importlib.util.spec_from_file_location('platform',repo/'scripts/test-cef-platform.py');p=importlib.util.module_from_spec(spec);spec.loader.exec_module(p)
 from pywinauto.controls.win32_controls import EditWrapper,ButtonWrapper
 exe=Path(sys.argv[1]).resolve();output=Path(sys.argv[2]).resolve();s.DEBUG_PORT=s.free_port();s.BASE=f'http://127.0.0.1:{s.DEBUG_PORT}';checks=[]
-with tempfile.TemporaryDirectory(prefix='soulu-import-pickers-',ignore_cleanup_errors=True) as tmp:
+with tempfile.TemporaryDirectory(prefix='sona-import-pickers-',ignore_cleanup_errors=True) as tmp:
  root=Path(tmp);local=root/'local';roaming=root/'roaming';local.mkdir();roaming.mkdir();portable=root/'portable';portable.mkdir();(portable/'Preferences').write_text('{}');(portable/'Bookmarks').write_text('{"roots":{"bookmark_bar":{"type":"folder","name":"Fixture","children":[{"type":"url","name":"Portable link","url":"https://example.test/portable"}]}}}')
  html=root/'bookmarks.html';html.write_text('<!DOCTYPE NETSCAPE-Bookmark-file-1><DL><DT><A HREF="https://example.test/picker">Synthetic bookmark</A></DL>');csv=root/'passwords.csv';csv.write_text('url,username,password\nhttps://example.test/,fixture,synthetic-picker-only\n')
- env=dict(os.environ,LOCALAPPDATA=str(local),APPDATA=str(roaming),SOULU_UI_TEST_PORT=str(s.DEBUG_PORT),SOULU_REGRESSION_SKIP_FIRST_RUN='1');process=subprocess.Popen([str(exe),'--no-proxy-server'],env=env);sockets=[]
+ env=dict(os.environ,LOCALAPPDATA=str(local),APPDATA=str(roaming),SONA_UI_TEST_PORT=str(s.DEBUG_PORT),SONA_REGRESSION_SKIP_FIRST_RUN='1');process=subprocess.Popen([str(exe),'--no-proxy-server'],env=env);sockets=[]
  def socket(fragment):
   def find():
    for row in s.targets():
@@ -31,7 +31,7 @@ with tempfile.TemporaryDirectory(prefix='soulu-import-pickers-',ignore_cleanup_e
   c=pick('file','passwords',csv);assert c['kind']=='passwords' and 'text' not in c and 'synthetic-picker-only' not in json.dumps(c);checks.append('native-CSV-picker-does-not-send-passwords-to-renderer')
   f=pick('portable',path=portable);assert f['family']=='chromium' and f['id'].startswith('portable:');checks.append('native-portable-profile-folder-picker')
   def run(payload):return s.evaluate(settings,'browserShell.browserImport("run",'+json.dumps(payload)+')')
-  nodes=s.evaluate(settings,'souluBrowserImport.parseHtml('+json.dumps(h['text'])+')')
+  nodes=s.evaluate(settings,'sonaBrowserImport.parseHtml('+json.dumps(h['text'])+')')
   payload={'source':h['id'],'target':'personal','bookmarks':True,'nodes':nodes}
   assert run(payload)['categories']['bookmarks']['imported']==1;checks.append('native-HTML-bookmark-import')
   assert run(payload)['categories']['bookmarks']['imported']==0;checks.append('native-HTML-repeat-deduplication')

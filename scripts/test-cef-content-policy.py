@@ -35,13 +35,13 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.end_headers();self.wfile.write(body)
     def log_message(self,*args):pass
 
-with tempfile.TemporaryDirectory(prefix='soulu-policy-',ignore_cleanup_errors=True) as root:
+with tempfile.TemporaryDirectory(prefix='sona-policy-',ignore_cleanup_errors=True) as root:
     os.environ['LOCALAPPDATA']=root
     server=http.server.ThreadingHTTPServer(('127.0.0.1',s.free_port()),Handler)
     threading.Thread(target=server.serve_forever,daemon=True).start()
     origin=f'http://127.0.0.1:{server.server_port}'
-    env=dict(os.environ,SOULU_UI_TEST_PORT=str(s.DEBUG_PORT))
-    # This changes resolution only in this disposable Soulu test process.
+    env=dict(os.environ,SONA_UI_TEST_PORT=str(s.DEBUG_PORT))
+    # This changes resolution only in this disposable Sona test process.
     process=subprocess.Popen([sys.argv[1],'--no-proxy-server',
         '--host-resolver-rules=MAP ad.doubleclick.net 127.0.0.1'],env=env)
     try:
@@ -74,7 +74,7 @@ with tempfile.TemporaryDirectory(prefix='soulu-policy-',ignore_cleanup_errors=Tr
         s.navigate(content,f'http://ad.doubleclick.net:{server.server_port}/document')
         assert s.evaluate(content,'document.title')=='Policy smoke','Top-level navigation was filtered'
         content.close();shell.close();s.close_normally(process)
-        preferences=json.loads((Path(root)/'Soulu'/'User Data'/'Profiles'/'personal'/'Preferences').read_text(encoding='utf-8'))
+        preferences=json.loads((Path(root)/'Sona'/'User Data'/'Profiles'/'personal'/'Preferences').read_text(encoding='utf-8'))
         exceptions=preferences['profile']['content_settings']['exceptions']
         assert exceptions['geolocation'][origin+',*']['setting']==1,'Native geolocation override was not applied'
         geo=exceptions['geolocation_with_options'][origin+',*']['setting']

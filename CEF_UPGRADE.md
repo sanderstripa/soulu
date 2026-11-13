@@ -12,7 +12,7 @@ Compared with the 154.0.33 distribution, public handler interfaces retain their 
 CefPreferenceRegistrar adds version-gated default preference methods. Color/command/resource
 identifiers changed; the source is rebuilt against the selected distribution rather than reusing binaries.
 CEF_COMMIT_NUMBER is 3659. The sandbox compatibility hash changes to 3b66cadf26145637;
-Soulu retains its existing USE_SANDBOX=OFF configuration and does not reuse sandbox libraries.
+Sona retains its existing USE_SANDBOX=OFF configuration and does not reuse sandbox libraries.
 
 Build workflow archive pins, compile-time guards, loaded-DLL guards, runtime manifests,
 DevTools version assertions and product/installer versions are updated together.
@@ -27,7 +27,7 @@ existing exact-SHA manual acceptance/deferral path. This document does not asser
 
 The first Windows run compiled and passed pre-packaging browser regressions, then
 caught a stale CEF 154 allowlist in the pinned shared CONNECT installer adapter.
-Soulu now specializes that single literal only after verifying the upstream adapter
+Sona now specializes that single literal only after verifying the upstream adapter
 source SHA-256, restores the checkout in finally, and records the specialized
 adapter hash and CEF distribution in installer provenance. The adapter's installation
 lifecycle and bundled-payload tests remain enabled. Added negative tests reject the
@@ -73,7 +73,7 @@ For this Windows x64 distribution they contain `libcef.dll`, `chrome_elf.dll`,
 `vk_swiftshader.dll`, its ICD JSON, `v8_context_snapshot.bin`, `icudtl.dat`,
 three resource packs and the locales directory. These expand to 233 files.
 `verify-cef-engine.ps1` builds a SHA-256 manifest from the verified distribution
-and checks every runtime component, then launches Soulu's linked-DLL version
+and checks every runtime component, then launches Sona's linked-DLL version
 probe. ZIP extraction and installer payload extraction repeat both checks.
 Static libraries, debug symbols and the intermediate runtime file list are
 excluded from the distributed package.

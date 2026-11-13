@@ -12,7 +12,7 @@ One canonical `Profiles/<id>` path and one `CefRequestContext` are created per
 registered ordinary profile. `main.cc` and the window use the same canonical
 data root. Session-cookie persistence stays enabled for ordinary profiles.
 Settings initially inherit the previous global settings as a migration template,
-then live in each profile's `soulu-settings.json`. VPN configuration retains its
+then live in each profile's `sona-settings.json`. VPN configuration retains its
 existing owner and behavior. The old global settings file is preserved.
 
 Deleting a profile requires a native confirmation and keeps at least one profile.
@@ -34,7 +34,7 @@ Incognito is not a guarantee that Windows paging/crash dumps contain no memory.
 
 ## Password vault
 
-`soulu-passwords.json` contains metadata (origin, username, stable record ID,
+`sona-passwords.json` contains metadata (origin, username, stable record ID,
 profile owner, creation/update time) and a Base64-encoded **DPAPI ciphertext**.
 DPAPI uses the current Windows user; per-profile/per-record entropy binds the
 ciphertext to its owner and ID. Writes replace an atomic temporary file containing
@@ -43,7 +43,7 @@ only ciphertext and metadata. Corrupt vaults refuse mutation.
 List responses omit encrypted secrets. Reveal/copy require explicit UI actions;
 the settings list masks passwords, hides revealed values after 15 seconds or
 loss of focus, and native clipboard copying clears after 30 seconds only if the
-clipboard sequence is still unchanged and Soulu is running. `origin + username` is the deduplication
+clipboard sequence is still unchanged and Sona is running. `origin + username` is the deduplication
 key. Import never overwrites an existing record. Explicit manual saves and
 confirmed form-save offers can update it.
 
@@ -100,14 +100,14 @@ deletion wait for import; app shutdown waits for the import task to finish.
 ## Accounts
 
 The standalone Settings Accounts placeholder is replaced by **Sites and
-permissions**; **Profiles** is named **Profiles and data**. No cloud Soulu account,
+permissions**; **Profiles** is named **Profiles and data**. No cloud Sona account,
 sync backend, discovered-account inventory or telemetry is invented. Existing
 quick links to Google account web pages are ordinary website navigation in the
 active profile, not an account backend or discovery feature.
 
 ## Permissions and exceptions
 
-Each profile owns `soulu-site-rules.json`. Permission defaults and exact-host
+Each profile owns `sona-site-rules.json`. Permission defaults and exact-host
 overrides are separate dictionaries. Domains use Chromium URL parsing, lower
 case, and no scheme/path/port duplication; subdomains are deliberately distinct.
 Password origins remain scheme/host/port origins, not these permission keys.

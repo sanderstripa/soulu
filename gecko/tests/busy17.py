@@ -3,7 +3,7 @@ from pathlib import Path
 prefix=Path(__file__).with_name('restart17.py').read_text().split('\ntry:\n for cycle',1)[0]
 exec(compile(prefix,str(Path(__file__).with_name('restart17.py')),'exec'),globals())
 try:
- p=subprocess.Popen([str(base/'Soulu.exe')],env=env)
+ p=subprocess.Popen([str(base/'Sona.exe')],env=env)
  def busy_dialog():
   result=[]
   @C.WINFUNCTYPE(W.BOOL,W.HWND,W.LPARAM)
@@ -19,7 +19,7 @@ try:
   user.EnumWindows(top,0);return result
  message=wait(busy_dialog,25)
  check('preview16_reproduces_exact_busy_dialog_with_unowned_mutex',bool(message),message)
- check('preview16_did_not_start_engine',not any(x.name().lower()=='souluengine.exe' for x in processes()))
+ check('preview16_did_not_start_engine',not any(x.name().lower()=='sonaengine.exe' for x in processes()))
  ImageGrab.grab().save(out/'preview16-busy-dialog.png');report['passed']=True
 finally:
  C.windll.kernel32.CloseHandle(retained)

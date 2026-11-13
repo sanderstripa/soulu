@@ -4,10 +4,10 @@ source=Path(__file__).with_name('preview4.py').read_text().split('\ntry:\n start
 exec(compile(source,str(Path(__file__).with_name('preview4.py')),'exec'),globals())
 report={'passed':False,'checks':{}}
 try:
- (profile/'soulu-weather.json').write_text(json.dumps({'key':'automatic|||ru','status':'ready','city':'Cached city','current':{'temperature_2m':12,'weather_code':0},'daily':{},'fetchedAt':time.time()}));
- started=time.monotonic();start();report['startupSeconds']=time.monotonic()-started;report['startupTimings']=chrome('return {...Soulu.startupTimings,windowAge:performance.now(),processAge:Date.now()-Services.startup.getStartupInfo().process.getTime()}')
+ (profile/'sona-weather.json').write_text(json.dumps({'key':'automatic|||ru','status':'ready','city':'Cached city','current':{'temperature_2m':12,'weather_code':0},'daily':{},'fetchedAt':time.time()}));
+ started=time.monotonic();start();report['startupSeconds']=time.monotonic()-started;report['startupTimings']=chrome('return {...Sona.startupTimings,windowAge:performance.now(),processAge:Date.now()-Services.startup.getStartupInfo().process.getTime()}')
  wait(lambda:content('return location.pathname.endsWith("onboarding.html")'));wait(lambda:ui('return !!document.querySelector("#actions button:not(.primary)")','page'));ui('document.querySelector("#actions button:not(.primary)").click();return true','page');wait(lambda:content('return location.pathname.endsWith("home.html")'))
- call('browser.navigate',url);wait(lambda:content('return !!document.getElementById("v")'));check('web_content_stays_remote_and_unprivileged',chrome('return gBrowser.selectedBrowser.isRemoteBrowser') and content('return !window.Soulu&&!window.cefQuery&&!window.browserShell'));rows=call('browser.bookmarks.add');mark=next(r for r in rows if r['url']==url);call('browser.bookmarks.homeFavorite',{'id':mark['id'],'selected':True})
+ call('browser.navigate',url);wait(lambda:content('return !!document.getElementById("v")'));check('web_content_stays_remote_and_unprivileged',chrome('return gBrowser.selectedBrowser.isRemoteBrowser') and content('return !window.Sona&&!window.cefQuery&&!window.browserShell'));rows=call('browser.bookmarks.add');mark=next(r for r in rows if r['url']==url);call('browser.bookmarks.homeFavorite',{'id':mark['id'],'selected':True})
  call('browser.navigate',url+'second');wait(lambda:content('return location.pathname==="/second"'));rows=call('browser.bookmarks.add');second=next(r for r in rows if r['url']==url+'second');call('browser.bookmarks.homeFavorite',{'id':second['id'],'selected':True})
  # A real settings snapshot must not overwrite newer favorites on a theme save.
  config=call('settings.begin');call('browser.bookmarks.homeFavorite',{'id':mark['id'],'selected':False});config['settings']['theme']='light';call('settings.save',config);check('stale_settings_do_not_restore_or_erase_favorites',call('browser.state.get')['settings']['homeFavoriteIds']==[second['id']])
@@ -15,17 +15,17 @@ try:
  ui('document.querySelector("#favoritesButton").click();return true');wait(lambda:ui('return !!document.getElementById("bookmarkHomeFavorite")'));check('actual_editor_reads_saved_favorite',ui('return document.getElementById("bookmarkHomeFavorite").checked'))
  ui('document.querySelector(".bookmark-editor").requestSubmit();return true');wait(lambda:ui('return !document.querySelector(".bookmark-editor")'));check('editor_preserves_other_favorites',set(call('browser.state.get')['settings']['homeFavoriteIds'])=={mark['id'],second['id']})
  call('browser.home');wait(lambda:content('return location.pathname.endsWith("home.html")'));wait(lambda:ui('return document.body.classList.contains("home-ready")','page'));check('home_shows_both_favorites_after_edit',ui('return document.querySelectorAll(".favorite").length===2','page'))
- chrome('window.openPreferences("panePrivacy")');check('native_preferences_entry_routes_to_soulu',wait(lambda:call('browser.state.get')['settingsOverlayOpen']));check('no_native_preferences_tab',all(not t['url'].startswith('about:preferences') for t in call('browser.state.get')['tabs']));chrome('Soulu.closeSettings()');time.sleep(.25)
+ chrome('window.openPreferences("panePrivacy")');check('native_preferences_entry_routes_to_sona',wait(lambda:call('browser.state.get')['settingsOverlayOpen']));check('no_native_preferences_tab',all(not t['url'].startswith('about:preferences') for t in call('browser.state.get')['tabs']));chrome('Sona.closeSettings()');time.sleep(.25)
  # A physical pointer click must reach Home while the shell sidebar is expanded.
  call('browser.bookmarks.sidebar',True);time.sleep(.25)
  r=ui('const r=document.getElementById("favoritesToggle").getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};','page');offset=chrome('const r=gBrowser.selectedBrowser.getBoundingClientRect();return {x:r.x,y:r.y};')
- report['homeClickTarget']=chrome('const n=document.elementFromPoint('+str(round(r['x']+offset['x']))+','+str(round(r['y']+offset['y']))+');return {id:n?.id,tag:n?.tagName,clip:document.getElementById("soulu-shell-frame").style.clipPath};')
+ report['homeClickTarget']=chrome('const n=document.elementFromPoint('+str(round(r['x']+offset['x']))+','+str(round(r['y']+offset['y']))+');return {id:n?.id,tag:n?.tagName,clip:document.getElementById("sona-shell-frame").style.clipPath};')
  m.set_context('chrome');m._send_message('WebDriver:PerformActions',{'actions':[{'type':'pointer','id':'home-favorite-click','parameters':{'pointerType':'mouse'},'actions':[{'type':'pointerMove','origin':'viewport','x':round(r['x']+offset['x']),'y':round(r['y']+offset['y']),'duration':0},{'type':'pointerDown','button':0},{'type':'pointerUp','button':0}]}]})
  check('real_home_favorites_click_reaches_page_with_sidebar',wait(lambda:ui('return !document.getElementById("favoritesPanel").hidden','page')))
  call('browser.bookmarks.sidebar',False)
  check('cached_weather_hydrated_before_home_reveal',ui('return document.getElementById("weatherSummary").textContent.includes("Cached city")','page'))
- check('puzzle_icon_matches_existing_asset' ,ui('return document.querySelector("#soulu-extensions-menu path").getAttribute("d").startsWith("M4 4h6V2")'))
- fixture={'draft':False,'tag_name':'gecko-preview-7','assets':[{'id':1,'name':'Soulu-Gecko-Preview-7-win64.zip','size':100,'digest':'sha256:'+'a'*64,'browser_download_url':'https://github.com/sanderstripa/soulu/releases/download/gecko-preview-7/Soulu-Gecko-Preview-7-win64.zip'}]};check('updater_never_offers_current_release',chrome('return Soulu.updateCandidate('+json.dumps([fixture])+')===null'))
+ check('puzzle_icon_matches_existing_asset' ,ui('return document.querySelector("#sona-extensions-menu path").getAttribute("d").startsWith("M4 4h6V2")'))
+ fixture={'draft':False,'tag_name':'gecko-preview-7','assets':[{'id':1,'name':'Sona-Gecko-Preview-7-win64.zip','size':100,'digest':'sha256:'+'a'*64,'browser_download_url':'https://github.com/sanderstripa/soulu/releases/download/gecko-preview-7/Sona-Gecko-Preview-7-win64.zip'}]};check('updater_never_offers_current_release',chrome('return Sona.updateCandidate('+json.dumps([fixture])+')===null'))
  call('browser.navigate',url+'glass');wait(lambda:content('return !!document.getElementById("v")'));content('document.body.style.background="#ff0000";document.getElementById("box").style.background="#ff0000";return true')
  call('browser.settings.set',{'mattePanel':True});time.sleep(.6)
  def shot(name):
@@ -36,23 +36,23 @@ try:
  a=Image.open(io.BytesIO(red)).convert('RGB');b=Image.open(io.BytesIO(blue)).convert('RGB');points=[(int(a.width*f),10) for f in [.1,.2,.85,.95]];diff=sum(sum(abs(x-y) for x,y in zip(a.getpixel(p),b.getpixel(p))) for p in points);check('actual_toolbar_backdrop_samples_page_pixels',diff>60,{'delta':diff,'points':points})
  low=[(x,62) for x,y in points];lowDiff=sum(sum(abs(x-y) for x,y in zip(a.getpixel(p),b.getpixel(p))) for p in low);check('page_glass_fades_to_opaque_at_content_edge',diff>lowDiff+60,{'top':diff,'bottom':lowDiff})
  call('browser.settings.set',{'mattePanel':False});time.sleep(.3);opaque=shot('glass-disabled.png');c=Image.open(io.BytesIO(opaque)).convert('RGB');diffOff=sum(sum(abs(x-y) for x,y in zip(b.getpixel(p),c.getpixel(p))) for p in points);check('matte_toggle_changes_actual_pixels',diffOff>60,{'delta':diffOff})
- call('browser.settings.openWindow','about');wait(lambda:call('browser.state.get')['settingsOverlayReady']);ui('souluSettings.openSection("about");return true','settings');wait(lambda:ui('return !!document.getElementById("gecko-update-check")','settings'));ui('document.getElementById("gecko-update-check").click();return true','settings')
- check('actual_update_check_reports_latest_without_download_offer',wait(lambda:ui('return document.getElementById("gecko-update-status").textContent.includes("Установлена последняя версия")&&!document.querySelector("[data-download-update]")','settings'),30));chrome('Soulu.closeSettings()');time.sleep(.25)
- # The actual add-on manager's settings entry must route into Soulu.
+ call('browser.settings.openWindow','about');wait(lambda:call('browser.state.get')['settingsOverlayReady']);ui('sonaSettings.openSection("about");return true','settings');wait(lambda:ui('return !!document.getElementById("gecko-update-check")','settings'));ui('document.getElementById("gecko-update-check").click();return true','settings')
+ check('actual_update_check_reports_latest_without_download_offer',wait(lambda:ui('return document.getElementById("gecko-update-status").textContent.includes("Установлена последняя версия")&&!document.querySelector("[data-download-update]")','settings'),30));chrome('Sona.closeSettings()');time.sleep(.25)
+ # The actual add-on manager's settings entry must route into Sona.
  call('browser.openTab',{'url':'about:addons'});select_latest();wait(lambda:content('return !!(document.getElementById("preferencesButton")||document.querySelector("categories-box")?.shadowRoot?.querySelector("#preferencesButton"))'))
  content('(document.getElementById("preferencesButton")||document.querySelector("categories-box")?.shadowRoot?.querySelector("#preferencesButton")).click();return true')
- check('addons_manager_settings_button_opens_soulu',wait(lambda:call('browser.state.get')['settingsOverlayOpen']))
- check('addons_manager_cannot_leave_firefox_preferences_tab',all(not t['url'].startswith('about:preferences') for t in call('browser.state.get')['tabs']));chrome('Soulu.closeSettings()');time.sleep(.25)
+ check('addons_manager_settings_button_opens_sona',wait(lambda:call('browser.state.get')['settingsOverlayOpen']))
+ check('addons_manager_cannot_leave_firefox_preferences_tab',all(not t['url'].startswith('about:preferences') for t in call('browser.state.get')['tabs']));chrome('Sona.closeSettings()');time.sleep(.25)
  # Native Fluent/legacy branding uses the product name, not a text overlay.
- brand=run('const loc=new Localization(["branding/brand.ftl","branding/soulu-check.ftl"]);return await loc.formatValue("soulu-branding-check");')
- check('native_branding_source_is_soulu',brand=='Soulu',brand)
+ brand=run('const loc=new Localization(["branding/brand.ftl","branding/sona-check.ftl"]);return await loc.formatValue("sona-branding-check");')
+ check('native_branding_source_is_sona',brand=='Sona',brand)
  # Exercise normal animation explicitly; Windows CI has reduced motion enabled.
  chrome('Services.prefs.setIntPref("ui.prefersReducedMotion",0)');report['reducedMotion']=chrome('return matchMedia("(prefers-reduced-motion:reduce)").matches')
  # Sample the closing transition, rather than only its final centered position.
- chrome('Soulu.closeSettings()');time.sleep(.25)
+ chrome('Sona.closeSettings()');time.sleep(.25)
  for maximized in [False,True]:
   chrome('window.'+('maximize' if maximized else 'restore')+'()');call('browser.openTab',{'url':url+'animation'});select_latest();time.sleep(.5);closing=call('browser.state.get')['activeTabId'];call('browser.closeOtherTabs',closing);call('browser.openTab',{'url':url+'animation2'});select_latest();time.sleep(.5);closing=call('browser.state.get')['activeTabId']
-  chrome('setTimeout(()=>Soulu.dispatch("browser.closeTab",'+str(closing)+'),70);return true')
+  chrome('setTimeout(()=>Sona.dispatch("browser.closeTab",'+str(closing)+'),70);return true')
   samples=ui('const rows=[],start=performance.now();while(performance.now()-start<650){const r=document.getElementById("classicAddress").getBoundingClientRect();rows.push({t:performance.now()-start,y:r.y+r.height/2});await new Promise(requestAnimationFrame);}return rows;')
   report['transitionSamples'+str(maximized)]=samples
   jumps=[abs(b['y']-a['y']) for a,b in zip(samples,samples[1:])];check('single_tab_transition_has_no_jump_'+str(maximized),len(samples)>5 and max(jumps)<4 and abs(samples[-1]['y']-34)<2,{'maxStep':max(jumps),'last':samples[-1],'frames':len(samples)})
@@ -67,15 +67,15 @@ try:
   m.set_context('chrome');m._send_message('WebDriver:PerformActions',{'actions':[{'type':'pointer','id':'p7-video-pointer','parameters':{'pointerType':'mouse'},'actions':[{'type':'pointerMove','origin':'viewport','x':x,'y':24,'duration':80}]}]});time.sleep(.2)
   video.append(content('const v=document.getElementById("v");return {h:innerHeight,w:innerWidth,y:v.getBoundingClientRect().y,t:v.currentTime,id:document.documentElement.dataset.identity}'))
  check('video_keeps_playing_without_viewport_jitter',video[-1]['t']>before['t']+.5 and all(all(abs(v[k]-before[k])<1 for k in ['h','w','y']) and v['id']==before['id'] for v in video),video)
- # Inspect the actual native location/permissions, not a filtered Soulu label.
- result=run('return await Soulu.dispatch("browser.vot.install",{consent:true},{gesture:{at:Date.now()}});');check('vot_builtin_install_completes',result['installed'])
+ # Inspect the actual native location/permissions, not a filtered Sona label.
+ result=run('return await Sona.dispatch("browser.vot.install",{consent:true},{gesture:{at:Date.now()}});');check('vot_builtin_install_completes',result['installed'])
  native=run('const {AddonManager}=ChromeUtils.importESModule("resource://gre/modules/AddonManager.sys.mjs");const a=await AddonManager.getAddonByID("vot-ext@firefox");return {builtin:a.isBuiltin,canUninstall:!!(a.permissions&AddonManager.PERM_CAN_UNINSTALL),active:a.isActive};')
  check('vot_is_native_builtin_and_not_user_removable',native['builtin'] and not native['canUninstall'],native)
  # Existing favorite IDs and actual builtin registration must survive a real restart.
  saved=set(call('browser.state.get')['settings']['homeFavoriteIds']);stop();start();check('home_favorites_preserved_after_restart',set(call('browser.state.get')['settings']['homeFavoriteIds'])==saved)
  native=run('const {AddonManager}=ChromeUtils.importESModule("resource://gre/modules/AddonManager.sys.mjs");const a=await AddonManager.getAddonByID("vot-ext@firefox");return {builtin:a?.isBuiltin,canUninstall:!!(a?.permissions&AddonManager.PERM_CAN_UNINSTALL),active:a?.isActive};')
  check('builtin_vot_survives_restart',native['builtin'] and native['active'] and not native['canUninstall'],native)
- check('first_shown_window_has_ready_functional_ui',chrome('return document.documentElement.hasAttribute("soulu-ui-ready")&&!window.__souluStartupHidden'))
+ check('first_shown_window_has_ready_functional_ui',chrome('return document.documentElement.hasAttribute("sona-ui-ready")&&!window.__sonaStartupHidden'))
  report['passed']=True
 except Exception as error:
  report['error']=str(error)

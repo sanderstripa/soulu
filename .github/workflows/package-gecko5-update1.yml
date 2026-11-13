@@ -1,4 +1,4 @@
-name: Package and publish Soulu Gecko Preview 5 Update 1
+name: Package and publish Sona Gecko Preview 5 Update 1
 on:
   push:
     branches: [gecko-preview]
@@ -24,15 +24,15 @@ jobs:
       - name: Assemble only previously verified components
         shell: pwsh
         run: |
-          gh run download 41706847641 -n Soulu-Gecko-Preview-5-final -D accepted
-          Expand-Archive accepted/Soulu-Gecko-Preview-5-win64.zip gecko-out
+          gh run download 41706847641 -n Sona-Gecko-Preview-5-final -D accepted
+          Expand-Archive accepted/Sona-Gecko-Preview-5-win64.zip gecko-out
           python gecko/tests/overlay6.py
           if ($LASTEXITCODE -ne 0) { throw 'Resource overlay failed' }
           gh run download 41722218683 -n gecko6-targeted-evidence -D evidence
           gh run download 41721520058 -n gecko6-speech-candidate -D speech-candidate
           python -c "import json,pathlib; assert json.loads(pathlib.Path('evidence/preview6.json').read_text())['passed']; assert json.loads(pathlib.Path('speech-candidate/speech6.json').read_text())['passed']"
           if ($LASTEXITCODE -ne 0) { throw 'Verified reports missing' }
-          Copy-Item speech-candidate/SouluSpeech.exe gecko-out/runtime/soulu/speech/ -Force
+          Copy-Item speech-candidate/SonaSpeech.exe gecko-out/runtime/sona/speech/ -Force
           Copy-Item speech-candidate/speech6.json gecko-out/
           Copy-Item evidence/preview6.json gecko-out/
           Copy-Item gecko/docs/PREVIEW5-UPDATE1-RESULTS.md gecko-out/
@@ -40,10 +40,10 @@ jobs:
       - name: Package and launch from the extracted ZIP
         shell: pwsh
         run: |
-          Compress-Archive -Path gecko-out/* -DestinationPath Soulu-Gecko-Preview-5-Update-1-win64.zip -CompressionLevel Optimal
-          python gecko/tests/zip_smoke.py Soulu-Gecko-Preview-5-Update-1-win64.zip zip-check
+          Compress-Archive -Path gecko-out/* -DestinationPath Sona-Gecko-Preview-5-Update-1-win64.zip -CompressionLevel Optimal
+          python gecko/tests/zip_smoke.py Sona-Gecko-Preview-5-Update-1-win64.zip zip-check
           if ($LASTEXITCODE -ne 0) { throw 'Extracted ZIP launch failed' }
-          (Get-FileHash Soulu-Gecko-Preview-5-Update-1-win64.zip -Algorithm SHA256).Hash.ToLowerInvariant() + '  Soulu-Gecko-Preview-5-Update-1-win64.zip' | Set-Content SHA256SUMS.txt
+          (Get-FileHash Sona-Gecko-Preview-5-Update-1-win64.zip -Algorithm SHA256).Hash.ToLowerInvariant() + '  Sona-Gecko-Preview-5-Update-1-win64.zip' | Set-Content SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -54,5 +54,5 @@ jobs:
       - name: Publish verified portable update
         shell: pwsh
         run: |
-          gh release create gecko-preview-5-update-1 Soulu-Gecko-Preview-5-Update-1-win64.zip SHA256SUMS.txt zip-check/zip-smoke.json evidence/preview6.json speech-candidate/speech6.json --target $env:GITHUB_SHA --title "Soulu Gecko Preview 5 Update 1" --prerelease --notes-file gecko/docs/PREVIEW5-UPDATE1-RESULTS.md
+          gh release create gecko-preview-5-update-1 Sona-Gecko-Preview-5-Update-1-win64.zip SHA256SUMS.txt zip-check/zip-smoke.json evidence/preview6.json speech-candidate/speech6.json --target $env:GITHUB_SHA --title "Sona Gecko Preview 5 Update 1" --prerelease --notes-file gecko/docs/PREVIEW5-UPDATE1-RESULTS.md
           if ($LASTEXITCODE -ne 0) { throw 'Release publication failed' }

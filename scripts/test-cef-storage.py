@@ -16,11 +16,11 @@ import urllib.request
 import websocket
 
 
-DEBUG_PORT = int(os.environ.get("SOULU_UI_TEST_PORT", "9223"))
+DEBUG_PORT = int(os.environ.get("SONA_UI_TEST_PORT", "9223"))
 BASE = f"http://127.0.0.1:{DEBUG_PORT}"
-COOKIE_VALUE = "soulu-session-cookie"
-STORAGE_VALUE = "soulu-local-storage"
-IDB_VALUE = "soulu-indexed-db"
+COOKIE_VALUE = "sona-session-cookie"
+STORAGE_VALUE = "sona-local-storage"
+IDB_VALUE = "sona-indexed-db"
 sequence = 0
 received_cookie = ""
 received_requests = []
@@ -35,12 +35,12 @@ class SiteHandler(http.server.BaseHTTPRequestHandler):
         # prefetch request must not overwrite the server-side observation.
         if self.path.startswith('/verify'):
             received_cookie = cookie_header
-        body = b"<!doctype html><meta charset=utf-8><title>Soulu storage test</title>"
+        body = b"<!doctype html><meta charset=utf-8><title>Sona storage test</title>"
         self.send_response(200)
         if self.path.startswith("/seed"):
             # Deliberately a session cookie: no Expires or Max-Age.
-            self.send_header("Set-Cookie", f"soulu_auth={COOKIE_VALUE}; Path=/; HttpOnly; SameSite=Lax")
-            self.send_header("Set-Cookie", "soulu_persistent=control; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400")
+            self.send_header("Set-Cookie", f"sona_auth={COOKIE_VALUE}; Path=/; HttpOnly; SameSite=Lax")
+            self.send_header("Set-Cookie", "sona_persistent=control; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400")
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
@@ -64,7 +64,7 @@ def targets(timeout=45):
                 rows=json.load(response)
             # Unrelated regression suites explicitly opt into a normal browsing
             # fixture. The dedicated first-run suite leaves this flag unset.
-            if os.environ.get('SOULU_REGRESSION_SKIP_FIRST_RUN')=='1':
+            if os.environ.get('SONA_REGRESSION_SKIP_FIRST_RUN')=='1':
                 for row in rows:
                     if '/ui/onboarding.html' not in row.get('url',''):continue
                     ws=websocket.create_connection(row['webSocketDebuggerUrl'],timeout=5,origin=BASE)
@@ -140,27 +140,27 @@ def close_normally(process):
         user32.GetClassNameW(hwnd, class_name, len(class_name))
         # Close the application host, not a Chromium-owned popup/tooltip that
         # can precede it in EnumWindows and leave the application running.
-        if pid.value == process.pid and class_name.value == 'SouluBrowserWindow':
+        if pid.value == process.pid and class_name.value == 'SonaBrowserWindow':
             handles.append(hwnd)
             return False
         return True
 
     user32.EnumWindows(callback, 0)
     if not handles:
-        raise AssertionError("Soulu top-level window was not found")
+        raise AssertionError("Sona top-level window was not found")
     user32.PostMessageW(handles[0], 0x0010, 0, 0)  # WM_CLOSE
     process.wait(timeout=30)
 
 
 def launch(executable):
     environment = os.environ.copy()
-    environment["SOULU_UI_TEST_PORT"] = str(DEBUG_PORT)
+    environment["SONA_UI_TEST_PORT"] = str(DEBUG_PORT)
     return subprocess.Popen([executable], env=environment)
 
 
 def main():
     if len(sys.argv) != 2:
-        raise SystemExit("usage: test-cef-storage.py <Soulu.exe>")
+        raise SystemExit("usage: test-cef-storage.py <Sona.exe>")
     executable = os.path.abspath(sys.argv[1])
     site_port = free_port()
     server = http.server.ThreadingHTTPServer(("127.0.0.1", site_port), SiteHandler)
@@ -171,20 +171,20 @@ def main():
     try:
         ws = page_socket()
         navigate(ws, origin + "/seed")
-        evaluate(ws, f"localStorage.setItem('soulu-test', {json.dumps(STORAGE_VALUE)})")
+        evaluate(ws, f"localStorage.setItem('sona-test', {json.dumps(STORAGE_VALUE)})")
         evaluate(ws, """new Promise((resolve, reject) => {
-          const request = indexedDB.open('soulu-test-db', 1);
+          const request = indexedDB.open('sona-test-db', 1);
           request.onupgradeneeded = () => request.result.createObjectStore('values');
           request.onerror = () => reject(request.error);
           request.onsuccess = () => {
             const tx = request.result.transaction('values', 'readwrite');
-            tx.objectStore('values').put('soulu-indexed-db', 'auth');
+            tx.objectStore('values').put('sona-indexed-db', 'auth');
             tx.oncomplete = () => { request.result.close(); resolve(true); };
             tx.onerror = () => reject(tx.error);
           };
         })""")
         indexed_seed = evaluate(ws, """new Promise((resolve, reject) => {
-          const request = indexedDB.open('soulu-test-db', 1);
+          const request = indexedDB.open('sona-test-db', 1);
           request.onerror = () => reject(request.error);
           request.onsuccess = () => {
             const db = request.result;
@@ -196,10 +196,10 @@ def main():
         assert indexed_seed == IDB_VALUE, indexed_seed
         time.sleep(2)
         cookies = command(ws, "Network.getAllCookies").get("cookies", [])
-        assert any(item["name"] == "soulu_auth" and item["value"] == COOKIE_VALUE for item in cookies)
+        assert any(item["name"] == "sona_auth" and item["value"] == COOKIE_VALUE for item in cookies)
         ws.close()
         close_normally(first)
-        root = pathlib.Path(os.environ["LOCALAPPDATA"]) / "Soulu" / "User Data" / "Profiles"
+        root = pathlib.Path(os.environ["LOCALAPPDATA"]) / "Sona" / "User Data" / "Profiles"
         for pref_file in root.rglob("*Preferences"):
             prefs = json.loads(pref_file.read_text(encoding="utf-8"))
             print(json.dumps({"profile": str(pref_file.parent.relative_to(root)),
@@ -211,7 +211,7 @@ def main():
             # not close the handle. CEF opens its CookieStore exclusively on
             # restart, so the inspection handle must be released first.
             with contextlib.closing(sqlite3.connect(f"file:{cookie_file.as_posix()}?mode=ro", uri=True)) as db:
-                rows = db.execute("SELECT host_key,name,is_persistent,has_expires,expires_utc FROM cookies WHERE name='soulu_auth'").fetchall()
+                rows = db.execute("SELECT host_key,name,is_persistent,has_expires,expires_utc FROM cookies WHERE name='sona_auth'").fetchall()
                 print(json.dumps({"cookie_file": str(cookie_file.relative_to(root)), "test_cookie_rows": rows}), flush=True)
     finally:
         if first.poll() is None:
@@ -228,12 +228,12 @@ def main():
     try:
         ws = page_socket()
         navigate(ws, origin + "/verify")
-        local_value = evaluate(ws, "localStorage.getItem('soulu-test')")
+        local_value = evaluate(ws, "localStorage.getItem('sona-test')")
         cookies = command(ws, "Network.getAllCookies").get("cookies", [])
         # Read in the page's own storage context, exactly as a website would.
         # Aborting an upgrade prevents a missing database from being recreated.
         indexed_value = evaluate(ws, """new Promise((resolve, reject) => {
-          const request = indexedDB.open('soulu-test-db', 1);
+          const request = indexedDB.open('sona-test-db', 1);
           request.onupgradeneeded = () => {
             request.transaction.abort();
             reject(new Error('IndexedDB database missing after restart'));
@@ -246,15 +246,15 @@ def main():
             get.onerror = () => { db.close(); reject(get.error); };
           };
         })""")
-        cookie_value = next((item["value"] for item in cookies if item["name"] == "soulu_auth"), None)
-        persistent_value = next((item['value'] for item in cookies if item['name'] == 'soulu_persistent'), None)
+        cookie_value = next((item["value"] for item in cookies if item["name"] == "sona_auth"), None)
+        persistent_value = next((item['value'] for item in cookies if item['name'] == 'sona_persistent'), None)
         print(json.dumps({"restored_session_cookie": cookie_value == COOKIE_VALUE,
                           "restored_persistent_cookie": persistent_value == 'control',
-                          "cookie_sent_to_server": f"soulu_auth={COOKIE_VALUE}" in received_cookie,
+                          "cookie_sent_to_server": f"sona_auth={COOKIE_VALUE}" in received_cookie,
                           "localStorage": local_value, "IndexedDB": indexed_value}), flush=True)
         assert cookie_value == COOKIE_VALUE, f"session cookie missing after restart: {cookie_value!r}"
         assert persistent_value == 'control', 'persistent cookie missing after restart'
-        assert f"soulu_auth={COOKIE_VALUE}" in received_cookie, received_requests
+        assert f"sona_auth={COOKIE_VALUE}" in received_cookie, received_requests
         assert local_value == STORAGE_VALUE, local_value
         assert indexed_value == IDB_VALUE, indexed_value
         print(json.dumps({

@@ -18,6 +18,6 @@ jobs:
           cache: false
       - name: Test verified Xray and Sudoku with real local tunnel traffic
         shell: pwsh
-        run: ./scripts/prepare-vpn-components.ps1 -Destination "$env:RUNNER_TEMP/soulu-test-cores"
+        run: ./scripts/prepare-vpn-components.ps1 -Destination "$env:RUNNER_TEMP/sona-test-cores"
       - name: Verify video runtime
         run: node scripts/test-video-runtime.cjs

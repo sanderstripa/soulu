@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const api = window.browserShell, safe = window.souluReaderSafe;
+  const api = window.browserShell, safe = window.sonaReaderSafe;
   if (!api?.getCurrentSite || !safe) return;
   let state = {}, site = null, key = '', revision = 0, anchor = null, articleKey = '', saving = Promise.resolve(), probing = false;
   let menuSignature = '', preferencesSignature = '', reloadMenu = null, level = 'main', picking = '', promptId = 0;
@@ -130,7 +130,7 @@
   }
   function toggle(label, checked, change, name) {
     const wrap = el('div', 'site-row'); if (name) wrap.append(glyph(name)); wrap.append(el('span', 'site-row-label', label));
-    const b = button('', () => change(!checked), 'soulu-site-toggle'); b.setAttribute('role', 'switch');
+    const b = button('', () => change(!checked), 'sona-site-toggle'); b.setAttribute('role', 'switch');
     b.setAttribute('aria-checked', String(checked)); b.setAttribute('aria-label', label); wrap.append(b); return wrap;
   }
   const divider = () => el('hr', 'site-divider');
@@ -278,7 +278,7 @@
     settings.append(divider(), toggle('Изображения', prefs.images, () => preferences(p => ({images:!p.images}))));
     if (wasFocused && label) [...settings.querySelectorAll('[aria-label]')].find(n => n.getAttribute('aria-label') === label)?.focus();
   }
-  const promptShield = el('div', 'soulu-permission-shield'), prompt = el('section', 'soulu-permission-prompt');
+  const promptShield = el('div', 'sona-permission-shield'), prompt = el('section', 'sona-permission-prompt');
   prompt.hidden = promptShield.hidden = true;
   prompt.setAttribute('role', 'dialog'); prompt.setAttribute('aria-modal', 'true');
   prompt.setAttribute('aria-label', 'Разрешение сайта'); document.body.append(promptShield, prompt);

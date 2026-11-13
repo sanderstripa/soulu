@@ -8,7 +8,7 @@ function render(){
  const en=document.documentElement.lang==='en';
  const note=document.createElement('p'),status=document.createElement('p'),update=document.createElement('button');
  note.className=status.className='note';status.setAttribute('role','status');
- note.textContent=en?'adblock-rust 0.13.3 · The core is updated with Soulu. Filter lists can be updated separately.':'adblock-rust 0.13.3 · Ядро обновляется вместе с Soulu. Списки фильтров обновляются отдельно.';
+ note.textContent=en?'adblock-rust 0.13.3 · The core is updated with Sona. Filter lists can be updated separately.':'adblock-rust 0.13.3 · Ядро обновляется вместе с Sona. Списки фильтров обновляются отдельно.';
  update.textContent=en?'Update filter lists':'Обновить списки фильтров';
  const show=r=>{
   if(!host.isConnected)return;

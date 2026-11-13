@@ -76,12 +76,12 @@ bool LoadTypography(){
  }
  return true;
 }
-void Text(Graphics& g,const wchar_t* text,soulu::typography::Metrics metrics,RectF rect,Color color){
+void Text(Graphics& g,const wchar_t* text,sona::typography::Metrics metrics,RectF rect,Color color){
  // The existing installer paints a 720-wide reference at 524 DIP. Compensate
  // that reference transform so token sizes/line boxes still match CSS DIP.
  const float size=metrics.size/kReferenceScale;
  const int face=metrics.weight==600?2:metrics.weight==500?1:0;
- const soulu::typography::Metrics roles[]={soulu::typography::display,soulu::typography::heading1,soulu::typography::heading2,soulu::typography::heading3,soulu::typography::bodyLarge,soulu::typography::body,soulu::typography::control,soulu::typography::compact,soulu::typography::compactControl,soulu::typography::caption};
+ const sona::typography::Metrics roles[]={sona::typography::display,sona::typography::heading1,sona::typography::heading2,sona::typography::heading3,sona::typography::bodyLarge,sona::typography::body,sona::typography::control,sona::typography::compact,sona::typography::compactControl,sona::typography::caption};
  int role=0;for(int i=0;i<10;++i)if(roles[i].size==metrics.size&&roles[i].weight==metrics.weight){role=i;break;}
  if(!textFonts[role])textFonts[role]=std::make_unique<Font>(fontFamilies[face].get(),size,FontStyleRegular,UnitPixel);
  SolidBrush brush(color);StringFormat format;format.SetAlignment(StringAlignmentCenter);format.SetLineAlignment(StringAlignmentCenter);
@@ -150,7 +150,7 @@ void DrawControl(Graphics& g,int id,bool pressed,bool focused){
      REAL positions[]={0,.3f,1};sheen.SetInterpolationColors(colors,positions,3);g.FillPath(&sheen,&pill);
    }
    Pen highlight(Color(105,255,255,255),1);g.DrawPath(&highlight,&pill);
-   Text(g,stage==Stage::Finished?L"Готово":stage==Stage::Error?L"Повторить":L"Установить →",soulu::typography::control,RectF(0,-1,320,60),Color(255,255,255,255));
+   Text(g,stage==Stage::Finished?L"Готово":stage==Stage::Error?L"Повторить":L"Установить →",sona::typography::control,RectF(0,-1,320,60),Color(255,255,255,255));
    if(focused){GraphicsPath ring;Round(ring,RectF(4,4,312,52),26);Pen focus(Color(170,255,255,255),1);g.DrawPath(&focus,&ring);}
  }else if(id==kLaunch){
    GraphicsPath box;Round(box,RectF(4,8,26,26),4);
@@ -158,7 +158,7 @@ void DrawControl(Graphics& g,int id,bool pressed,bool focused){
      LinearGradientBrush blue(PointF(4,8),PointF(30,34),Color(255,45,157,255),Color(255,38,63,255));g.FillPath(&blue,&box);
      Pen check(Color(255,255,255,255),1.6f);g.DrawLine(&check,10.0f,21.0f,15.0f,26.0f);g.DrawLine(&check,15.0f,26.0f,25.0f,15.0f);
    }else{SolidBrush clear(Color(130,250,253,255));g.FillPath(&clear,&box);Pen outline(muted,1);g.DrawPath(&outline,&box);}
-   Text(g,L"Запустить Soulu",soulu::typography::control,RectF(42,0,168,42),muted);
+   Text(g,L"Запустить Sona",sona::typography::control,RectF(42,0,168,42),muted);
    if(focused){Pen focus(muted,1);g.DrawRectangle(&focus,1.0f,3.0f,218.0f,35.0f);}
  }else{
    Pen line(ink,1.3f);
@@ -175,20 +175,20 @@ void PaintContent(Graphics& g){
    // A single transparent production PNG, never a baked screen or old logo.
    if(logo)g.DrawImage(logo,RectF(276,46,168,168));
    if(stage==Stage::Welcome){
-     Text(g,L"Soulu",soulu::typography::display,RectF(0,209,kWidth,67),ink);
-     Text(g,L"Спокойный и умный браузер\nдля больших возможностей.",soulu::typography::bodyLarge,RectF(110,279,500,62),muted);
-     Text(g,L"Быстро. Безопасно. Для того, что важно.",soulu::typography::body,RectF(80,460,560,35),muted);
+     Text(g,L"Sona",sona::typography::display,RectF(0,209,kWidth,67),ink);
+     Text(g,L"Спокойный и умный браузер\nдля больших возможностей.",sona::typography::bodyLarge,RectF(110,279,500,62),muted);
+     Text(g,L"Быстро. Безопасно. Для того, что важно.",sona::typography::body,RectF(80,460,560,35),muted);
    }else{
-     Text(g,L"Всё готово",soulu::typography::heading1,RectF(0,220,kWidth,57),ink);
-     Text(g,L"Браузер установлен. Можно начинать.",soulu::typography::bodyLarge,RectF(35,278,650,38),muted);
+     Text(g,L"Всё готово",sona::typography::heading1,RectF(0,220,kWidth,57),ink);
+     Text(g,L"Браузер установлен. Можно начинать.",sona::typography::bodyLarge,RectF(35,278,650,38),muted);
    }
  }else if(stage==Stage::Installing){
-   Text(g,L"Установка Soulu",soulu::typography::heading1,RectF(0,212,kWidth,64),ink);
-   Text(g,L"Это займёт всего несколько мгновений.",soulu::typography::bodyLarge,RectF(35,278,650,38),muted);
+   Text(g,L"Установка Sona",sona::typography::heading1,RectF(0,212,kWidth,64),ink);
+   Text(g,L"Это займёт всего несколько мгновений.",sona::typography::bodyLarge,RectF(35,278,650,38),muted);
    // NSIS exposes completion/exit code, not byte progress. No fake percentage.
  }else{
-   Text(g,L"Не удалось завершить установку",soulu::typography::heading2,RectF(35,207,650,58),ink);
-   Text(g,errorText.c_str(),soulu::typography::body,RectF(75,274,570,66),muted);
+   Text(g,L"Не удалось завершить установку",sona::typography::heading2,RectF(35,207,650,58),ink);
+   Text(g,errorText.c_str(),sona::typography::body,RectF(75,274,570,66),muted);
  }
 }
 void Paint(HDC dc){
@@ -298,7 +298,7 @@ void StartInstall(){
 void Finish(){
  if(stage==Stage::Welcome||stage==Stage::Error){PostMessageW(window,WM_APP+1,0,0);return;}
  if(stage!=Stage::Finished)return;
- bool start=launch;std::wstring exe=installDir+L"\\Soulu.exe";
+ bool start=launch;std::wstring exe=installDir+L"\\Sona.exe";
  DestroyWindow(window);
  if(start)ShellExecuteW(nullptr,L"open",exe.c_str(),nullptr,installDir.c_str(),SW_SHOWNORMAL);
 }
@@ -342,8 +342,8 @@ LRESULT CALLBACK Proc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp){
   case WM_APP+2:KillTimer(hwnd,1);CleanupWorker(false);errorText=L"Не удалось запустить установку. Попробуй ещё раз.";ShowStage(Stage::Error);return 0;
   case WM_TIMER:if(worker.load()&&WaitForSingleObject(worker.load(),0)==WAIT_OBJECT_0){
     DWORD code=1;GetExitCodeProcess(worker.load(),&code);KillTimer(hwnd,1);CleanupWorker(false);
-    if(code==0&&GetFileAttributesW((installDir+L"\\Soulu.exe").c_str())!=INVALID_FILE_ATTRIBUTES)ShowStage(Stage::Finished);
-    else{errorText=L"Установка не завершена. Закрой Soulu и повтори попытку.";ShowStage(Stage::Error);}
+    if(code==0&&GetFileAttributesW((installDir+L"\\Sona.exe").c_str())!=INVALID_FILE_ATTRIBUTES)ShowStage(Stage::Finished);
+    else{errorText=L"Установка не завершена. Закрой Sona и повтори попытку.";ShowStage(Stage::Error);}
   }return 0;
   case WM_CLOSE:cancelling.store(true);DestroyWindow(hwnd);return 0;
   case WM_DESTROY:PostQuitMessage(0);return 0;
@@ -354,7 +354,7 @@ LRESULT CALLBACK Proc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp){
 int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,wchar_t* arguments,int){
  SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
  GdiplusStartupInput input;GdiplusStartup(&graphicsToken,&input,nullptr);
- if(!LoadTypography()){MessageBoxW(nullptr,L"Bundled Onest resources are missing or invalid.",L"Soulu Setup",MB_ICONERROR);
+ if(!LoadTypography()){MessageBoxW(nullptr,L"Bundled Onest resources are missing or invalid.",L"Sona Setup",MB_ICONERROR);
   for(auto& family:fontFamilies)family.reset();for(auto& collection:fontCollections)collection.reset();
   GdiplusShutdown(graphicsToken);return 1;}
  logo=LoadPngResource(102,&logoStream);
@@ -366,20 +366,20 @@ int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,wchar_t* arguments,int){
   GdiplusShutdown(graphicsToken);return result;
  }
  if(args)LocalFree(args);
- wchar_t local[MAX_PATH]={};GetEnvironmentVariableW(L"LOCALAPPDATA",local,MAX_PATH);installDir=std::wstring(local)+L"\\Programs\\Soulu";
+ wchar_t local[MAX_PATH]={};GetEnvironmentVariableW(L"LOCALAPPDATA",local,MAX_PATH);installDir=std::wstring(local)+L"\\Programs\\Sona";
  icon=static_cast<HICON>(LoadImageW(instance,MAKEINTRESOURCEW(101),IMAGE_ICON,GetSystemMetrics(SM_CXICON),GetSystemMetrics(SM_CYICON),LR_DEFAULTCOLOR));
  smallIcon=static_cast<HICON>(LoadImageW(instance,MAKEINTRESOURCEW(101),IMAGE_ICON,GetSystemMetrics(SM_CXSMICON),GetSystemMetrics(SM_CYSMICON),LR_DEFAULTCOLOR));
- WNDCLASSEXW cls={sizeof(cls)};cls.lpfnWndProc=Proc;cls.hInstance=instance;cls.lpszClassName=L"SouluInstaller";
+ WNDCLASSEXW cls={sizeof(cls)};cls.lpfnWndProc=Proc;cls.hInstance=instance;cls.lpszClassName=L"SonaInstaller";
  cls.hCursor=LoadCursor(nullptr,IDC_ARROW);cls.hIcon=icon;cls.hIconSm=smallIcon;RegisterClassExW(&cls);
  scale=GetDpiForSystem()/96.0f*kReferenceScale;
  RECT work={};SystemParametersInfoW(SPI_GETWORKAREA,0,&work,0);
- window=CreateWindowExW(WS_EX_APPWINDOW,cls.lpszClassName,L"Soulu Setup",WS_POPUP|WS_MINIMIZEBOX|WS_SYSMENU|WS_CLIPCHILDREN,
+ window=CreateWindowExW(WS_EX_APPWINDOW,cls.lpszClassName,L"Sona Setup",WS_POPUP|WS_MINIMIZEBOX|WS_SYSMENU|WS_CLIPCHILDREN,
    work.left+(work.right-work.left-Px(kWidth))/2,work.top+(work.bottom-work.top-Px(kHeight))/2,Px(kWidth),Px(kHeight),nullptr,nullptr,instance,nullptr);
  HRGN region=CreateRoundRectRgn(0,0,Px(kWidth)+1,Px(kHeight)+1,Px(34),Px(34));SetWindowRgn(window,region,TRUE);
  DWORD corner=2;DwmSetWindowAttribute(window,33,&corner,sizeof(corner));
  mainButton=Button(kMain,L"Установить",200,365,320,60);
  minButton=Button(kMin,L"Свернуть",590,10,48,44);closeButton=Button(kClose,L"Закрыть",652,10,48,44);
- launchButton=Button(kLaunch,L"Запустить Soulu",258,431,220,42);ShowWindow(launchButton,SW_HIDE);
+ launchButton=Button(kLaunch,L"Запустить Sona",258,431,220,42);ShowWindow(launchButton,SW_HIDE);
  ShowWindow(window,SW_SHOW);SetFocus(mainButton);UpdateWindow(window);
  MSG message;while(GetMessageW(&message,nullptr,0,0)>0){
    if(message.message==WM_KEYDOWN&&message.wParam==VK_TAB){keyboardFocus=true;InvalidateRect(mainButton,nullptr,FALSE);InvalidateRect(launchButton,nullptr,FALSE);}

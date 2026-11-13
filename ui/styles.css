@@ -40,7 +40,7 @@ body[data-matte=true] .toolbar,body[data-matte=true] .compact-toolbar-surface{ba
 @media(max-width:1060px){.compact-tab-flow{max-width:calc(100% - 400px)}.compact-active-tab{flex-basis:190px;width:190px}.layout-card small{display:none}}
 
 
-/* Soulu toolbar architecture ------------------------------------------------ */
+/* Sona toolbar architecture ------------------------------------------------ */
 .browser-toolbar{position:fixed;z-index:100;inset:0 0 auto;width:100%;user-select:none;background:var(--toolbar-bg);}
 .browser-toolbar button,.browser-toolbar input,.browser-toolbar form,.browser-toolbar .tab-strip,.browser-toolbar .compact-tab-flow{-webkit-app-region:no-drag}
 .extension-slot{align-items:center;flex:0 0 auto}.extension-left,.extension-right{display:none}

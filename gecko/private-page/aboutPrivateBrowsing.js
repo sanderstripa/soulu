@@ -2,7 +2,7 @@ const en = !navigator.language.toLowerCase().startsWith('ru');
 const isPrivate = RPMIsWindowPrivate();
 const mode = isPrivate ? (en ? 'Incognito' : 'Инкогнито') : (en ? 'Regular window' : 'Обычное окно');
 document.documentElement.lang = en ? 'en' : 'ru';
-document.title = mode + ' — Soulu';
+document.title = mode + ' — Sona';
 document.querySelector('#mode').textContent = mode;
 if (!isPrivate) {
   const button = document.querySelector('#open');

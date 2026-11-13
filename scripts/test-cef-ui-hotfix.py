@@ -26,13 +26,13 @@ def main():
   target=o.wait(lambda:next((t for t in s.targets() if fragment in t.get('url','')),None))
   ws=s.websocket.create_connection(target['webSocketDebuggerUrl'],timeout=30,origin=s.BASE);connections.append(ws);return ws
  try:
-  with tempfile.TemporaryDirectory(prefix='soulu-ui-hotfix-',ignore_cleanup_errors=True) as temp:
-   env=dict(os.environ,LOCALAPPDATA=temp,SOULU_UI_TEST_PORT=str(s.DEBUG_PORT),SOULU_REGRESSION_SKIP_FIRST_RUN='1')
+  with tempfile.TemporaryDirectory(prefix='sona-ui-hotfix-',ignore_cleanup_errors=True) as temp:
+   env=dict(os.environ,LOCALAPPDATA=temp,SONA_UI_TEST_PORT=str(s.DEBUG_PORT),SONA_REGRESSION_SKIP_FIRST_RUN='1')
    process=subprocess.Popen([exe,'--no-proxy-server'],env=env);shell=connect('/ui/index.html')
    o.wait(lambda:s.evaluate(shell,"typeof browserShell?.getState==='function'"))
    def call(method,value=None):return s.evaluate(shell,'browserShell.'+method+'('+('' if value is None else json.dumps(value))+')')
    def state():return call('getState')
-   hwnd=o.wait(lambda:next(iter(o.windows(process.pid,'SouluBrowserWindow')),None));u.MoveWindow(hwnd,40,30,940,640,True);u.SetForegroundWindow(hwnd)
+   hwnd=o.wait(lambda:next(iter(o.windows(process.pid,'SonaBrowserWindow')),None));u.MoveWindow(hwnd,40,30,940,640,True);u.SetForegroundWindow(hwnd)
    call('setSettings',{'theme':'light','mattePanel':True});call('navigate',url);page=connect(url)
    o.wait(lambda:s.evaluate(page,'!!window.v && v.currentTime>.1'))
    call('setSettings',{'theme':'dark'})
@@ -68,7 +68,7 @@ def main():
    o.wait(lambda:state()['settingsOverlayReady']);o.wait(lambda:state()['settingsOverlayProgress']==1)
    current=state();report['settingsDuration']=current['settingsOverlayDuration'];report['settingsTicks']=current['settingsOverlayTicks']
    check(current['settingsOverlayDuration'] in (90,320) and current['settingsOverlayTicks']>=2,'Settings opening reaches its final position through native animation ticks')
-   s.evaluate(settings,'souluSettingsRequestClose()');o.wait(lambda:not state()['settingsOverlayOpen'])
+   s.evaluate(settings,'sonaSettingsRequestClose()');o.wait(lambda:not state()['settingsOverlayOpen'])
    check(True,'Settings closing completes without leaving an overlay')
    ImageGrab.grab().save(out/'final.png');report['passed']=True
  finally:

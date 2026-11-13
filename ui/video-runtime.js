@@ -1,14 +1,14 @@
 function(run){
  'use strict';
- const native=window.__souluVideoNative;delete window.__souluVideoNative;
- const claim=new Event('soulu-video-runtime-claim',{cancelable:true});if(!document.dispatchEvent(claim))return;document.addEventListener('soulu-video-runtime-claim',event=>event.preventDefault());
+ const native=window.__sonaVideoNative;delete window.__sonaVideoNative;
+ const claim=new Event('sona-video-runtime-claim',{cancelable:true});if(!document.dispatchEvent(claim))return;document.addEventListener('sona-video-runtime-claim',event=>event.preventDefault());
  const call=value=>new Promise((resolve,reject)=>native(JSON.stringify(value),raw=>{try{const data=JSON.parse(raw);data.ok===false?reject(Error(data.error||'Video translation request failed')):resolve(data)}catch(e){reject(e)}}));
  const encode=async value=>{if(value===undefined||value===null)return '';if(typeof value==='string')return value;if(value instanceof Blob)value=await value.arrayBuffer();if(value instanceof ArrayBuffer)value=new Uint8Array(value);if(ArrayBuffer.isView(value)){let text='';const bytes=new Uint8Array(value.buffer,value.byteOffset,value.byteLength);for(let i=0;i<bytes.length;i+=16384)text+=String.fromCharCode(...bytes.subarray(i,i+16384));return btoa(text)}throw Error('Unsupported video request body')};
  const decode=text=>{const raw=atob(text||''),bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);return bytes};
  call({op:'init'}).then(init=>{
-  globalThis.performance?.mark?.('soulu.video.runtime.initialized');
+  globalThis.performance?.mark?.('sona.video.runtime.initialized');
   if(!init.enabled)return;
-  globalThis.performance?.mark?.('soulu.video.runtime.enabled');
+  globalThis.performance?.mark?.('sona.video.runtime.enabled');
   const storage=init.values||{},listeners=new Map();let listenerId=0,xhrId=0;
 
   native(JSON.stringify({op:'watch'}),raw=>{try{const update=JSON.parse(raw);if(!update.values)return;const fresh=update.values;for(const key of new Set([...Object.keys(storage),...Object.keys(fresh)])){const old=storage[key],value=fresh[key];if(JSON.stringify(old)===JSON.stringify(value))continue;if(Object.hasOwn(fresh,key))storage[key]=structuredClone(value);else delete storage[key];for(const entry of listeners.values())if(entry.key===key)entry.fn(key,old,value,true)}}catch(error){console.error('Video preferences:',error)}});
@@ -25,8 +25,8 @@ function(run){
    promise.catch(()=>{});
    return {promise,abort(){if(settled)return;aborted=true;finish('onabort',{status:0,context:details.context});call({op:'abort',id}).catch(()=>{})}};
   };
-  const info={scriptHandler:'Soulu',version:'1.0.73',platform:{os:'win',arch:'x86-64',browserName:'Soulu'},script:{name:'VOT — Soulu Video Translate',version:init.version||'1.12.3',namespace:'vot',description:'Integrated voice-over translation'},scriptMetaStr:'',isIncognito:!!init.incognito};
+  const info={scriptHandler:'Sona',version:'1.0.73',platform:{os:'win',arch:'x86-64',browserName:'Sona'},script:{name:'VOT — Sona Video Translate',version:init.version||'1.12.3',namespace:'vot',description:'Integrated voice-over translation'},scriptMetaStr:'',isIncognito:!!init.incognito};
   const GM={info,getValue:async(k,d)=>get(k,d),setValue:set,deleteValue:remove,listValues:async()=>Object.keys(storage),getValues:async keys=>values(keys),setValues:async rows=>{for(const[k,v]of Object.entries(rows))await set(k,v)},deleteValues:async keys=>{for(const k of keys)await remove(k)},addStyle:style,notification:notice,xmlHttpRequest:details=>{const controller=xhr(details);const p=controller.promise;p.abort=controller.abort;return p},addValueChangeListener:(key,fn)=>{const id=++listenerId;listeners.set(id,{key,fn});return id},removeValueChangeListener:id=>listeners.delete(id)};
   run(GM,get,(k,v)=>{set(k,v).catch(console.error)},k=>{remove(k).catch(console.error)},()=>Object.keys(storage),style,info,xhr,notice);
- }).catch(error=>console.error('Soulu Video Translate:',error));
+ }).catch(error=>console.error('Sona Video Translate:',error));
 }

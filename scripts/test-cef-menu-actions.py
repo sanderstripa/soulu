@@ -18,8 +18,8 @@ def wait(fn,timeout=20):
         if value:return value
         time.sleep(.05)
     raise AssertionError('Menu command result timed out')
-with tempfile.TemporaryDirectory(prefix='soulu-menu-actions-',ignore_cleanup_errors=True) as profile:
-    os.environ.update(LOCALAPPDATA=profile,SOULU_UI_TEST_PORT=str(s.DEBUG_PORT),SOULU_REGRESSION_SKIP_FIRST_RUN='1',SOULU_ADBLOCK_NO_UPDATE='1',NO_PROXY='127.0.0.1,localhost')
+with tempfile.TemporaryDirectory(prefix='sona-menu-actions-',ignore_cleanup_errors=True) as profile:
+    os.environ.update(LOCALAPPDATA=profile,SONA_UI_TEST_PORT=str(s.DEBUG_PORT),SONA_REGRESSION_SKIP_FIRST_RUN='1',SONA_ADBLOCK_NO_UPDATE='1',NO_PROXY='127.0.0.1,localhost')
     process=s.launch(str(pathlib.Path(sys.argv[1]).resolve()));report={}
     try:
         page=s.page_socket();target=next(t for t in s.targets() if '/ui/index.html' in t.get('url',''));shell=s.websocket.create_connection(target['webSocketDebuggerUrl'],origin=s.BASE)
@@ -29,7 +29,7 @@ with tempfile.TemporaryDirectory(prefix='soulu-menu-actions-',ignore_cleanup_err
             @ctypes.WINFUNCTYPE(ctypes.c_bool,ctypes.c_void_p,ctypes.c_void_p)
             def visit(hwnd,_):
                 pid=ctypes.c_ulong();u.GetWindowThreadProcessId(hwnd,ctypes.byref(pid));name=ctypes.create_unicode_buffer(80);u.GetClassNameW(ctypes.c_void_p(hwnd),name,80)
-                if pid.value==process.pid and name.value=='SouluMenuHost':result.append(hwnd)
+                if pid.value==process.pid and name.value=='SonaMenuHost':result.append(hwnd)
                 return True
             u.EnumWindows(visit,0);return result
         def choose(selector,text):
@@ -51,8 +51,8 @@ with tempfile.TemporaryDirectory(prefix='soulu-menu-actions-',ignore_cleanup_err
         choose('#media','Пауза');assert s.evaluate(page,'media.paused');report['media_pause']='passed'
         choose('#media','Повторять');assert s.evaluate(page,'media.loop');report['media_loop']='passed'
         choose('#media','Показывать элементы управления');assert s.evaluate(page,'!media.controls');report['media_controls']='passed'
-        choose('#blank','QR');wait(lambda:s.evaluate(shell,'!!document.querySelector(".soulu-qr canvas")'))
-        assert s.evaluate(shell,'document.querySelector(".soulu-qr canvas").width>0');report['local_qr']='native menu produced canvas'
+        choose('#blank','QR');wait(lambda:s.evaluate(shell,'!!document.querySelector(".sona-qr canvas")'))
+        assert s.evaluate(shell,'document.querySelector(".sona-qr canvas").width>0');report['local_qr']='native menu produced canvas'
         print(json.dumps(report),flush=True);output=pathlib.Path(sys.argv[2]);output.parent.mkdir(parents=True,exist_ok=True);output.write_text(json.dumps(report,indent=2),encoding='utf-8')
         page.close();shell.close();s.close_normally(process)
     finally:

@@ -11,10 +11,10 @@ def main():
     executable = pathlib.Path(sys.argv[1]).resolve()
     output = pathlib.Path(sys.argv[2]).resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix="soulu-data-test-") as directory:
+    with tempfile.TemporaryDirectory(prefix="sona-data-test-") as directory:
         env = os.environ.copy()
         env.update(LOCALAPPDATA=directory, APPDATA=directory,
-                   SOULU_DATA_SECURITY_TEST_ROOT=directory, SOULU_UI_TEST_PORT="9223")
+                   SONA_DATA_SECURITY_TEST_ROOT=directory, SONA_UI_TEST_PORT="9223")
         result = subprocess.run([str(executable), f"--data-security-test-report={output}"],
                                 env=env, timeout=120)
         if output.exists():

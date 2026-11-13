@@ -31,8 +31,8 @@ Audit baseline: CEF main f3a4ae3fc1f15487c95811de8010524ab95b311b; Gecko Preview
 |Security bridge|CEF messaging|Exact installed principal allowlist|Keep Gecko|Adversarial web-content test; no generic privileged API|
 |Sandbox/isolation|CEF|Firefox Fission and sandbox|Keep Firefox|Never disable in shipped defaults|
 |Default browser|Installer registry integration|Portable only|Defer|Do not imply registration works|
-|Soulu auto-update|CEF update workflow|Portable ZIP|Defer|Use reviewed releases; runtime pin explicitly documented|
+|Sona auto-update|CEF update workflow|Portable ZIP|Defer|Use reviewed releases; runtime pin explicitly documented|
 
 Firefox 159 API compatibility: SessionStore and MigrationUtils use moz-src:/// browser module URLs; moveTabTo accepts {tabIndex}; profile deletion uses removeProfileFilesByPath with an OS profile lock; Downloads uses the registered Integration.downloads hook, preserving native parental/reputation checks. Distribution defaults replace active Preferences policy because Firefox 159 ServiceRequest expects an array from an API that currently returns an object. Do not re-enable that incompatible policy.
 
-The single Rust URL blocker replaces duplicate ETP URL classification, while native cookie partitioning, Safe Browsing, sandboxing, certificate verification and Fission remain enabled. Native extension URL blockers may still be installed by the user; Soulu does not install a second one.
+The single Rust URL blocker replaces duplicate ETP URL classification, while native cookie partitioning, Safe Browsing, sandboxing, certificate verification and Fission remain enabled. Native extension URL blockers may still be installed by the user; Sona does not install a second one.

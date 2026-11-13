@@ -1,11 +1,11 @@
-name: Soulu Gecko Preview 4 Update 1
+name: Sona Gecko Preview 4 Update 1
 on:
   workflow_dispatch:
 permissions:
   contents: read
   actions: read
 concurrency:
-  group: soulu-gecko4-update1
+  group: sona-gecko4-update1
   cancel-in-progress: true
 jobs:
   windows:
@@ -20,17 +20,17 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Assemble the same checksum-pinned Firefox with updated Soulu resources
+      - name: Assemble the same checksum-pinned Firefox with updated Sona resources
         run: python gecko/build.py --platform win64 --output gecko-out
       - name: Reuse byte-identical accepted VPN, Rust DLL and icon-bearing launcher
         shell: pwsh
         run: |
-          gh release download gecko-preview-4 -p Soulu-Gecko-Preview-4-win64.zip -D base
-          if ((Get-FileHash base/Soulu-Gecko-Preview-4-win64.zip -Algorithm SHA256).Hash.ToLowerInvariant() -cne '94331ff8ebe85fe059bb7bbf2ca0525dd491883e9e3d8f49478baa68a75989d1') { throw 'Base release checksum mismatch' }
-          Expand-Archive base/Soulu-Gecko-Preview-4-win64.zip base/expanded
-          Copy-Item base/expanded/runtime/soulu/vpn gecko-out/runtime/soulu/vpn -Recurse
-          Copy-Item base/expanded/runtime/soulu/adblock gecko-out/runtime/soulu/adblock -Recurse
-          Copy-Item 'base/expanded/Soulu Gecko Preview 4.exe' gecko-out/
+          gh release download gecko-preview-4 -p Sona-Gecko-Preview-4-win64.zip -D base
+          if ((Get-FileHash base/Sona-Gecko-Preview-4-win64.zip -Algorithm SHA256).Hash.ToLowerInvariant() -cne '94331ff8ebe85fe059bb7bbf2ca0525dd491883e9e3d8f49478baa68a75989d1') { throw 'Base release checksum mismatch' }
+          Expand-Archive base/Sona-Gecko-Preview-4-win64.zip base/expanded
+          Copy-Item base/expanded/runtime/sona/vpn gecko-out/runtime/sona/vpn -Recurse
+          Copy-Item base/expanded/runtime/sona/adblock gecko-out/runtime/sona/adblock -Recurse
+          Copy-Item 'base/expanded/Sona Gecko Preview 4.exe' gecko-out/
       - name: Test real extension actions, permissions, signed restart and file guards
         shell: pwsh
         run: |
@@ -62,10 +62,10 @@ jobs:
           Copy-Item gecko4-update1/extensions.json gecko-out/
           New-Item -ItemType Directory -Force gecko-out/visual-evidence | Out-Null
           Copy-Item gecko4-update1/*.png gecko-out/visual-evidence/
-          Compress-Archive -Path gecko-out/* -DestinationPath Soulu-Gecko-Preview-4-Update-1-win64.zip -CompressionLevel Optimal
-          python gecko/tests/zip_smoke.py Soulu-Gecko-Preview-4-Update-1-win64.zip gecko4-update1
+          Compress-Archive -Path gecko-out/* -DestinationPath Sona-Gecko-Preview-4-Update-1-win64.zip -CompressionLevel Optimal
+          python gecko/tests/zip_smoke.py Sona-Gecko-Preview-4-Update-1-win64.zip gecko4-update1
           if ($LASTEXITCODE -ne 0) { throw 'Extracted launcher smoke failed' }
-          (Get-FileHash Soulu-Gecko-Preview-4-Update-1-win64.zip -Algorithm SHA256).Hash.ToLowerInvariant() + '  Soulu-Gecko-Preview-4-Update-1-win64.zip' | Set-Content SHA256SUMS.txt
+          (Get-FileHash Sona-Gecko-Preview-4-Update-1-win64.zip -Algorithm SHA256).Hash.ToLowerInvariant() + '  Sona-Gecko-Preview-4-Update-1-win64.zip' | Set-Content SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -76,7 +76,7 @@ jobs:
             gecko4-final/
       - uses: actions/upload-artifact@v4
         with:
-          name: Soulu-Gecko-Preview-4-Update-1
+          name: Sona-Gecko-Preview-4-Update-1
           path: |
-            Soulu-Gecko-Preview-4-Update-1-win64.zip
+            Sona-Gecko-Preview-4-Update-1-win64.zip
             SHA256SUMS.txt

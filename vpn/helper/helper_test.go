@@ -185,7 +185,7 @@ func TestLargeReleaseCatalogIsPagedAndProjected(t *testing.T) {
 }
 
 func TestOfficialReleaseCatalog(t *testing.T) {
-	if os.Getenv("SOULU_TEST_LIVE_RELEASES") != "1" {
+	if os.Getenv("SONA_TEST_LIVE_RELEASES") != "1" {
 		t.Skip("explicit live GitHub catalog check")
 	}
 	for _, id := range []string{"xray", "sudoku"} {

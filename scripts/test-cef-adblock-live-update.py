@@ -31,7 +31,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
   except OSError:pass
  def log_message(self,*args):pass
 server=http.server.ThreadingHTTPServer(('127.0.0.1',s.free_port()),Handler);threading.Thread(target=server.serve_forever,daemon=True).start();result={};process=None
-os.environ['SOULU_REGRESSION_SKIP_FIRST_RUN']='1'
+os.environ['SONA_REGRESSION_SKIP_FIRST_RUN']='1'
 def wait(fn,timeout=100):
  end=time.monotonic()+timeout
  while time.monotonic()<end:
@@ -39,9 +39,9 @@ def wait(fn,timeout=100):
   if r:return r
   time.sleep(.2)
  raise AssertionError('Live update timeout')
-with tempfile.TemporaryDirectory(prefix='soulu-live-update-',ignore_cleanup_errors=True) as root:
- env=dict(os.environ,LOCALAPPDATA=root,SOULU_UI_TEST_PORT=str(s.DEBUG_PORT),SOULU_REGRESSION_SKIP_FIRST_RUN='1')
- for key in ('SOULU_ADBLOCK_NO_UPDATE','SOULU_ADBLOCK_TEST_RULES','HTTP_PROXY','HTTPS_PROXY','ALL_PROXY','http_proxy','https_proxy','all_proxy'):env.pop(key,None)
+with tempfile.TemporaryDirectory(prefix='sona-live-update-',ignore_cleanup_errors=True) as root:
+ env=dict(os.environ,LOCALAPPDATA=root,SONA_UI_TEST_PORT=str(s.DEBUG_PORT),SONA_REGRESSION_SKIP_FIRST_RUN='1')
+ for key in ('SONA_ADBLOCK_NO_UPDATE','SONA_ADBLOCK_TEST_RULES','HTTP_PROXY','HTTPS_PROXY','ALL_PROXY','http_proxy','https_proxy','all_proxy'):env.pop(key,None)
  env['HTTPS_PROXY']='http://127.0.0.1:'+str(server.server_port)
  try:
   process=subprocess.Popen([sys.argv[1],'--no-proxy-server','--host-resolver-rules=MAP ad.doubleclick.net 127.0.0.1'],env=env)

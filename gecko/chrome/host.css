@@ -1,40 +1,40 @@
-/* Layout integration only. All visible controls come from the original Soulu UI. */
+/* Layout integration only. All visible controls come from the original Sona UI. */
 #navigator-toolbox,#sidebar-main,#sidebar-box,#sidebar-splitter,#statuspanel{visibility:collapse!important;min-height:0!important;height:0!important}
-#browser{margin-top:var(--soulu-toolbar-height,68px)!important;margin-inline-end:var(--soulu-right-panel,0px)!important;border:0!important}
+#browser{margin-top:var(--sona-toolbar-height,68px)!important;margin-inline-end:var(--sona-right-panel,0px)!important;border:0!important}
 #tabbrowser-tabbox{outline:none!important;border:0!important;box-shadow:none!important}
-#soulu-shell-frame{position:fixed;inset:0 0 auto 0;width:100%;height:var(--soulu-surface-height,68px);border:0;z-index:10000;background:transparent;}
-#soulu-settings-shade{position:fixed;inset:var(--soulu-toolbar-height,68px) 0 0;z-index:11000;background:#0004;backdrop-filter:blur(7px)}
-#soulu-settings-frame{position:fixed;top:calc(var(--soulu-toolbar-height,68px) + 18px);left:50%;transform:translateX(-50%);width:min(1080px,calc(100vw - 48px));height:min(720px,calc(100vh - var(--soulu-toolbar-height,68px) - 36px));border:0;border-radius:22px;z-index:11001;background:transparent;box-shadow:0 20px 70px #0005}
-#soulu-shell-frame[hidden],#soulu-settings-frame[hidden],#soulu-settings-shade[hidden]{display:none!important}
-:root[soulu-fullscreen] #soulu-shell-frame{display:none!important}
+#sona-shell-frame{position:fixed;inset:0 0 auto 0;width:100%;height:var(--sona-surface-height,68px);border:0;z-index:10000;background:transparent;}
+#sona-settings-shade{position:fixed;inset:var(--sona-toolbar-height,68px) 0 0;z-index:11000;background:#0004;backdrop-filter:blur(7px)}
+#sona-settings-frame{position:fixed;top:calc(var(--sona-toolbar-height,68px) + 18px);left:50%;transform:translateX(-50%);width:min(1080px,calc(100vw - 48px));height:min(720px,calc(100vh - var(--sona-toolbar-height,68px) - 36px));border:0;border-radius:22px;z-index:11001;background:transparent;box-shadow:0 20px 70px #0005}
+#sona-shell-frame[hidden],#sona-settings-frame[hidden],#sona-settings-shade[hidden]{display:none!important}
+:root[sona-fullscreen] #sona-shell-frame{display:none!important}
 /* Native CEF SettingsOverlay::Layout: width <=1020, top edge flush, bottom corners 24. */
-#soulu-settings-shade{inset:0!important}
-#soulu-settings-frame{top:0!important;width:min(1020px,100vw)!important;max-height:100vh!important;border-radius:0 0 24px 24px!important}
-#browser{margin-inline-start:var(--soulu-left-panel,0px)!important}
+#sona-settings-shade{inset:0!important}
+#sona-settings-frame{top:0!important;width:min(1020px,100vw)!important;max-height:100vh!important;border-radius:0 0 24px 24px!important}
+#browser{margin-inline-start:var(--sona-left-panel,0px)!important}
 
 #tabbrowser-tabpanels,#appcontent,.browserStack,.browserContainer,.browserSidebarContainer{border:0!important;outline:none!important;box-shadow:none!important}
 :root{background:light-dark(#f6f6f8,#08090b)!important;color-scheme:light dark;}
-:root[soulu-dark]{color-scheme:dark}
-:root:not([soulu-dark]){color-scheme:light}
-:root[soulu-matte][soulu-ui-ready]{background:transparent!important}
+:root[sona-dark]{color-scheme:dark}
+:root:not([sona-dark]){color-scheme:light}
+:root[sona-matte][sona-ui-ready]{background:transparent!important}
 #browser,#tabbrowser-tabbox,#tabbrowser-tabpanels,.browserContainer,.browserSidebarContainer{min-height:0!important;min-width:0!important;overflow:clip!important;background:transparent!important}
-#soulu-settings-frame{will-change:transform,opacity;contain:paint;}
+#sona-settings-frame{will-change:transform,opacity;contain:paint;}
 
 :root#main-window #navigator-toolbox,:root#main-window #titlebar,:root#main-window #sidebar-main{display:none!important}
-/* Remove Firefox split-view/theme insets around Soulu's native content surface. */
+/* Remove Firefox split-view/theme insets around Sona's native content surface. */
 #browser,#tabbrowser-tabbox,#tabbrowser-tabpanels,#appcontent,.browserSidebarContainer,.browserContainer,.browserStack{padding:0!important;margin-block-end:0!important;border-radius:0!important;box-shadow:none!important}
 #tabbrowser-tabbox,#tabbrowser-tabpanels{margin-inline:0!important;flex:1!important;--tab-selected-bgcolor:transparent;--tabpanel-background-color:transparent}
 #tabbrowser-tabpanels>.browserSidebarContainer{inset:0!important}
 :root{--tabpanel-background-color:transparent!important;--sidebar-background-color:transparent!important;--chrome-content-separator-color:transparent!important}
 /* A root clip keeps backdrop and remote content in a readable WR cache slice. */
-:root[soulu-page-glass]{clip-path:inset(0);background:var(--soulu-bg,#f6f6f8)!important}
-:root[soulu-page-glass] #browser{margin-top:0!important}
-#soulu-page-glass{display:none;position:fixed;inset:0 0 auto;height:var(--soulu-toolbar-height,68px);pointer-events:none;z-index:9999;backdrop-filter:blur(24px) saturate(130%);background:linear-gradient(to bottom,#f6f6f85c,#f6f6f8b0 65%,#f6f6f8)}
-:root[soulu-page-glass] #soulu-page-glass{display:block}
-:root[soulu-dark] #soulu-page-glass{background:linear-gradient(to bottom,#08090b60,#08090bb0 65%,#08090b)}
+:root[sona-page-glass]{clip-path:inset(0);background:var(--sona-bg,#f6f6f8)!important}
+:root[sona-page-glass] #browser{margin-top:0!important}
+#sona-page-glass{display:none;position:fixed;inset:0 0 auto;height:var(--sona-toolbar-height,68px);pointer-events:none;z-index:9999;backdrop-filter:blur(24px) saturate(130%);background:linear-gradient(to bottom,#f6f6f85c,#f6f6f8b0 65%,#f6f6f8)}
+:root[sona-page-glass] #sona-page-glass{display:block}
+:root[sona-dark] #sona-page-glass{background:linear-gradient(to bottom,#08090b60,#08090bb0 65%,#08090b)}
 
-menupopup[data-soulu-extensions]{appearance:none;min-width:220px;padding:6px;background:var(--soulu-bg,#f6f6f8);color:var(--soulu-text,#191a1e);border:1px solid light-dark(#00000020,#ffffff24);border-radius:14px;font:13px Onest,"Segoe UI",sans-serif}
-menupopup[data-soulu-extensions] menuitem{min-height:34px;padding:6px 10px;border-radius:8px}
-menupopup[data-soulu-extensions] .menu-iconic-icon{width:18px;height:18px}
-:root{--soulu-bg:#f6f6f8;--soulu-text:#191a1e}
-:root[soulu-dark]{--soulu-bg:#08090b;--soulu-text:#eeeeef}
+menupopup[data-sona-extensions]{appearance:none;min-width:220px;padding:6px;background:var(--sona-bg,#f6f6f8);color:var(--sona-text,#191a1e);border:1px solid light-dark(#00000020,#ffffff24);border-radius:14px;font:13px Onest,"Segoe UI",sans-serif}
+menupopup[data-sona-extensions] menuitem{min-height:34px;padding:6px 10px;border-radius:8px}
+menupopup[data-sona-extensions] .menu-iconic-icon{width:18px;height:18px}
+:root{--sona-bg:#f6f6f8;--sona-text:#191a1e}
+:root[sona-dark]{--sona-bg:#08090b;--sona-text:#eeeeef}

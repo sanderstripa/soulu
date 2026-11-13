@@ -1,4 +1,4 @@
-"""Keep Soulu's section layout; expose only controls backed by Gecko."""
+"""Keep Sona's section layout; expose only controls backed by Gecko."""
 import pathlib
 
 def adapt(path):

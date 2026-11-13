@@ -1,6 +1,6 @@
 """Apply resource changes to the accepted Preview 5 binaries without rebuilding them."""
 import difflib,hashlib,json,pathlib,subprocess,shutil
-root=pathlib.Path(__file__).resolve().parents[2];out=root/'gecko-out';runtime=out/'runtime/soulu/chrome';base='1e799a06fc24fddb31a27ce0ffc59d8d1ee78572'
+root=pathlib.Path(__file__).resolve().parents[2];out=root/'gecko-out';runtime=out/'runtime/sona/chrome';base='1e799a06fc24fddb31a27ce0ffc59d8d1ee78572'
 def hashes():return {str(p.relative_to(out)):hashlib.sha256(p.read_bytes()).hexdigest() for p in out.rglob('*') if p.suffix.lower() in ['.exe','.dll','.bin','.xpi']}
 before=hashes()
 changed=subprocess.check_output(['git','diff','--name-only',base,'HEAD'],text=True).splitlines()
@@ -19,11 +19,11 @@ for p in (root/'gecko/chrome').rglob('*'):
   target=runtime/p.relative_to(root/'gecko/chrome');target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(p,target)
 for source,target in [('extensions-ui.js','extension-toolbar.js'),('bridge.js','gecko-bridge.js'),('frontend.css','gecko-frontend.css'),('integration-ui.js','integration-ui.js'),('settings-support.js','settings-support.js'),('updates-ui.js','updates-ui.js'),('vot-ui.js','vot-ui.js')]:shutil.copyfile(root/'gecko/chrome'/source,runtime/'ui'/target)
 with (out/'runtime/defaults/pref/autoconfig.js').open('a',encoding='utf-8') as f:f.write('\npref("browser.startup.blankWindow",false);\npref("browser.startup.preXulSkeletonUI",false);\n')
-shutil.copyfile(root/'gecko/soulu.cfg',out/'runtime/soulu.cfg')
-shutil.copyfile(root/'gecko/chrome.manifest',out/'runtime/soulu/chrome.manifest')
+shutil.copyfile(root/'gecko/sona.cfg',out/'runtime/sona.cfg')
+shutil.copyfile(root/'gecko/chrome.manifest',out/'runtime/sona/chrome.manifest')
 shutil.copyfile(root/'gecko/README.md',out/'README.md')
 assert before==hashes(),'Existing executable components must remain byte-identical'
-build=json.loads((out/'BUILD.json').read_text());build['base_runtime_source']=build.get('soulu_source');build['soulu_source']=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip();build['name']='Soulu Gecko Preview 8';build['channel']='gecko-preview';build['platform']='win64';build['resource_source']=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip();(out/'BUILD.json').write_text(json.dumps(build,indent=2))
+build=json.loads((out/'BUILD.json').read_text());build['base_runtime_source']=build.get('sona_source');build['sona_source']=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip();build['name']='Sona Gecko Preview 8';build['channel']='gecko-preview';build['platform']='win64';build['resource_source']=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip();(out/'BUILD.json').write_text(json.dumps(build,indent=2))
 
 settings=runtime/'ui/settings.js'
 s=settings.read_text();s=s.replace('Установленные расширения Firefox','Установленные расширения').replace('Installed Firefox extensions','Installed extensions').replace('Firefox Add-ons','Каталог расширений').replace('менеджер Firefox','менеджер расширений').replace('Firefox manager','extension manager');settings.write_text(s)

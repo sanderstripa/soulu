@@ -27,25 +27,25 @@ def frames(data):
 
 def verify_assets():
     manifest = json.loads((ROOT/'ui/branding/manifest.json').read_text())
-    source = (ROOT/'ui/branding/soulu-master.svg').read_text(encoding='utf-8')
+    source = (ROOT/'ui/branding/sona-master.svg').read_text(encoding='utf-8')
     assert hashlib.sha256(source.encode('utf-8')).hexdigest() == manifest['source_sha256'], 'Master changed without re-exporting'
     for size in manifest['png_sizes']:
-        data = (ROOT/f'ui/branding/soulu-{size}.png').read_bytes()
+        data = (ROOT/f'ui/branding/sona-{size}.png').read_bytes()
         assert hashlib.sha256(data).hexdigest() == manifest['png_sha256'][str(size)], f'Stale PNG at {size}px'
         im = Image.open(BytesIO(data)).convert('RGBA')
         assert im.size == (size, size) and im.getpixel((0, 0))[3] == 0
-    expected = (ROOT/'ui/soulu-icon.ico').read_bytes()
+    expected = (ROOT/'ui/sona-icon.ico').read_bytes()
     assert hashlib.sha256(expected).hexdigest() == manifest['ico_sha256']
     for alias in manifest['aliases']:
         data = (ROOT/'ui'/alias).read_bytes()
         if alias.endswith('.ico'):
             assert data == expected, f'Stale icon alias: {alias}'
         else:
-            assert data == (ROOT/'ui/branding/soulu-1024.png').read_bytes(), f'Stale PNG alias: {alias}'
+            assert data == (ROOT/'ui/branding/sona-1024.png').read_bytes(), f'Stale PNG alias: {alias}'
     for size, data in frames(expected).items():
         im = Image.open(BytesIO(data)).convert('RGBA')
         assert im.size == (size, size)
-        assert im.tobytes() == Image.open(ROOT/f'ui/branding/soulu-{size}.png').convert('RGBA').tobytes()
+        assert im.tobytes() == Image.open(ROOT/f'ui/branding/sona-{size}.png').convert('RGBA').tobytes()
         alpha = im.getchannel('A')
         x0, y0, x1, y1 = alpha.getbbox()
         assert (x0,y0,x1,y1) == (0,0,size,size), f'Inset optical bounds at {size}'
@@ -54,8 +54,8 @@ def verify_assets():
         # A white/black perimeter stroke or colored specks is never intentional.
         assert not any(a > 32 and max(r,g,b) < 20 for r,g,b,a in im.getdata()), 'Black pixels'
         assert not any(a > 32 and min(r,g,b) > 245 for r,g,b,a in im.getdata()), 'White pixels'
-    assert not (ROOT/'ui/soulu-icon.jpg').exists(), 'Opaque legacy logo remains'
-    svg = (ROOT/'ui/branding/soulu-master.svg').read_text()
+    assert not (ROOT/'ui/sona-icon.jpg').exists(), 'Opaque legacy logo remains'
+    svg = (ROOT/'ui/branding/sona-master.svg').read_text()
     assert '<image' not in svg and 'stroke=' not in svg and '<filter' not in svg
     return expected
 

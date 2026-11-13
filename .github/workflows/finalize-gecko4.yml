@@ -1,4 +1,4 @@
-name: Finalize and publish Soulu Gecko Preview 4
+name: Finalize and publish Sona Gecko Preview 4
 on:
   push:
     branches: [gecko-preview]
@@ -8,7 +8,7 @@ permissions:
   contents: write
   actions: read
 concurrency:
-  group: soulu-gecko-final4
+  group: sona-gecko-final4
   cancel-in-progress: false
 jobs:
   windows-final:
@@ -30,7 +30,7 @@ jobs:
         run: |
           if ((gh api repos/sanderstripa/soulu/actions/runs/41653080983 --jq .conclusion) -ne 'success') { throw 'Full Windows acceptance is not successful' }
           if ((gh api repos/sanderstripa/soulu/actions/runs/41653080983 --jq .head_sha) -ne 'c09a46573870d3eea0adf15015b1d15e6dc9abe2') { throw 'Wrong base source' }
-          gh run download 41653080983 -n Soulu-Gecko-Preview-4-win64 -D candidate
+          gh run download 41653080983 -n Sona-Gecko-Preview-4-win64 -D candidate
           gh run download 41653080983 -n gecko4-acceptance -D gecko4-baseline
           python gecko/tests/prepare-final4.py
           if ($LASTEXITCODE -ne 0) { throw 'Candidate verification/overlay failed' }
@@ -53,10 +53,10 @@ jobs:
       - name: Package final ZIP and launch its extracted portable EXE
         shell: pwsh
         run: |
-          Compress-Archive -Path gecko-out/* -DestinationPath Soulu-Gecko-Preview-4-win64.zip -CompressionLevel Optimal
-          python gecko/tests/zip_smoke.py Soulu-Gecko-Preview-4-win64.zip gecko4-final
+          Compress-Archive -Path gecko-out/* -DestinationPath Sona-Gecko-Preview-4-win64.zip -CompressionLevel Optimal
+          python gecko/tests/zip_smoke.py Sona-Gecko-Preview-4-win64.zip gecko4-final
           if ($LASTEXITCODE -ne 0) { throw 'Final extracted ZIP failed to launch' }
-          (Get-FileHash Soulu-Gecko-Preview-4-win64.zip -Algorithm SHA256).Hash.ToLowerInvariant() + '  Soulu-Gecko-Preview-4-win64.zip' | Set-Content SHA256SUMS.txt
+          (Get-FileHash Sona-Gecko-Preview-4-win64.zip -Algorithm SHA256).Hash.ToLowerInvariant() + '  Sona-Gecko-Preview-4-win64.zip' | Set-Content SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -64,9 +64,9 @@ jobs:
           path: gecko4-final/
       - uses: actions/upload-artifact@v4
         with:
-          name: Soulu-Gecko-Preview-4-final
+          name: Sona-Gecko-Preview-4-final
           path: |
-            Soulu-Gecko-Preview-4-win64.zip
+            Sona-Gecko-Preview-4-win64.zip
             SHA256SUMS.txt
       - name: Publish only after archive launch and every required gate
         shell: pwsh
@@ -75,5 +75,5 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Final publication gate failed' }
           gh release view gecko-preview-4 *> $null
           if ($LASTEXITCODE -eq 0) { throw 'Release already exists; refusing overwrite' }
-          gh release create gecko-preview-4 Soulu-Gecko-Preview-4-win64.zip SHA256SUMS.txt gecko-out/BUILD.json gecko-out/preview4.json gecko-out/adblock-update.json gecko4-final/final4.json gecko4-final/visual-comparison.json gecko4-final/zip-smoke.json gecko/docs/PREVIEW4-RESULTS.md --target "$env:GITHUB_SHA" --title 'Soulu Gecko Preview 4' --prerelease --notes-file gecko/docs/PREVIEW4-RESULTS.md
+          gh release create gecko-preview-4 Sona-Gecko-Preview-4-win64.zip SHA256SUMS.txt gecko-out/BUILD.json gecko-out/preview4.json gecko-out/adblock-update.json gecko4-final/final4.json gecko4-final/visual-comparison.json gecko4-final/zip-smoke.json gecko/docs/PREVIEW4-RESULTS.md --target "$env:GITHUB_SHA" --title 'Sona Gecko Preview 4' --prerelease --notes-file gecko/docs/PREVIEW4-RESULTS.md
           if ($LASTEXITCODE -ne 0) { throw 'Release publication failed' }

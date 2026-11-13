@@ -1,4 +1,4 @@
-/* Soulu native surfaces. Security warnings and their actions remain intact. */
+/* Sona native surfaces. Security warnings and their actions remain intact. */
 :root {
  --color-accent-primary:#0671ff!important;
  --color-accent-primary-hover:#0065e6!important;
@@ -22,11 +22,11 @@
  --theme-focus-outline-color:#0671ff!important;
  --border-radius-medium:10px!important;
 }
-@font-face{font-family:Inter;src:url("chrome://soulu/content/ui/fonts/Inter.ttf");font-weight:100 900}
+@font-face{font-family:Inter;src:url("chrome://sona/content/ui/fonts/Inter.ttf");font-weight:100 900}
 :root,body,button,input,select,textarea{font-family:Inter,"Segoe UI",sans-serif!important}
 /* Replace decorative fox artwork only; retain warning and certificate icons. */
 body.neterror .img-container img,body.certerror .img-container img{
- content:url("chrome://soulu/content/ui/browser-icon.png")!important;
+ content:url("chrome://sona/content/ui/browser-icon.png")!important;
  object-fit:contain!important;width:140px!important;height:140px!important;
 }
 body.neterror,body.certerror{background:light-dark(#fcfcfd,#202124)!important;color:light-dark(#242628,#e6e7e9)!important}

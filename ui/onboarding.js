@@ -14,7 +14,7 @@
   async function run(fn){if(busy)return;busy=true;document.querySelector('main').setAttribute('aria-busy','true');disable();try{await fn();}catch(e){report(e);}finally{busy=false;document.querySelector('main').setAttribute('aria-busy','false');disable();}}
   function disable(){document.querySelectorAll('button,input').forEach(n=>{n.disabled=busy||n.dataset.unavailable==='true';});}
   const persist=async patch=>{flow=await invoke('progress',{...patch,step:patch.step||flow.step||1});};
-  const parseVpn=()=>window.souluParseVpnKey(vpnDraft);
+  const parseVpn=()=>window.sonaParseVpnKey(vpnDraft);
   const go=async step=>{await persist({step});render();$('title').focus();};
   function button(text,fn,kind=''){const n=el('button',text,kind);n.type='button';n.onclick=()=>run(fn);return n;}
   function note(text){$('controls').append(el('p',text,'note'));}
@@ -33,7 +33,7 @@
   function art(step){const container=$('art');container.replaceChildren();
     if(step===4){container.append(el('div',null,'glass-shield'),el('div',null,'orbit'));return;}
     if(step===5){const tunnel=el('div',null,'tunnel');tunnel.append(el('div',null,'glass-shield'));container.append(tunnel);return;}
-    container.append(image('branding/soulu-512.png','hero-logo'));
+    container.append(image('branding/sona-512.png','hero-logo'));
     if(step===2||step===3){const data=el('div',null,'data-art');for(const kind of ['bookmark','clock','key']){const tile=el('span');tile.append(symbol(kind));data.append(tile);}container.append(data);}
   }
   function summary(){const ul=el('ul',null,'summary');const r=flow.importReport;
@@ -45,9 +45,9 @@
     const focused=clearMessage?null:document.activeElement?.getAttribute('aria-label');
     const step=flow.step||1;art(step);$('counter').textContent=`${step} из 6`;
     $('controls').replaceChildren();$('actions').replaceChildren();if(clearMessage)$('message').textContent='';
-    const titles=['Добро пожаловать в Soulu','Импортировать данные','Что перенести?','Приватность и защита','Встроенный VPN','Всё готово — добро пожаловать в Soulu'];
+    const titles=['Добро пожаловать в Sona','Импортировать данные','Что перенести?','Приватность и защита','Встроенный VPN','Всё готово — добро пожаловать в Sona'];
     const source=sources.find(s=>s.id===flow.source);
-    const descriptions=['Спокойный браузер с чистым интерфейсом, вкладками, закладками и приватностью под твоим контролем.',sources.length?'Найдены браузеры на этом устройстве. Выбери, откуда перенести данные в Soulu.':'Поддерживаемые браузеры для импорта не найдены.',`Выбери, какие данные импортировать из ${source?.browser||'выбранного браузера'}.`,'Базовые настройки, которые можно изменить позже.','Добавь ключ подключения сейчас или настрой позже.','Базовые параметры настроены. Остальное можно изменить в настройках в любой момент.'];
+    const descriptions=['Спокойный браузер с чистым интерфейсом, вкладками, закладками и приватностью под твоим контролем.',sources.length?'Найдены браузеры на этом устройстве. Выбери, откуда перенести данные в Sona.':'Поддерживаемые браузеры для импорта не найдены.',`Выбери, какие данные импортировать из ${source?.browser||'выбранного браузера'}.`,'Базовые настройки, которые можно изменить позже.','Добавь ключ подключения сейчас или настрой позже.','Базовые параметры настроены. Остальное можно изменить в настройках в любой момент.'];
     $('title').textContent=titles[step-1];$('description').textContent=descriptions[step-1];
     if(step===6&&!flow.privacyApplied)$('description').textContent='Первичная настройка завершена. Остальное можно изменить в настройках в любой момент.';
     const actions=$('actions'),controls=$('controls');
@@ -83,8 +83,8 @@
       controls.append(button('Проверить ключ',()=>{parseVpn();$('message').textContent='Формат ключа распознан. При добавлении его проверит VPN backend. Подключение не запускается.';},'link'));
       actions.append(button('Назад',()=>go(4)),button('Пропустить',()=>go(6)),button('Добавить',async()=>{const parsed=parseVpn();const result=await invoke('vpn',parsed);if(result?.ok===false)throw Error(result.error||'Ключ не сохранён');flow.vpnAdded=true;vpnDraft='';await go(6);},'primary'));
     }
-    if(step===6){summary();note('Если хочешь, можно сразу сделать Soulu браузером по умолчанию.');controls.lastChild.classList.add('divider');
-      actions.append(button('Не сейчас',()=>finish(false)),button('Сделать браузером по умолчанию',async()=>{const result=await invoke('default');if(!result.ok)throw Error('Не удалось открыть стандартные приложения Windows');$('message').textContent=result.message;},'primary'),button('Открыть Soulu',()=>finish(false),'link'));
+    if(step===6){summary();note('Если хочешь, можно сразу сделать Sona браузером по умолчанию.');controls.lastChild.classList.add('divider');
+      actions.append(button('Не сейчас',()=>finish(false)),button('Сделать браузером по умолчанию',async()=>{const result=await invoke('default');if(!result.ok)throw Error('Не удалось открыть стандартные приложения Windows');$('message').textContent=result.message;},'primary'),button('Открыть Sona',()=>finish(false),'link'));
     }
     disable();
     if(focused)for(const n of document.querySelectorAll('input'))if(n.getAttribute('aria-label')===focused)n.focus();

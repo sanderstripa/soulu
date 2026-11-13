@@ -10,19 +10,19 @@ def package(url,integrity):
 b=package(*PACKAGES[0][1:]);t=package(*PACKAGES[1][1:])
 worker=b['package/worker/translator-worker.js'].decode();glue=b['package/worker/bergamot-translator-worker.js'].decode();glue=glue.replace('var global_object = this;', 'var global_object = self;')
 wasm=base64.b64encode(b['package/worker/bergamot-translator-worker.wasm']).decode()
-worker=worker.replace("new URL('./bergamot-translator-worker.wasm', self.location)","'soulu-wasm'")
+worker=worker.replace("new URL('./bergamot-translator-worker.wasm', self.location)","'sona-wasm'")
 worker=worker.replace("self.importScripts('bergamot-translator-worker.js');",'(function(Module){'+glue+'})(Module);')
 bootstrap='const wasm=Uint8Array.from(atob('+json.dumps(wasm)+'),c=>c.charCodeAt(0));\nself.fetch=async()=>new Response(wasm,{headers:{"Content-Type":"application/wasm"}});\n'+worker
 main=b['package/translator.js'].decode().replace('export class ','class ')
 main=main.replace("new Worker(new URL('./worker/translator-worker.js', import.meta.url))",'new Worker(workerURL)')
 assert 'import.meta' not in main
 out=ROOT/'ui/third_party/bergamot-runtime.js'
-out.write_text('// Generated from integrity-pinned official @browsermt/bergamot-translator 0.4.9. MPL-2.0.\n(()=>{const workerURL=URL.createObjectURL(new Blob(['+json.dumps(bootstrap)+'],{type:"text/javascript"}));\n'+main+'\nwindow.SouluBergamot={BatchTranslator,TranslatorBacking,CancelledError};})();\n',encoding='utf-8')
+out.write_text('// Generated from integrity-pinned official @browsermt/bergamot-translator 0.4.9. MPL-2.0.\n(()=>{const workerURL=URL.createObjectURL(new Blob(['+json.dumps(bootstrap)+'],{type:"text/javascript"}));\n'+main+'\nwindow.SonaBergamot={BatchTranslator,TranslatorBacking,CancelledError};})();\n',encoding='utf-8')
 language=t['package/dist/tinyld.normal.browser.js'].decode()
 start=language.rfind('export {');assert start!=-1
-language=language[:start]+'window.SouluLanguage={detect,detectAll};'
+language=language[:start]+'window.SonaLanguage={detect,detectAll};'
 (ROOT/'ui/third_party/tinyld.js').write_text('(()=>{'+language+'})();',encoding='utf-8')
 (ROOT/'ui/third_party/tinyld.LICENSE').write_bytes(t['package/license'])
 manifest=json.loads((ROOT/'ui/translation-models.json').read_text())
-(ROOT/'ui/translation-models.js').write_text('window.SouluTranslationModels='+json.dumps(manifest)+';\n',encoding='utf-8')
+(ROOT/'ui/translation-models.js').write_text('window.SonaTranslationModels='+json.dumps(manifest)+';\n',encoding='utf-8')
 print('Built integrity-pinned translation runtime:',out.stat().st_size)

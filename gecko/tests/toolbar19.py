@@ -5,8 +5,8 @@ import json
 def verify_toolbar(m, check, wait):
     def shell(code):
         script = ('const done=arguments[arguments.length-1];'
-                  'document.getElementById("soulu-shell-frame").browsingContext.currentWindowGlobal'
-                  '.getActor("SouluApp").sendQuery("testing",' + json.dumps(code) +
+                  'document.getElementById("sona-shell-frame").browsingContext.currentWindowGlobal'
+                  '.getActor("SonaApp").sendQuery("testing",' + json.dumps(code) +
                   ').then(done,error=>done({error:String(error)}));')
         value = m.execute_async_script(script)
         if isinstance(value, dict) and 'error' in value:

@@ -12,7 +12,7 @@ import time
 spec=importlib.util.spec_from_file_location('storage',Path(__file__).with_name('test-cef-storage.py'))
 s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
 os.environ['NO_PROXY']='localhost,127.0.0.1,::1'
-os.environ['SOULU_REGRESSION_SKIP_FIRST_RUN']='1'
+os.environ['SONA_REGRESSION_SKIP_FIRST_RUN']='1'
 
 def wait(fn):
     until=time.monotonic()+40
@@ -30,8 +30,8 @@ def main():
         assert value,label
         report['checks'].append(label);print('PASS:',label,flush=True)
     sockets=[]
-    with tempfile.TemporaryDirectory(prefix='soulu-typography-',ignore_cleanup_errors=True) as temp:
-        env=dict(os.environ,LOCALAPPDATA=temp,APPDATA=str(Path(temp)/'roaming'),SOULU_UI_TEST_PORT=str(s.DEBUG_PORT))
+    with tempfile.TemporaryDirectory(prefix='sona-typography-',ignore_cleanup_errors=True) as temp:
+        env=dict(os.environ,LOCALAPPDATA=temp,APPDATA=str(Path(temp)/'roaming'),SONA_UI_TEST_PORT=str(s.DEBUG_PORT))
         process=subprocess.Popen([str(exe),'--no-proxy-server'],env=env)
         def connect(fragment):
             target=wait(lambda:next((t for t in s.targets() if fragment in t.get('url','')),None))
@@ -58,19 +58,19 @@ def main():
             wait(lambda:s.evaluate(shell,'typeof browserShell?.getState==="function"'))
             audit(shell,'browser chrome');audit(home,'Home');actual_face(home,'#providerName','Home provider label');capture(home,'home')
             s.evaluate(shell,'document.querySelector("#compactVpnButton").dispatchEvent(new PointerEvent("pointerover",{bubbles:true}))')
-            wait(lambda:s.evaluate(shell,'!document.querySelector(".soulu-type-tooltip").hidden'))
-            actual_face(shell,'.soulu-type-tooltip','Toolbar title tooltip');capture(shell,'toolbar-tooltip')
+            wait(lambda:s.evaluate(shell,'!document.querySelector(".sona-type-tooltip").hidden'))
+            actual_face(shell,'.sona-type-tooltip','Toolbar title tooltip');capture(shell,'toolbar-tooltip')
             s.evaluate(shell,'document.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true}))')
             s.evaluate(shell,'browserShell.openSettingsWindow()');settings=connect('/ui/settings.html')
             wait(lambda:s.evaluate(settings,'document.body.classList.contains("ready")'))
             actual_face(settings,'#settingsTitle','Settings title')
             for lang in ('ru','en'):
-                s.evaluate(settings,"(()=>{souluSettings.openSection('general');const n=document.querySelector('#language');n.value="+json.dumps(lang)+";n.dispatchEvent(new Event('change',{bubbles:true}));})()")
+                s.evaluate(settings,"(()=>{sonaSettings.openSection('general');const n=document.querySelector('#language');n.value="+json.dumps(lang)+";n.dispatchEvent(new Event('change',{bubbles:true}));})()")
                 for theme in ('light','dark','system'):
-                    s.evaluate(settings,"(()=>{souluSettings.openSection('interface');const n=document.querySelector('[name=settings-theme][value="+theme+"]');n.click();})()")
+                    s.evaluate(settings,"(()=>{sonaSettings.openSection('interface');const n=document.querySelector('[name=settings-theme][value="+theme+"]');n.click();})()")
                     for scale in (1,1.25,1.5,2):
                         s.command(settings,'Emulation.setDeviceMetricsOverride',{'width':1000,'height':760,'deviceScaleFactor':scale,'mobile':False})
-                        s.evaluate(settings,"souluSettings.openSection('')")
+                        s.evaluate(settings,"sonaSettings.openSection('')")
                         wait(lambda:s.evaluate(settings,'!document.getAnimations().some(a=>a.playState==="running")'))
                         audit(settings,f'Settings {lang}/{theme}/{scale}')
                         check(s.evaluate(settings,'document.documentElement.scrollWidth<=innerWidth'),f'No horizontal page overflow {lang}/{theme}/{scale}')
@@ -78,14 +78,14 @@ def main():
                         report['matrix'].append({'language':lang,'theme':theme,'scale':scale,'screenshot':name+'.png'})
                 sections=s.evaluate(settings,'[...document.querySelectorAll("#homeCards [data-section]")].map(n=>n.dataset.section)')
                 for section in sections:
-                    s.evaluate(settings,'souluSettings.openSection('+json.dumps(section)+')')
+                    s.evaluate(settings,'sonaSettings.openSection('+json.dumps(section)+')')
                     wait(lambda:s.evaluate(settings,'!document.getAnimations().some(a=>a.playState==="running")'))
                     audit(settings,'Settings '+lang+'/'+section);capture(settings,'section-'+lang+'-'+section)
-            s.evaluate(settings,'souluSettings.flush()')
+            s.evaluate(settings,'sonaSettings.flush()')
             s.evaluate(shell,"browserShell.openHistory()")
             history=connect('/ui/history.html');audit(history,'History');actual_face(history,'h1','History title');capture(history,'history')
             # VPN is now part of Settings; there is no separate panel/iframe.
-            s.evaluate(settings,"souluSettings.openSection('vpn')")
+            s.evaluate(settings,"sonaSettings.openSection('vpn')")
             audit(settings,'VPN connections');actual_face(settings,'.vpn-default-summary strong','VPN default connection');capture(settings,'vpn-connections')
             check(s.evaluate(shell,"!document.querySelector('#vpnFrame,#vpnPanel')"),'Legacy VPN iframe and side panel removed')
             report['passed']=True

@@ -45,6 +45,6 @@
     const expanded = state.tabs.length > 1;
     apply(state.adaptiveToolbar?.active ? state.adaptiveToolbar : {expanded,progress:expanded?1:0,height:expanded?88:68});
   }
-  window.souluAdaptiveToolbar = {sync};
+  window.sonaAdaptiveToolbar = {sync};
   window.browserShell.onAdaptiveGeometry?.(apply);
 })();

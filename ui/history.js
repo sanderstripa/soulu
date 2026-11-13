@@ -13,7 +13,7 @@
   function text(id,ru,en){$(id).textContent=t(ru,en);}
   function apply(next,initial=false){state=next;document.documentElement.dataset.theme=next.resolvedTheme;document.documentElement.lang=locale();document.title=t('История','History');
     text('heading','История','History');text('clearData','Очистить данные браузера…','Clear browsing data…');text('more','Показать ещё','Show more');
-    $('profileLabel').textContent=state.incognito?t('ИНКОГНИТО','INCOGNITO'):'SOULU · '+(state.profileName||t('Текущий профиль','Current profile'));
+    $('profileLabel').textContent=state.incognito?t('ИНКОГНИТО','INCOGNITO'):'SONA · '+(state.profileName||t('Текущий профиль','Current profile'));
     $('search').placeholder=t('Поиск по названию, адресу или домену','Search titles, URLs or domains');$('search').setAttribute('aria-label',$('search').placeholder);
     $('filter').setAttribute('aria-label',t('Период истории','History period'));$('visits').setAttribute('aria-label',t('Записи истории','History visits'));
     const filter=initial?state.filter:$('filter').value,range=$('range').value||'all';
@@ -24,7 +24,7 @@
     text('rangeLabel','Диапазон истории','History time range');text('historyName','История браузера','Browsing history');text('historyHint','Посещения за выбранный период.','Visits in the selected time range.');
     text('sitesName','Файлы cookie и данные сайтов','Cookies and site data');text('sitesHint','За всё время. Включая хранилища сайтов; большинство сайтов выйдет из аккаунта.','All time. Includes site storage; most sites will sign you out.');
     text('cacheName','Кэшированные файлы и изображения','Cached files and images');text('cacheHint','За всё время. Временные файлы страниц; следующая загрузка может быть медленнее.','All time. Temporary page files; the next load may take longer.');
-    text('autofillNote','Soulu пока не сохраняет автозаполнение форм. Сохранённые пароли не удаляются.','Soulu does not yet store form autofill data. Saved passwords are preserved.');
+    text('autofillNote','Sona пока не сохраняет автозаполнение форм. Сохранённые пароли не удаляются.','Sona does not yet store form autofill data. Saved passwords are preserved.');
     text('allTimeText','Я понимаю, что выбранные cookies, данные сайтов и кэш удалятся за всё время, независимо от диапазона истории.','I understand that selected cookies, site data and cache will be removed for all time, regardless of the history range.');
     text('cancelClear','Отмена','Cancel');text('confirmClear','Очистить','Clear');
     $('search').disabled=$('filter').disabled=$('clearData').disabled=!!state.incognito;
@@ -46,7 +46,7 @@
   $('search').addEventListener('input',()=>{clearTimeout(timer);++epoch;timer=setTimeout(()=>load(),160);});$('filter').onchange=()=>load();$('more').onclick=()=>load(false);
   function controls(){const web=$('sitesChoice').checked||$('cacheChoice').checked;$('allTimeLabel').hidden=!web;$('confirmClear').disabled=busy||!($('historyChoice').checked||web)||(web&&!$('allTimeAck').checked);}
   function openClear(){if(state.incognito||busy)return;$('clearMessage').textContent='';$('allTimeAck').checked=false;controls();if(!$('clearDialog').open)$('clearDialog').showModal();}
-  window.souluHistoryClear=openClear;$('clearData').onclick=openClear;
+  window.sonaHistoryClear=openClear;$('clearData').onclick=openClear;
   for(const id of ['historyChoice','sitesChoice','cacheChoice','allTimeAck'])$(id).onchange=controls;
   $('cancelClear').onclick=()=>{if(!busy)$('clearDialog').close();};$('clearDialog').addEventListener('cancel',e=>{if(busy)e.preventDefault();});
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('clearDialog').open){e.preventDefault();if(!busy)$('clearDialog').close();}});

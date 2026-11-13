@@ -1,4 +1,4 @@
-# Soulu AdBlock
+# Sona AdBlock
 
 ## Original failure
 
@@ -45,7 +45,7 @@ Bundled directly in the executable, so a new installation works offline:
 
 Bundled date: 4 October 2026. Rules are initialized before CefInitialize can
 open the first web page. Lists are shared, while settings stay profile scoped.
-Cache: `%LOCALAPPDATA%\Soulu\User Data\AdBlock\filters-v1.json`.
+Cache: `%LOCALAPPDATA%\Sona\User Data\AdBlock\filters-v1.json`.
 It contains all three raw lists, schema, successful update timestamp and a
 SHA-256 integrity digest covering length-prefixed list contents.
 
@@ -64,7 +64,7 @@ Timeout, HTTP error, redirect, invalid content, failed write or invalid parser
 result retains the last working engine/cache and records an update error.
 Corrupt cache falls back to the bundled lists, without crashing or claiming
 zero-rule protection. Missing cache is an ordinary first-install condition.
-No visited domains, filter hits or browsing data are sent to Soulu servers.
+No visited domains, filter hits or browsing data are sent to Sona servers.
 
 ## CEF integration and settings
 
@@ -91,7 +91,7 @@ of the top-level site. All content tabs/popups share the process-wide engine.
 Internal file/UI pages and local Reader UI are not filtered.
 
 Global/default and host overrides use the existing SitePolicy model, stored in
-each profile's `soulu-site-rules.json`. Explicit site ON can override global OFF.
+each profile's `sona-site-rules.json`. Explicit site ON can override global OFF.
 Settings mutations apply immediately to new requests and refresh cosmetic
 styles in existing frames. Site Info changes also reload the page without HTTP
 cache to remove already loaded advertisements. Incognito starts with a copy of
@@ -120,7 +120,7 @@ protection, real loaded rule counts, engine version, subscription versions,
 cache/bundled source, last successful update/error and blocked/checked requests.
 Counter scope: current tab document, reset on main navigation, not an eternal
 global statistic. Browserless worker hits are not attributed to a tab counter.
-Detailed hit samples exist only in an explicit SOULU_UI_TEST_PORT diagnostic
+Detailed hit samples exist only in an explicit SONA_UI_TEST_PORT diagnostic
 process, are capped at 200 per document and include timestamp/site/type/URL/rule.
 They contain no headers, cookies, Authorization, request bodies or passwords.
 Site Info displays readiness and its real blocked count without a redesign.

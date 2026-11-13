@@ -13,7 +13,7 @@ import time
 spec=importlib.util.spec_from_file_location('overlay',Path(__file__).with_name('test-cef-settings-overlay.py'))
 o=importlib.util.module_from_spec(spec);spec.loader.exec_module(o)
 s=o.s
-os.environ['SOULU_REGRESSION_SKIP_FIRST_RUN']='1'
+os.environ['SONA_REGRESSION_SKIP_FIRST_RUN']='1'
 os.environ['NO_PROXY']='localhost,127.0.0.1,::1'
 
 def main():
@@ -26,8 +26,8 @@ def main():
     def check(value,name):
         assert value,name
         report['checks'].append(name);print('PASS:',name,flush=True)
-    with tempfile.TemporaryDirectory(prefix='soulu-motion-',ignore_cleanup_errors=True) as temp:
-        env=dict(os.environ,LOCALAPPDATA=temp,SOULU_UI_TEST_PORT=str(s.DEBUG_PORT))
+    with tempfile.TemporaryDirectory(prefix='sona-motion-',ignore_cleanup_errors=True) as temp:
+        env=dict(os.environ,LOCALAPPDATA=temp,SONA_UI_TEST_PORT=str(s.DEBUG_PORT))
         process=subprocess.Popen([exe,'--no-proxy-server'],env=env);sockets=[]
         def connect(fragment):
             target=o.wait(lambda:next((t for t in s.targets() if fragment in t.get('url','')),None))
@@ -42,11 +42,11 @@ def main():
         try:
             shell=connect('/ui/index.html')
             o.wait(lambda:s.evaluate(shell,'typeof window.browserShell?.getState==="function"'))
-            window=o.wait(lambda:next(iter(o.windows(process.pid,'SouluBrowserWindow')),None))
+            window=o.wait(lambda:next(iter(o.windows(process.pid,'SonaBrowserWindow')),None))
             s.evaluate(shell,'browserShell.openSettingsWindow()');settings=connect('/ui/settings.html')
             o.wait(lambda:evaluate('document.body?.classList.contains("ready")'))
-            host=o.wait(lambda:next(iter(o.windows(process.pid,'SouluSettingsOverlay')),None))
-            report['systemReducedAtLaunch']=evaluate('souluMotion.reduced')
+            host=o.wait(lambda:next(iter(o.windows(process.pid,'SonaSettingsOverlay')),None))
+            report['systemReducedAtLaunch']=evaluate('sonaMotion.reduced')
             s.command(settings,'Emulation.setEmulatedMedia',{'features':[{'name':'prefers-reduced-motion','value':'no-preference'}]})
             keys=evaluate('[...document.querySelectorAll("#homeCards [data-section]")].map(n=>n.dataset.section)')
             check(len(keys)==12,'Twelve Settings categories available')
@@ -68,7 +68,7 @@ def main():
                 click('#sectionNav button:first-child');settled()
                 check(evaluate('document.querySelector("main").dataset.view==="home" && document.activeElement.dataset.section==='+json.dumps(key)),key+': reverse and card focus')
             # No source exists when search or internal links directly choose a section.
-            evaluate('souluSettings.openSection("privacy","permissions-camera")')
+            evaluate('sonaSettings.openSection("privacy","permissions-camera")')
             check(evaluate('!document.querySelector(".motion-shared")'),'Deep link has no fabricated card');settled()
             click('#sectionNav button:first-child');settled()
             evaluate('settingsSearch.value="camera";settingsSearch.dispatchEvent(new Event("input"))')
@@ -94,14 +94,14 @@ def main():
             for theme in ['light','dark','system']:
                 for scale in [1,1.25,1.5,1.75,2]:
                     s.command(settings,'Emulation.setDeviceMetricsOverride',{'width':900,'height':740,'deviceScaleFactor':scale,'mobile':False})
-                    evaluate('souluSettings.current.settings.theme='+json.dumps(theme)+';document.body.dataset.theme='+json.dumps(theme))
+                    evaluate('sonaSettings.current.settings.theme='+json.dumps(theme)+';document.body.dataset.theme='+json.dumps(theme))
                     click(card('interface'));settled()
                     check(evaluate('document.querySelector(".nav-item.active").getBoundingClientRect().width>0 && !document.querySelector(".motion-shared")'),f'{theme} scale {scale}: geometry and cleanup')
                     click('#sectionNav button:first-child');settled()
                     report['deviceScales'].append({'theme':theme,'scale':scale})
             s.command(settings,'Emulation.clearDeviceMetricsOverride')
             for cycle in range(30):
-                evaluate('souluSettings.openSection("interface");souluSettings.openSection("");souluSettings.openSection("startup");souluSettings.openSection("")')
+                evaluate('sonaSettings.openSection("interface");sonaSettings.openSection("");sonaSettings.openSection("startup");sonaSettings.openSection("")')
                 settled()
             check(evaluate('document.querySelector("main").dataset.view==="home"'),'Rapid repeated input settles to last intent')
             click(card('interface'))
@@ -116,7 +116,7 @@ def main():
             click('#sectionNav button:first-child');settled()
             s.command(settings,'Emulation.setEmulatedMedia',{'features':[{'name':'prefers-reduced-motion','value':'reduce'}]})
             click(card('interface'))
-            check(evaluate('souluMotion.reduced && !document.querySelector(".motion-shared")'),'Reduced motion removes spatial morph');settled()
+            check(evaluate('sonaMotion.reduced && !document.querySelector(".motion-shared")'),'Reduced motion removes spatial morph');settled()
             click('#sectionNav button:first-child');settled()
             s.command(settings,'Emulation.setEmulatedMedia',{'features':[{'name':'prefers-reduced-motion','value':'no-preference'}]})
             s.command(settings,'HeapProfiler.collectGarbage')
@@ -130,7 +130,7 @@ def main():
                 return sum((t.high<<32)+t.low for t in times[2:])/10000
             host_before=cpu_ms();wall_before=time.monotonic()
             # Record monotonic rAF pacing and real transition duration over repeated cycles.
-            samples=evaluate('''(async()=>{const cycles=[];for(let i=0;i<10;i++){const frames=[];let run=true,last=performance.now();function frame(now){frames.push(now-last);last=now;if(run)requestAnimationFrame(frame)}requestAnimationFrame(frame);const start=performance.now();souluSettings.openSection("interface");while(document.getAnimations().some(a=>a.playState==="running"))await new Promise(r=>setTimeout(r,10));run=false;cycles.push({elapsed:performance.now()-start,frames});souluSettings.openSection("");while(document.getAnimations().some(a=>a.playState==="running"))await new Promise(r=>setTimeout(r,10));}return cycles})()''')
+            samples=evaluate('''(async()=>{const cycles=[];for(let i=0;i<10;i++){const frames=[];let run=true,last=performance.now();function frame(now){frames.push(now-last);last=now;if(run)requestAnimationFrame(frame)}requestAnimationFrame(frame);const start=performance.now();sonaSettings.openSection("interface");while(document.getAnimations().some(a=>a.playState==="running"))await new Promise(r=>setTimeout(r,10));run=false;cycles.push({elapsed:performance.now()-start,frames});sonaSettings.openSection("");while(document.getAnimations().some(a=>a.playState==="running"))await new Promise(r=>setTimeout(r,10));}return cycles})()''')
             report['timing']=samples
             renderer_after={m['name']:m['value'] for m in s.command(settings,'Performance.getMetrics')['metrics']}
             report['cpu']={'hostMs':cpu_ms()-host_before,'rendererTaskMs':1000*(renderer_after['TaskDuration']-renderer_before['TaskDuration']),'wallMs':1000*(time.monotonic()-wall_before)}
@@ -142,9 +142,9 @@ def main():
             report['heapBytes']={'before':heap_before,'after':heap_after}
             check(heap_after-heap_before<4*1024*1024,'No accumulating transition layers or material retained JS heap growth')
             # Close during an in-flight internal transition, then reopen canonical Settings.
-            evaluate('souluSettings.flush()')
-            click(card('interface'));evaluate('souluSettingsRequestClose()')
-            o.wait(lambda:not o.windows(process.pid,'SouluSettingsOverlay'))
+            evaluate('sonaSettings.flush()')
+            click(card('interface'));evaluate('sonaSettingsRequestClose()')
+            o.wait(lambda:not o.windows(process.pid,'SonaSettingsOverlay'))
             # Tab sidebar is an overlay: webpage geometry must stay unchanged.
             target=next(t for t in s.targets() if t.get('type')=='page' and '/ui/index.html' not in t.get('url','') and '/ui/settings.html' not in t.get('url','') and not t.get('url','').startswith('chrome://extensions/shortcuts'))
             page=s.websocket.create_connection(target['webSocketDebuggerUrl'],timeout=30,origin=s.BASE);sockets.append(page)

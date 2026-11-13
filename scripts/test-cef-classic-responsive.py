@@ -12,7 +12,7 @@ import time
 
 spec=importlib.util.spec_from_file_location('storage',Path(__file__).with_name('test-cef-storage.py'))
 s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
-os.environ['SOULU_REGRESSION_SKIP_FIRST_RUN']='1'
+os.environ['SONA_REGRESSION_SKIP_FIRST_RUN']='1'
 os.environ['NO_PROXY']='localhost,127.0.0.1,::1'
 u=C.windll.user32
 u.SetWindowPos.argtypes=[W.HWND,W.HWND,C.c_int,C.c_int,C.c_int,C.c_int,W.UINT]
@@ -33,8 +33,8 @@ def main():
     checks=[]
     def check(value,label):
         assert value,label;checks.append(label);print('PASS:',label,flush=True)
-    with tempfile.TemporaryDirectory(prefix='soulu-classic-',ignore_cleanup_errors=True) as root:
-        env=dict(os.environ,LOCALAPPDATA=root,APPDATA=str(Path(root)/'roaming'),SOULU_UI_TEST_PORT=str(s.DEBUG_PORT))
+    with tempfile.TemporaryDirectory(prefix='sona-classic-',ignore_cleanup_errors=True) as root:
+        env=dict(os.environ,LOCALAPPDATA=root,APPDATA=str(Path(root)/'roaming'),SONA_UI_TEST_PORT=str(s.DEBUG_PORT))
         process=None;shell=None
         def state():return s.evaluate(shell,'browserShell.getState()')
         def call(method,value=None):return s.evaluate(shell,'browserShell.'+method+'('+('' if value is None else json.dumps(value))+')')
@@ -48,7 +48,7 @@ def main():
             # The shell may appear before onboarding; finish it before testing restart.
             def onboarding_finished():
                 s.targets()
-                settings=Path(root)/'Soulu'/'User Data'/'Profiles'/'personal'/'soulu-settings.json'
+                settings=Path(root)/'Sona'/'User Data'/'Profiles'/'personal'/'sona-settings.json'
                 return settings.exists() and json.loads(settings.read_text(encoding='utf-8')).get('onboarding',{}).get('status') in ('skipped','completed')
             wait(onboarding_finished)
         def stop():
@@ -62,7 +62,7 @@ def main():
             @C.WINFUNCTYPE(W.BOOL,W.HWND,W.LPARAM)
             def visit(hwnd,_):
                 pid=W.DWORD();u.GetWindowThreadProcessId(hwnd,C.byref(pid));name=C.create_unicode_buffer(128);u.GetClassNameW(hwnd,name,128)
-                if pid.value==process.pid and name.value=='SouluBrowserWindow':handles.append(hwnd)
+                if pid.value==process.pid and name.value=='SonaBrowserWindow':handles.append(hwnd)
                 return True
             u.EnumWindows(visit,0)
             if not handles:raise AssertionError('Native browser window missing')
@@ -81,7 +81,7 @@ def main():
             wait(lambda:len(state()['tabs'])==10)
             resize(640);narrow=wait(lambda:(v if v['compact'] and v['visible'] else None) if (v:=sample()) else None)
             check(narrow['activeWidth']==160 and narrow['title'] and narrow['close'] and all(w==30 for w in narrow['inactive']),'Narrow row keeps active title and close; other tabs become icons')
-            normal=state()['tabs'];pinned_id=next(t['id'] for t in normal if t['url']=='soulu://home');call('pinTab',pinned_id)
+            normal=state()['tabs'];pinned_id=next(t['id'] for t in normal if t['url']=='sona://home');call('pinTab',pinned_id)
             wait(lambda:any(t['id']==pinned_id and t.get('pinned') for t in state()['tabs']))
             check(bool(wait(lambda:s.evaluate(shell,"document.querySelector('#classicPinnedTabs .pinned')?.getBoundingClientRect().width===30"))),'Pinned tab is a separate circle')
             call('switchTab',pinned_id)
@@ -103,12 +103,12 @@ def main():
             check(any(t.get('pinned') for t in state()['tabs']),'Pinned tab returns with its own profile')
             print('Before restart:',json.dumps(state()['tabs'],ensure_ascii=False),flush=True)
             stop()
-            session=Path(root)/'Soulu'/'User Data'/'Profiles'/'personal'/'soulu-session.json'
+            session=Path(root)/'Sona'/'User Data'/'Profiles'/'personal'/'sona-session.json'
             print('Saved session:',session.read_text(encoding='utf-8') if session.exists() else '<missing>',flush=True)
             start();print('After restart:',json.dumps(state()['tabs'],ensure_ascii=False),flush=True)
             wait(lambda:any(t.get('pinned') for t in state()['tabs']))
             check(sum(bool(t.get('pinned')) for t in state()['tabs'])==1,'Pinned tab survives normal restart')
-            call('setSettings',{'startupMode':'soulu'});stop();start()
+            call('setSettings',{'startupMode':'sona'});stop();start()
             wait(lambda:any(t.get('pinned') for t in state()['tabs']) and len(state()['tabs'])>=2)
             check(any(t.get('pinned') for t in state()['tabs']) and any(not t.get('pinned') for t in state()['tabs']),'Pinned tabs survive normal startup alongside the configured home page')
             restored=next(t['id'] for t in state()['tabs'] if t.get('pinned'));call('pinTab',restored)

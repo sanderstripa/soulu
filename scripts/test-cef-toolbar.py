@@ -18,7 +18,7 @@ import time
 spec=importlib.util.spec_from_file_location('storage',Path(__file__).with_name('test-cef-storage.py'))
 s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
 os.environ['NO_PROXY']='localhost,127.0.0.1,::1'
-os.environ['SOULU_REGRESSION_SKIP_FIRST_RUN']='1'
+os.environ['SONA_REGRESSION_SKIP_FIRST_RUN']='1'
 u=C.windll.user32
 u.SetWindowPos.argtypes=[W.HWND,W.HWND,C.c_int,C.c_int,C.c_int,C.c_int,W.UINT]
 u.GetWindowRect.argtypes=[W.HWND,C.POINTER(W.RECT)]
@@ -41,8 +41,8 @@ def main():
     def check(ok,label):
         assert ok,label
         report['checks'].append(label);print('PASS:',label,flush=True)
-    with tempfile.TemporaryDirectory(prefix='soulu-toolbar-',ignore_cleanup_errors=True) as temp:
-        env=dict(os.environ,LOCALAPPDATA=temp,APPDATA=str(Path(temp)/'roaming'),SOULU_UI_TEST_PORT=str(s.DEBUG_PORT))
+    with tempfile.TemporaryDirectory(prefix='sona-toolbar-',ignore_cleanup_errors=True) as temp:
+        env=dict(os.environ,LOCALAPPDATA=temp,APPDATA=str(Path(temp)/'roaming'),SONA_UI_TEST_PORT=str(s.DEBUG_PORT))
         process=subprocess.Popen([str(exe),'--no-proxy-server'],env=env)
         ws=None
         try:
@@ -58,7 +58,7 @@ def main():
             @C.WINFUNCTYPE(W.BOOL,W.HWND,W.LPARAM)
             def visit(hwnd,_):
                 pid=W.DWORD();u.GetWindowThreadProcessId(hwnd,C.byref(pid));name=C.create_unicode_buffer(128);u.GetClassNameW(hwnd,name,128)
-                if pid.value==process.pid and name.value=='SouluBrowserWindow':handles.append(hwnd)
+                if pid.value==process.pid and name.value=='SonaBrowserWindow':handles.append(hwnd)
                 return True
             u.EnumWindows(visit,0);hwnd=handles[0]
             def capture(name):

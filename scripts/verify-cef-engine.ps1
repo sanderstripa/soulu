@@ -5,10 +5,10 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $build = (Resolve-Path -LiteralPath $BuildDir).Path
-$exe = Join-Path $build 'Soulu.exe'
+$exe = Join-Path $build 'Sona.exe'
 $dll = Join-Path $build 'libcef.dll'
 if (!(Test-Path -LiteralPath $exe) -or !(Test-Path -LiteralPath $dll)) {
-  throw 'Soulu.exe or bundled libcef.dll is missing'
+  throw 'Sona.exe or bundled libcef.dll is missing'
 }
 $manifestPath = Join-Path $build 'cef-runtime-manifest.json'
 if ($DistributionDir) {
@@ -43,7 +43,7 @@ foreach ($file in $manifest.files) {
     throw "CEF runtime component is missing or mixed: $($file.path)"
   }
 }
-$probe = Join-Path ([IO.Path]::GetTempPath()) ("soulu-engine-" + [guid]::NewGuid() + ".json")
+$probe = Join-Path ([IO.Path]::GetTempPath()) ("sona-engine-" + [guid]::NewGuid() + ".json")
 try {
   $process = Start-Process -FilePath $exe -WorkingDirectory $build -WindowStyle Hidden -PassThru -ArgumentList @("--engine-version-file=`"$probe`"")
   if (!$process.WaitForExit(30000)) {
@@ -64,7 +64,7 @@ try {
     chromium = $version.chromium
     commit = $env:GITHUB_SHA
     run_id = $env:GITHUB_RUN_ID
-    soulu_sha256 = (Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash
+    sona_sha256 = (Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash
     libcef_sha256 = (Get-FileHash -LiteralPath $dll -Algorithm SHA256).Hash
     distribution = $manifest.distribution
     runtime_files_verified = @($manifest.files).Count

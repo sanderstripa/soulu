@@ -1,4 +1,4 @@
-name: Publish Soulu Gecko Preview 3
+name: Publish Sona Gecko Preview 3
 on:
   push:
     branches: [gecko-preview]
@@ -18,7 +18,7 @@ jobs:
         run: |
           test "$(gh api repos/sanderstripa/soulu/actions/runs/41620674088 --jq .conclusion)" = success
           test "$(gh api repos/sanderstripa/soulu/actions/runs/41620674088 --jq .head_sha)" = 9a316503893730357d034d23de29607c900936d7
-          gh run download 41620674088 -n Soulu-Gecko-Preview-3-win64 -D package
+          gh run download 41620674088 -n Sona-Gecko-Preview-3-win64 -D package
           gh run download 41620674088 -n gecko3-acceptance -D evidence
       - name: Verify the archive checksum, source and embedded test report
         working-directory: package
@@ -26,10 +26,10 @@ jobs:
           sha256sum -c SHA256SUMS.txt
           python - <<'PY'
           import json,zipfile
-          with zipfile.ZipFile('Soulu-Gecko-Preview-3-win64.zip') as z:
+          with zipfile.ZipFile('Sona-Gecko-Preview-3-win64.zip') as z:
             build=json.loads(z.read('BUILD.json'))
-            assert build['soulu_source']=='9a316503893730357d034d23de29607c900936d7',build
-            assert build['name']=='Soulu Gecko Preview 3'
+            assert build['sona_source']=='9a316503893730357d034d23de29607c900936d7',build
+            assert build['name']=='Sona Gecko Preview 3'
             report=json.loads(z.read('preview3.json'))
             assert report['passed'] and len(report['checks'])>=19
             assert all(c['passed'] for c in report['checks'].values())
@@ -41,22 +41,22 @@ jobs:
       - name: Publish the verified Preview 3 archive
         run: |
           cat > notes.md <<'NOTES'
-          Soulu Gecko Preview 3 · Windows x64 · ZIP без установщика.
+          Sona Gecko Preview 3 · Windows x64 · ZIP без установщика.
           
-          Распакуйте архив целиком и запустите Soulu Gecko Preview 3.exe. Данные Preview 2 сохраняются в отдельном каталоге SouluGecko; основной Soulu CEF и установленный Firefox не изменяются.
+          Распакуйте архив целиком и запустите Sona Gecko Preview 3.exe. Данные Preview 2 сохраняются в отдельном каталоге SonaGecko; основной Sona CEF и установленный Firefox не изменяются.
           
           Исправлено:
           - Иконка из CEF встроена в EXE и назначается окну; Windows-проверка извлекает большие и малые значки.
-          - Штатные панели Firefox скрываются глобальным стилем до загрузки оболочки Soulu и остаются скрыты при изменении размеров окна.
+          - Штатные панели Firefox скрываются глобальным стилем до загрузки оболочки Sona и остаются скрыты при изменении размеров окна.
           - Исправлены подложка окна, минимальные размеры области страницы и появление лишних слоёв.
           - Контекстное меню открывается у курсора и содержит шесть команд CEF: настройки, загрузки, история, очистка данных, новая вкладка, инкогнито.
           - Настройки плавно открываются и закрываются; при смене разделов используется короткая анимация без полного исчезновения содержимого.
           - Убрано мелькание оставшейся вкладки при закрытии второй.
           - Обзор вкладок больше не фокусирует поиск автоматически; крестик SVG отцентрирован в круге 32×32.
-          - «О Soulu» показывает версии Soulu, Gecko/Firefox, встроенных Xray/Sudoku и блокировщика; сохранён менеджер компонентов VPN.
+          - «О Sona» показывает версии Sona, Gecko/Firefox, встроенных Xray/Sudoku и блокировщика; сохранён менеджер компонентов VPN.
           - Chrome Web Store заменён на Firefox Add-ons и штатный менеджер Firefox.
           - Возвращена исходная компактная панель наряду с основной.
-          - Переключатель матовой поверхности работает: нативный Windows Mica и поверхность Soulu. Это материал системного композитора; CEF page-glass захват страницы не используется.
+          - Переключатель матовой поверхности работает: нативный Windows Mica и поверхность Sona. Это материал системного композитора; CEF page-glass захват страницы не используется.
           - Добавлена кнопка перевода в адресной строке. Перевод страницы выполняется локальным движком Gecko; модели Mozilla загружаются при первом использовании. Проверены реальный перевод на русский и возврат оригинала.
           - Исправлена погода Open-Meteo, кэш, прогноз и сообщения об ошибках. Подтверждён реальный ответ для выбранного города. Автогеолокация запрашивается только с разрешением; её доступность зависит от среды.
           
@@ -69,4 +69,4 @@ jobs:
           В архиве: preview3.json, BUILD.json и visual-evidence. Отчёт, снимки и SHA256SUMS.txt также приложены к релизу.
           NOTES
           if gh release view gecko-preview-3 >/dev/null 2>&1; then echo 'Release already exists; refusing overwrite'; exit 1; fi
-          gh release create gecko-preview-3 package/Soulu-Gecko-Preview-3-win64.zip package/SHA256SUMS.txt evidence/preview3.json evidence/*preview3.png --target "$GITHUB_SHA" --title 'Soulu Gecko Preview 3' --prerelease --notes-file notes.md
+          gh release create gecko-preview-3 package/Sona-Gecko-Preview-3-win64.zip package/SHA256SUMS.txt evidence/preview3.json evidence/*preview3.png --target "$GITHUB_SHA" --title 'Sona Gecko Preview 3' --prerelease --notes-file notes.md

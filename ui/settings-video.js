@@ -49,8 +49,8 @@
  ['m3u8ProxyHost','Прокси M3U8','M3U8 proxy','text','media-proxy.toil.cc/v1/proxy/m3u8'],
  ['localeLangOverride','Язык интерфейса VOT','VOT interface language','select','ru',['ru','en']]
  ];
- window.souluVideoSettings={open:async()=>{
-  const {t,el,button,dialog}=window.souluSettings;let values=await call(null),queue=Promise.resolve();
+ window.sonaVideoSettings={open:async()=>{
+  const {t,el,button,dialog}=window.sonaSettings;let values=await call(null),queue=Promise.resolve();
   dialog('Video Translate · VOT 1.12.3',box=>{
    box.append(el('p',t('Перевод выполняет сервис VOT/Яндекс: ему передаются адрес видео и необходимые данные для перевода. Дорожка появляется поверх видео; отдельной кнопки на панели браузера нет. Изменения сохраняются в текущем профиле.','VOT/Yandex receives the video URL and data required for translation. Controls appear on the video. Changes are saved in the current profile.'),'note'));
    const message=el('p','','note');message.setAttribute('role','status');box.append(message);
@@ -64,7 +64,7 @@
     if(key==='subtitlesFontFamily'){control.placeholder='default-sans / arial / google:Roboto';control.pattern='(?:default-sans|arial|helvetica|roboto|verdana|open-sans|poppins|lato|montserrat|barlow|google:.+)';control.title=t('Встроенный шрифт или google:Название шрифта','Built-in font or google:Font name');}control.setAttribute('aria-label',t(ru,en));row.append(label,control);box.append(row);
    }
    const account=el('p',values.account?.username?t('Аккаунт Яндекс: ','Yandex account: ')+values.account.username:t('Аккаунт Яндекс не подключён. Обычный перевод работает без входа; вход доступен ниже.','Yandex account is not connected. Regular translation works without signing in; sign-in is available below.'),'note');
-   box.append(account,button(t('Войти в Яндекс для VOT','Sign in to Yandex for VOT'),async()=>{await window.souluSettings.flush();const response=await call({operation:'authStart'});await window.browserShell.openTab(response.url);window.souluSettingsRequestClose();}),button(t('Выйти из аккаунта VOT','Sign out of VOT'),async()=>{await save('account',null);account.textContent=t('Аккаунт отключён','Account disconnected')}));
+   box.append(account,button(t('Войти в Яндекс для VOT','Sign in to Yandex for VOT'),async()=>{await window.sonaSettings.flush();const response=await call({operation:'authStart'});await window.browserShell.openTab(response.url);window.sonaSettingsRequestClose();}),button(t('Выйти из аккаунта VOT','Sign out of VOT'),async()=>{await save('account',null);account.textContent=t('Аккаунт отключён','Account disconnected')}));
    const upstream=el('a','VOT · MIT · ilyhalight/voice-over-translation');upstream.href='https://github.com/ilyhalight/voice-over-translation';upstream.onclick=e=>{e.preventDefault();window.browserShell.openTab(upstream.href)};box.append(upstream);
   });
  }};

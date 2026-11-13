@@ -7,7 +7,7 @@
   const emit = (name, value) => {
     for (const listener of listeners.get(name) || []) listener(value);
   };
-  window.__souluEmit = emit;
+  window.__sonaEmit = emit;
 
   const subscribe = (name, callback) => {
     if (!listeners.has(name)) listeners.set(name, new Set());
@@ -75,7 +75,7 @@
     find: (value, forward = true) => invoke("browser.find", {text:value, forward}),
     suggestions: value => invoke("browser.suggestions", value),
     getDownloads: () => invoke("browser.downloads.get"),
-    setOverview: async value => {if(!value)await window.souluNavigation?.animateOverviewClose?.();return invoke("browser.overview",value);},
+    setOverview: async value => {if(!value)await window.sonaNavigation?.animateOverviewClose?.();return invoke("browser.overview",value);},
     onEditBookmark: callback => subscribe("editBookmark",callback),
     setPopover: (value, owner = 'default') => {
       if (value) popovers.add(owner); else popovers.delete(owner);

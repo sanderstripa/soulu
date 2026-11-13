@@ -2,7 +2,7 @@
 import base64,ctypes,http.server,importlib.util,json,os,subprocess,sys,tempfile,threading,time
 from pathlib import Path
 spec=importlib.util.spec_from_file_location('daily',Path(__file__).with_name('test-cef-storage.py'));s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
-os.environ['NO_PROXY']='localhost,127.0.0.1,::1';os.environ['SOULU_REGRESSION_SKIP_FIRST_RUN']='1'
+os.environ['NO_PROXY']='localhost,127.0.0.1,::1';os.environ['SONA_REGRESSION_SKIP_FIRST_RUN']='1'
 checks=[];sockets=[];passed=False
 def wait(fn,timeout=30):
  end=time.monotonic()+timeout;last=None
@@ -28,18 +28,18 @@ class Fixture(http.server.BaseHTTPRequestHandler):
  def log_message(self,*args):pass
 server=http.server.ThreadingHTTPServer(('127.0.0.1',0),Fixture);threading.Thread(target=server.serve_forever,daemon=True).start()
 origin=f'http://127.0.0.1:{server.server_port}';out=Path(sys.argv[2]);out.mkdir(parents=True,exist_ok=True)
-with tempfile.TemporaryDirectory(prefix='soulu-polish-',ignore_cleanup_errors=True) as root:
- config=Path(root)/'Soulu'/'User Data'/'Profiles'/'personal';config.mkdir(parents=True)
- (config/'soulu-settings.json').write_text(json.dumps({'onboarding':{'status':'skipped'},'layout':'adaptive','theme':'light','startupMode':'soulu','newTabMode':'blank','mattePanel':False,'bookmarksBarMode':'never'}))
+with tempfile.TemporaryDirectory(prefix='sona-polish-',ignore_cleanup_errors=True) as root:
+ config=Path(root)/'Sona'/'User Data'/'Profiles'/'personal';config.mkdir(parents=True)
+ (config/'sona-settings.json').write_text(json.dumps({'onboarding':{'status':'skipped'},'layout':'adaptive','theme':'light','startupMode':'sona','newTabMode':'blank','mattePanel':False,'bookmarksBarMode':'never'}))
  # GetModuleFileName and Chromium canonical file URLs differ when this path has Unicode/spaces.
- alias=Path(root)/'Soulu тест';runtime=Path(sys.argv[1]).resolve().parent
+ alias=Path(root)/'Sona тест';runtime=Path(sys.argv[1]).resolve().parent
  subprocess.run(['cmd','/c','mklink','/J',str(alias),str(runtime)],check=True,capture_output=True)
- process=subprocess.Popen([str(alias/Path(sys.argv[1]).name),'--no-proxy-server'],env=dict(os.environ,LOCALAPPDATA=root,SOULU_UI_TEST_PORT=str(s.DEBUG_PORT)))
+ process=subprocess.Popen([str(alias/Path(sys.argv[1]).name),'--no-proxy-server'],env=dict(os.environ,LOCALAPPDATA=root,SONA_UI_TEST_PORT=str(s.DEBUG_PORT)))
  try:
   shell=connect('/ui/index.html');home=connect('/ui/home.html');state=lambda:s.evaluate(shell,'browserShell.getState()')
   wait(lambda:s.evaluate(shell,"document.documentElement.classList.contains('typography-ready')&&!!window.browserShell"))
-  wait(lambda:s.evaluate(home,"typeof souluHomeApply==='function'&&document.readyState==='complete'"))
-  check(state()['page']['url']=='soulu://home' and not state()['page']['loading'],'Unicode/space installation path canonicalizes Home without permanent loading')
+  wait(lambda:s.evaluate(home,"typeof sonaHomeApply==='function'&&document.readyState==='complete'"))
+  check(state()['page']['url']=='sona://home' and not state()['page']['loading'],'Unicode/space installation path canonicalizes Home without permanent loading')
   # Compare every VPN state with actual hover and pressed styling applied.
   baseline=s.evaluate(shell,"document.querySelector('#vpnButton').getBoundingClientRect().y")
   s.command(shell,'DOM.enable');doc=s.command(shell,'DOM.getDocument')['root']['nodeId'];node=s.command(shell,'DOM.querySelector',{'nodeId':doc,'selector':'#vpnButton'})['nodeId'];s.command(shell,'CSS.enable')
@@ -52,21 +52,21 @@ with tempfile.TemporaryDirectory(prefix='soulu-polish-',ignore_cleanup_errors=Tr
   s.evaluate(shell,'browserShell.openSettingsWindow()');settings=connect('/ui/settings.html');wait(lambda:s.evaluate(settings,"document.body.classList.contains('ready')"))
   keys=s.evaluate(settings,"[...document.querySelectorAll('#homeCards [data-section]')].map(n=>n.dataset.section)")
   check(len(keys)==12 and all(k in keys for k in ['extensions','translation','performance']),'Twelve sections include Extensions, Translation and Performance')
-  s.evaluate(settings,"souluSettings.openSection('reading')")
+  s.evaluate(settings,"sonaSettings.openSection('reading')")
   check(not s.evaluate(settings,"!!document.querySelector('#videoTranslationEnabled')||!!document.querySelector('#translationTarget')"),'Reader mode contains no translation controls')
-  s.evaluate(settings,"souluSettings.openSection('translation')")
+  s.evaluate(settings,"sonaSettings.openSection('translation')")
   check(s.evaluate(settings,"!!document.querySelector('#videoTranslationEnabled')&&!!document.querySelector('#translationTarget')"),'Page and YouTube translation controls moved together')
   check(s.evaluate(settings,"document.querySelector('#settingsTitle').textContent==='Перевод'"),'Translation section has the correct heading')
-  s.evaluate(settings,"souluSettings.openSection('interface')")
-  s.evaluate(settings,"document.querySelector('#showHome').click();souluSettings.flush()")
+  s.evaluate(settings,"sonaSettings.openSection('interface')")
+  s.evaluate(settings,"document.querySelector('#showHome').click();sonaSettings.flush()")
   wait(lambda:s.evaluate(shell,"[...document.querySelectorAll('[data-home]')].every(n=>!n.getClientRects().length)"));check(True,'Home button can be hidden through persisted Settings')
-  s.evaluate(settings,"document.querySelector('#showHome').click();souluSettings.flush()")
+  s.evaluate(settings,"document.querySelector('#showHome').click();sonaSettings.flush()")
   wait(lambda:s.evaluate(shell,"document.querySelector('.classic-toolbar [data-home]').getClientRects().length>0"))
   nav=s.evaluate(settings,"document.querySelector('[data-section=interface]').getBoundingClientRect().toJSON()")
   s.command(settings,'Input.dispatchMouseEvent',{'type':'mouseMoved','x':nav['x']+15,'y':nav['y']+15});time.sleep(.6)
-  check(s.evaluate(settings,"!document.querySelector('.soulu-type-tooltip').hidden&&![...document.querySelectorAll('[title]')].some(n=>n.title)"),'Settings hover has one custom tooltip and no competing native titles')
+  check(s.evaluate(settings,"!document.querySelector('.sona-type-tooltip').hidden&&![...document.querySelectorAll('[title]')].some(n=>n.title)"),'Settings hover has one custom tooltip and no competing native titles')
   shot=s.command(settings,'Page.captureScreenshot',{'format':'png'});(out/'settings-tooltip.png').write_bytes(base64.b64decode(shot['data']))
-  s.evaluate(settings,'souluSettingsRequestClose()');wait(lambda:not state()['settingsOverlayOpen'])
+  s.evaluate(settings,'sonaSettingsRequestClose()');wait(lambda:not state()['settingsOverlayOpen'])
   s.evaluate(shell,'browserShell.navigate('+json.dumps(origin+'/first')+')');page=connect('/first');wait(lambda:s.evaluate(page,'typeof identity==="number"'))
   click(shell,'#classicAddress');wait(lambda:s.evaluate(shell,"!!document.querySelector('.suggestions.visible')"))
   click(shell,'#sidebarButton');wait(lambda:not s.evaluate(shell,"!!document.querySelector('.suggestions.visible')"));check(True,'Address suggestions close on another toolbar control')
@@ -77,7 +77,7 @@ with tempfile.TemporaryDirectory(prefix='soulu-polish-',ignore_cleanup_errors=Tr
   @ctypes.WINFUNCTYPE(ctypes.c_bool,ctypes.c_void_p,ctypes.c_void_p)
   def enum(hwnd,_):
    pid=ctypes.c_ulong();u.GetWindowThreadProcessId(hwnd,ctypes.byref(pid));name=ctypes.create_unicode_buffer(128);u.GetClassNameW(hwnd,name,128)
-   if pid.value==process.pid and name.value=='SouluBrowserWindow':hwnds.append(hwnd)
+   if pid.value==process.pid and name.value=='SonaBrowserWindow':hwnds.append(hwnd)
    return True
   u.EnumWindows(enum,0);assert hwnds
   u.SendMessageW(ctypes.c_void_p(hwnds[0]),0x0006,0,0)

@@ -3,7 +3,7 @@ permissions:
   contents: write
   actions: write
 concurrency:
-  group: soulu-page-glass-prototype
+  group: sona-page-glass-prototype
   cancel-in-progress: true
 jobs:
   windows-cef:
@@ -13,12 +13,12 @@ jobs:
       BETA_VERSION: 1.0.66-beta
       BETA_NUMBER: 66
       AUTOMATED_RELEASE: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[release 1.0.66]') }}
-      SOULU_REGRESSION_SKIP_FIRST_RUN: 1
-      SOULU_TEST_DEFAULT_APPS: 1
+      SONA_REGRESSION_SKIP_FIRST_RUN: 1
+      SONA_TEST_DEFAULT_APPS: 1
       PYTHONUTF8: 1
       PYTHONDONTWRITEBYTECODE: 1
     steps:
-    - name: Checkout Soulu
+    - name: Checkout Sona
       uses: actions/checkout@v4
       with:
         path: browser
@@ -45,7 +45,7 @@ jobs:
         path: cef-project
     - name: Pin the approved CEF distribution on a clean path
       shell: pwsh
-      run: "if ((Test-Path cef-project/third_party/cef) -or (Test-Path cef-build)) {\n  throw 'Clean build required: CEF distribution or build directory already exists'\n}\n$index = Invoke-RestMethod 'https://cef-builds.spotifycdn.com/index.json'\n$versions = @($index.windows64.versions | Where-Object {\n  $_.cef_version -match '^156\\.0\\.14\\+g4fa4ab5\\+chromium-156\\.0\\.8078\\.48$' -and\n  $_.chromium_version -eq '156.0.8078.48' -and $_.channel -eq 'stable'\n})\nif ($versions.Count -ne 1) { throw 'Exactly one approved CEF distribution must exist; no fallback allowed' }\n$version = $versions[0].cef_version\n$archive = @($versions[0].files | Where-Object type -eq 'standard')\nif ($archive.Count -ne 1 -or $archive[0].sha1 -cne '7a1049f0facf3b6ce9efc4d683cf1bac72691ba6') {\n  throw 'Canonical CEF archive checksum changed'\n}\n$cmakeFile = 'cef-project/CMakeLists.txt'\n$cmake = Get-Content $cmakeFile -Raw\n$pattern = 'set\\(CEF_VERSION \"[^\"]+\"\\)'\nif ([regex]::Matches($cmake, $pattern).Count -ne 1) { throw 'CEF project version declaration changed' }\n$cmake = [regex]::Replace($cmake, $pattern, ('set(CEF_VERSION \"' + $version + '\")'))\n# Soulu needs the wrapper and examples, not\
+      run: "if ((Test-Path cef-project/third_party/cef) -or (Test-Path cef-build)) {\n  throw 'Clean build required: CEF distribution or build directory already exists'\n}\n$index = Invoke-RestMethod 'https://cef-builds.spotifycdn.com/index.json'\n$versions = @($index.windows64.versions | Where-Object {\n  $_.cef_version -match '^156\\.0\\.14\\+g4fa4ab5\\+chromium-156\\.0\\.8078\\.48$' -and\n  $_.chromium_version -eq '156.0.8078.48' -and $_.channel -eq 'stable'\n})\nif ($versions.Count -ne 1) { throw 'Exactly one approved CEF distribution must exist; no fallback allowed' }\n$version = $versions[0].cef_version\n$archive = @($versions[0].files | Where-Object type -eq 'standard')\nif ($archive.Count -ne 1 -or $archive[0].sha1 -cne '7a1049f0facf3b6ce9efc4d683cf1bac72691ba6') {\n  throw 'Canonical CEF archive checksum changed'\n}\n$cmakeFile = 'cef-project/CMakeLists.txt'\n$cmake = Get-Content $cmakeFile -Raw\n$pattern = 'set\\(CEF_VERSION \"[^\"]+\"\\)'\nif ([regex]::Matches($cmake, $pattern).Count -ne 1) { throw 'CEF project version declaration changed' }\n$cmake = [regex]::Replace($cmake, $pattern, ('set(CEF_VERSION \"' + $version + '\")'))\n# Sona needs the wrapper and examples, not\
         \ upstream CEF test applications.\n# The project snapshot's test targets are incompatible with this distribution.\nforeach ($target in @('cefclient', 'cefsimple', 'gtest', 'ceftests')) {\n  $line = 'add_subdirectory(${CEF_ROOT}/tests/' + $target + ')'\n  if (!$cmake.Contains($line)) { throw \"Upstream target declaration changed: $target\" }\n  $cmake = $cmake.Replace($line, '')\n}\nSet-Content $cmakeFile $cmake -Encoding utf8\n# Use the canonical index checksum: the CDN .sha1 sidecar can return\n# an empty response. Keep DownloadCEF's EXPECTED_HASH verification.\n$loaderFile = 'cef-project/cmake/DownloadCEF.cmake'\n$loader = Get-Content $loaderFile -Raw\n$hashDownload = 'file(DOWNLOAD \"${CEF_DOWNLOAD_URL_ESCAPED}.sha1\" \"${CEF_DOWNLOAD_PATH}.sha1\")'\n$hashRead = 'file(READ \"${CEF_DOWNLOAD_PATH}.sha1\" CEF_SHA1)'\nif (!$loader.Contains($hashDownload) -or !$loader.Contains($hashRead)) { throw 'CEF checksum loader changed' }\n$loader = $loader.Replace($hashDownload, '').Replace($hashRead, ('set(CEF_SHA1 \"' + $archive[0].sha1 + '\")'))\nSet-Content $loaderFile $loader -Encoding utf8\nWrite-Host \"Pinned CEF distribution: $version\"\n"
     - name: Verify canonical typography and bundled fonts
       shell: pwsh
@@ -72,26 +72,26 @@ jobs:
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
         '
-    - name: Add Soulu target and assets
+    - name: Add Sona target and assets
       shell: pwsh
-      run: 'Copy-Item -Recurse -Force browser/cef/soulu cef-project/examples/soulu
+      run: 'Copy-Item -Recurse -Force browser/cef/sona cef-project/examples/sona
 
-        New-Item -ItemType Directory -Force cef-project/examples/soulu/assets/ui | Out-Null
+        New-Item -ItemType Directory -Force cef-project/examples/sona/assets/ui | Out-Null
 
-        New-Item -ItemType Directory -Force cef-project/examples/soulu/assets/vpn | Out-Null
+        New-Item -ItemType Directory -Force cef-project/examples/sona/assets/vpn | Out-Null
 
-        Copy-Item -Recurse -Force browser/ui/* cef-project/examples/soulu/assets/ui/
+        Copy-Item -Recurse -Force browser/ui/* cef-project/examples/sona/assets/ui/
 
-        Copy-Item -Recurse -Force browser/vpn/* cef-project/examples/soulu/assets/vpn/
+        Copy-Item -Recurse -Force browser/vpn/* cef-project/examples/sona/assets/vpn/
 
-        Add-Content cef-project/examples/CMakeLists.txt "`nadd_subdirectory(soulu)`n"
+        Add-Content cef-project/examples/CMakeLists.txt "`nadd_subdirectory(sona)`n"
 
         '
     - name: Compile page-glass Windows interop before the full CEF build
       shell: pwsh
       run: '$vs = & "${env:ProgramFiles(x86)}/Microsoft Visual Studio/Installer/vswhere.exe" -latest -property installationPath
 
-        $command = ''"'' + $vs + ''\VC\Auxiliary\Build\vcvars64.bat" && cl /nologo /std:c++20 /EHsc /DWIN32_LEAN_AND_MEAN /DNOMINMAX /c /I cef-project browser\cef\soulu\page_glass.cc /Fopage-glass-check.obj''
+        $command = ''"'' + $vs + ''\VC\Auxiliary\Build\vcvars64.bat" && cl /nologo /std:c++20 /EHsc /DWIN32_LEAN_AND_MEAN /DNOMINMAX /c /I cef-project browser\cef\sona\page_glass.cc /Fopage-glass-check.obj''
 
         cmd /d /s /c $command
 
@@ -102,7 +102,7 @@ jobs:
       shell: pwsh
       run: |
         $vs = & "${env:ProgramFiles(x86)}/Microsoft Visual Studio/Installer/vswhere.exe" -latest -property installationPath
-        $command = '"' + $vs + '\VC\Auxiliary\Build\vcvars64.bat" && cl /nologo /std:c++20 /EHsc /DWIN32_LEAN_AND_MEAN /DNOMINMAX /I cef-project browser\scripts\page-glass-probe.cc browser\cef\soulu\page_glass.cc /Fepage-glass-probe.exe /link windowsapp.lib CoreMessaging.lib user32.lib gdi32.lib ole32.lib d2d1.lib dxguid.lib uuid.lib'
+        $command = '"' + $vs + '\VC\Auxiliary\Build\vcvars64.bat" && cl /nologo /std:c++20 /EHsc /DWIN32_LEAN_AND_MEAN /DNOMINMAX /I cef-project browser\scripts\page-glass-probe.cc browser\cef\sona\page_glass.cc /Fepage-glass-probe.exe /link windowsapp.lib CoreMessaging.lib user32.lib gdi32.lib ole32.lib d2d1.lib dxguid.lib uuid.lib'
         cmd /d /s /c $command
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         ./page-glass-probe.exe
@@ -121,12 +121,12 @@ jobs:
       id: rust_cache
       uses: actions/cache/restore@v4
       with:
-        path: 'browser/cef/soulu/adblock/target
+        path: 'browser/cef/sona/adblock/target
 
-          cef-build/examples/soulu/adblock
+          cef-build/examples/sona/adblock
 
           '
-        key: adblock-windows-rust-1.99-${{ hashFiles('browser/cef/soulu/adblock/Cargo.lock', 'browser/cef/soulu/adblock/src/**') }}
+        key: adblock-windows-rust-1.99-${{ hashFiles('browser/cef/sona/adblock/Cargo.lock', 'browser/cef/sona/adblock/src/**') }}
         restore-keys: adblock-windows-rust-1.99-
     - name: Compile and test the pinned AdBlock engine
       shell: pwsh
@@ -134,7 +134,7 @@ jobs:
 
         rustup default 1.99.0
 
-        cargo test --locked --manifest-path browser/cef/soulu/adblock/Cargo.toml
+        cargo test --locked --manifest-path browser/cef/sona/adblock/Cargo.toml
 
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
@@ -149,14 +149,14 @@ jobs:
     - name: Verify fresh CEF archive and distribution resources
       shell: pwsh
       run: "$archive = Get-ChildItem cef-project/third_party/cef -Filter '*.tar.bz2'\nif (@($archive).Count -ne 1 -or (Get-FileHash $archive.FullName -Algorithm SHA1).Hash.ToLowerInvariant() -cne '7a1049f0facf3b6ce9efc4d683cf1bac72691ba6') {\n  throw 'Downloaded CEF archive does not match the selected distribution'\n}\n$distribution = Get-ChildItem cef-project/third_party/cef -Directory\nif (@($distribution).Count -ne 1) { throw 'Mixed CEF distributions' }\nGet-ChildItem $distribution.FullName -Recurse -File | Select-Object FullName, Length | ConvertTo-Json | Set-Content cef-distribution-files.json\n"
-    - name: Build Soulu
+    - name: Build Sona
       id: native_build
       shell: pwsh
-      run: 'cmake --build cef-build --config Release --target soulu --parallel 2
+      run: 'cmake --build cef-build --config Release --target sona --parallel 2
 
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-        $exe = Get-ChildItem cef-build -Recurse -Filter Soulu.exe | Where-Object { $_.FullName -match "Release" } | Select-Object -First 1
+        $exe = Get-ChildItem cef-build -Recurse -Filter Sona.exe | Where-Object { $_.FullName -match "Release" } | Select-Object -First 1
 
         "build_dir=$($exe.Directory.FullName)" >> $env:GITHUB_ENV
 
@@ -165,9 +165,9 @@ jobs:
       if: steps.native_build.outcome == 'success' && steps.rust_cache.outputs.cache-hit != 'true'
       uses: actions/cache/save@v4
       with:
-        path: 'browser/cef/soulu/adblock/target
+        path: 'browser/cef/sona/adblock/target
 
-          cef-build/examples/soulu/adblock
+          cef-build/examples/sona/adblock
 
           '
         key: ${{ steps.rust_cache.outputs.cache-primary-key }}
@@ -184,8 +184,8 @@ jobs:
       if: ${{ always() && steps.native_build.outcome == 'success' }}
       uses: actions/upload-artifact@v4
       with:
-        name: Soulu-cef-candidate-${{ github.sha }}
-        path: '${{ env.build_dir }}/Soulu.exe
+        name: Sona-cef-candidate-${{ github.sha }}
+        path: '${{ env.build_dir }}/Sona.exe
 
           ${{ env.build_dir }}/engine-version.json
 
@@ -201,7 +201,7 @@ jobs:
       shell: pwsh
       run: 'python -m pip install --disable-pip-version-check websocket-client pillow
 
-        python browser/scripts/test-cef-page-glass.py "$env:build_dir/Soulu.exe" browser/artifacts/page-glass
+        python browser/scripts/test-cef-page-glass.py "$env:build_dir/Sona.exe" browser/artifacts/page-glass
 
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
@@ -215,7 +215,7 @@ jobs:
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: Soulu-page-glass-${{ github.sha }}
+        name: Sona-page-glass-${{ github.sha }}
         path: 'browser/artifacts/page-glass/
 
           '

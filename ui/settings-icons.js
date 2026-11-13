@@ -23,5 +23,5 @@
     up:'<path d="m6 13 6-6 6 6M12 7v12"/>',
     edit:'<path d="m4 16 12-12 4 4L8 20H4zm10-10 4 4"/>'
   };
-  window.souluSettingsIcons={create(id){const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('aria-hidden','true');svg.setAttribute('focusable','false');svg.dataset.settingsIcon=id;svg.innerHTML=paths[id]||paths.open;return svg;}};
+  window.sonaSettingsIcons={create(id){const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('aria-hidden','true');svg.setAttribute('focusable','false');svg.dataset.settingsIcon=id;svg.innerHTML=paths[id]||paths.open;return svg;}};
 })();

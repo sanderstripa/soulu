@@ -1,4 +1,4 @@
-# Soulu identity and installer
+# Sona identity and installer
 
 The supplied October 18 icon and three-panel installer concept are the visual references.
 This change is confined to identity, installer rendering and their build/verification
@@ -6,7 +6,7 @@ chain. Browser pages, navigation, storage and CEF are not redesigned.
 
 ## Production assets
 
-`ui/branding/soulu-master.svg` is the newly drawn, editable vector source. Three blue petal regions with a dark central overlap use smooth fills without a background, stroke, external
+`ui/branding/sona-master.svg` is the newly drawn, editable vector source. Three blue petal regions with a dark central overlap use smooth fills without a background, stroke, external
 image, shadow or filter. Generated raster studies were rejected for edge artifacts;
 no generated study or previous icon is part of the master.
 
@@ -24,10 +24,10 @@ contain the same new 1024px export. The obsolete opaque JPEG is removed.
 
 The main exe RC file embeds the canonical ICO. Both NSIS Icon and UninstallIcon,
 the setup wrapper and two shortcuts use that same identity. The installer uses
-`soulu-512.png` for its visible logo. The browser already requests the correct
+`sona-512.png` for its visible logo. The browser already requests the correct
 large/small Windows icon sizes; the installer now does too.
 
-Shortcuts use `soulu-icon-v20261018.ico` to avoid the v24 shell-cache entry. Installation
+Shortcuts use `sona-icon-v20261018.ico` to avoid the v24 shell-cache entry. Installation
 replaces all shipped aliases and the old v24 and v44 ICOs' content, removes the JPEG, recreates
 desktop/Start shortcuts and sends shell change notifications. Windows can retain
 a separately pinned old shortcut or an icon in a running Explorer process;
@@ -68,11 +68,11 @@ new production export, supporting PNG and DIB resources.
 for both installed shortcuts (excluding its standard shortcut-arrow overlay).
 `--window` checks the running browser's actual small and large HICON pixels.
 
-The main build requires these checks for Soulu.exe, setup, payload and installed
+The main build requires these checks for Sona.exe, setup, payload and installed
 uninstaller. Existing native suites remain mandatory. The installer mouse smoke
 test checks drag, three screens, persistent finish, launch enabled/disabled,
 direct close, shortcut/Installed Apps targets and actual uninstall. Screenshots
-are uploaded as `Soulu-visual-checks`; final artifacts include the verified engine
+are uploaded as `Sona-visual-checks`; final artifacts include the verified engine
 version and source SHA. Publication requires all mandatory checks and
 HEAD == origin/main == build SHA.
 

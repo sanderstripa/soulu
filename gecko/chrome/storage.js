@@ -1,13 +1,13 @@
 /* Gecko's Places and NSS stores; the frontend receives no privileged objects. */
 (() => {
-const {shared,Services,IOUtils,PathUtils,PlacesUtils,profile,isPrivate,save}=Soulu.backend;
+const {shared,Services,IOUtils,PathUtils,PlacesUtils,profile,isPrivate,save}=Sona.backend;
 let cache=null,queue=Promise.resolve();shared.bookmarkSerial??=Math.max(0,...Object.values(shared.config.bookmarkIds||{}));
 const guidToId=guid=>{const map=shared.config.bookmarkIds??={};if(!map[guid])map[guid]=++shared.bookmarkSerial;return map[guid];};
 const hydrated=new WeakSet();
-function hydrate(rows){if(hydrated.has(rows))return;hydrated.add(rows);let index=0,changed=false;const worker=async()=>{while(index<rows.length){const row=rows[index++];if(!row.url||row.favicon)continue;try{const icon=await PlacesUtils.favicons.getFaviconForPage(Services.io.newURI(row.url),32);if(!icon?.rawData?.length||icon.rawData.length>65536)continue;let binary='';for(const byte of icon.rawData)binary+=String.fromCharCode(byte);row.favicon='data:'+icon.mimeType+';base64,'+btoa(binary);changed=true;}catch{}}};Promise.all(Array.from({length:8},worker)).then(()=>{if(changed&&cache===rows)Soulu.dispatch('browser.bookmarks.get').catch(console.error);});}
+function hydrate(rows){if(hydrated.has(rows))return;hydrated.add(rows);let index=0,changed=false;const worker=async()=>{while(index<rows.length){const row=rows[index++];if(!row.url||row.favicon)continue;try{const icon=await PlacesUtils.favicons.getFaviconForPage(Services.io.newURI(row.url),32);if(!icon?.rawData?.length||icon.rawData.length>65536)continue;let binary='';for(const byte of icon.rawData)binary+=String.fromCharCode(byte);row.favicon='data:'+icon.mimeType+';base64,'+btoa(binary);changed=true;}catch{}}};Promise.all(Array.from({length:8},worker)).then(()=>{if(changed&&cache===rows)Sona.dispatch('browser.bookmarks.get').catch(console.error);});}
 const idToGuid=id=>Object.keys(shared.config.bookmarkIds||{}).find(g=>shared.config.bookmarkIds[g]===Number(id));
 async function read(){const root=await PlacesUtils.promiseBookmarksTree(PlacesUtils.bookmarks.rootGuid);const output=[];function walk(nodes,parentId=0){for(const node of nodes||[]){const id=guidToId(node.guid);output.push({id,guid:node.guid,type:node.type===PlacesUtils.TYPE_X_MOZ_PLACE_CONTAINER?'folder':node.uri?'url':'folder',title:node.title||node.uri||'',url:node.uri||'',parentId,order:node.index||0,favicon:node.iconuri||'',createdAt:node.dateAdded/1000||Date.now()});walk(node.children,id);}}for(const nativeRoot of root.children||[])walk(nativeRoot.children);await save();return output;}
-Soulu.bookmarks=async(operation,payload)=>{
+Sona.bookmarks=async(operation,payload)=>{
  const task=async()=>{
   if(operation==='invalidate'){cache=null;return true;}
   if(operation==='get'){if(!cache)cache=await read();hydrate(cache);return structuredClone(cache);}
@@ -24,7 +24,7 @@ Soulu.bookmarks=async(operation,payload)=>{
  };
  const result=queue.then(task);queue=result.catch(()=>{});return result;
 };
-Soulu.history=async(operation,payload={},source)=>{
+Sona.history=async(operation,payload={},source)=>{
  if(operation==='state'){const s=shared.config.settings;return {language:s.language,resolvedTheme:s.theme==='system'?(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'):s.theme,incognito:isPrivate,profileName:shared.config.profile,saveHistory:s.saveHistory!==false,groupDays:s.historyGroupDays!==false,filter:'all',openClear:source?.location.search.includes('clear=1')};}
  if(isPrivate){if(operation==='query')return {rows:[],more:false};throw Error('История не сохраняется в инкогнито.');}
  const db=await PlacesUtils.promiseDBConnection();
@@ -44,18 +44,18 @@ Soulu.history=async(operation,payload={},source)=>{
  }
  throw Error('Unknown history operation');
 };
-const base=Soulu.dispatch;
-Soulu.dispatch=async(action,payload,source)=>{
+const base=Sona.dispatch;
+Sona.dispatch=async(action,payload,source)=>{
  if(action.startsWith('browser.passwords.')){
   const op=action.slice('browser.passwords.'.length),all=await Services.logins.getAllLogins();
   if(op==='get')return all.filter(l=>!l.hostname.startsWith('chrome:')).map(l=>({id:l.guid,origin:l.hostname,username:l.username}));
   const login=all.find(l=>l.guid===payload||l.guid===payload?.id);
   if(op==='reveal'){if(!login)throw Error('Запись не найдена.');return login.password;}
   if(op==='copy'){if(!login)throw Error('Запись не найдена.');const value=payload.field==='password'?login.password:login.username;Cc['@mozilla.org/widget/clipboardhelper;1'].getService(Ci.nsIClipboardHelper).copyString(value);return true;}
-  if(op==='remove'){if(login)await Services.logins.removeLoginAsync(login);return Soulu.dispatch('browser.passwords.get');}
-  if(op==='add'){if(isPrivate)throw Error('Пароли не сохраняются в инкогнито.');const u=new URL(payload.origin);if(!['http:','https:'].includes(u.protocol)||!payload.password)throw Error('Invalid password record');const record=Cc['@mozilla.org/login-manager/loginInfo;1'].createInstance(Ci.nsILoginInfo);record.init(u.origin,u.origin,null,payload.username,payload.password,'','');const prior=payload.id?all.find(l=>l.guid===payload.id):all.find(l=>l.hostname===u.origin&&l.username===payload.username);if(payload.id&&!prior)throw Error('Запись изменилась.');if(prior)await Services.logins.modifyLoginAsync(prior,record);else await Services.logins.addLoginAsync(record);return Soulu.dispatch('browser.passwords.get');}
+  if(op==='remove'){if(login)await Services.logins.removeLoginAsync(login);return Sona.dispatch('browser.passwords.get');}
+  if(op==='add'){if(isPrivate)throw Error('Пароли не сохраняются в инкогнито.');const u=new URL(payload.origin);if(!['http:','https:'].includes(u.protocol)||!payload.password)throw Error('Invalid password record');const record=Cc['@mozilla.org/login-manager/loginInfo;1'].createInstance(Ci.nsILoginInfo);record.init(u.origin,u.origin,null,payload.username,payload.password,'','');const prior=payload.id?all.find(l=>l.guid===payload.id):all.find(l=>l.hostname===u.origin&&l.username===payload.username);if(payload.id&&!prior)throw Error('Запись изменилась.');if(prior)await Services.logins.modifyLoginAsync(prior,record);else await Services.logins.addLoginAsync(record);return Sona.dispatch('browser.passwords.get');}
  }
  return base(action,payload,source);
 };
-Soulu.storageReady=Promise.resolve();
+Sona.storageReady=Promise.resolve();
 })();

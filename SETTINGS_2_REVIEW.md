@@ -19,10 +19,10 @@ The sections below document implementation and earlier review history; earlier p
 | Search | Search → Address bar | Profile searchEngine / addressOpenMode |
 | Websites → Permissions, exceptions, ad blocking, site data | Privacy and security | Existing per-profile SitePolicy and site storage actions |
 | Profiles and data → History and clearing / Passwords | Privacy and security | Profile history settings; existing History and PasswordVault entry points |
-| Websites → Reader mode / Soulu Translate | Reading and translation | Existing per-profile reader preferences and translationTarget |
+| Websites → Reader mode / Sona Translate | Reading and translation | Existing per-profile reader preferences and translationTarget |
 | Profiles and data → Profiles / Import / Incognito | Profiles and import | App profile registry; explicit import targets; existing incognito action |
 | VPN | VPN | Existing global VPN dictionary and native helper |
-| Updates | About Soulu | Runtime component versions and truthful existing updater status |
+| Updates | About Sona | Runtime component versions and truthful existing updater status |
 
 `showDownloads` is toolbar visibility. `downloadsMode` independently chooses
 always-visible versus visible-during-download behavior. Both are retained and
@@ -112,7 +112,7 @@ the user's original approval gate remains in place.
 
 ## Preview input hang correction
 
-Windows recorded `AppHangXProcB1`: the preview Soulu process was waiting on
+Windows recorded `AppHangXProcB1`: the preview Sona process was waiting on
 the Python companion. The companion owned a native shadow window while making
 blocking renderer/network requests on its window-message thread. That created
 a cross-process input wait. Network observation now runs on an independent
@@ -121,7 +121,7 @@ Panel position requests are asynchronous, and the companion exits with the
 preview browser. This review-only companion is not part of production.
 
 The published CEF `cefQuery` function also cannot be replaced through assignment.
-The preview adapter now uses a separate `souluPreviewQuery` hook only in the
+The preview adapter now uses a separate `sonaPreviewQuery` hook only in the
 copied preview UI. Repository UI continues to call the production native bridge.
 
 The user's repeated freeze report authorized the focused reproduction/fix check:

@@ -1,0 +1,268 @@
+#include "examples/sona/browser_window.h"
+#include "examples/sona/vpn_routing.h"
+#include "examples/sona/vpn_profiles.h"
+#include "examples/sona/reader_preferences.h"
+#include "examples/sona/frosted_backdrop.h"
+#include "include/cef_parser.h"
+#include "include/wrapper/cef_helpers.h"
+#include <shellapi.h>
+#include <shlobj.h>
+#include <algorithm>
+#include <cmath>
+
+namespace sona {
+namespace {
+CefRefPtr<CefValue> Value(CefRefPtr<CefDictionaryValue> d) {
+  auto v=CefValue::Create();v->SetDictionary(d);return v;
+}
+bool Same(CefRefPtr<CefDictionaryValue> a,CefRefPtr<CefDictionaryValue> b) {
+  return a&&b&&a->IsEqual(b);
+}
+bool ValidReader(CefRefPtr<CefDictionaryValue> d) {
+  if(!d)return false;
+  const std::string theme=d->GetString("theme"),font=d->GetString("font");
+  return IsReaderThemeSupported(theme)&&
+    IsReaderFontSupported(font)&&d->GetType("images")==VTYPE_BOOL&&
+    d->GetType("size")==VTYPE_INT&&d->GetInt("size")>=14&&d->GetInt("size")<=32&&
+    d->GetType("width")==VTYPE_INT&&d->GetInt("width")>=0&&d->GetInt("width")<=2&&
+    d->GetType("spacing")==VTYPE_INT&&d->GetInt("spacing")>=0&&d->GetInt("spacing")<=2;
+}
+}
+
+CefRefPtr<CefDictionaryValue> BrowserWindow::EffectiveSettings() const {
+  return settings_;
+}
+CefRefPtr<CefDictionaryValue> BrowserWindow::SettingsSnapshot() {
+  auto data=CefDictionaryValue::Create();
+  data->SetString("profile",active_profile_id_);
+  data->SetDictionary("settings",settings_->Copy(false));
+  auto policy=policies_[active_profile_id_];
+  if(!policy)policies_[active_profile_id_]=policy=std::make_shared<SitePolicy>(active_profile_id_);
+  data->SetDictionary("rules",policy->Snapshot());
+  Tab profile;profile.profile_id=active_profile_id_;
+  data->SetDictionary("reader",ReaderPreferences(profile));
+  data->SetList("readerFonts",ReaderFontChoices());
+  data->SetDictionary("vpn",vpn_settings_->Copy(false));
+  if(!settings_requested_section_.empty()){data->SetString("requestedSection",settings_requested_section_);settings_requested_section_.clear();}
+  return data;
+}
+void BrowserWindow::RefreshSettingsAppearance() {
+  ApplyWindowAppearance();ApplyContentTheme();ApplyPerformancePolicy();Layout();EmitState();
+}
+bool BrowserWindow::GuardSettingsClose(int id,bool all) {
+  if (!settings_overlay_ || (!all && id != kSettingsSession)) return false;
+  if (all) settings_close_all_ = true;
+  if (settings_browser_) {
+    settings_browser_->GetMainFrame()->ExecuteJavaScript(
+      "window.sonaSettingsRequestClose&&window.sonaSettingsRequestClose()",
+      settings_browser_->GetMainFrame()->GetURL(), 0);
+  } else CloseSettingsOverlay();
+  return true;
+}
+bool BrowserWindow::GuardSettingsNavigation(int id,const std::string& url) {
+  if (id != kSettingsSession && IsSettingsUrl(url)) { OpenSettingsOverlay(); return true; }
+  if (id != kSettingsSession) return false;
+  // Permit the initial trusted document and profile-local reload only. Settings
+  // cannot turn itself into a webpage or a tab; outgoing navigation is gated.
+  if (IsSettingsUrl(url)) return false;
+  settings_pending_url_ = url; GuardSettingsClose(id); return true;
+}
+
+// Each canonical store commits atomically through its existing writer. If a
+// later group fails, the reply includes the actual persisted snapshot; the UI
+// reflects the actual store values and reports a failed save.
+bool BrowserWindow::SaveSettingsSnapshot(CefRefPtr<CefDictionaryValue> requested, std::string& error) {
+  if(!settings_loaded_||!requested||settings_profile_!=active_profile_id_) {
+    error="Профиль изменился. Откройте настройки заново.";return false;
+  }
+  auto config=requested->GetDictionary("settings");
+  auto reader=requested->GetDictionary("reader");
+  auto rules=requested->GetDictionary("rules");
+  auto vpn=requested->GetDictionary("vpn");
+  if(!config||!rules||!vpn||!ValidReader(reader)) {
+    error="Проверьте адреса страниц и настройки чтения.";return false;
+  }
+  // Rebase only edited keys on the live dictionary, retaining onboarding and
+  // home data changed outside this view. Refuse concurrent edits to a key.
+  auto next=settings_->Copy(false),base=settings_loaded_->GetDictionary("settings");
+  CefDictionaryValue::KeyList keys;config->GetKeys(keys);
+  for(const auto& key:keys){auto changed=config->GetValue(key),before=base->GetValue(key);
+    if(before&&before->IsEqual(changed))continue;
+    auto current=settings_->GetValue(key);
+    if(before&&current&&!before->IsEqual(current)&&!current->IsEqual(changed)){
+      error="Настройка изменена в другом окне: "+key.ToString();return false;}
+    if(!current||current->GetType()!=changed->GetType()){
+      error="Некорректное значение: "+key.ToString();return false;}
+    next->SetValue(key,changed->Copy());
+  }
+  const std::pair<const char*,std::vector<std::string>> enums[]={
+    {"performanceMode",{"balanced","eco","performance"}},
+    {"backgroundTabTimeout",{"60","300","900","1800"}},
+    {"historyDefaultFilter",{"all","today","yesterday","week","older"}},
+    {"theme",{"system","light","dark"}},{"language",{"ru","en"}},{"translationTarget",{"ru","en"}},
+    {"layout",{"compact","classic","adaptive"}},{"searchEngine",{"google","yandex","bing","duckduckgo"}},
+    {"addressPosition",{"left","center"}},{"extensionsPosition",{"left","right"}},
+    {"downloadsMode",{"always","dynamic"}},{"addressOpenMode",{"current","newIfOccupied"}},
+    {"bookmarksBarMode",{"always","newTab","home","auto","never"}},
+    {"bookmarksBarPosition",{"above","hidden"}}};
+  for(const auto& [key,allowed]:enums){const std::string value=next->GetString(key);
+    if(std::find(allowed.begin(),allowed.end(),value)==allowed.end()){
+      error="Некорректное значение: "+std::string(key);return false;}}
+  auto pagePatch=CefDictionaryValue::Create();
+  for(const char* kind:{"startup","newTab","home"})for(const char* suffix:{"Mode","Url"}){
+    const std::string key=std::string(kind)+suffix;
+    if(!config->GetValue(key)->IsEqual(base->GetValue(key)))pagePatch->SetValue(key,config->GetValue(key)->Copy());
+  }
+  if(!ValidatePagePatch(pagePatch)){error="Проверьте HTTP/HTTPS-адреса страниц.";return false;}
+  auto homePatch=CefDictionaryValue::Create();
+  for(const char* key:{"homeProvider","homeWeatherMode","homeWeatherUnits","homeFavoriteIds","homeShortcuts","homeWeatherCity","homeShowLogo","homeShowSearch",
+      "homeShowWeather","homeShowShortcuts","homeShowBackground"}){
+    auto changed=config->GetValue(key),before=base->GetValue(key);
+    if(changed&&(!before||!before->IsEqual(changed)))homePatch->SetValue(key,changed->Copy());
+  }
+  if(!ValidateHomePatch(homePatch,next,error))return false;
+  for(const char* kind:{"startup","newTab","home"}){
+    const std::string mode=std::string(kind)+"Mode",url=std::string(kind)+"Url";
+    if((pagePatch->HasKey(mode)||pagePatch->HasKey(url))&&next->GetString(mode)=="custom"&&next->GetString(url).empty()){
+      error="Укажите HTTP/HTTPS-адрес страницы.";return false;
+    }
+  }
+  const auto download=next->GetString("downloadPath").ToWString();
+  std::error_code folderError;
+  if(!config->GetValue("downloadPath")->IsEqual(base->GetValue("downloadPath"))&&!download.empty()&&!std::filesystem::is_directory(download,folderError)){
+    error="Папка загрузок не существует или недоступна.";return false;
+  }
+  if(!Same(next,settings_)){
+    if(!WriteJson(ProfileRoot(settings_profile_)/L"sona-settings.json",Value(next))){
+      error="Не удалось сохранить настройки профиля.";return false;}
+    settings_=next;
+  }
+  auto policy=policies_[settings_profile_];
+  if(!Same(rules,settings_loaded_->GetDictionary("rules"))){
+    if(!Same(policy->Snapshot(),settings_loaded_->GetDictionary("rules"))&&!Same(policy->Snapshot(),rules)){
+      error="Веб-сайты: правила изменены в другом окне.";return false;}
+    if(!policy->Replace(rules)){error="Веб-сайты: правила не сохранены.";return false;}
+    ApplySiteSound();
+    for(const auto& tab:tabs_)if(tab.profile_id==settings_profile_&&!tab.incognito)SyncSitePolicy(tab.id,tab.url);
+  }
+  if(!Same(reader,settings_loaded_->GetDictionary("reader"))){
+    auto live=reader_preferences_[settings_profile_];
+    if(live&&!Same(live,settings_loaded_->GetDictionary("reader"))&&!Same(live,reader)){
+      error="Режим чтения: настройки изменены в другом окне.";return false;}
+    if(!WriteJson(ProfileRoot(settings_profile_)/L"sona-reader.json",Value(reader))){
+      error="Режим чтения: настройки не сохранены.";return false;}
+    reader_preferences_[settings_profile_]=reader->Copy(false);
+  }
+  if(!Same(vpn,settings_loaded_->GetDictionary("vpn"))){
+    if(!Same(vpn_settings_,settings_loaded_->GetDictionary("vpn"))&&!Same(vpn_settings_,vpn)){error="VPN: конфигурация изменена в другом окне.";return false;}
+    if(!CommitVpnSettings(vpn->Copy(false),error))return false;
+  }
+  for(auto& profile:profiles_)ApplyProxy(profile.context);ApplyProxy(incognito_context_);
+  return true;
+}
+
+bool BrowserWindow::HandleSettingsBridge(int id,const std::string& request,
+    CefRefPtr<CefMessageRouterBrowserSide::Callback> callback) {
+  auto parsed=CefParseJSON(request,JSON_PARSER_RFC);
+  if(!parsed||parsed->GetType()!=VTYPE_DICTIONARY)return false;
+  auto root=parsed->GetDictionary();const std::string action=root->GetString("action");
+  auto payload=root->GetDictionary("payload");
+  if(action.rfind("settings.",0)!=0)return false;
+  if(id!=kSettingsSession||!settings_browser_||!settings_overlay_||
+      !IsSettingsUrl(settings_browser_->GetMainFrame()->GetURL())){
+    callback->Failure(403,"Настройки доступны только в слое Sona.");return true;
+  }
+  if (settings_overlay_->closing()) {
+    callback->Failure(409,"Настройки закрываются.");return true;
+  }
+  if(action=="settings.extensions"){
+    if(!payload||payload->GetType("visible")!=VTYPE_BOOL){callback->Failure(400,"Invalid extension panel request");return true;}
+    if(!payload->GetBool("visible")){
+      if(extensions_panel_)extensions_panel_->Place(RECT{});
+      ReplyEmpty(callback);return true;
+    }
+    RECT client={};GetClientRect(settings_browser_->GetHost()->GetWindowHandle(),&client);
+    const double scale=GetDpiForWindow(settings_overlay_->hwnd())/96.0;
+    auto number=[&](const char* key){return payload->GetType(key)==VTYPE_INT?double(payload->GetInt(key)):payload->GetType(key)==VTYPE_DOUBLE?payload->GetDouble(key):-1.0;};
+    const double dx=number("x"),dy=number("y"),dw=number("width"),dh=number("height");
+    if(!std::isfinite(dx)||!std::isfinite(dy)||!std::isfinite(dw)||!std::isfinite(dh)||
+        dx<0||dy<0||dw<1||dh<1||dx+dw>client.right/scale+1||dy+dh>client.bottom/scale+1){callback->Failure(400,"Invalid extension panel bounds");return true;}
+    const int x=static_cast<int>(dx*scale),y=static_cast<int>(dy*scale);
+    const int w=static_cast<int>(dw*scale),h=static_cast<int>(dh*scale);
+    if(x<0||y<0||w<1||h<1||x+w>client.right+1||y+h>client.bottom+1){callback->Failure(400,"Invalid extension panel bounds");return true;}
+    if(!extensions_panel_)extensions_panel_=CreateExtensionsPanel(settings_browser_->GetHost()->GetWindowHandle(),ContextForNewTab(false));
+    if(!extensions_panel_){callback->Failure(500,"Не удалось открыть менеджер расширений Chromium.");return true;}
+    extensions_panel_->Place(RECT{x,y,x+w,y+h});
+    const std::string page=payload->GetString("page");
+    if(page=="store"||page=="installed")extensions_panel_->Navigate(page=="store");
+    ReplyEmpty(callback);return true;
+  }
+  if(action=="settings.capabilities"){
+    auto result=CefDictionaryValue::Create();bool is_default=true;
+    for(const wchar_t* scheme:{L"http",L"https"}){
+      wchar_t progid[256]={};DWORD size=sizeof(progid);
+      const std::wstring key=std::wstring(L"Software\\Microsoft\\Windows\\Shell\\Associations\\UrlAssociations\\")+scheme+L"\\UserChoice";
+      if(RegGetValueW(HKEY_CURRENT_USER,key.c_str(),L"ProgId",RRF_RT_REG_SZ,nullptr,progid,&size)!=ERROR_SUCCESS||
+          std::wstring(progid)!=L"Sona.Url")is_default=false;
+    }
+    const int backdrop=BackdropCapabilities();
+    result->SetBool("matteAvailable",(backdrop&3)==3&&!(backdrop&8));
+    result->SetBool("defaultBrowser",is_default);Reply(callback,result);return true;
+  }
+  if(action=="settings.begin"){
+    if (settings_loaded_ && settings_profile_ == active_profile_id_ && settings_session_id_ == id) {
+      Reply(callback,settings_loaded_->Copy(false));return true;
+    }
+    RefreshSettingsAppearance();settings_session_id_=id;settings_profile_=active_profile_id_;
+    settings_loaded_=SettingsSnapshot();
+    Reply(callback,settings_loaded_->Copy(false));return true;
+  }
+  if(action=="settings.defaultBrowser"){
+    if(!OpenDefaultBrowserSettings())callback->Failure(500,"Не удалось открыть настройки Windows.");else ReplyEmpty(callback);
+    return true;
+  }
+  if(action=="settings.chooseFolder"){
+    BROWSEINFOW info={};info.hwndOwner=settings_overlay_->hwnd();info.lpszTitle=L"Папка загрузок";
+    info.ulFlags=BIF_RETURNONLYFSDIRS|BIF_NEWDIALOGSTYLE;
+    auto item=SHBrowseForFolderW(&info);wchar_t path[MAX_PATH]={};
+    if(item){SHGetPathFromIDListW(item,path);CoTaskMemFree(item);}
+    auto result=CefValue::Create();result->SetString(CefString(path));Reply(callback,result);return true;
+  }
+  if(action=="settings.openFolder"){
+    const auto folder=settings_->GetString("downloadPath").ToWString();
+    PWSTR standard=nullptr;std::wstring path=folder;
+    if(path.empty()&&SUCCEEDED(SHGetKnownFolderPath(FOLDERID_Downloads,0,nullptr,&standard))){path=standard;CoTaskMemFree(standard);}
+    if(path.empty()||!std::filesystem::is_directory(path)||reinterpret_cast<INT_PTR>(
+       ShellExecuteW(hwnd_,L"open",path.c_str(),nullptr,nullptr,SW_SHOWNORMAL))<=32)
+      callback->Failure(500,"Не удалось открыть папку загрузок.");else ReplyEmpty(callback);
+    return true;
+  }
+  if(id!=settings_session_id_||settings_profile_!=active_profile_id_||!settings_loaded_){
+    callback->Failure(409,"Откройте настройки заново.");return true;}
+  if(action=="settings.save"){
+    if(!payload||payload->GetString("profile")!=settings_profile_||
+        !payload->GetDictionary("settings")||!payload->GetDictionary("rules")||
+        !payload->GetDictionary("reader")||!payload->GetDictionary("vpn")){
+      callback->Failure(400,"Некорректные настройки.");return true;
+    }
+    std::string error;const bool ok=SaveSettingsSnapshot(payload,error);
+    settings_loaded_=SettingsSnapshot();
+    RefreshSettingsAppearance();RefreshHomePages();
+    auto result=CefDictionaryValue::Create();result->SetBool("ok",ok);result->SetString("error",error);
+    result->SetDictionary("persisted",settings_loaded_->Copy(false));Reply(callback,result);return true;
+  }
+  if(action=="settings.resize"){
+    if(!payload||payload->GetType("height")!=VTYPE_INT){callback->Failure(400,"Некорректная высота настроек.");return true;}
+    settings_overlay_->SetPanelHeight(payload->GetInt("height"));ReplyEmpty(callback);return true;
+  }
+  if(action=="settings.ready"){
+    if(payload && payload->GetType("height")==VTYPE_INT)settings_overlay_->SetPanelHeight(payload->GetInt("height"));
+    settings_overlay_->Open(); FocusSettings(); ReplyEmpty(callback); return true;
+  }
+  if(action=="settings.close"){
+    RefreshSettingsAppearance();ReplyEmpty(callback);CloseSettingsOverlay();return true;
+  }
+
+  callback->Failure(400,"Неизвестное действие настроек.");return true;
+}
+}

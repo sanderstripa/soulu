@@ -53,9 +53,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.send_header('Cache-Control', 'no-store'); self.end_headers(); self.wfile.write(body)
     def log_message(self, *args): pass
 
-with tempfile.TemporaryDirectory(prefix='soulu-reader-', ignore_cleanup_errors=True) as root:
+with tempfile.TemporaryDirectory(prefix='sona-reader-', ignore_cleanup_errors=True) as root:
     os.environ['LOCALAPPDATA'] = root
-    env = dict(os.environ, SOULU_UI_TEST_PORT=str(s.DEBUG_PORT))
+    env = dict(os.environ, SONA_UI_TEST_PORT=str(s.DEBUG_PORT))
     server = http.server.ThreadingHTTPServer(('127.0.0.1', s.free_port()), Handler)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     origin = f'http://127.0.0.1:{server.server_port}'
@@ -108,23 +108,23 @@ with tempfile.TemporaryDirectory(prefix='soulu-reader-', ignore_cleanup_errors=T
         def popup_state():
             return s.evaluate(shell,"new Promise((resolve,reject)=>cefQuery({request:JSON.stringify({action:'browser.surfaceDiagnostics'}),onSuccess:s=>resolve(JSON.parse(s)),onFailure:reject}))")
         def exercise_select(selector, name):
-            # The styled Soulu listbox replaces the OS select popup.
+            # The styled Sona listbox replaces the OS select popup.
             time.sleep(.3)
-            trigger = "document.querySelector("+json.dumps(selector)+").parentElement.querySelector('.soulu-select-button')"
+            trigger = "document.querySelector("+json.dumps(selector)+").parentElement.querySelector('.sona-select-button')"
             wait(lambda:s.evaluate(shell, "!!("+trigger+")"))
             s.evaluate(shell, trigger+".focus()")
             rect = s.evaluate(shell,"(()=>{const r=("+trigger+").getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()")
             s.command(shell,'Input.dispatchMouseEvent',dict(rect,type='mousePressed',button='left',clickCount=1))
             s.command(shell,'Input.dispatchMouseEvent',dict(rect,type='mouseReleased',button='left',clickCount=1))
-            wait(lambda:s.evaluate(shell,"!!document.querySelector('.soulu-select-menu:popover-open')"))
-            bounds=s.evaluate(shell,"(()=>{const n=document.querySelector('.soulu-select-menu:popover-open'),r=n.getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height,width:innerWidth,height:innerHeight,rows:n.querySelectorAll('[role=option]').length}})()")
-            assert_check(bounds['w']>0 and bounds['h']>0 and bounds['x']>=0 and bounds['y']>=0 and bounds['x']+bounds['w']<=bounds['width'] and bounds['y']+bounds['h']<=bounds['height'] and bounds['rows']>=3,name+' Soulu listbox painted inside client')
+            wait(lambda:s.evaluate(shell,"!!document.querySelector('.sona-select-menu:popover-open')"))
+            bounds=s.evaluate(shell,"(()=>{const n=document.querySelector('.sona-select-menu:popover-open'),r=n.getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height,width:innerWidth,height:innerHeight,rows:n.querySelectorAll('[role=option]').length}})()")
+            assert_check(bounds['w']>0 and bounds['h']>0 and bounds['x']>=0 and bounds['y']>=0 and bounds['x']+bounds['w']<=bounds['width'] and bounds['y']+bounds['h']<=bounds['height'] and bounds['rows']>=3,name+' Sona listbox painted inside client')
             s.evaluate(shell,'browserShell.getSettings().then(settings=>browserShell.setSettings({theme:settings.theme}))')
             time.sleep(.2)
-            assert_check(s.evaluate(shell,"!!document.querySelector('.soulu-select-menu:popover-open')"),name+' unchanged state preserves listbox')
+            assert_check(s.evaluate(shell,"!!document.querySelector('.sona-select-menu:popover-open')"),name+' unchanged state preserves listbox')
             s.command(shell,'Input.dispatchKeyEvent',{'type':'keyDown','key':'Escape','windowsVirtualKeyCode':27})
             s.command(shell,'Input.dispatchKeyEvent',{'type':'keyUp','key':'Escape','windowsVirtualKeyCode':27})
-            wait(lambda:not s.evaluate(shell,"!!document.querySelector('.soulu-select-menu:popover-open')"))
+            wait(lambda:not s.evaluate(shell,"!!document.querySelector('.sona-select-menu:popover-open')"))
             assert_check(visible_surface('.reader-settings') and s.evaluate(shell,"document.activeElement===("+trigger+")"),name+' listbox dismiss preserves palette and focus')
         for layout in ('compact','classic'):
             s.evaluate(shell,'browserShell.setSettings('+json.dumps({'layout':layout})+')')
@@ -163,10 +163,10 @@ with tempfile.TemporaryDirectory(prefix='soulu-reader-', ignore_cleanup_errors=T
         action('reset');action('zoom',{'command':'reset'})
         # Test sanitizer independently with malicious content Readability may discard.
         malicious = '<script>window.readerXSS=1</script><img src="javascript:alert(1)" onerror="window.readerXSS=2"><svg onload="window.readerXSS=3"></svg><a href="javascript:alert(1)">bad</a><iframe></iframe><form></form><p style="position:fixed" id="evil">safe</p>'
-        clean = s.evaluate(shell, "(()=>{const n=document.createElement('div');n.append(souluReaderSafe.content("+json.dumps(malicious)+","+json.dumps(origin)+"));return n.innerHTML})()")
+        clean = s.evaluate(shell, "(()=>{const n=document.createElement('div');n.append(sonaReaderSafe.content("+json.dumps(malicious)+","+json.dumps(origin)+"));return n.innerHTML})()")
         assert_check(all(word not in clean for word in ('script','iframe','form','onclick','onerror','onload','javascript:','style=','id=')), 'allowlist sanitizer malicious payload')
         assert_check(s.evaluate(shell, '!window.readerXSS'), 'sanitizer executes no script')
-        lazy=s.evaluate(shell,"(()=>{const n=document.createElement('div');n.append(souluReaderSafe.content('<img data-src=\"/image.png\"><img><a href=\"https://user:pass@example.com/\">credentials</a>',"+json.dumps(origin)+"));return {images:n.querySelectorAll('img').length,src:n.querySelector('img').dataset.readerSrc,links:n.querySelectorAll('a[href]').length,blank:souluReaderSafe.webURL('',"+json.dumps(origin)+")}})()")
+        lazy=s.evaluate(shell,"(()=>{const n=document.createElement('div');n.append(sonaReaderSafe.content('<img data-src=\"/image.png\"><img><a href=\"https://user:pass@example.com/\">credentials</a>',"+json.dumps(origin)+"));return {images:n.querySelectorAll('img').length,src:n.querySelector('img').dataset.readerSrc,links:n.querySelectorAll('a[href]').length,blank:sonaReaderSafe.webURL('',"+json.dumps(origin)+")}})()")
         assert_check(lazy=={'images':1,'src':origin+'/image.png','links':0,'blank':''}, 'lazy image fallback and URL validation')
         for command in ('in','out','reset'): action('zoom', {'command':command})
         assert_check(current()['zoom']==100, 'native zoom reset')
@@ -204,7 +204,7 @@ with tempfile.TemporaryDirectory(prefix='soulu-reader-', ignore_cleanup_errors=T
         def own_window(hwnd,_):
             pid=ctypes.c_ulong();user.GetWindowThreadProcessId(hwnd,ctypes.byref(pid))
             name=ctypes.create_unicode_buffer(128);user.GetClassNameW(hwnd,name,128)
-            if pid.value==process.pid and name.value=='SouluBrowserWindow':handles.append(hwnd)
+            if pid.value==process.pid and name.value=='SonaBrowserWindow':handles.append(hwnd)
             return True
         user.EnumWindows(own_window,0);assert handles
         hwnd=ctypes.c_void_p(handles[0])
@@ -275,17 +275,17 @@ with tempfile.TemporaryDirectory(prefix='soulu-reader-', ignore_cleanup_errors=T
         assert_check(s.evaluate(shell,"document.querySelector('.site-confirm-text').textContent.includes('Cookies')"),'clear confirmation exact scope')
         s.evaluate(shell,"document.querySelector('[data-confirm=clear]').click()")
         wait(lambda:s.evaluate(shell,"document.querySelector('.site-status').textContent.includes('очищены')"))
-        assert_check(True, 'Soulu confirmed storage cleanup')
+        assert_check(True, 'Sona confirmed storage cleanup')
         assert_check(s.evaluate(page,"localStorage.getItem('keep')===null&&document.cookie.includes('keep=yes')&&sessionStorage.getItem('keep')===null"), 'clear DOM storage and retain cookies')
         assert_check(s.evaluate(page,"indexedDB.databases().then(ds=>!ds.some(d=>d.name==='site-reader'))"), 'clear indexeddb')
         assert_check(s.evaluate(page,"caches.keys().then(keys=>!keys.includes('reader-cache'))"), 'clear cache storage')
         assert_check(s.evaluate(page,"navigator.serviceWorker.getRegistrations().then(rows=>rows.length===0)"), 'clear service workers')
         assert_check(s.evaluate(other_ws,"localStorage.getItem('keep')==='yes'&&sessionStorage.getItem('keep')==='yes'"), 'other origin retained');other_ws.close()
         assert_check(s.evaluate(second_ws,"localStorage.getItem('keep')==='yes'&&sessionStorage.getItem('keep')==='yes'&&document.cookie.includes('keep=yes')"), 'other profile storage retained')
-        second_prefs=json.loads((Path(root)/f'Soulu/User Data/Profiles/{second_id}/soulu-reader.json').read_text())
+        second_prefs=json.loads((Path(root)/f'Sona/User Data/Profiles/{second_id}/sona-reader.json').read_text())
         assert_check(second_prefs['size']==18, 'other profile preferences retained');second_ws.close()
         page.close();shell.close();s.close_normally(process);process=None
-        persisted=json.loads((Path(root)/'Soulu/User Data/Profiles/personal/soulu-reader.json').read_text())
+        persisted=json.loads((Path(root)/'Sona/User Data/Profiles/personal/sona-reader.json').read_text())
         assert_check(persisted['size']==24 and persisted['theme']=='dark', 'preferences on disk')
         process,shell,page=start();s.navigate(page,origin+'/article')
         assert_check(current()['preferences']['size']==24 and current()['rules']['sites']['127.0.0.1']['camera']==2, 'preferences and permissions survive restart')
@@ -293,7 +293,7 @@ with tempfile.TemporaryDirectory(prefix='soulu-reader-', ignore_cleanup_errors=T
         wait(lambda:s.evaluate(shell,'browserShell.getState().then(s=>s.incognito)'))
         private=current();action('reader.preferences',{'preferences':{'size':30}},private)
         assert_check(current()['preferences']['size']==30, 'private reader preferences in memory')
-        assert_check(json.loads((Path(root)/'Soulu/User Data/Profiles/personal/soulu-reader.json').read_text())['size']==24, 'private preferences do not overwrite regular')
+        assert_check(json.loads((Path(root)/'Sona/User Data/Profiles/personal/sona-reader.json').read_text())['size']==24, 'private preferences do not overwrite regular')
         s.evaluate(shell,'browserShell.closeTab('+str(private['tabId'])+')');wait(lambda:not s.evaluate(shell,'browserShell.getState().then(s=>s.incognito)'))
         s.evaluate(shell,'browserShell.newIncognito()');wait(lambda:s.evaluate(shell,'browserShell.getState().then(s=>s.incognito)'))
         assert_check(current()['preferences']['size']==20, 'private preferences discarded with last private tab')

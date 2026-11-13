@@ -26,6 +26,6 @@
     catch(error){console.error('Extensions:',error);}
   }
   window.browserShell.onState(state=>{const next=getProfile(state);if(next&&next!==profile){profile=next;items=[];draw();refresh();}});
-  window.souluExtensionToolbar={refresh,get items(){return items;},get lastError(){return lastError;}};
+  window.sonaExtensionToolbar={refresh,get items(){return items;},get lastError(){return lastError;}};
   refresh();setInterval(refresh,2000);
 })();

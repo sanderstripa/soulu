@@ -1,4 +1,4 @@
-# Soulu motion language — Beta 1.0.50
+# Sona motion language — Beta 1.0.50
 
 Motion explains structural changes. The existing CEF engine, Settings card home,
 settings transaction, backend and native overlay are retained.
@@ -17,7 +17,7 @@ settles the previous destination. Resize, page teardown, search, theme edits,
 profile changes and close settle temporary layers. There is no new UI framework.
 
 `ui/motion.css` owns web timing/easing tokens read by `ui/motion.js`; native
-`cef/soulu/motion.h` supplies equivalent timing and ease-out for the existing
+`cef/sona/motion.h` supplies equivalent timing and ease-out for the existing
 overlay. Keep these small cross-runtime token sets synchronized.
 
 | Class | Duration | Easing |

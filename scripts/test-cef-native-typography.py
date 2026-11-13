@@ -15,7 +15,7 @@ from PIL import ImageGrab
 spec=importlib.util.spec_from_file_location('storage',Path(__file__).with_name('test-cef-storage.py'))
 s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
 os.environ['NO_PROXY']='localhost,127.0.0.1,::1'
-os.environ['SOULU_REGRESSION_SKIP_FIRST_RUN']='1'
+os.environ['SONA_REGRESSION_SKIP_FIRST_RUN']='1'
 u=ctypes.windll.user32;g=ctypes.windll.gdi32
 u.GetDlgItem.argtypes=[w.HWND,ctypes.c_int];u.GetDlgItem.restype=w.HWND
 u.SendMessageW.argtypes=[w.HWND,w.UINT,w.WPARAM,w.LPARAM];u.SendMessageW.restype=ctypes.c_ssize_t
@@ -46,7 +46,7 @@ def main():
     report={'passed':False,'checks':[],'nativeFonts':[]}
     out=Path(sys.argv[2]);out.parent.mkdir(parents=True,exist_ok=True)
     visuals=out.parent/'typography-visuals';visuals.mkdir(exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix='soulu-native-type-',ignore_cleanup_errors=True) as root:
+    with tempfile.TemporaryDirectory(prefix='sona-native-type-',ignore_cleanup_errors=True) as root:
         os.environ['LOCALAPPDATA']=root
         server=http.server.ThreadingHTTPServer(('127.0.0.1',s.free_port()),s.SiteHandler)
         threading.Thread(target=server.serve_forever,daemon=True).start()

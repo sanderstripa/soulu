@@ -1,6 +1,6 @@
 """Apply resource changes to the accepted Preview 5 binaries without rebuilding them."""
 import difflib,hashlib,json,pathlib,subprocess,shutil
-root=pathlib.Path(__file__).resolve().parents[2];out=root/'gecko-out';runtime=out/'runtime/soulu/chrome';base='e1ceb1bc72306c1dab466b3ec126f1fcdf9cca9a'
+root=pathlib.Path(__file__).resolve().parents[2];out=root/'gecko-out';runtime=out/'runtime/sona/chrome';base='e1ceb1bc72306c1dab466b3ec126f1fcdf9cca9a'
 def hashes():return {str(p.relative_to(out)):hashlib.sha256(p.read_bytes()).hexdigest() for p in out.rglob('*') if p.suffix.lower() in ['.exe','.dll','.bin','.xpi']}
 before=hashes()
 changed=subprocess.check_output(['git','diff','--name-only',base,'HEAD'],text=True).splitlines()

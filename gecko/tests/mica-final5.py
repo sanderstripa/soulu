@@ -4,9 +4,9 @@ source=Path(__file__).with_name('preview4.py').read_text(encoding='utf-8').split
 exec(compile(source,str(Path(__file__).with_name('preview4.py')),'exec'),globals())
 report={'passed':False,'checks':{}}
 try:
- (profile/'soulu-settings.json').write_text(json.dumps({'onboarding':{'done':True},'settings':{'theme':'light'}}));start();call('browser.navigate',url);wait(lambda:content('return !!document.getElementById("v")'))
- call('browser.settings.set',{'mattePanel':False});check('disabled_matte_paints_opaque_soulu_background',chrome('return getComputedStyle(document.documentElement).backgroundColor!=="rgba(0, 0, 0, 0)"&&!document.documentElement.hasAttribute("windowsmica")'))
- call('browser.settings.set',{'mattePanel':True});state=chrome('return {available:Soulu.material.native,enabled:document.documentElement.hasAttribute("windowsmica"),background:getComputedStyle(document.documentElement).backgroundColor};')
+ (profile/'sona-settings.json').write_text(json.dumps({'onboarding':{'done':True},'settings':{'theme':'light'}}));start();call('browser.navigate',url);wait(lambda:content('return !!document.getElementById("v")'))
+ call('browser.settings.set',{'mattePanel':False});check('disabled_matte_paints_opaque_sona_background',chrome('return getComputedStyle(document.documentElement).backgroundColor!=="rgba(0, 0, 0, 0)"&&!document.documentElement.hasAttribute("windowsmica")'))
+ call('browser.settings.set',{'mattePanel':True});state=chrome('return {available:Sona.material.native,enabled:document.documentElement.hasAttribute("windowsmica"),background:getComputedStyle(document.documentElement).backgroundColor};')
  check('enabled_matte_releases_opaque_early_paint',state['background']=='rgba(0, 0, 0, 0)' and state['enabled'] if state['available'] else state['background']!='rgba(0, 0, 0, 0)',state)
  before=content('return {height:innerHeight,width:innerWidth,time:document.querySelector("video").currentTime};');time.sleep(1);after=content('return {height:innerHeight,width:innerWidth,time:document.querySelector("video").currentTime};');check('native_backdrop_keeps_video_playing_and_geometry_stable',after['time']>before['time'] and after['height']==before['height'] and after['width']==before['width'])
  if os.name=='nt':

@@ -1,4 +1,4 @@
-"""Probe the actual Soulu runtime with an isolated local HTTP fixture."""
+"""Probe the actual Sona runtime with an isolated local HTTP fixture."""
 import base64
 import ctypes
 import hashlib
@@ -18,7 +18,7 @@ import urllib.request
 spec = importlib.util.spec_from_file_location('storage', Path(__file__).with_name('test-cef-storage.py'))
 s = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(s)
-BODY = b'Soulu CEF native download fixture\n' * 4096
+BODY = b'Sona CEF native download fixture\n' * 4096
 
 class Fixture(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
@@ -85,7 +85,7 @@ def dialog_controls(pid):
     return results
 
 def main():
-    os.environ['SOULU_REGRESSION_SKIP_FIRST_RUN'] = '1'
+    os.environ['SONA_REGRESSION_SKIP_FIRST_RUN'] = '1'
     urllib.request.install_opener(urllib.request.build_opener(urllib.request.ProxyHandler({})))
     executable = str(Path(sys.argv[1]).resolve())
     output = Path(sys.argv[2]).resolve(); output.parent.mkdir(parents=True, exist_ok=True)
@@ -96,8 +96,8 @@ def main():
     server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Fixture)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     origin = f'http://127.0.0.1:{server.server_port}'
-    with tempfile.TemporaryDirectory(prefix='soulu-cef-platform-', dir=output.parent, ignore_cleanup_errors=True) as root:
-        env = dict(os.environ, LOCALAPPDATA=root, APPDATA=root, SOULU_UI_TEST_PORT=str(s.DEBUG_PORT), SOULU_REGRESSION_SKIP_FIRST_RUN='1')
+    with tempfile.TemporaryDirectory(prefix='sona-cef-platform-', dir=output.parent, ignore_cleanup_errors=True) as root:
+        env = dict(os.environ, LOCALAPPDATA=root, APPDATA=root, SONA_UI_TEST_PORT=str(s.DEBUG_PORT), SONA_REGRESSION_SKIP_FIRST_RUN='1')
         process = subprocess.Popen([executable, '--no-proxy-server'], env=env, cwd=Path(executable).parent)
         connections = []
         try:
@@ -120,11 +120,11 @@ def main():
             check(s.evaluate(page, 'v.currentTime') > start + .3, 'Video frames and playback time advance')
             s.evaluate(page, 'v.pause()'); paused = s.evaluate(page, 'v.currentTime'); time.sleep(.4)
             check(abs(s.evaluate(page, 'v.currentTime') - paused) < .15, 'Video pauses')
-            upload = Path(root) / 'upload.txt'; upload.write_text('Soulu upload fixture', encoding='utf-8')
+            upload = Path(root) / 'upload.txt'; upload.write_text('Sona upload fixture', encoding='utf-8')
             document = s.command(page, 'DOM.getDocument')['root']['nodeId']
             node = s.command(page, 'DOM.querySelector', {'nodeId': document, 'selector': '#upload'})['nodeId']
             s.command(page, 'DOM.setFileInputFiles', {'nodeId': node, 'files': [str(upload)]})
-            check(s.evaluate(page, "upload.files[0].text().then(t=>fetch('/upload',{method:'POST',body:t})).then(r=>r.text()).then(t=>t==='Soulu upload fixture')"), 'Selected file uploads through native fetch')
+            check(s.evaluate(page, "upload.files[0].text().then(t=>fetch('/upload',{method:'POST',body:t})).then(r=>r.text()).then(t=>t==='Sona upload fixture')"), 'Selected file uploads through native fetch')
             s.evaluate(shell, "browserShell.setSiteRule({domain:'',permission:'downloads',value:0})")
             saved = Path(root) / 'saved-download.bin'
             s.command(page, 'Page.navigate', {'url': origin + '/download'})
@@ -150,7 +150,7 @@ def main():
                     return None  # Windows may briefly retain the download's write handle.
             check(wait(downloaded_bytes) == BODY, 'Native Save As downloads exact fixture bytes to selected path')
             downloads = wait(lambda: (rows if any(r['state'] == 'completed' for r in rows) else None) if (rows := s.evaluate(shell, 'browserShell.getDownloads()')) else None)
-            check(any(r['receivedBytes'] == len(BODY) for r in downloads), 'Download completion callback reaches Soulu UI')
+            check(any(r['receivedBytes'] == len(BODY) for r in downloads), 'Download completion callback reaches Sona UI')
             s.command(page, 'Page.navigate', {'url': origin + '/download-again'})
             controls = wait(lambda: dialog_controls(process.pid))
             cancel = next(c for c in controls if c[1] == 'Button' and c[3] == 2)

@@ -9,9 +9,9 @@ const tr=(k)=>I[state.settings?.language||"ru"]?.[k]||k;
 function esc(v){const e=document.createElement("span");e.textContent=v??"";return e.innerHTML.replaceAll('"',"&quot;").replaceAll("'","&#39;");}
 function fav(x,c="favicon"){return x?.favicon?`<img class="${c}" src="${esc(x.favicon)}" alt="">`:"";}
 function fallbacks(root){root.querySelectorAll("img.favicon,img.sidebar-favicon,img.list-favicon").forEach((i)=>i.addEventListener("error",()=>i.remove(),{once:true}));}
-function translate(){document.documentElement.lang=state.settings.language;document.querySelectorAll("[data-i18n]").forEach((e)=>e.textContent=tr(e.dataset.i18n));document.querySelectorAll("[data-i18n-title]").forEach((e)=>{const title=tr(e.dataset.i18nTitle);if(e.dataset.tooltip!==title&&e.title!==title)e.title=title;if(e.getAttribute("aria-label")!==title)e.setAttribute("aria-label",title);});document.querySelectorAll("[data-i18n-placeholder]").forEach((e)=>e.placeholder=e.id==='classicAddress'&&state.page?.url==='soulu://home'?'':tr(e.dataset.i18nPlaceholder));}
+function translate(){document.documentElement.lang=state.settings.language;document.querySelectorAll("[data-i18n]").forEach((e)=>e.textContent=tr(e.dataset.i18n));document.querySelectorAll("[data-i18n-title]").forEach((e)=>{const title=tr(e.dataset.i18nTitle);if(e.dataset.tooltip!==title&&e.title!==title)e.title=title;if(e.getAttribute("aria-label")!==title)e.setAttribute("aria-label",title);});document.querySelectorAll("[data-i18n-placeholder]").forEach((e)=>e.placeholder=e.id==='classicAddress'&&state.page?.url==='sona://home'?'':tr(e.dataset.i18nPlaceholder));}
 function setVisible(selector,visible){document.querySelectorAll(selector).forEach(el=>{el.hidden=!visible;el.style.display=visible?"":"none";});}
-function appearance(){document.body.toggleAttribute("data-native-page-glass",!!state.pageGlassReady);document.body.dataset.pageGlassReady=String(!!state.pageGlassReady);document.body.dataset.fullscreen=String(!!state.fullscreen);const s=state.settings;document.body.dataset.layout=["classic","compact","adaptive"].includes(s.layout)?s.layout:"compact";document.body.dataset.theme=s.theme||"system";document.body.dataset.matte=s.mattePanel?"true":"false";document.body.dataset.addressPosition=s.addressPosition||"center";document.body.dataset.extensionsPosition=s.extensionsPosition||"left";document.body.dataset.vpnToolbar=s.vpnToolbarVisible===false?"false":"true";document.body.dataset.showSidebar=String(s.showSidebar!==false);document.body.dataset.showBack=String(s.showBack!==false);document.body.dataset.showFavorites=String(s.showFavorites!==false);document.body.dataset.showNewTab=String(s.showNewTab!==false);document.body.dataset.showDownloads=String(s.showDownloads!==false);document.body.dataset.showVpn=String(s.vpnToolbarVisible!==false);setVisible("#sidebarButton,#compactSidebarButton",s.showSidebar!==false);setVisible("#backButton,#compactBackButton",s.showBack!==false);setVisible("[data-home]",s.showHome!==false);setVisible("#favoritesButton,[data-favorites]",s.showFavorites!==false);setVisible("#newTabButton,#compactNewTabButton",s.showNewTab!==false);setVisible(".vpn-button",s.vpnToolbarVisible!==false);setVisible("#downloadsButton,#compactDownloadsButton",s.showDownloads!==false);window.souluAdaptiveToolbar?.sync(state);translate();syncDownloadVisibility();}
+function appearance(){document.body.toggleAttribute("data-native-page-glass",!!state.pageGlassReady);document.body.dataset.pageGlassReady=String(!!state.pageGlassReady);document.body.dataset.fullscreen=String(!!state.fullscreen);const s=state.settings;document.body.dataset.layout=["classic","compact","adaptive"].includes(s.layout)?s.layout:"compact";document.body.dataset.theme=s.theme||"system";document.body.dataset.matte=s.mattePanel?"true":"false";document.body.dataset.addressPosition=s.addressPosition||"center";document.body.dataset.extensionsPosition=s.extensionsPosition||"left";document.body.dataset.vpnToolbar=s.vpnToolbarVisible===false?"false":"true";document.body.dataset.showSidebar=String(s.showSidebar!==false);document.body.dataset.showBack=String(s.showBack!==false);document.body.dataset.showFavorites=String(s.showFavorites!==false);document.body.dataset.showNewTab=String(s.showNewTab!==false);document.body.dataset.showDownloads=String(s.showDownloads!==false);document.body.dataset.showVpn=String(s.vpnToolbarVisible!==false);setVisible("#sidebarButton,#compactSidebarButton",s.showSidebar!==false);setVisible("#backButton,#compactBackButton",s.showBack!==false);setVisible("[data-home]",s.showHome!==false);setVisible("#favoritesButton,[data-favorites]",s.showFavorites!==false);setVisible("#newTabButton,#compactNewTabButton",s.showNewTab!==false);setVisible(".vpn-button",s.vpnToolbarVisible!==false);setVisible("#downloadsButton,#compactDownloadsButton",s.showDownloads!==false);window.sonaAdaptiveToolbar?.sync(state);translate();syncDownloadVisibility();}
 function sourceLabel(s){return s==="tab"?tr("openTab"):s==="bookmark"?tr("bookmark"):s==="history"?tr("history"):s==="website"?"Сайт":tr("search");}
 function hideSuggestions(box){++token;box.classList.remove("visible");window.browserShell.setSuggestionsHeight(0);}
 function drawSuggestions(box,items,q){q=String(q||"").trim();if(!q){hideSuggestions(box);return;}const rows=items.map((x)=>x.source==="search"?`<button type="button" class="suggestion-row" data-search="${esc(x.query)}"><b class="search-mark">⌕</b><span><strong>${esc(x.title)}</strong><small>${tr("searchFor")}</small></span><em>${tr("search")}</em></button>`:`<button type="button" class="suggestion-row" data-url="${esc(x.url)}">${fav(x)}<span><strong>${esc(x.title)}</strong><small>${esc(x.url)}</small></span><em>${sourceLabel(x.source)}</em></button>`).join("");box.innerHTML=rows+`<button type="button" class="suggestion-row" data-search="${esc(q)}"><b class="search-mark">⌕</b><span><strong>${tr("searchFor")} «${esc(q)}»</strong></span><em>${tr("search")}</em></button>`;box.classList.add("visible");box.positionForAddress?.();window.browserShell.setSuggestionsHeight(Math.min(430,box.getBoundingClientRect().top+box.querySelectorAll(".suggestion-row").length*44+18));fallbacks(box);box.querySelectorAll("[data-url]").forEach((b)=>b.onmousedown=(e)=>{e.preventDefault();window.browserShell.navigate(b.dataset.url);hideSuggestions(box);});box.querySelectorAll("[data-search]").forEach((b)=>b.onmousedown=(e)=>{e.preventDefault();window.browserShell.navigate(e.currentTarget.dataset.search);hideSuggestions(box);});}
@@ -26,7 +26,7 @@ function bindAddress(form,input,box){
   const dismiss=()=>{if(!box.classList.contains('visible')&&document.activeElement!==input)return;clearTimeout(queryTimer);clearTimeout(blurTimer);editing=false;hideSuggestions(box);if(document.activeElement===input)input.blur();input.value=addressDisplay(state.page);};
   document.addEventListener('pointerdown',e=>{if(!form.contains(e.target)&&!box.contains(e.target))dismiss();},{capture:true,signal:binding.signal});
   window.addEventListener('blur',dismiss,{signal:binding.signal});
-  window.addEventListener('soulu-dismiss-address',dismiss,{signal:binding.signal});
+  window.addEventListener('sona-dismiss-address',dismiss,{signal:binding.signal});
 
   const refresh=()=>{clearTimeout(queryTimer);const n=++token;queryTimer=setTimeout(async()=>{
     const q=input.value;
@@ -36,7 +36,7 @@ function bindAddress(form,input,box){
     }catch(error){if(n===token&&document.hasFocus()&&document.activeElement===input)drawSuggestions(box,[],q);}
   },140);};
   form.onsubmit=e=>{e.preventDefault();const value=input.value.trim();if(!value)return;editing=false;hideSuggestions(box);input.blur();window.browserShell.navigate(value);};
-  input.onfocus=()=>{clearTimeout(blurTimer);input.value=state.page?.url==='soulu://home'?'':state.page?.url||'';editing=true;input.select();refresh();};
+  input.onfocus=()=>{clearTimeout(blurTimer);input.value=state.page?.url==='sona://home'?'':state.page?.url||'';editing=true;input.select();refresh();};
   input.oninput=refresh;
   input.onblur=()=>{blurTimer=setTimeout(()=>{if(!input.isConnected||document.activeElement===input)return;editing=false;input.value=addressDisplay(state.page);hideSuggestions(box);},140);};
   input.onkeydown=e=>{const rows=[...box.querySelectorAll('.suggestion-row')];
@@ -47,11 +47,11 @@ function bindAddress(form,input,box){
 }
 
 function addressDisplay(x){
-  if(!x?.url||x.url==='soulu://home'||x.url==='about:blank')return '';
+  if(!x?.url||x.url==='sona://home'||x.url==='about:blank')return '';
   try{const u=new URL(x.url);if(['http:','https:'].includes(u.protocol))return u.hostname;}catch{}
   return x.label||x.url;
 }
-function activeTab(x){const hasFavicon=Boolean(x.favicon),display=addressDisplay(x);return`<form class="compact-active-tab${hasFavicon?"":" no-favicon"}" data-compact-rendered data-active-tab="${x.id}"><button class="tab-action page-action" type="button" data-page-menu title="${tr("pageMenu")}"><svg viewBox="0 0 20 20"><path d="M4 5.5h12M4 10h12M4 14.5h7"/></svg></button>${fav(x)}<input id="compactAddress" class="active-address" value="${esc(display)}" placeholder="${x.url==='soulu://home'?'':tr("addressPlaceholder")}" autocomplete="off" spellcheck="false"><button class="tab-action address-favorite" type="button" data-favorites title="${tr("favorites")}"><svg viewBox="0 0 24 24"><path d="m12 4 2.47 5.27L20 10.12l-4 4.1.94 5.78L12 17.27 7.06 20 8 14.22 4 10.12l5.53-.85L12 4Z"/></svg></button><button class="tab-action reload-action${x.loading?" loading":""}" type="button" data-reload title="${x.loading?tr("stop"):tr("reload")}"><svg class="reload-svg" viewBox="0 0 24 24"><path d="M19 8.13A8 8 0 1 0 20 12M19 4v4h-4"/></svg><svg class="stop-svg" viewBox="0 0 20 20"><rect x="4.5" y="4.5" width="11" height="11" rx="2"/></svg></button><button class="tab-action close-action" type="button" data-close-active title="${tr("close")}"><svg viewBox="0 0 24 24"><path d="M4 4l16 16m0-16L4 20"/></svg></button><div class="suggestions active-suggestions" id="compactSuggestions"></div></form>`;}
+function activeTab(x){const hasFavicon=Boolean(x.favicon),display=addressDisplay(x);return`<form class="compact-active-tab${hasFavicon?"":" no-favicon"}" data-compact-rendered data-active-tab="${x.id}"><button class="tab-action page-action" type="button" data-page-menu title="${tr("pageMenu")}"><svg viewBox="0 0 20 20"><path d="M4 5.5h12M4 10h12M4 14.5h7"/></svg></button>${fav(x)}<input id="compactAddress" class="active-address" value="${esc(display)}" placeholder="${x.url==='sona://home'?'':tr("addressPlaceholder")}" autocomplete="off" spellcheck="false"><button class="tab-action address-favorite" type="button" data-favorites title="${tr("favorites")}"><svg viewBox="0 0 24 24"><path d="m12 4 2.47 5.27L20 10.12l-4 4.1.94 5.78L12 17.27 7.06 20 8 14.22 4 10.12l5.53-.85L12 4Z"/></svg></button><button class="tab-action reload-action${x.loading?" loading":""}" type="button" data-reload title="${x.loading?tr("stop"):tr("reload")}"><svg class="reload-svg" viewBox="0 0 24 24"><path d="M19 8.13A8 8 0 1 0 20 12M19 4v4h-4"/></svg><svg class="stop-svg" viewBox="0 0 20 20"><rect x="4.5" y="4.5" width="11" height="11" rx="2"/></svg></button><button class="tab-action close-action" type="button" data-close-active title="${tr("close")}"><svg viewBox="0 0 24 24"><path d="M4 4l16 16m0-16L4 20"/></svg></button><div class="suggestions active-suggestions" id="compactSuggestions"></div></form>`;}
 let classicVisibleTabId=null,classicTabsSignature="",sidebarSignature="";
 function sizeClassicTabs(){
   if(!["classic","adaptive"].includes(document.body.dataset.layout))return;
@@ -146,7 +146,7 @@ function renderClassicTabs(){
     const signature=selected?`${selected.id}:${!!selected.pinned}`:null;
     if(signature!==classicVisibleTabId){classicVisibleTabId=signature;revealClassicTab();}
     else {tabStrip.scrollLeft=previousScroll;classicPinnedTabs.scrollLeft=previousPinnedScroll;}}
-  const input=$("#classicAddress");if(document.activeElement!==input)input.value=addressDisplay(state.page);input.placeholder=state.page?.url==='soulu://home'?'':tr("addressPlaceholder");
+  const input=$("#classicAddress");if(document.activeElement!==input)input.value=addressDisplay(state.page);input.placeholder=state.page?.url==='sona://home'?'':tr("addressPlaceholder");
   $(".classic-reload").classList.toggle("loading",!!state.page?.loading);
 }
 new ResizeObserver(()=>{sizeClassicTabs();revealClassicTab();}).observe(tabStrip);
@@ -183,18 +183,18 @@ function renderCompactTabs(){
     const media=mediaMarkup(x);if(activity.innerHTML!==media){activity.innerHTML=media;bindMedia(activity);}
     node.dataset.tooltip=x.title||x.label||tr('newTab');
     node.removeAttribute('title');
-    const src=x.url==='soulu://settings'?'settings-icon.svg':x.favicon;
+    const src=x.url==='sona://settings'?'settings-icon.svg':x.favicon;
     let icon=node.querySelector('img.favicon');
     if(src){
       if(!icon){icon=document.createElement('img');icon.className='favicon';icon.alt='';x.active?node.querySelector('input').before(icon):node.prepend(icon);}
       if(icon.getAttribute('src')!==src)icon.src=src;
-      icon.classList.toggle('settings-favicon',x.url==='soulu://settings');
+      icon.classList.toggle('settings-favicon',x.url==='sona://settings');
     }else icon?.remove();
     if(x.active){
       node.classList.toggle('no-favicon',!src);
       const input=node.querySelector('input');
       if(document.activeElement!==input)input.value=addressDisplay(x);
-      input.placeholder=x.url==='soulu://home'?'':tr('addressPlaceholder');
+      input.placeholder=x.url==='sona://home'?'':tr('addressPlaceholder');
       const reload=node.querySelector('[data-reload]');
       reload.classList.toggle('loading',Boolean(x.loading));
       reload.title=x.loading?tr('stop'):tr('reload');
@@ -209,7 +209,7 @@ function renderTabs(){renderClassicTabs();renderCompactTabs();}
 function renderSidebar(){const signature=JSON.stringify([state.settings?.language,state.tabs.map(x=>[x.id,x.title,x.label,x.favicon,x.active])]);if(signature===sidebarSignature)return;sidebarSignature=signature;const box=$("#sidebarTabs");$("#sidebarCount").textContent=`${state.tabs.length} ${tr("opened")}`;box.innerHTML=state.tabs.map((x)=>`<div class="sidebar-tab${x.active?" active":""}">${fav(x,"sidebar-favicon")}<button data-select="${x.id}"><strong>${esc(x.title||tr("newTab"))}</strong><small>${esc(x.label)}</small></button><button data-close="${x.id}">×</button></div>`).join("");fallbacks(box);box.querySelectorAll("[data-select]").forEach((b)=>b.onclick=()=>window.browserShell.switchTab(+b.dataset.select));box.querySelectorAll("[data-close]").forEach((b)=>b.onclick=()=>window.browserShell.closeTab(+b.dataset.close));}
 let pendingState=null,stateFrame=0;
 function renderState(v){pendingState=v||pendingState||state;if(stateFrame)return;stateFrame=requestAnimationFrame(()=>{stateFrame=0;applyState(pendingState);pendingState=null;});}
-function applyState(v){state=v||state;appearance();renderTabs();backButtons.forEach((button)=>button.disabled=!state.page?.canGoBack);sidebar.classList.toggle("visible",!!state.sidebarVisible&&!state.bookmarksSidebarVisible);if((!state.sidebarVisible||state.bookmarksSidebarVisible)&&sidebar.contains(document.activeElement))sidebarButtons.find(b=>b.getClientRects().length)?.focus();sidebar.inert=!state.sidebarVisible||!!state.bookmarksSidebarVisible;sidebarButtons.forEach((button)=>button.classList.toggle("active",!!state.sidebarVisible&&!state.bookmarksSidebarVisible));[$("#windowMaximize"),$("#compactWindowMaximize")].forEach((m)=>{m.title=state.maximized?tr("restore"):tr("maximize");m.innerHTML=state.maximized?'<svg viewBox="0 0 24 24"><rect x="8.25" y="5.25" width="10.5" height="10.5"/><path d="M15.75 15.75v3h-10.5v-10.5h3"/></svg>':'<svg viewBox="0 0 24 24"><rect x="5.25" y="5.25" width="13.5" height="13.5"/></svg>';});document.title=state.page?.title?`${state.page.title} — Soulu`:"Soulu";renderSidebar();}
+function applyState(v){state=v||state;appearance();renderTabs();backButtons.forEach((button)=>button.disabled=!state.page?.canGoBack);sidebar.classList.toggle("visible",!!state.sidebarVisible&&!state.bookmarksSidebarVisible);if((!state.sidebarVisible||state.bookmarksSidebarVisible)&&sidebar.contains(document.activeElement))sidebarButtons.find(b=>b.getClientRects().length)?.focus();sidebar.inert=!state.sidebarVisible||!!state.bookmarksSidebarVisible;sidebarButtons.forEach((button)=>button.classList.toggle("active",!!state.sidebarVisible&&!state.bookmarksSidebarVisible));[$("#windowMaximize"),$("#compactWindowMaximize")].forEach((m)=>{m.title=state.maximized?tr("restore"):tr("maximize");m.innerHTML=state.maximized?'<svg viewBox="0 0 24 24"><rect x="8.25" y="5.25" width="10.5" height="10.5"/><path d="M15.75 15.75v3h-10.5v-10.5h3"/></svg>':'<svg viewBox="0 0 24 24"><rect x="5.25" y="5.25" width="13.5" height="13.5"/></svg>';});document.title=state.page?.title?`${state.page.title} — Sona`:"Sona";renderSidebar();}
 function closePanel(){rightPanel="";[favoritesPanel,downloadsPanel].forEach((x)=>x.classList.remove("open"));[...favoritesButtons,...downloadsButtons,...vpnButtons,...settingsButtons].forEach((x)=>x.classList.remove("active"));window.browserShell.setRightPanel(0);}
 function openPanel(type){if(type==="settings")return window.browserShell.openSettingsWindow();if(rightPanel===type)return closePanel();closePanel();rightPanel=type;const map={favorites:[favoritesPanel,favoritesButtons,330],downloads:[downloadsPanel,downloadsButtons,350]},[panel,buttons,width]=map[type];panel.classList.add("open");buttons.forEach((button)=>button.classList.add("active"));window.browserShell.setRightPanel(width);}
 function bytes(n){n=+n||0;return n<1024?`${n} B`:n<1048576?`${Math.round(n/1024)} KB`:`${(n/1048576).toFixed(1)} MB`;}
@@ -259,15 +259,15 @@ function updateAdaptiveGeometry(frame){state.adaptiveToolbar=frame;if(pendingSta
 window.browserShell.onAdaptiveGeometry?.(updateAdaptiveGeometry);
 window.browserShell.onSettings?.((settings)=>{state.settings={...state.settings,...settings};appearance();renderTabs();});
 window.browserShell.onDownloads(renderDownloads);
-window.browserShell.onFocusAddress(()=>{const input=state.settings.layout!=="compact"?$("#classicAddress"):$("#compactAddress");if(input&&state.page?.url==='soulu://home'){
+window.browserShell.onFocusAddress(()=>{const input=state.settings.layout!=="compact"?$("#classicAddress"):$("#compactAddress");if(input&&state.page?.url==='sona://home'){
   input.value='';input.dispatchEvent(new Event('input',{bubbles:true}));
   const box=input.closest('form')?.addressSuggestions;if(box)hideSuggestions(box);
 }input?.focus();input?.select();});
 window.browserShell.onOpenSettings(()=>openPanel("settings"));
 window.browserShell.onOpenDownloads(async()=>{renderDownloads(await window.browserShell.getDownloads());openPanel("downloads");});
-window.browserShell.onOpenFavorites(async()=>{if(window.souluNavigation)return window.souluNavigation.openBookmarks();renderBookmarks(await window.browserShell.getBookmarks());openPanel("favorites");});
+window.browserShell.onOpenFavorites(async()=>{if(window.sonaNavigation)return window.sonaNavigation.openBookmarks();renderBookmarks(await window.browserShell.getBookmarks());openPanel("favorites");});
 window.browserShell.onOpenVpnSettings(()=>window.browserShell.openSettingsWindow("vpn"));
-window.souluInitialStateReady=Promise.all([
+window.sonaInitialStateReady=Promise.all([
  window.browserShell.getState(),
  window.browserShell.getDownloads().catch(()=>[]),
  window.browserShell.getBookmarks().catch(()=>[])
@@ -287,7 +287,7 @@ async function synchronizeSettings(){
       renderTabs();
 
     }
-  }catch(error){console.error("Soulu settings synchronization failed",error);}
+  }catch(error){console.error("Sona settings synchronization failed",error);}
   finally{settingsPollBusy=false;}
 }
 setInterval(synchronizeSettings,500);

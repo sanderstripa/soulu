@@ -45,7 +45,7 @@ all source attributes are dropped except explicitly reconstructed HTTP(S)
 links/images and bounded image alt text. Event handlers, source CSS, IDs,
 srcset, arbitrary protocols, credentials in URLs and source JS cannot survive.
 The existing shell CSP remains in effect. Links are handled through the native
-Soulu tab routing, including foreground, background and incognito actions.
+Sona tab routing, including foreground, background and incognito actions.
 Images are fetched by native CefURLRequest in the **source tab's profile context**
 with no cache and no referrer, respecting the existing adblock rules. The shell
 receives raster data URLs, never source network URLs; incognito images cannot use
@@ -68,7 +68,7 @@ executed in the privileged reader. This is a reading view, not script suspension
 Themes: light, sepia, dark. Fonts: Arial sans, Georgia serif, system. Text size:
 14–32 px in two-pixel controls. Three widths and three line heights; image toggle.
 There is no duplicate layout zoom control. Preferences are validated by native
-code and stored atomically in `Profiles/<profile>/soulu-reader.json`. Incognito
+code and stored atomically in `Profiles/<profile>/sona-reader.json`. Incognito
 preferences stay in memory and are discarded when the last private tab closes.
 
 Site-data deletion requires a native confirmation naming the exact origin and

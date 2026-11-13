@@ -15,7 +15,7 @@ sys.stdout.reconfigure(encoding='utf-8')
 spec=importlib.util.spec_from_file_location('storage',Path(__file__).with_name('test-cef-storage.py'))
 s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
 os.environ['NO_PROXY']='localhost,127.0.0.1,::1'
-os.environ['SOULU_REGRESSION_SKIP_FIRST_RUN']='1'
+os.environ['SONA_REGRESSION_SKIP_FIRST_RUN']='1'
 
 def wait(fn,timeout=30):
     end=time.monotonic()+timeout
@@ -40,9 +40,9 @@ def main():
     def check(value,name):
         assert value,name
         report['checks'].append(name);print('PASS:',name,flush=True)
-    with tempfile.TemporaryDirectory(prefix='soulu-site-surfaces-',ignore_cleanup_errors=True) as root:
+    with tempfile.TemporaryDirectory(prefix='sona-site-surfaces-',ignore_cleanup_errors=True) as root:
         os.environ['LOCALAPPDATA']=root
-        env=dict(os.environ,SOULU_UI_TEST_PORT=str(s.DEBUG_PORT))
+        env=dict(os.environ,SONA_UI_TEST_PORT=str(s.DEBUG_PORT))
         server=http.server.ThreadingHTTPServer(('127.0.0.1',s.free_port()),Handler)
         threading.Thread(target=server.serve_forever,daemon=True).start()
         origin=f'http://127.0.0.1:{server.server_port}'
@@ -63,9 +63,9 @@ def main():
         def prompt():return E('browserShell.getState().then(s=>s.permissionPrompt||null)')
         def reply(decision):
             item=wait(prompt)
-            wait(lambda:E("(()=>{const n=document.querySelector('.soulu-permission-prompt');return !n.hidden&&n.dataset.requestId==="+json.dumps(str(item['id']))+"})()"))
+            wait(lambda:E("(()=>{const n=document.querySelector('.sona-permission-prompt');return !n.hidden&&n.dataset.requestId==="+json.dumps(str(item['id']))+"})()"))
             selector={'allow':'.site-primary','block':'.site-confirm-actions button:first-child','dismiss':'.site-prompt-dismiss'}[decision]
-            E("document.querySelector('.soulu-permission-prompt "+selector+"').click()")
+            E("document.querySelector('.sona-permission-prompt "+selector+"').click()")
             return wait(lambda:not (p:=prompt()) or p['id']!=item['id'])
         def bounds(selector):
             return E('(()=>{const n=document.querySelector('+json.dumps(selector)+');const r=n.getBoundingClientRect();return {hidden:n.hidden,x:r.x,y:r.y,w:r.width,h:r.height,viewport:innerHeight,scroll:n.scrollHeight>n.clientHeight+1,font:getComputedStyle(n).fontFamily}})()')
@@ -82,8 +82,8 @@ def main():
                 check(True,'Notification API site value '+str(value))
             trigger("window.notificationResult=null;Notification.requestPermission().then(v=>window.notificationResult=v)")
             item=wait(prompt);check(item['origin']==origin and item['permissions']==['notifications'],'real notification callback names exact origin')
-            wait(lambda:not bounds('.soulu-permission-prompt')['hidden'])
-            r=bounds('.soulu-permission-prompt');check(r['x']==12 and r['y']>=58 and r['y']<150 and r['h']<280 and 'Onest' in r['font'],'compact upper left Onest prompt')
+            wait(lambda:not bounds('.sona-permission-prompt')['hidden'])
+            r=bounds('.sona-permission-prompt');check(r['x']==12 and r['y']>=58 and r['y']<150 and r['h']<280 and 'Onest' in r['font'],'compact upper left Onest prompt')
             capture('notification-prompt');reply('block')
             wait(lambda:s.evaluate(page,'window.notificationResult')=='denied')
             check(current()['rules']['sites']['127.0.0.1']['notifications']==2,'prompt Block persists canonical override')
@@ -94,7 +94,7 @@ def main():
             check(s.evaluate(page,'Notification.permission')=='default','reset notification permission reaches new document')
             trigger("window.notificationResult=null;Notification.requestPermission().then(v=>window.notificationResult=v)")
             wait(prompt);reply('allow');wait(lambda:s.evaluate(page,'window.notificationResult')=='granted')
-            check(s.evaluate(page,"(()=>{try{const n=new Notification('Soulu controlled test',{silent:true});n.close();return true}catch{return false}})()"),'allowed Notification constructor accepted')
+            check(s.evaluate(page,"(()=>{try{const n=new Notification('Sona controlled test',{silent:true});n.close();return true}catch{return false}})()"),'allowed Notification constructor accepted')
             # Camera/microphone use fake devices, never fake permission UI.
             trigger("window.mediaResult=null;navigator.mediaDevices.getUserMedia({video:true,audio:true}).then(v=>{v.getTracks().forEach(t=>t.stop());window.mediaResult='allowed'},()=>window.mediaResult='blocked')")
             item=wait(prompt);check(set(item['permissions'])=={'camera','microphone'},'combined media callback')
@@ -128,7 +128,7 @@ def main():
             # Independent requests are serialized, with a single visible card.
             action('permission',{'permission':'notifications','value':-1})
             trigger("window.queueCamera=null;window.queueNotification=null;navigator.mediaDevices.getUserMedia({video:true}).then(v=>{v.getTracks().forEach(t=>t.stop());window.queueCamera='allowed'},()=>window.queueCamera='blocked');Notification.requestPermission().then(v=>window.queueNotification=v)")
-            first=wait(prompt);check(len(E("[...document.querySelectorAll('.soulu-permission-prompt:not([hidden])')].map(n=>n.tagName)"))<=1,'one card for concurrent requests')
+            first=wait(prompt);check(len(E("[...document.querySelectorAll('.sona-permission-prompt:not([hidden])')].map(n=>n.tagName)"))<=1,'one card for concurrent requests')
             reply('block');second=wait(lambda:(p if (p:=prompt()) and p['id']!=first['id'] else None));reply('block')
             wait(lambda:s.evaluate(page,'window.queueCamera')=='blocked' and s.evaluate(page,'window.queueNotification')=='denied')
             check(True,'concurrent media and notification queue completes once')
@@ -138,7 +138,7 @@ def main():
             reply('block');wait(lambda:s.evaluate(page,'window.geoResult')==1)
             check(True,'geolocation block reaches API')
             action('permission',{'permission':'popups','value':1})
-            trigger("window.open('/popup','soulu-fixture','width=400,height=400')")
+            trigger("window.open('/popup','sona-fixture','width=400,height=400')")
             item=wait(prompt);check(item['permissions']==['popups'],'real popup gate prompt')
             reply('block');check(len(E('browserShell.getState().then(s=>s.tabs)'))==1,'blocked popup retains opener only')
             # Exercise actual UI in both layouts and every browser theme.

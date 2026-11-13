@@ -74,10 +74,10 @@ html.cef-runtime .classic-address-pill:has(.classic-reload.loading)::after {
   transform-origin: left center;
   background: linear-gradient(90deg, #7ea5dc, #4f83cf 65%, #9bb9e4);
   box-shadow: 0 0 4px rgba(74, 126, 201, .28);
-  animation: soulu-loading-line 1.35s cubic-bezier(.3,.1,.2,1) infinite;
+  animation: sona-loading-line 1.35s cubic-bezier(.3,.1,.2,1) infinite;
 }
 
-@keyframes soulu-loading-line {
+@keyframes sona-loading-line {
   0% { transform: scaleX(.06); opacity: .55; }
   55% { transform: scaleX(.72); opacity: 1; }
   100% { transform: scaleX(1); opacity: .22; }

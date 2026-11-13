@@ -13,7 +13,7 @@ import time
 
 spec=importlib.util.spec_from_file_location('storage',Path(__file__).with_name('test-cef-storage.py'))
 s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
-os.environ['SOULU_REGRESSION_SKIP_FIRST_RUN']='1'
+os.environ['SONA_REGRESSION_SKIP_FIRST_RUN']='1'
 os.environ['NO_PROXY']='localhost,127.0.0.1,::1'
 checks=[]
 os.environ["NO_PROXY"]="localhost,127.0.0.1,::1"
@@ -45,11 +45,11 @@ def main():
     server=http.server.ThreadingHTTPServer(('127.0.0.1',s.free_port()),Site)
     threading.Thread(target=server.serve_forever,daemon=True).start()
     origin=f'http://127.0.0.1:{server.server_port}'
-    with tempfile.TemporaryDirectory(prefix='soulu-home-',ignore_cleanup_errors=True) as root:
+    with tempfile.TemporaryDirectory(prefix='sona-home-',ignore_cleanup_errors=True) as root:
         os.environ['LOCALAPPDATA']=root
-        env=dict(os.environ,SOULU_UI_TEST_PORT=str(s.DEBUG_PORT))
+        env=dict(os.environ,SONA_UI_TEST_PORT=str(s.DEBUG_PORT))
         process=None;shell=None;connections=[]
-        profile=Path(root)/'Soulu'/'User Data'/'Profiles'/'personal'
+        profile=Path(root)/'Sona'/'User Data'/'Profiles'/'personal'
         def start():
             nonlocal process,shell
             process=subprocess.Popen([exe,'--no-proxy-server'],env=env)
@@ -69,7 +69,7 @@ def main():
                         # The target URL changes before the new document/context is ready.
                         # Do not await a bridge promise from the departing context:
                         # navigation cancels that query without settling its JS promise.
-                        if not s.evaluate(ws,"document.readyState==='complete'"+ (" && typeof window.souluHomeApply==='function'" if fragment=='/ui/home.html' else '')):
+                        if not s.evaluate(ws,"document.readyState==='complete'"+ (" && typeof window.sonaHomeApply==='function'" if fragment=='/ui/home.html' else '')):
                             ws.close();continue
                         if fragment=='/ui/home.html' and home(ws,'home.get')['tabId']!=state()['activeTabId']:
                             ws.close();continue
@@ -101,7 +101,7 @@ def main():
             wait(lambda:len(state()['tabs'])==1)
         try:
             start();h=page()
-            check(current_url()=='soulu://home' and len(state()['tabs'])==1,'Fresh startup is one offline local Soulu page')
+            check(current_url()=='sona://home' and len(state()['tabs'])==1,'Fresh startup is one offline local Sona page')
             for layout in ('compact','classic'):
                 call('setSettings',{'layout':layout})
                 selector='#compactAddress' if layout=='compact' else '#classicAddress'
@@ -113,14 +113,14 @@ def main():
                 check(s.evaluate(shell,'document.querySelector('+json.dumps(selector)+').value')=='','Home blur keeps the address empty: '+layout)
             call('setSettings',{'layout':'compact'})
             s.evaluate(h,"document.querySelector('#query').focus()")
-            check(s.evaluate(h,"document.querySelector('#logo').getAttribute('src')==='browser-icon.png' && typeof window.souluHomeApply==='function'"),'Bundled logo and internal shell rendered')
+            check(s.evaluate(h,"document.querySelector('#logo').getAttribute('src')==='browser-icon.png' && typeof window.sonaHomeApply==='function'"),'Bundled logo and internal shell rendered')
             wait(lambda:s.evaluate(h,"document.activeElement?.id==='query'"))
             check(home(h,'home.get')['homeProvider']=='google','Fresh Home provider is Google')
             check(home(h,'home.get')['favorites']==[],'Fresh favorites are not seeded with marketing links')
             check(s.evaluate(h,"!document.querySelector('#customize,#shortcuts,#add,#editor,dialog')"),'Home has no editor, customization or dashboard blocks')
             check(s.evaluate(h,"performance.getEntriesByType('resource').every(r=>r.name.startsWith('file:'))"),'Shell assets have no external dependencies')
             s.command(h,'Network.enable');s.command(h,'Network.emulateNetworkConditions',{'offline':True,'latency':0,'downloadThroughput':0,'uploadThroughput':0})
-            s.command(h,'Page.reload');wait(lambda:s.evaluate(h,"typeof window.souluHomeApply==='function'"))
+            s.command(h,'Page.reload');wait(lambda:s.evaluate(h,"typeof window.sonaHomeApply==='function'"))
             check(home(h,'home.weather')['status']=='unavailable','Unpermitted location fails calmly without blocking Home')
             for panel in ('provider','weather','favorites'):
                 s.evaluate(h,"document.querySelector('#"+panel+"Toggle').click()")
@@ -138,11 +138,11 @@ def main():
             wait(lambda:s.evaluate(h,"document.querySelectorAll('.favorite').length===2"))
             check(s.evaluate(h,"!document.querySelector('#favoritesGrid [onerror]') && document.querySelectorAll('.favorite span:last-child')[1].textContent.includes('<img')"),'Bookmark text cannot inject HTML')
             s.evaluate(h,"document.querySelector('#favoritesToggle').click();document.querySelector('.favorite').click()")
-            wait(lambda:current_url()==origin+'/two');check(len(state()['tabs'])==1,'Favorite opens inside current Soulu tab')
+            wait(lambda:current_url()==origin+'/two');check(len(state()['tabs'])==1,'Favorite opens inside current Sona tab')
             call('home');h=page()
             s.evaluate(h,"document.querySelector('#favoritesToggle').click()")
             s.command(h,'Input.dispatchKeyEvent',{'type':'keyDown','key':' ','code':'Space','windowsVirtualKeyCode':32})
-            wait(lambda:current_url()==origin+'/two');check(len(state()['tabs'])==1,'Space activates the focused real favorite inside Soulu')
+            wait(lambda:current_url()==origin+'/two');check(len(state()['tabs'])==1,'Space activates the focused real favorite inside Sona')
             call('home');h=page()
             for theme in ('light','dark','system'):
                 call('setSettings',{'theme':theme});wait(lambda:home(h,'home.get')['theme']==theme)
@@ -168,15 +168,15 @@ def main():
             for value in ('openai.com','https://github.com',origin+'/enter'):
                 home(h,'home.navigate',value);wait(lambda:current_url().startswith(value if value.startswith('http') else 'https://'+value))
                 check(True,'URL takes precedence over provider: '+value);call('home');h=page()
-            call('setSettings',{'startupMode':'custom','startupUrl':origin+'/startup','newTabMode':'blank','homeMode':'soulu'})
+            call('setSettings',{'startupMode':'custom','startupUrl':origin+'/startup','newTabMode':'blank','homeMode':'sona'})
             s.evaluate(shell,"document.querySelector('#compactNewTabButton').click()");wait(lambda:current_url()=='');check(True,'Plus button uses blank New Tab independently of custom Startup')
-            call('home');wait(lambda:current_url()=='soulu://home');check(True,'Home Soulu is independent of New Tab blank')
+            call('home');wait(lambda:current_url()=='sona://home');check(True,'Home Sona is independent of New Tab blank')
             call('setSettings',{'newTabMode':'custom','newTabUrl':origin+'/new','homeMode':'custom','homeUrl':origin+'/home'})
             call('newTab');wait(lambda:current_url()==origin+'/new');call('home');wait(lambda:current_url()==origin+'/home')
             check(call('getSettings')['startupUrl']==origin+'/startup','Three custom intent URLs remain independent')
             check(s.evaluate(shell,"browserShell.setSettings({newTabUrl:'file:///C:/Windows/win.ini'}).then(()=>false,()=>true)"),'Custom file URL is rejected')
             check(s.evaluate(shell,"browserShell.setSettings({startupUrl:'javascript:alert(1)'}).then(()=>false,()=>true)"),'Invalid startup URL is rejected')
-            call('setSettings',{'newTabMode':'soulu','homeMode':'soulu','startupMode':'soulu'})
+            call('setSettings',{'newTabMode':'sona','homeMode':'sona','startupMode':'sona'})
             before=len(state()['tabs']);s.evaluate(shell,"Promise.all(Array.from({length:8},()=>browserShell.newTab()))")
             wait(lambda:len(state()['tabs'])==before+8);check(True,'Eight rapid new tabs produce exactly eight tabs')
             h=page();wait(lambda:s.evaluate(h,"document.activeElement?.id==='query'"));check(True,'New tab focuses Home input')
@@ -188,16 +188,16 @@ def main():
             call('setSettings',{'homeMode':'blank'})
             s.evaluate(shell,"new Promise((resolve,reject)=>cefQuery({request:JSON.stringify({action:'browser.test.pageShortcut',payload:36}),onSuccess:resolve,onFailure:reject}))")
             wait(lambda:current_url()=='');check(True,'Native Alt+Home opens configured blank Home')
-            call('setSettings',{'homeMode':'soulu'})
+            call('setSettings',{'homeMode':'sona'})
             ids=[t['id'] for t in state()['tabs']]
             s.evaluate(shell,'Promise.all('+json.dumps(ids)+'.map(id=>browserShell.closeTab(id)))')
             wait(lambda:len(state()['tabs'])==1)
             check(True,'Rapid closing all tabs creates one replacement without a loop')
-            one_tab();call('setSettings',{'openStartPageAfterLastTab':True,'startupMode':'custom','startupUrl':origin+'/startup','newTabMode':'soulu'})
+            one_tab();call('setSettings',{'openStartPageAfterLastTab':True,'startupMode':'custom','startupUrl':origin+'/startup','newTabMode':'sona'})
             call('closeTab',state()['activeTabId']);wait(lambda:len(state()['tabs'])==1 and current_url()==origin+'/startup')
             check(True,'Last-tab ON uses Startup custom and creates one tab')
-            call('setSettings',{'startupMode':'soulu'});call('closeTab',state()['activeTabId']);wait(lambda:len(state()['tabs'])==1 and current_url()=='soulu://home')
-            check(True,'Last-tab ON uses Startup Soulu')
+            call('setSettings',{'startupMode':'sona'});call('closeTab',state()['activeTabId']);wait(lambda:len(state()['tabs'])==1 and current_url()=='sona://home')
+            check(True,'Last-tab ON uses Startup Sona')
             call('setSettings',{'openStartPageAfterLastTab':False});call('closeTab',state()['activeTabId']);wait(lambda:len(state()['tabs'])==1 and current_url()=='')
             check(True,'Last-tab OFF retains legacy blank replacement')
             call('home');h=page();marker='private-home-marker'
@@ -210,7 +210,7 @@ def main():
             home(h,'home.set',{'homeProvider':'google'})
             check(home(h,'home.get')['incognito'],'Incognito home uses temporary state')
             call('closeTab',state()['activeTabId']);wait(lambda:not state()['incognito'])
-            check(json.loads((profile/'soulu-settings.json').read_text(encoding='utf-8'))['homeProvider']=='perplexity','Incognito provider never writes normal settings')
+            check(json.loads((profile/'sona-settings.json').read_text(encoding='utf-8'))['homeProvider']=='perplexity','Incognito provider never writes normal settings')
             call('createProfile','Home B');b=state()['activeProfileId'];h=page()
             for target in s.targets():
                 if '/ui/home.html' in target.get('url',''):
@@ -220,13 +220,13 @@ def main():
             home(h,'home.set',{'homeProvider':'perplexity'})
             call('setSettings',{'startupMode':'blank','newTabMode':'blank','homeMode':'blank'})
             call('switchProfile','personal');call('home');h=page()
-            check(call('getSettings')['newTabMode']=='soulu','Page modes are isolated by profile')
+            check(call('getSettings')['newTabMode']=='sona','Page modes are isolated by profile')
             # Save ordered ordinary URLs and an active index, excluding every incognito tab.
             one_tab();call('navigate',origin+'/first');wait(lambda:current_url()==origin+'/first')
             call('newTab');call('navigate',origin+'/second');wait(lambda:current_url()==origin+'/second')
             normal=state()['tabs'];call('setSettings',{'startupMode':'continue'})
             call('newIncognito');wait(lambda:state()['incognito']);call('navigate',origin+'/private-session')
-            stop();saved=json.loads((profile/'soulu-session.json').read_text(encoding='utf-8'))
+            stop();saved=json.loads((profile/'sona-session.json').read_text(encoding='utf-8'))
             check(saved['tabs']==[origin+'/first',origin+'/second'],'Saved session order excludes incognito')
             start();wait(lambda:len(state()['tabs'])==2)
             check([t['url'] for t in state()['tabs']]==saved['tabs'] and current_url()==origin+'/second','Startup restores ordered session without an extra home tab')
@@ -236,9 +236,9 @@ def main():
             check(current_url()==selected,'Restore retains actual normal selection after incognito closes')
             stop()
             # Explicit startup modes are tested at full launch, rather than as Ctrl+T.
-            for mode,expected in [('blank',''),('custom',origin+'/startup'),('soulu','soulu://home')]:
-                data=json.loads((profile/'soulu-settings.json').read_text(encoding='utf-8'));data.update(startupMode=mode,startupUrl=origin+'/startup')
-                (profile/'soulu-settings.json').write_text(json.dumps(data),encoding='utf-8')
+            for mode,expected in [('blank',''),('custom',origin+'/startup'),('sona','sona://home')]:
+                data=json.loads((profile/'sona-settings.json').read_text(encoding='utf-8'));data.update(startupMode=mode,startupUrl=origin+'/startup')
+                (profile/'sona-settings.json').write_text(json.dumps(data),encoding='utf-8')
                 start();wait(lambda:current_url()==expected);check(len(state()['tabs'])==1,'Full launch startup '+mode);stop()
             report={'passed':True,'checks':checks,'count':len(checks),'weather':'unpermitted location gracefully unavailable','session':'ordered URL restore after normal shutdown'}
             if output:output.parent.mkdir(parents=True,exist_ok=True);output.write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')

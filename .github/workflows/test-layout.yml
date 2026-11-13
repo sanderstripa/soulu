@@ -1,4 +1,4 @@
-name: Soulu layout test build
+name: Sona layout test build
 on:
   push:
     branches: [codex/layout-resize-composition]
@@ -10,7 +10,7 @@ jobs:
     runs-on: windows-2025
     timeout-minutes: 45
     steps:
-      - name: Checkout Soulu
+      - name: Checkout Sona
         uses: actions/checkout@v4
         with:
           path: browser
@@ -40,7 +40,7 @@ jobs:
           $pattern = 'set\(CEF_VERSION "[^"]+"\)'
           if ([regex]::Matches($cmake, $pattern).Count -ne 1) { throw 'CEF project version declaration changed' }
           $cmake = [regex]::Replace($cmake, $pattern, ('set(CEF_VERSION "' + $version + '")'))
-          # Soulu needs the wrapper and examples, not upstream CEF test applications.
+          # Sona needs the wrapper and examples, not upstream CEF test applications.
           # The project snapshot's test targets are incompatible with this distribution.
           foreach ($target in @('cefclient', 'cefsimple', 'gtest', 'ceftests')) {
             $line = 'add_subdirectory(${CEF_ROOT}/tests/' + $target + ')'
@@ -50,15 +50,15 @@ jobs:
           Set-Content $cmakeFile $cmake -Encoding utf8
           Write-Host "Pinned CEF distribution: $version"
 
-      - name: Add Soulu target and assets
+      - name: Add Sona target and assets
         shell: pwsh
         run: |
-          Copy-Item -Recurse -Force browser/cef/soulu cef-project/examples/soulu
-          New-Item -ItemType Directory -Force cef-project/examples/soulu/assets/ui | Out-Null
-          New-Item -ItemType Directory -Force cef-project/examples/soulu/assets/vpn | Out-Null
-          Copy-Item -Recurse -Force browser/ui/* cef-project/examples/soulu/assets/ui/
-          Copy-Item -Recurse -Force browser/vpn/* cef-project/examples/soulu/assets/vpn/
-          Add-Content cef-project/examples/CMakeLists.txt "`nadd_subdirectory(soulu)`n"
+          Copy-Item -Recurse -Force browser/cef/sona cef-project/examples/sona
+          New-Item -ItemType Directory -Force cef-project/examples/sona/assets/ui | Out-Null
+          New-Item -ItemType Directory -Force cef-project/examples/sona/assets/vpn | Out-Null
+          Copy-Item -Recurse -Force browser/ui/* cef-project/examples/sona/assets/ui/
+          Copy-Item -Recurse -Force browser/vpn/* cef-project/examples/sona/assets/vpn/
+          Add-Content cef-project/examples/CMakeLists.txt "`nadd_subdirectory(sona)`n"
 
       - name: Use CEF-compatible Python
         uses: actions/setup-python@v5
@@ -75,40 +75,40 @@ jobs:
           cmake -S cef-project -B cef-build -A x64 -DUSE_SANDBOX=OFF
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: Build Soulu
+      - name: Build Sona
         shell: pwsh
         run: |
-          cmake --build cef-build --config Release --target soulu --parallel 2
+          cmake --build cef-build --config Release --target sona --parallel 2
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Package verified fresh test build
         shell: pwsh
         run: |
-          $exe = Get-ChildItem cef-build -Recurse -Filter Soulu.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
+          $exe = Get-ChildItem cef-build -Recurse -Filter Sona.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
           if (!$exe) { throw 'No test executable' }
           $buildDir = $exe.Directory.FullName
           New-Item -ItemType Directory -Force browser/artifacts | Out-Null
           & ./browser/scripts/verify-cef-engine.ps1 -BuildDir $buildDir -ReportPath browser/artifacts/engine-version.json
-          Compress-Archive -Path "$buildDir/*" -DestinationPath browser/artifacts/Soulu-layout-test-x64.zip
-          "SOULU_TEST_EXE=$($exe.FullName)" >> $env:GITHUB_ENV
+          Compress-Archive -Path "$buildDir/*" -DestinationPath browser/artifacts/Sona-layout-test-x64.zip
+          "SONA_TEST_EXE=$($exe.FullName)" >> $env:GITHUB_ENV
       - name: Upload test build for manual review
         uses: actions/upload-artifact@v4
         with:
-          name: Soulu-layout-test-x64
+          name: Sona-layout-test-x64
           path: |
-            browser/artifacts/Soulu-layout-test-x64.zip
+            browser/artifacts/Sona-layout-test-x64.zip
             browser/artifacts/engine-version.json
           if-no-files-found: error
       - name: Exercise actual native sizing loop and Chromium viewport
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client pillow
-          python browser/scripts/test-cef-layout.py "$env:SOULU_TEST_EXE" browser/artifacts/layout-evidence
+          python browser/scripts/test-cef-layout.py "$env:SONA_TEST_EXE" browser/artifacts/layout-evidence
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Upload layout evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Soulu-layout-evidence
+          name: Sona-layout-evidence
           path: browser/artifacts/layout-evidence
           if-no-files-found: ignore

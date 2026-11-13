@@ -24,7 +24,7 @@ def wait_for(predicate):
 
 
 def native_windows(process):
-    """Include owned popups too: none may escape Soulu's child tab host."""
+    """Include owned popups too: none may escape Sona's child tab host."""
     windows = []
     user32 = ctypes.windll.user32
     callback_type = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p)
@@ -114,7 +114,7 @@ try:
     assert s.evaluate(content, 'location.href') == initial_url
     assert s.command(content, 'Page.getNavigationHistory') == initial_history, 'background tab changed opener history'
     # Chrome preloads hidden browser_ui surfaces for its retained native toolbar.
-    # These are not navigable Soulu tabs; reject leaked page targets instead.
+    # These are not navigable Sona tabs; reject leaked page targets instead.
     assert not any(t.get('type') == 'page' and t.get('url', '').startswith('chrome://omnibox-popup') for t in s.targets())
     print(json.dumps({'window_open': 'internal tab', 'opener': 'preserved',
                       'popup_close': 'opener retained', 'background_tab': 'active tab retained',

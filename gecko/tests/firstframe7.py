@@ -32,9 +32,9 @@ def observe():
   done.wait(.04)
 try:
  monitor=threading.Thread(target=observe,daemon=True);monitor.start();start();monitor.join(timeout=8)
- report['presentation']=chrome('return {events:window.__souluStartupEvents,presentation:window.__souluStartupPresentation,hidden:window.__souluStartupHidden,cloaked:window.__souluStartupCloaked,mainHandle:String(window.docShell.treeOwner.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIBaseWindow).nativeHandle),timing:Soulu.startupTimings,console:Services.console.getMessageArray().map(x=>x.message).slice(-15)}')
+ report['presentation']=chrome('return {events:window.__sonaStartupEvents,presentation:window.__sonaStartupPresentation,hidden:window.__sonaStartupHidden,cloaked:window.__sonaStartupCloaked,mainHandle:String(window.docShell.treeOwner.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIBaseWindow).nativeHandle),timing:Sona.startupTimings,console:Services.console.getMessageArray().map(x=>x.message).slice(-15)}')
  frames=report['visibleFrames'];check('visible_window_never_starts_with_blank_header',bool(frames) and all(f['contrast']>5 for f in frames),frames)
- report['timing']=chrome('return Soulu.startupTimings');check('first_visible_window_is_functionally_ready',chrome('return Soulu.ready&&document.documentElement.hasAttribute("soulu-ui-ready")&&!window.__souluStartupHidden'))
+ report['timing']=chrome('return Sona.startupTimings');check('first_visible_window_is_functionally_ready',chrome('return Sona.ready&&document.documentElement.hasAttribute("sona-ui-ready")&&!window.__sonaStartupHidden'))
  count=len(call('browser.state.get')['tabs']);call('browser.newTab');check('new_tab_command_works_on_first_launch',wait(lambda:len(call('browser.state.get')['tabs'])==count+1));check('web_process_isolation_retained',chrome('return Services.prefs.getBoolPref("fission.autostart")&&!Services.prefs.getBoolPref("layers.acceleration.disabled",false)'))
  report['passed']=True
 except Exception as e:report['error']=str(e);raise

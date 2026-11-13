@@ -1,4 +1,4 @@
-# Soulu local translation and QR notices
+# Sona local translation and QR notices
 
 Bergamot translator: Mozilla Public License 2.0 (full text ../bergamot.LICENSE).
 Official npm package @browsermt/bergamot-translator 0.4.9:
@@ -12,7 +12,7 @@ SentencePiece: 3ffdc0065a03cadd9d0e5e123aaf9b6ea7ffb05d (Apache-2.0).
 intgemm: be3053515a8a04d19c6959a370eaf8b5a6eab686 (MIT).
 Other upstream notices in this directory retain their original authors.
 
-Soulu modifications: scripts/build-translation-runtime.py wraps upstream
+Sona modifications: scripts/build-translation-runtime.py wraps upstream
 JavaScript as a classic script, embeds WASM in a Blob worker, substitutes a
 local WASM fetch response, includes Emscripten glue without indirect eval,
 and uses self rather than strict-mode this for glue export registration.

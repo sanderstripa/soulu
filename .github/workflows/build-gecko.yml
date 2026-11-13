@@ -1,10 +1,10 @@
-name: Soulu Gecko Preview 2
+name: Sona Gecko Preview 2
 on:
   workflow_dispatch:
 permissions:
   contents: write
 concurrency:
-  group: soulu-gecko-preview
+  group: sona-gecko-preview
   cancel-in-progress: true
 jobs:
   windows-gecko:
@@ -22,9 +22,9 @@ jobs:
         with:
           go-version: '1.27.0'
           cache: false
-      - name: Prepare checksum-pinned Gecko and original Soulu frontend
+      - name: Prepare checksum-pinned Gecko and original Sona frontend
         run: python gecko/build.py --platform win64 --output gecko-out
-      - name: Select the same Rust toolchain as Soulu CEF
+      - name: Select the same Rust toolchain as Sona CEF
         shell: pwsh
         run: |
           rustup toolchain install 1.99.0 --profile minimal
@@ -33,25 +33,25 @@ jobs:
         id: blocker-cache
         with:
           path: gecko-cache/adblock/target
-          key: gecko-blocker-rust199-${{ hashFiles('cef/soulu/adblock/Cargo.lock', 'cef/soulu/adblock/src/lib.rs') }}
-      - name: Build the original Soulu Rust adblock engine as a DLL
+          key: gecko-blocker-rust199-${{ hashFiles('cef/sona/adblock/Cargo.lock', 'cef/sona/adblock/src/lib.rs') }}
+      - name: Build the original Sona Rust adblock engine as a DLL
         run: python gecko/build-adblock.py gecko-out
       - uses: actions/cache/save@v4
         if: always() && steps.blocker-cache.outputs.cache-hit != 'true'
         with:
           path: gecko-cache/adblock/target
-          key: gecko-blocker-rust199-${{ hashFiles('cef/soulu/adblock/Cargo.lock', 'cef/soulu/adblock/src/lib.rs') }}
+          key: gecko-blocker-rust199-${{ hashFiles('cef/sona/adblock/Cargo.lock', 'cef/sona/adblock/src/lib.rs') }}
       - name: Build portable launcher
         shell: pwsh
         run: |
           Push-Location gecko/launcher
-          go build -trimpath -ldflags '-s -w -H=windowsgui' -o '../../gecko-out/Soulu Gecko Preview 2.exe' .
+          go build -trimpath -ldflags '-s -w -H=windowsgui' -o '../../gecko-out/Sona Gecko Preview 2.exe' .
           if ($LASTEXITCODE -ne 0) { throw 'Launcher compilation failed' }
           Pop-Location
       - name: Build helper and test real Xray and Sudoku tunnels
         shell: pwsh
         run: |
-          ./scripts/prepare-vpn-components.ps1 -Destination "$env:GITHUB_WORKSPACE/gecko-out/runtime/soulu/vpn"
+          ./scripts/prepare-vpn-components.ps1 -Destination "$env:GITHUB_WORKSPACE/gecko-out/runtime/sona/vpn"
       - name: Verify the actual Windows Gecko runtime
         shell: pwsh
         run: |
@@ -59,7 +59,7 @@ jobs:
           python gecko/tests/preview2.py gecko-out/runtime/firefox.exe gecko-acceptance
           if ($LASTEXITCODE -ne 0) { throw 'Gecko acceptance failed' }
           Copy-Item gecko-acceptance/acceptance.json gecko-out/acceptance.json
-      - name: Compare against the actual published Soulu CEF at equal client sizes
+      - name: Compare against the actual published Sona CEF at equal client sizes
         if: ${{ !cancelled() }}
         shell: pwsh
         run: |
@@ -79,19 +79,19 @@ jobs:
           $meta = Get-Content gecko-out/BUILD.json -Raw | ConvertFrom-Json
           $meta | Add-Member -NotePropertyName source_commit -NotePropertyValue $env:GITHUB_SHA -Force
           $meta | ConvertTo-Json -Depth 10 | Set-Content gecko-out/BUILD.json -Encoding utf8NoBOM
-          Compress-Archive -Path gecko-out/* -DestinationPath Soulu-Gecko-Preview-2-win64.zip -CompressionLevel Optimal
-          (Get-FileHash Soulu-Gecko-Preview-2-win64.zip -Algorithm SHA256).Hash.ToLowerInvariant() + '  Soulu-Gecko-Preview-2-win64.zip' | Set-Content SHA256SUMS.txt
+          Compress-Archive -Path gecko-out/* -DestinationPath Sona-Gecko-Preview-2-win64.zip -CompressionLevel Optimal
+          (Get-FileHash Sona-Gecko-Preview-2-win64.zip -Algorithm SHA256).Hash.ToLowerInvariant() + '  Sona-Gecko-Preview-2-win64.zip' | Set-Content SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: gecko-acceptance
           path: gecko-acceptance/
       - uses: actions/upload-artifact@v4
-        if: ${{ !cancelled() && hashFiles('Soulu-Gecko-Preview-2-win64.zip') != '' }}
+        if: ${{ !cancelled() && hashFiles('Sona-Gecko-Preview-2-win64.zip') != '' }}
         with:
-          name: Soulu-Gecko-Preview-2-win64
+          name: Sona-Gecko-Preview-2-win64
           path: |
-            Soulu-Gecko-Preview-2-win64.zip
+            Sona-Gecko-Preview-2-win64.zip
             SHA256SUMS.txt
       - name: Publish isolated Gecko prerelease
         if: contains(github.event.head_commit.message, '[publish-gecko-2]')
@@ -100,9 +100,9 @@ jobs:
         shell: pwsh
         run: |
           $notes = @'
-          Soulu Gecko Preview 2 — original Soulu HTML/CSS frontend on Gecko.
-          Extract the entire ZIP and run Soulu Gecko Preview 2.exe.
-          Original adaptive toolbar, Home, history, bookmark management and all 12 settings sections. Native Gecko website processes and sandbox remain enabled. The same Soulu CEF Rust blocker and three filter subscriptions are bundled; no uBlock dependency. Xray/Sudoku cores and helper are bundled. VPN keys use the profile NSS encrypted store.
+          Sona Gecko Preview 2 — original Sona HTML/CSS frontend on Gecko.
+          Extract the entire ZIP and run Sona Gecko Preview 2.exe.
+          Original adaptive toolbar, Home, history, bookmark management and all 12 settings sections. Native Gecko website processes and sandbox remain enabled. The same Sona CEF Rust blocker and three filter subscriptions are bundled; no uBlock dependency. Xray/Sudoku cores and helper are bundled. VPN keys use the profile NSS encrypted store.
           See acceptance.json and visual-comparison.json for the actual Windows test results. Screenshot comparison uses the published CEF 1.0.76 binary at equal client sizes.
           Optional page/YouTube translation and CEF-style reader are not ported. Firefox extensions use Firefox's manager; Chrome CRX is unsupported. Automatic Rust filter subscription updates are not enabled in this preview. Physical GPU, multi-monitor DPI and account-specific VPN service quality are not certified by CI.
           Source is isolated on gecko-preview; main is untouched.
@@ -110,5 +110,5 @@ jobs:
           $notes | Set-Content gecko-release-notes.md -Encoding utf8NoBOM
           gh release view gecko-preview-2 *> $null
           if ($LASTEXITCODE -eq 0) { throw 'Preview 2 already exists; never overwrite a published archive' }
-          gh release create gecko-preview-2 Soulu-Gecko-Preview-2-win64.zip SHA256SUMS.txt --target $env:GITHUB_SHA --title 'Soulu Gecko Preview 2' --prerelease --notes-file gecko-release-notes.md
+          gh release create gecko-preview-2 Sona-Gecko-Preview-2-win64.zip SHA256SUMS.txt --target $env:GITHUB_SHA --title 'Sona Gecko Preview 2' --prerelease --notes-file gecko-release-notes.md
           if ($LASTEXITCODE -ne 0) { throw 'Gecko prerelease publication failed' }

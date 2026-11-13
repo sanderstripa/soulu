@@ -28,7 +28,7 @@ Onest typography and browser light/dark/system tokens. Nested transitions use
 
 The existing `SitePolicy` owns geolocation, camera, microphone, notifications,
 sound, popups and downloads. Values remain 0=Allow, 1=Ask/Mute, 2=Block.
-Profile defaults and domain overrides remain in `soulu-site-rules.json`.
+Profile defaults and domain overrides remain in `sona-site-rules.json`.
 Private decisions remain in memory. AdBlock retains its existing separate
 blocking dictionary and filtering runtime.
 
@@ -53,13 +53,13 @@ access. Unsupported masks are refused rather than assigned fake controls.
 
 CEF popup creation is synchronous. An Ask popup is blocked while the card saves
 the choice for the next attempt; the text asks the user to repeat the action.
-Soulu does not manufacture a new tab with a different opener/context. Ordinary
+Sona does not manufacture a new tab with a different opener/context. Ordinary
 user-initiated links retain their existing routing. Download callbacks can wait
 asynchronously; the ordinary file-save picker is retained.
 
 ## Clear and reset
 
-Clear Site Data now has a compact Soulu confirmation, including the existing
+Clear Site Data now has a compact Sona confirmation, including the existing
 Settings site-data subview. The confirmed action remains bound to the original
 tab, URL and generation. The unchanged `SiteStorageJob` removes localStorage,
 sessionStorage, IndexedDB, Cache Storage and service workers for the exact origin
@@ -89,7 +89,7 @@ native list/validation. No macOS fonts are invented or downloaded. Invalid or
 unavailable stored choices use the existing serif default and CSS fallback.
 Article font selection never changes the Onest controls.
 
-Preferences remain in `soulu-reader.json` with atomic writes. Private preferences
+Preferences remain in `sona-reader.json` with atomic writes. Private preferences
 remain in memory and disappear with the last private tab.
 
 ## Checks

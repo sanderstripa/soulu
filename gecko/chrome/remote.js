@@ -1,2 +1,2 @@
 // The remoting service must outlive the first browser window.
-ChromeUtils.importESModule('chrome://soulu/content/remote.sys.mjs').startRemoting(Soulu.backend);
+ChromeUtils.importESModule('chrome://sona/content/remote.sys.mjs').startRemoting(Sona.backend);

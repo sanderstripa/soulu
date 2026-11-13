@@ -1,4 +1,4 @@
-"""Replace every version/icon language and original icon group with Soulu branding."""
+"""Replace every version/icon language and original icon group with Sona branding."""
 import ctypes as c,pathlib,json,hashlib
 from ctypes import wintypes as w
 root=pathlib.Path(__file__).resolve().parents[1]/'gecko-out';k=c.WinDLL('kernel32',use_last_error=True)
@@ -19,7 +19,7 @@ def scan(path):
    k.EnumResourceLanguagesW(module,typ,name,languages,0);return True
   k.EnumResourceNamesW(h,c.c_void_p(kind),names,0)
  k.FreeLibrary(h);return result
-source=scan(root/'Soulu.exe');group=next(data for kind,_,_,data in source if kind==14)
+source=scan(root/'Sona.exe');group=next(data for kind,_,_,data in source if kind==14)
 audit=[]
 for target in (root/'engine').glob('*.exe'):
  old=scan(target);groups={ident for kind,ident,_,_ in old if kind==14};update=k.BeginUpdateResourceW(str(target),False);assert update
@@ -32,5 +32,5 @@ for target in (root/'engine').glob('*.exe'):
  assert k.EndUpdateResourceW(update,False)
 
  after=scan(target);groups=[data for kind,_,_,data in after if kind==14];assert groups and all(data==group for data in groups)
- audit.append({'file':target.name,'groups':len(groups),'iconGroupsMatchSoulu':True,'iconSHA256':hashlib.sha256(group).hexdigest()})
+ audit.append({'file':target.name,'groups':len(groups),'iconGroupsMatchSona':True,'iconSHA256':hashlib.sha256(group).hexdigest()})
 (root/'windows-brand-audit.json').write_text(json.dumps(audit,indent=2))

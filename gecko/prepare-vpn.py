@@ -1,6 +1,6 @@
 import pathlib,json,urllib.request,hashlib,zipfile,shutil,subprocess,os
 root=pathlib.Path(__file__).resolve().parent.parent
-pins=json.loads((root/'vpn/components-pin.json').read_text(encoding='utf-8'));target=root/'gecko-out/runtime/soulu/vpn';target.mkdir(parents=True,exist_ok=True);stamps={}
+pins=json.loads((root/'vpn/components-pin.json').read_text(encoding='utf-8'));target=root/'gecko-out/runtime/sona/vpn';target.mkdir(parents=True,exist_ok=True);stamps={}
 for name,pin in pins.items():
  archive=root/'gecko-cache'/pin['archive']
  if not archive.exists():
@@ -18,4 +18,4 @@ for name,pin in pins.items():
 (target/'components.json').write_text(json.dumps(stamps,indent=2))
 for name in ['xray','sudoku']:
  for f in (root/'vpn/native-host'/name).glob('*LICENSE*'):shutil.copy(f,target/name/f.name)
-subprocess.run([os.environ.get('GO_BINARY','go'),'build','-trimpath','-ldflags','-s -w','-o',str(target/'SouluVpnHost.exe'),'.'],cwd=root/'vpn/helper',env={**os.environ,'GOOS':'windows','GOARCH':'amd64'},check=True)
+subprocess.run([os.environ.get('GO_BINARY','go'),'build','-trimpath','-ldflags','-s -w','-o',str(target/'SonaVpnHost.exe'),'.'],cwd=root/'vpn/helper',env={**os.environ,'GOOS':'windows','GOARCH':'amd64'},check=True)

@@ -1221,7 +1221,7 @@
   },
   {
     "file": "ui\\theme.css",
-    "selector": ".soulu-tooltip",
+    "selector": ".sona-tooltip",
     "before": [
       "font-size:12px;",
       "line-height:1.4;"
@@ -1230,7 +1230,7 @@
   },
   {
     "file": "ui\\theme.css",
-    "selector": ".soulu-tooltip small",
+    "selector": ".sona-tooltip small",
     "before": [
       "font-size:11px;"
     ],

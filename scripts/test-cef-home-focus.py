@@ -13,7 +13,7 @@ import time
 
 spec=importlib.util.spec_from_file_location('storage',Path(__file__).with_name('test-cef-storage.py'))
 s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
-os.environ.update(SOULU_REGRESSION_SKIP_FIRST_RUN='1',NO_PROXY='localhost,127.0.0.1,::1')
+os.environ.update(SONA_REGRESSION_SKIP_FIRST_RUN='1',NO_PROXY='localhost,127.0.0.1,::1')
 u=C.windll.user32
 u.SetProcessDPIAware()
 u.GetForegroundWindow.restype=W.HWND
@@ -50,7 +50,7 @@ def native_window(pid):
  @callback_type
  def visit(hwnd,_):
   owner=W.DWORD();u.GetWindowThreadProcessId(hwnd,C.byref(owner));name=C.create_unicode_buffer(256);u.GetClassNameW(hwnd,name,len(name))
-  if owner.value==pid and name.value=='SouluBrowserWindow' and u.IsWindowVisible(hwnd):handles.append(hwnd)
+  if owner.value==pid and name.value=='SonaBrowserWindow' and u.IsWindowVisible(hwnd):handles.append(hwnd)
   return True
  u.EnumWindows(visit,0);return handles[0] if handles else None
 
@@ -60,7 +60,7 @@ def foreground(hwnd):
  if previous!=hwnd:
   thread=u.GetWindowThreadProcessId(previous,None);current=C.windll.kernel32.GetCurrentThreadId()
   u.AttachThreadInput(current,thread,True);u.BringWindowToTop(hwnd);u.SetForegroundWindow(hwnd);u.AttachThreadInput(current,thread,False)
- assert u.GetForegroundWindow()==hwnd,'Only the isolated Soulu window may receive native test input'
+ assert u.GetForegroundWindow()==hwnd,'Only the isolated Sona window may receive native test input'
 
 def text(value,prefix=()):
  events=[]
@@ -79,8 +79,8 @@ def shortcut(key):
 
 def main():
  exe=Path(sys.argv[1]).resolve();report=Path(sys.argv[2]).resolve();sockets=[]
- with tempfile.TemporaryDirectory(prefix='soulu-home-focus-',ignore_cleanup_errors=True) as root:
-  process=subprocess.Popen([str(exe)],env=dict(os.environ,LOCALAPPDATA=root,SOULU_UI_TEST_PORT=str(s.DEBUG_PORT)))
+ with tempfile.TemporaryDirectory(prefix='sona-home-focus-',ignore_cleanup_errors=True) as root:
+  process=subprocess.Popen([str(exe)],env=dict(os.environ,LOCALAPPDATA=root,SONA_UI_TEST_PORT=str(s.DEBUG_PORT)))
   def link(target):
    ws=s.websocket.create_connection(target['webSocketDebuggerUrl'],timeout=30,origin=s.BASE);sockets.append(ws);return ws
   def home():
@@ -90,7 +90,7 @@ def main():
     candidate=link(target)
     try:
      data=s.evaluate(candidate,"new Promise(resolve=>cefQuery({request:JSON.stringify({action:'home.get'}),onSuccess:v=>resolve(JSON.parse(v)),onFailure:()=>resolve({})}))")
-     if data.get('tabId')==active and s.evaluate(candidate,"typeof window.souluHomeFocus==='function'"):return candidate
+     if data.get('tabId')==active and s.evaluate(candidate,"typeof window.sonaHomeFocus==='function'"):return candidate
     except AssertionError:pass
    return None
   def check(ok,label):
@@ -107,7 +107,7 @@ def main():
     client=W.RECT();u.GetClientRect(hwnd,C.byref(client))
     return abs(s.evaluate(shell,'innerWidth*devicePixelRatio')-(client.right-client.left))<2
    wait(layout_ready)
-   s.evaluate(shell,"browserShell.setSettings({layout:'compact',newTabMode:'soulu',homeMode:'soulu'})")
+   s.evaluate(shell,"browserShell.setSettings({layout:'compact',newTabMode:'sona',homeMode:'sona'})")
    wait(lambda:s.evaluate(shell,"(()=>{const n=document.querySelector('#compactNewTabButton'),r=n.getBoundingClientRect();return r.width>0&&getComputedStyle(n).visibility==='visible'&&n.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))})()"))
    # Finish the initial onboarding transition before starting the input test.
    initial=wait(home)
@@ -139,7 +139,7 @@ def main():
    report.parent.mkdir(parents=True,exist_ok=True)
    ImageGrab.grab().save(report.with_suffix('.failure.png'))
    report.parent.mkdir(parents=True,exist_ok=True)
-   log=Path(root)/'Soulu/User Data/Profiles/chrome_debug.log'
+   log=Path(root)/'Sona/User Data/Profiles/chrome_debug.log'
    if log.is_file():shutil.copyfile(log,report.with_suffix('.debug.log'))
    raise
   finally:

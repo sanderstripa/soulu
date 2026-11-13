@@ -1,4 +1,4 @@
-# Soulu Gecko Preview 5 Update 1
+# Sona Gecko Preview 5 Update 1
 
 Windows x64 portable update to Preview 5, branch gecko-preview. This is a targeted maintenance update, not a claim that every reported issue has been eliminated.
 
@@ -11,7 +11,7 @@ Windows x64 portable update to Preview 5, branch gecko-preview. This is a target
 - Settings reopen at the main twelve-section menu without resetting values.
 - The single-tab address row uses the full single-row height, including restored and maximized windows.
 - Extension actions are grouped under one optional button between tab overview and Windows minimize. Native Firefox extension behavior is retained.
-- Content fallback surfaces use the active Soulu theme, and the theme is applied earlier during startup.
+- Content fallback surfaces use the active Sona theme, and the theme is applied earlier during startup.
 - Whisper uses a bounded encoder context for short queries. Actual offline recognition measured RU 2.69s and EN 5.20s, versus approximately 14s in Preview 5. These are CI fixture timings, not physical microphone latency guarantees.
 
 ## Unresolved and verification limits

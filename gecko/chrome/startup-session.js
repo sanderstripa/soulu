@@ -1,6 +1,6 @@
 /* Restore native tabs into one initial window; explicit later windows remain native. */
 (()=>{
- const {shared,isPrivate}=Soulu.backend;if(isPrivate||shared.startupWindowTask)return;
+ const {shared,isPrivate}=Sona.backend;if(isPrivate||shared.startupWindowTask)return;
  shared.startupWindowTask=(async()=>{
   const {SessionStore}=ChromeUtils.importESModule('moz-src:///browser/components/sessionstore/SessionStore.sys.mjs');
   await SessionStore.promiseAllWindowsRestored;
@@ -15,6 +15,6 @@
    for(const tab of [...other.gBrowser.tabs])if(!tab.closing)primary.gBrowser.adoptTab(tab,primary.gBrowser.tabs.length,false);
    if(!other.closed)other.close();
   }
-  primary.Soulu?.notify();
- })().catch(error=>{Soulu.startupWindowError=String(error);console.error(error);});
+  primary.Sona?.notify();
+ })().catch(error=>{Sona.startupWindowError=String(error);console.error(error);});
 })();

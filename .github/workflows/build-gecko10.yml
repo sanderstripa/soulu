@@ -1,4 +1,4 @@
-name: Build and publish Soulu Gecko Preview 10
+name: Build and publish Sona Gecko Preview 10
 on:
   push:
     branches: [gecko-preview]
@@ -37,13 +37,13 @@ jobs:
           Push-Location gecko/launcher
           go run github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.5.0 -64 -o rsrc.syso
           if ($LASTEXITCODE) { throw 'Launcher resources failed' }
-          go build -trimpath -ldflags '-s -w -H=windowsgui' -o ../../gecko-out/Soulu.exe .
+          go build -trimpath -ldflags '-s -w -H=windowsgui' -o ../../gecko-out/Sona.exe .
           if ($LASTEXITCODE) { throw 'Launcher compilation failed' }
           Pop-Location
           python -m pip install marionette_driver pillow psutil websocket-client
       - name: Test migration from welcome and Settings with actual source data
         run: python gecko/tests/preview10.py gecko-out/runtime/firefox.exe gecko10-checks
-      - name: Verify first visible frame contains functional Soulu controls
+      - name: Verify first visible frame contains functional Sona controls
         if: ${{ !cancelled() && steps.assemble.outcome == 'success' }}
         run: python gecko/tests/firstframe7.py gecko-out/runtime/firefox.exe gecko10-checks
       - name: Verify single-window launch and normal close
@@ -54,12 +54,12 @@ jobs:
         if: ${{ !cancelled() && steps.assemble.outcome == 'success' }}
         shell: pwsh
         run: |
-          ./gecko/installer/build.ps1 -BuildDir gecko-out -OutFile Soulu-Gecko-Preview-10-Setup-win64.exe
+          ./gecko/installer/build.ps1 -BuildDir gecko-out -OutFile Sona-Gecko-Preview-10-Setup-win64.exe
           if ($LASTEXITCODE) { throw 'Installer build failed' }
-          if ((Get-Item Soulu-Gecko-Preview-10-Setup-win64.exe).VersionInfo.ProductVersion -ne '0.10.0.0') { throw 'Installer version mismatch' }
+          if ((Get-Item Sona-Gecko-Preview-10-Setup-win64.exe).VersionInfo.ProductVersion -ne '0.10.0.0') { throw 'Installer version mismatch' }
       - name: Verify clean installation, first launch, upgrade and removal
         if: ${{ !cancelled() && steps.installer.outcome == 'success' }}
-        run: python gecko/tests/installer10.py Soulu-Gecko-Preview-10-Setup-win64.exe gecko10-checks
+        run: python gecko/tests/installer10.py Sona-Gecko-Preview-10-Setup-win64.exe gecko10-checks
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -69,13 +69,13 @@ jobs:
         with:
           name: gecko10-verified-installer
           path: |
-            Soulu-Gecko-Preview-10-Setup-win64.exe
-            Soulu-Gecko-Preview-10-Setup-win64.exe.build.json
+            Sona-Gecko-Preview-10-Setup-win64.exe
+            Sona-Gecko-Preview-10-Setup-win64.exe.build.json
       - name: Publish tested Preview 10 installer
         shell: pwsh
         run: |
           python -c "import json,pathlib; paths=['preview10.json','firstframe7.json','startup8.json','installer10.json']; assert all(json.loads((pathlib.Path('gecko10-checks')/p).read_text())['passed'] for p in paths)"
           if ($LASTEXITCODE) { throw 'Acceptance reports not green' }
-          (Get-FileHash Soulu-Gecko-Preview-10-Setup-win64.exe -Algorithm SHA256).Hash.ToLowerInvariant() + '  Soulu-Gecko-Preview-10-Setup-win64.exe' | Set-Content SHA256SUMS.txt
-          gh release create gecko-preview-10 Soulu-Gecko-Preview-10-Setup-win64.exe Soulu-Gecko-Preview-10-Setup-win64.exe.build.json SHA256SUMS.txt gecko10-checks/preview10.json gecko10-checks/firstframe7.json gecko10-checks/startup8.json gecko10-checks/installer10.json --target $env:GITHUB_SHA --title 'Soulu Gecko Preview 10' --notes-file gecko/docs/PREVIEW10-RESULTS.md
+          (Get-FileHash Sona-Gecko-Preview-10-Setup-win64.exe -Algorithm SHA256).Hash.ToLowerInvariant() + '  Sona-Gecko-Preview-10-Setup-win64.exe' | Set-Content SHA256SUMS.txt
+          gh release create gecko-preview-10 Sona-Gecko-Preview-10-Setup-win64.exe Sona-Gecko-Preview-10-Setup-win64.exe.build.json SHA256SUMS.txt gecko10-checks/preview10.json gecko10-checks/firstframe7.json gecko10-checks/startup8.json gecko10-checks/installer10.json --target $env:GITHUB_SHA --title 'Sona Gecko Preview 10' --notes-file gecko/docs/PREVIEW10-RESULTS.md
           if ($LASTEXITCODE) { throw 'Release publication failed' }

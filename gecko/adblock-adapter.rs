@@ -2,7 +2,7 @@
 // Only compilation and atomic cache installation run in this worker.
 static GECKO_UPDATING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn soulu_ab_install_files(directory: *const c_char, cache: *const c_char) -> bool { boundary(|| {
+pub unsafe extern "C" fn sona_ab_install_files(directory: *const c_char, cache: *const c_char) -> bool { boundary(|| {
     use std::sync::atomic::Ordering;
     if directory.is_null() || cache.is_null() {return false;}
     let directory=PathBuf::from(unsafe{CStr::from_ptr(directory)}.to_string_lossy().into_owned());
@@ -19,4 +19,4 @@ pub unsafe extern "C" fn soulu_ab_install_files(directory: *const c_char, cache:
     });true
 }) }
 #[unsafe(no_mangle)]
-pub extern "C" fn soulu_ab_updating() -> bool {GECKO_UPDATING.load(std::sync::atomic::Ordering::SeqCst)}
+pub extern "C" fn sona_ab_updating() -> bool {GECKO_UPDATING.load(std::sync::atomic::Ordering::SeqCst)}

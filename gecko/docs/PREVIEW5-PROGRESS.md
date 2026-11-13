@@ -9,9 +9,9 @@ Implemented, pending final Windows acceptance:
 - Compact page-translation panel, aligned labels, grouped buttons; local Firefox translator preserved.
 - Native PageThumbs images for overview and inactive-tab hover, memory-only per window, bounded cache, event driven.
 - Idle preparation of existing settings document, without displaying its overlay before a user requests it.
-- Import actions in a 2×2 grid, readable operation messages, close Soulu dialog before opening native wizard.
-- Remove native split-view padding; apply Soulu blue to native permission/password/migration controls.
-- Native Windows window grouping set to Soulu alongside original application icon.
+- Import actions in a 2×2 grid, readable operation messages, close Sona dialog before opening native wizard.
+- Remove native split-view padding; apply Sona blue to native permission/password/migration controls.
+- Native Windows window grouping set to Sona alongside original application icon.
 
 Local checks before the workspace restart passed actual bookmark edits/move, nonblank native thumbnail pixels, overview image rendering, readable faviconless suggestion geometry, 12 settings sections, content-edge alignment and bookmark/favorite persistence after restart. Repeat changed scenarios on Windows before release.
 
@@ -20,7 +20,7 @@ Not yet complete: first-run flow, Windows default registration/external URL rout
 
 Second implementation checkpoint:
 
-- Per-user HTTP/HTTPS registration invokes Windows Default Apps only on a trusted click. No UserChoice overrides. Authenticated loopback remoting reuses an existing Soulu profile and rejects invalid tokens/URL schemes.
+- Per-user HTTP/HTTPS registration invokes Windows Default Apps only on a trusted click. No UserChoice overrides. Authenticated loopback remoting reuses an existing Sona profile and rejects invalid tokens/URL schemes.
 - Existing CEF local Whisper/microphone implementation adapted into a small standalone CPU-only helper. Pinned multilingual model, no audio upload or disk recording. Recognition inserts text without submitting it.
 - VOT 1.12.6 Firefox XPI is unchanged, SHA-pinned and verified with Firefox signature enforcement. Installation is opt-in after explicit permission/service disclosure. Optional data collection is not automatically granted. End-to-end public YouTube voice-over remains a separate real-playback gate.
 - Original welcome layout restored for new profiles, persisted language/theme/privacy/import/VPN/default-browser steps. Existing profile files skip automatic onboarding.

@@ -5,7 +5,7 @@ import time
 import urllib.request
 import websocket
 
-PORT = int(os.environ.get("SOULU_UI_TEST_PORT", "9223"))
+PORT = int(os.environ.get("SONA_UI_TEST_PORT", "9223"))
 BASE = f"http://127.0.0.1:{PORT}"
 seq = 0
 
@@ -61,7 +61,7 @@ shell = find_target("/ui/index.html")
 settings = None
 try:
     assert wait_for(lambda: evaluate(shell, "Boolean(window.browserShell && document.querySelector('.browser-toolbar'))"), "shell ready")
-    if os.environ.get('SOULU_REGRESSION_SKIP_FIRST_RUN')=='1':
+    if os.environ.get('SONA_REGRESSION_SKIP_FIRST_RUN')=='1':
         onboarding=next((r for r in targets() if '/ui/onboarding.html' in r.get('url','')),None)
         if onboarding:
             setup=find_target('/ui/onboarding.html')
@@ -73,10 +73,10 @@ try:
     settings = find_target("/ui/settings.html")
     assert wait_for(lambda: evaluate(settings, "Boolean(document.body?.classList.contains('ready'))"), "settings ready")
     # This visual fixture explicitly selects Blank rather than assuming the
-    # product's Soulu Home default is an old blank New Tab page.
-    evaluate(settings,"souluSettings.openSection('startup');const n=document.querySelector('#newTabMode');n.value='blank';n.dispatchEvent(new Event('change',{bubbles:true}))")
-    evaluate(settings,'souluSettings.flush()')
-    evaluate(settings, "window.souluSettings.openSection('interface')")
+    # product's Sona Home default is an old blank New Tab page.
+    evaluate(settings,"sonaSettings.openSection('startup');const n=document.querySelector('#newTabMode');n.value='blank';n.dispatchEvent(new Event('change',{bubbles:true}))")
+    evaluate(settings,'sonaSettings.flush()')
+    evaluate(settings, "window.sonaSettings.openSection('interface')")
     evaluate(settings, 'document.querySelector(\'[name="settings-layout"][value="compact"]\').click()')
     wait_for(lambda: evaluate(shell, "document.body.dataset.layout === \'compact\'"), "compact toolbar fixture")
     # These are real change/click handlers from the settings page, not a
@@ -151,11 +151,11 @@ try:
     wait_for(lambda: evaluate(shell, "document.body.dataset.theme === 'dark'"), "dark restored")
     evaluate(settings, "if(!document.querySelector('#mattePanel').checked)document.querySelector('#mattePanel').click()")
     wait_for(lambda: evaluate(shell, "document.body.dataset.matte === 'true'"), "matte restored")
-    evaluate(settings, "window.souluSettings.flush()")
+    evaluate(settings, "window.sonaSettings.flush()")
     persisted = evaluate(shell, """(async () => await window.browserShell.getSettings())()""")
     assert persisted["theme"] == "dark" and persisted["mattePanel"] is True
     assert persisted["vpnToolbarVisible"] is True
-    evaluate(settings, "souluSettingsRequestClose()")
+    evaluate(settings, "sonaSettingsRequestClose()")
     wait_for(lambda:not evaluate(shell,"browserShell.getState().then(s=>s.settingsOverlayOpen)"), "Settings close before background input checks")
     # The native OSR buffer must contain actual non-opaque toolbar pixels.
     surface = evaluate(shell, "new Promise((resolve,reject)=>cefQuery({request:JSON.stringify({action:'browser.surfaceDiagnostics'}),onSuccess:s=>resolve(JSON.parse(s)),onFailure:reject}))")
@@ -180,7 +180,7 @@ try:
     user.GetWindowRect.argtypes=[wintypes.HWND,ctypes.POINTER(wintypes.RECT)]
     user.SetForegroundWindow.argtypes=[wintypes.HWND]
     user.GetDpiForWindow.argtypes=[wintypes.HWND]
-    wanted_pid=int(os.environ.get('SOULU_TEST_PROCESS_ID','0'))
+    wanted_pid=int(os.environ.get('SONA_TEST_PROCESS_ID','0'))
     handles=[]
     callback_type=ctypes.WINFUNCTYPE(wintypes.BOOL,wintypes.HWND,wintypes.LPARAM)
     user.GetWindowThreadProcessId.argtypes=[wintypes.HWND,ctypes.POINTER(wintypes.DWORD)]
@@ -189,7 +189,7 @@ try:
     def visit(window,unused):
         pid=wintypes.DWORD();user.GetWindowThreadProcessId(window,ctypes.byref(pid))
         name=ctypes.create_unicode_buffer(128);user.GetClassNameW(window,name,128)
-        if name.value=='SouluBrowserWindow' and (not wanted_pid or pid.value==wanted_pid):handles.append(window)
+        if name.value=='SonaBrowserWindow' and (not wanted_pid or pid.value==wanted_pid):handles.append(window)
         return True
     user.EnumWindows(visit,0)
     assert handles, ('Browser HWND missing for process',wanted_pid)
@@ -252,12 +252,12 @@ try:
             assert user.SendInput(1,ctypes.byref(value),ctypes.sizeof(value))==1, 'Windows rejected keyboard injection'
         send_key(0x11);send_key(0x41);send_key(0x41,2);send_key(0x11,2)
         time.sleep(.05)
-        for character in 'soulu test':
+        for character in 'sona test':
             send_key(0,4,ord(character));send_key(0,6,ord(character))
         time.sleep(.5)
         typed=evaluate(shell,"document.querySelector('#compactAddress').value")
         print('Native input after keys:',json.dumps(native_input_state()),flush=True)
-        assert typed.lower()=='soulu test', ('Physical address input failed with confirmed foreground',typed)
+        assert typed.lower()=='sona test', ('Physical address input failed with confirmed foreground',typed)
         physical_input=True
     else:
         print('PHYSICAL_INPUT_UNVERIFIED: runner desktop did not foreground or hit-test the selected browser window')
@@ -275,13 +275,13 @@ try:
     dispatch('Input.dispatchMouseEvent',dict(pos,type='mouseReleased',button='left',clickCount=1))
     dispatch('Input.dispatchKeyEvent',{'type':'rawKeyDown','key':'a','code':'KeyA','windowsVirtualKeyCode':65,'modifiers':2})
     dispatch('Input.dispatchKeyEvent',{'type':'keyUp','key':'a','code':'KeyA','windowsVirtualKeyCode':65,'modifiers':2})
-    dispatch('Input.insertText',{'text':'soulu test'})
-    wait_for(lambda:evaluate(shell,"document.querySelector('#compactAddress').value.toLowerCase()==='soulu test'"),'CEF address input')
+    dispatch('Input.insertText',{'text':'sona test'})
+    wait_for(lambda:evaluate(shell,"document.querySelector('#compactAddress').value.toLowerCase()==='sona test'"),'CEF address input')
     wait_for(lambda:evaluate(shell,"(() => {const row=document.querySelector('#compactSuggestions.visible .suggestion-row');if(!row)return false;const r=row.getBoundingClientRect();return !!document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.closest('.suggestion-row')})()"),'Suggestions remain clickable inside CEF')
     prior=evaluate(shell,"window.browserShell.getState()")
     dispatch('Input.dispatchKeyEvent',{'type':'rawKeyDown','key':'Enter','code':'Enter','windowsVirtualKeyCode':13})
     dispatch('Input.dispatchKeyEvent',{'type':'keyUp','key':'Enter','code':'Enter','windowsVirtualKeyCode':13})
-    wait_for(lambda: evaluate(shell,"window.browserShell.getState().then(s=>s.page.url.includes('soulu') && !s.page.url.includes('settings.html'))"),'typed search navigation')
+    wait_for(lambda: evaluate(shell,"window.browserShell.getState().then(s=>s.page.url.includes('sona') && !s.page.url.includes('settings.html'))"),'typed search navigation')
     after_navigation=evaluate(shell,"window.browserShell.getState()")
     assert len(prior['tabs'])==len(after_navigation['tabs']), 'Address navigation created another tab'
     print('CEF address click, keyboard input and same-tab navigation passed; physical input verified:',physical_input)

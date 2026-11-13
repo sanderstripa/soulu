@@ -1,6 +1,6 @@
-// Only explicitly linked Soulu pages run this; never inject into web content.
+// Only explicitly linked Sona pages run this; never inject into web content.
 // Hold the first visible frame until all real faces are available, including Cyrillic.
-window.souluTypographyReady = Promise.all([400,500,600].map(weight =>
+window.sonaTypographyReady = Promise.all([400,500,600].map(weight =>
   document.fonts.load(`${weight} 14px Onest`, 'Aa Ёё Йй Жж Щщ Ыы Дд Лл 0123456789 @/:;()[]—+%')
 )).then(faces => {
   if (faces.some(face => !face.length)) throw new Error('Bundled Onest face unavailable');
@@ -8,22 +8,22 @@ window.souluTypographyReady = Promise.all([400,500,600].map(weight =>
   return true;
 }).catch(error => {
   // A broken package must not quietly present a different UI font.
-  console.error('Soulu typography initialization failed', error);
+  console.error('Sona typography initialization failed', error);
   document.documentElement.dataset.typographyError = String(error);
   throw error;
 });
 
 // Native title bubbles cannot select a page's private @font-face. Own pages
 // use one semantic tooltip and ARIA; never leave a competing native title.
-const souluNormalizeTitles=root=>{
+const sonaNormalizeTitles=root=>{
   const nodes=[...(root.matches?.('[title]')?[root]:[]),...root.querySelectorAll('[title]')];
   for(const node of nodes){const title=node.getAttribute('title');if(title){if(node.dataset.tooltip!==title)node.dataset.tooltip=title;if(!node.textContent.trim()&&(!node.getAttribute('aria-label')||node.getAttribute('aria-label')===node.dataset.tooltipLabel)){if(node.getAttribute('aria-label')!==title)node.setAttribute('aria-label',title);if(node.dataset.tooltipLabel!==title)node.dataset.tooltipLabel=title;}}node.removeAttribute('title');}
 };
-souluNormalizeTitles(document);
-new MutationObserver(records=>{const roots=new Set();for(const r of records){if(r.type==='attributes'){if(r.target.hasAttribute('title'))roots.add(r.target);}else for(const node of r.addedNodes)if(node.nodeType===1)roots.add(node);}for(const root of roots)if(root.isConnected)souluNormalizeTitles(root);}).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['title']});
+sonaNormalizeTitles(document);
+new MutationObserver(records=>{const roots=new Set();for(const r of records){if(r.type==='attributes'){if(r.target.hasAttribute('title'))roots.add(r.target);}else for(const node of r.addedNodes)if(node.nodeType===1)roots.add(node);}for(const root of roots)if(root.isConnected)sonaNormalizeTitles(root);}).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['title']});
 (() => {
-  const tip=document.createElement('div');tip.className='soulu-type-tooltip';
-  tip.id='soulu-type-tooltip';tip.setAttribute('role','tooltip');tip.hidden=true;
+  const tip=document.createElement('div');tip.className='sona-type-tooltip';
+  tip.id='sona-type-tooltip';tip.setAttribute('role','tooltip');tip.hidden=true;
   document.body.append(tip);
   let owner=null,timer=0,previousDescription=null,expanded=false;
   const hide=()=>{
@@ -59,8 +59,8 @@ new MutationObserver(records=>{const roots=new Set();for(const r of records){if(
 })();
 
 (()=>{
- if(location.pathname.endsWith('/home.html')){window.souluSelectReady=Promise.resolve();return;}
+ if(location.pathname.endsWith('/home.html')){window.sonaSelectReady=Promise.resolve();return;}
  const script=document.createElement('script');script.src=new URL('select-control.js',document.currentScript.src).href;script.async=false;
- window.souluSelectReady=new Promise((resolve,reject)=>{script.onload=()=>Promise.resolve(window.souluSelectControlsReady).then(resolve,reject);script.onerror=()=>reject(Error('Soulu controls could not be loaded'));});
- window.souluSelectReady.catch(error=>console.error('Soulu controls:',error));document.head.append(script);
+ window.sonaSelectReady=new Promise((resolve,reject)=>{script.onload=()=>Promise.resolve(window.sonaSelectControlsReady).then(resolve,reject);script.onerror=()=>reject(Error('Sona controls could not be loaded'));});
+ window.sonaSelectReady.catch(error=>console.error('Sona controls:',error));document.head.append(script);
 })();

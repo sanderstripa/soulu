@@ -36184,4 +36184,4 @@ function detectAll(text, opts) {
     return [];
   return detectAllStats(text, options, profiles, uniqueKeys);
 }
-window.SouluLanguage={detect,detectAll};})();
+window.SonaLanguage={detect,detectAll};})();

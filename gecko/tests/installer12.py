@@ -125,13 +125,13 @@ def finished(ws):
 def capture(ws,name):
  data=command(ws,'Page.captureScreenshot',{'format':'png','captureBeyondViewport':False});(out/name).write_bytes(base64.b64decode(data['data']))
 def version(ws,stage):
- check('only_soulu_brand_'+stage,not evaluate(ws,'/firefox/i.test(document.body.innerText)'))
+ check('only_sona_brand_'+stage,not evaluate(ws,'/firefox/i.test(document.body.innerText)'))
  value=evaluate(ws,'document.getElementById("version").textContent');check('version_visible_'+stage,'0.12.0-preview' in value and evaluate(ws,'document.getElementById("version").getBoundingClientRect().height>0'),value)
 try:
  with tempfile.TemporaryDirectory(prefix='Soul installer acceptance ') as temporary:
   root=pathlib.Path(temporary);local=root/'userdata';profile=local/'Soul/Profiles/default';profile.mkdir(parents=True);mp=port()
   (profile/'user.js').write_text(f'user_pref("remote.prefs.recommended",false);user_pref("marionette.port",{mp});',encoding='utf-8')
-  env=dict(os.environ,LOCALAPPDATA=str(local),WEBVIEW2_USER_DATA_FOLDER=str(root/'installer-webview'),MOZ_MARIONETTE='1',MOZ_REMOTE_ALLOW_SYSTEM_ACCESS='1',SOULU_GECKO_TEST='1')
+  env=dict(os.environ,LOCALAPPDATA=str(local),WEBVIEW2_USER_DATA_FOLDER=str(root/'installer-webview'),MOZ_MARIONETTE='1',MOZ_REMOTE_ALLOW_SYSTEM_ACCESS='1',SONA_GECKO_TEST='1')
   destination=local/'Programs/Soul';original_proxy=proxy_snapshot()
   # Reproduce Preview 8 uninstall leftovers from the user's failed installation.
   (destination/'engine/old/empty').mkdir(parents=True)
@@ -149,7 +149,7 @@ try:
   def listening():
    with socket.create_connection(('127.0.0.1',mp),timeout=.2):return True
   wait(listening,60);m=Marionette('127.0.0.1',port=mp);m.start_session();m.set_context('chrome');m.timeout.script=60
-  wait(lambda:m.execute_script('return !!window.Soulu?.ready&&!window.__souluStartupHidden&&document.documentElement.hasAttribute("soulu-ui-ready")'))
+  wait(lambda:m.execute_script('return !!window.Sona?.ready&&!window.__sonaStartupHidden&&document.documentElement.hasAttribute("sona-ui-ready")'))
   time.sleep(.5);recording.set();recorder.join(timeout=5);(out/'launch-windows.json').write_text(json.dumps(observed,indent=2))
   check('no_visible_firefox_window_during_first_launch',bool(observed) and not any('firefox' in x['title'].lower() for x in observed))
   check('engine_application_identity_is_soul',m.execute_script('return Services.appinfo.name')=='Soul')
@@ -157,11 +157,11 @@ try:
   check('payload_has_no_firefox_installer_tools',not any(p.name.lower() in ['firefox.exe','helper.exe','default-browser-agent.exe','maintenanceservice_installer.exe'] for p in destination.rglob('*.exe')))
   check('first_installed_launch_uses_own_engine',pathlib.Path(m.execute_script('return Services.dirsvc.get("GreD",Ci.nsIFile).path')).resolve()==(destination/'engine').resolve())
   check('first_installed_launch_has_one_browser_window',m.execute_script('return [...Services.wm.getEnumerator("navigator:browser")].length')==1)
-  check('installer_choices_apply_only_to_new_profile',m.execute_script('return Soulu.config.settings.theme==="dark"&&Soulu.config.settings.language==="ru"'))
-  check('first_installed_launch_version_is_preview12',m.execute_script('return document.documentElement.getAttribute("soulu-version")')=='Soul 0.12.0 Preview')
-  check('first_installed_launch_shows_soulu_welcome',m.execute_script('return gBrowser.selectedBrowser.currentURI.spec.endsWith("/onboarding.html")'))
+  check('installer_choices_apply_only_to_new_profile',m.execute_script('return Sona.config.settings.theme==="dark"&&Sona.config.settings.language==="ru"'))
+  check('first_installed_launch_version_is_preview12',m.execute_script('return document.documentElement.getAttribute("sona-version")')=='Soul 0.12.0 Preview')
+  check('first_installed_launch_shows_sona_welcome',m.execute_script('return gBrowser.selectedBrowser.currentURI.spec.endsWith("/onboarding.html")'))
   (out/'installed-first-launch.png').write_bytes(base64.b64decode(m.screenshot()))
-  result=m.execute_async_script('const done=arguments[arguments.length-1];(async()=>{const {PlacesUtils}=ChromeUtils.importESModule("resource://gre/modules/PlacesUtils.sys.mjs");await PlacesUtils.bookmarks.insert({parentGuid:PlacesUtils.bookmarks.toolbarGuid,url:"https://example.org/preview12-persistence",title:"Preview 11 installer persistence"});Soulu.config.onboarding={done:true,step:6};await Soulu.backend.save();return true;})().then(done,e=>done({error:String(e)}));');check('real_bookmark_saved_before_upgrade',result is True)
+  result=m.execute_async_script('const done=arguments[arguments.length-1];(async()=>{const {PlacesUtils}=ChromeUtils.importESModule("resource://gre/modules/PlacesUtils.sys.mjs");await PlacesUtils.bookmarks.insert({parentGuid:PlacesUtils.bookmarks.toolbarGuid,url:"https://example.org/preview12-persistence",title:"Preview 11 installer persistence"});Sona.config.onboarding={done:true,step:6};await Sona.backend.save();return true;})().then(done,e=>done({error:String(e)}));');check('real_bookmark_saved_before_upgrade',result is True)
   pid=m.execute_script('return Services.appinfo.processID');handle=int(m.execute_script('return String(window.docShell.treeOwner.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIBaseWindow).nativeHandle)'),16);C.windll.user32.PostMessageW(C.c_void_p(handle),0x0010,0,0)
   def exited():
    import psutil
@@ -173,25 +173,25 @@ try:
    for handle in again.window_handles:
     try:
      again.switch_to_window(handle);again.set_context('chrome')
-     if again.execute_script('return !!window.Soulu?.ready&&Soulu.config.onboarding.done&&!window.__souluStartupHidden'):return True
+     if again.execute_script('return !!window.Sona?.ready&&Sona.config.onboarding.done&&!window.__sonaStartupHidden'):return True
     except Exception:pass
    return False
   check('launcher_reopens_after_normal_close',wait(live_reopened_window))
   (out/'installed-reopened.png').write_bytes(base64.b64decode(again.screenshot()))
-  windows=again.execute_script('return [...Services.wm.getEnumerator("navigator:browser")].filter(w=>!w.closed).map(w=>({uri:w.document.documentURI,ready:!!w.Soulu?.ready,title:w.document.title,hidden:!!w.__souluStartupHidden,startupError:w.Soulu?.startupWindowError||null,startupMode:w.Soulu?.config.settings.startupMode,tabs:[...w.gBrowser.tabs].map(t=>t.linkedBrowser.currentURI.spec)}));');check('reopened_browser_has_one_window',len(windows)==1,windows)
+  windows=again.execute_script('return [...Services.wm.getEnumerator("navigator:browser")].filter(w=>!w.closed).map(w=>({uri:w.document.documentURI,ready:!!w.Sona?.ready,title:w.document.title,hidden:!!w.__sonaStartupHidden,startupError:w.Sona?.startupWindowError||null,startupMode:w.Sona?.config.settings.startupMode,tabs:[...w.gBrowser.tabs].map(t=>t.linkedBrowser.currentURI.spec)}));');check('reopened_browser_has_one_window',len(windows)==1,windows)
   second_pid=again.execute_script('return Services.appinfo.processID');second_handle=int(again.execute_script('return String(window.docShell.treeOwner.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIBaseWindow).nativeHandle)'),16);C.windll.user32.PostMessageW(C.c_void_p(second_handle),0x0010,0,0);reopened.wait(timeout=30)
   check('reopened_browser_process_exits_normally',wait(lambda:not psutil.pid_exists(second_pid),30))
   # A partially removed install is still recognized by its ownership manifest.
   (destination/'Soul.exe').unlink()
   with setup(exe,env) as (ws,process):
    version(ws,'upgrade');evaluate(ws,'document.getElementById("primary").click();true');wait(lambda:finished(ws),120);evaluate(ws,'document.getElementById("launch").checked=false;document.getElementById("done").click();true');process.wait(timeout=20)
-  settings=json.loads((profile/'soulu-settings.json').read_text());check('upgrade_keeps_existing_profile_settings',settings['settings']['theme']=='dark' and settings['onboarding']['done'])
+  settings=json.loads((profile/'sona-settings.json').read_text());check('upgrade_keeps_existing_profile_settings',settings['settings']['theme']=='dark' and settings['onboarding']['done'])
   with contextlib.closing(sqlite3.connect(profile/'places.sqlite')) as db:check('upgrade_keeps_real_bookmarks',db.execute('select count(*) from moz_bookmarks where title=?',('Preview 11 installer persistence',)).fetchone()[0]==1)
   with winreg.OpenKey(winreg.HKEY_CURRENT_USER,r'Software\Microsoft\Windows\CurrentVersion\Uninstall\Soul') as key:check('windows_installed_apps_has_correct_version',winreg.QueryValueEx(key,'DisplayVersion')[0]=='0.12.0-preview')
   uninstaller=destination/'Uninstall Soul.exe'
   with setup(uninstaller,env,True) as (ws,process):
    version(ws,'uninstall');evaluate(ws,'document.getElementById("primary").click();true');wait(lambda:evaluate(ws,'document.body.dataset.stage==="finish"'),90);evaluate(ws,'document.getElementById("done").click();true');process.wait(timeout=20)
-  check('uninstall_removes_application_but_preserves_profile',not (destination/'Soul.exe').exists() and (profile/'soulu-settings.json').exists() and (profile/'places.sqlite').exists())
+  check('uninstall_removes_application_but_preserves_profile',not (destination/'Soul.exe').exists() and (profile/'sona-settings.json').exists() and (profile/'places.sqlite').exists())
   check('uninstall_cleans_own_executable_and_empty_engine_tree',wait(lambda:not destination.exists(),20))
   report['passed']=True
 except Exception as e:report['error']=str(e);raise

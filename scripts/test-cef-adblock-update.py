@@ -18,10 +18,10 @@ def wait(fn,timeout=150):
         time.sleep(.25)
     raise AssertionError('Filter update timeout')
 out=Path(sys.argv[2]);out.parent.mkdir(parents=True,exist_ok=True);evidence={}
-with tempfile.TemporaryDirectory(prefix='soulu-adblock-update-',ignore_cleanup_errors=True) as root:
-    os.environ['SOULU_REGRESSION_SKIP_FIRST_RUN']='1'
-    env=dict(os.environ,LOCALAPPDATA=root,SOULU_UI_TEST_PORT=str(s.DEBUG_PORT),SOULU_REGRESSION_SKIP_FIRST_RUN='1')
-    env.pop('SOULU_ADBLOCK_NO_UPDATE',None);env.pop('SOULU_ADBLOCK_TEST_RULES',None)
+with tempfile.TemporaryDirectory(prefix='sona-adblock-update-',ignore_cleanup_errors=True) as root:
+    os.environ['SONA_REGRESSION_SKIP_FIRST_RUN']='1'
+    env=dict(os.environ,LOCALAPPDATA=root,SONA_UI_TEST_PORT=str(s.DEBUG_PORT),SONA_REGRESSION_SKIP_FIRST_RUN='1')
+    env.pop('SONA_ADBLOCK_NO_UPDATE',None);env.pop('SONA_ADBLOCK_TEST_RULES',None)
     for key in ('HTTP_PROXY','HTTPS_PROXY','ALL_PROXY','http_proxy','https_proxy','all_proxy'):
         env.pop(key,None)
     process=None;shell=None
@@ -40,10 +40,10 @@ with tempfile.TemporaryDirectory(prefix='soulu-adblock-update-',ignore_cleanup_e
             if r.get('lastUpdateError'):raise AssertionError(r['lastUpdateError'])
             return r if r.get('lastSuccessfulUpdate',0)>0 else None
         completed=wait(updated)
-        cache=Path(root)/'Soulu'/'User Data'/'AdBlock'/'filters-v1.json'
+        cache=Path(root)/'Sona'/'User Data'/'AdBlock'/'filters-v1.json'
         assert cache.exists() and completed['ready'] and completed['source']=='cache'
         evidence['successful_https_update']=completed;stop()
-        offline=dict(env,SOULU_ADBLOCK_NO_UPDATE='1');start(offline)
+        offline=dict(env,SONA_ADBLOCK_NO_UPDATE='1');start(offline)
         restored=status();assert restored['lastSuccessfulUpdate']==completed['lastSuccessfulUpdate'] and restored['source']=='cache'
         evidence['restart_cached_offline']=restored;stop()
         # Make cache due, then use a closed local proxy to force a bounded network failure.

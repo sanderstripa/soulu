@@ -1,13 +1,13 @@
 """Adapt the audited CEF capture/inference component without linking CEF."""
 from pathlib import Path
 root=Path(__file__).resolve().parents[2]
-s=(root/'cef/soulu/home_system.cc').read_text()
+s=(root/'cef/sona/home_system.cc').read_text()
 core=s[s.index('bool MicrophoneDenied()'):s.index('\n}\nvoid HomeCancelVoice')]
 core=core.replace('return std::filesystem::path(path).parent_path()/L"ui"/L"speech"/L"ggml-tiny.bin";', 'return std::filesystem::path(path).parent_path()/L"ggml-tiny.bin";')
 core=core.replace('CefString(path.wstring()).ToString()', 'Utf8(path.wstring())')
 # Short search utterances do not need a full 30-second encoder window.
 core=core.replace('params.language=language==', 'params.audio_ctx=std::clamp(static_cast<int>((audio.size()+319)/320+127)/128*128,384,1500);\n params.language=language==')
-includes='''// Soulu CEF local speech component, isolated from the browser process.
+includes='''// Sona CEF local speech component, isolated from the browser process.
 #include <windows.h>
 #include <mmsystem.h>
 #include <bcrypt.h>

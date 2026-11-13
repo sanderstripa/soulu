@@ -11,8 +11,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Create reproducible source snapshot
-        run: git archive --format=zip HEAD > soulu-gecko-source.zip
+        run: git archive --format=zip HEAD > sona-gecko-source.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: soulu-gecko-source
-          path: soulu-gecko-source.zip
+          name: sona-gecko-source
+          path: sona-gecko-source.zip

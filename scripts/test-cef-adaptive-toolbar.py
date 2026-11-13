@@ -15,7 +15,7 @@ import time
 
 spec=importlib.util.spec_from_file_location('storage',Path(__file__).with_name('test-cef-storage.py'))
 s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
-os.environ['SOULU_REGRESSION_SKIP_FIRST_RUN']='1'
+os.environ['SONA_REGRESSION_SKIP_FIRST_RUN']='1'
 os.environ['NO_PROXY']='localhost,127.0.0.1,::1'
 u=C.windll.user32
 u.SetWindowPos.argtypes=[W.HWND,W.HWND,C.c_int,C.c_int,C.c_int,C.c_int,W.UINT]
@@ -47,10 +47,10 @@ def main():
     server=ThreadingHTTPServer(('127.0.0.1',0),Fixture);threading.Thread(target=server.serve_forever,daemon=True).start()
     def check(value,label):
         assert value,label;evidence['checks'].append(label);print('PASS:',label,flush=True)
-    with tempfile.TemporaryDirectory(prefix='soulu-adaptive-',ignore_cleanup_errors=True) as root:
-        profile=Path(root)/'Soulu'/'User Data'/'Profiles'/'personal';profile.mkdir(parents=True)
-        (profile/'soulu-settings.json').write_text(json.dumps({'onboarding':{'status':'skipped'},'layout':'adaptive','startupMode':'continue','newTabMode':'blank','bookmarksBarMode':'never','theme':'dark','mattePanel':False}),encoding='utf-8')
-        env=dict(os.environ,LOCALAPPDATA=root,SOULU_UI_TEST_PORT=str(s.DEBUG_PORT))
+    with tempfile.TemporaryDirectory(prefix='sona-adaptive-',ignore_cleanup_errors=True) as root:
+        profile=Path(root)/'Sona'/'User Data'/'Profiles'/'personal';profile.mkdir(parents=True)
+        (profile/'sona-settings.json').write_text(json.dumps({'onboarding':{'status':'skipped'},'layout':'adaptive','startupMode':'continue','newTabMode':'blank','bookmarksBarMode':'never','theme':'dark','mattePanel':False}),encoding='utf-8')
+        env=dict(os.environ,LOCALAPPDATA=root,SONA_UI_TEST_PORT=str(s.DEBUG_PORT))
         def state():return s.evaluate(shell,'browserShell.getState()')
         def call(method,value=None):return s.evaluate(shell,'browserShell.'+method+'('+('' if value is None else json.dumps(value))+')')
         def start():
@@ -58,7 +58,7 @@ def main():
             process=subprocess.Popen([exe,'--no-proxy-server'],env=env)
             target=wait(lambda:next((t for t in s.targets() if '/ui/index.html' in t.get('url','')),None))
             shell=s.websocket.create_connection(target['webSocketDebuggerUrl'],timeout=30,origin=s.BASE)
-            wait(lambda:s.evaluate(shell,"!!window.browserShell&&!!window.souluAdaptiveToolbar"))
+            wait(lambda:s.evaluate(shell,"!!window.browserShell&&!!window.sonaAdaptiveToolbar"))
             wait(lambda:state().get('tabs'))
         def stop():
             nonlocal process,shell
@@ -71,7 +71,7 @@ def main():
             @C.WINFUNCTYPE(W.BOOL,W.HWND,W.LPARAM)
             def visit(hwnd,_):
                 pid=W.DWORD();u.GetWindowThreadProcessId(hwnd,C.byref(pid));name=C.create_unicode_buffer(128);u.GetClassNameW(hwnd,name,128)
-                if pid.value==process.pid and name.value=='SouluBrowserWindow':found.append(hwnd)
+                if pid.value==process.pid and name.value=='SonaBrowserWindow':found.append(hwnd)
                 return True
             u.EnumWindows(visit,0);return found[0]
         def native_inset(expected):

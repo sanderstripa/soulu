@@ -1,7 +1,7 @@
 (() => {
   'use strict';
   const normalize=lang=>String(lang||'').toLowerCase().split(/[-_]/)[0];
-  const registry=window.SouluTranslationModels;
+  const registry=window.SonaTranslationModels;
   const pairs=registry.pairs;
   const resolve=(from,to)=>{
     from=normalize(from);to=normalize(to);
@@ -14,7 +14,7 @@
   };
   let database;
   function db(){return database??=new Promise((resolve,reject)=>{
-    const request=indexedDB.open('soulu-translation-models',1);
+    const request=indexedDB.open('sona-translation-models',1);
     request.onupgradeneeded=()=>request.result.createObjectStore('models');
     request.onsuccess=()=>{
       const database=request.result,valid=new Set(pairs.flatMap(pair=>Object.values(pair.files).map(file=>file.sha256)));
@@ -75,7 +75,7 @@
     if(!await verify(bytes,file)){await discard(file.sha256);throw Error('integrity');}
     await store(file.sha256,bytes);return bytes;
   }
-  class Backing extends window.SouluBergamot.TranslatorBacking {
+  class Backing extends window.SonaBergamot.TranslatorBacking {
     constructor(signal,status){super({cacheSize:4096,pivotLanguage:'en',useNativeIntGemm:false});this.signal=signal;this.status=status;}
     async loadModelRegistery(){return pairs;}
     async loadTranslationModel({from,to}){
@@ -87,7 +87,7 @@
   class LocalTranslator {
     constructor(status=()=>{}){
       this.controller=new AbortController();this.status=status;
-      this.engine=new window.SouluBergamot.BatchTranslator({workers:1,batchSize:8,onerror:()=>this.engine.remove(()=>true)},new Backing(this.controller.signal,status));
+      this.engine=new window.SonaBergamot.BatchTranslator({workers:1,batchSize:8,onerror:()=>this.engine.remove(()=>true)},new Backing(this.controller.signal,status));
     }
     async translate(from,to,text,jobKey){
       if(this.controller.signal.aborted)throw Error('cancelled');
@@ -100,8 +100,8 @@
   }
   function detect(text,hint=''){
     if(String(text).trim().length<40)return normalize(hint);
-    const results=window.SouluLanguage.detectAll(text);
+    const results=window.SonaLanguage.detectAll(text);
     return results.length&&results[0].accuracy>=0.2?results[0].lang:'';
   }
-  window.SouluTranslate={normalize,resolve,verify,detect,LocalTranslator,pairs};
+  window.SonaTranslate={normalize,resolve,verify,detect,LocalTranslator,pairs};
 })()

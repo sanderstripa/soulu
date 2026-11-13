@@ -1,14 +1,14 @@
 # History and browsing data
 
 Baseline: fresh `origin/main` at `20571921c079f8ed1dce5d2936d302e85304b408`
-(Settings 2.0, Soulu Preview 46). The approved CEF/Chromium pin is unchanged.
+(Settings 2.0, Sona Preview 46). The approved CEF/Chromium pin is unchanged.
 
 ## Entry points and presentation
 
 The native top-toolbar context menu contains **История** and **Очистить данные
 браузера…**. Ctrl+H opens History; Ctrl+Shift+Delete opens its clearing dialog.
 Both shortcuts work when the shell or a content document has focus. The address
-`soulu://history` resolves to the local `ui/history.html` internal document.
+`sona://history` resolves to the local `ui/history.html` internal document.
 Settings → Profiles and data also exposes both actions.
 
 The bilingual page shows favicon, title, URL and visit time. Newest visits appear
@@ -25,11 +25,11 @@ remains open during clearing and returns focus to its entry button afterwards.
 
 ## Canonical model and recording
 
-The baseline source had no persistent Soulu visit model: omnibox suggestions used
-open tabs, bookmarks and search suggestions. No previous Soulu history database
+The baseline source had no persistent Sona visit model: omnibox suggestions used
+open tabs, bookmarks and search suggestions. No previous Sona history database
 or history importer is replaced or duplicated.
 
-`HistoryStore` owns `Profiles/<id>/soulu-history.sqlite`, using the existing safe
+`HistoryStore` owns `Profiles/<id>/sona-history.sqlite`, using the existing safe
 `ProfileRoot()` and bundled SQLite. Both the History page and omnibox suggestions
 query this same model. Each successful HTTP(S) main-frame load records one visit;
 title/favicon callbacks update its existing ID. Internal pages, subframes, failed
@@ -58,7 +58,7 @@ The native coordinator uses an invisible auxiliary Chromium Settings WebUI in
 the History document's existing `CefRequestContext`. It invokes Chromium's
 allowlisted `browser.clear_data.cookies` / `browser.clear_data.cache` operation,
 in a Chrome-style CEF Views window that is never shown. It waits for completion through an observed DevTools promise and for the
-auxiliary browser to close. The worker has no Soulu bridge. It does not infer
+auxiliary browser to close. The worker has no Sona bridge. It does not infer
 site origins from history, inspect/delete live profile files, reset the entire
 profile or create another persistent browser context.
 
@@ -73,7 +73,7 @@ There is no misleading partial-time clearing of web storage, and no invented cac
 size. Passwords, bookmarks, permissions, UI settings, Reader settings, VPN configuration,
 profile metadata and downloaded files are not selected by this flow.
 
-Soulu's Alloy content browsers do not implement persistent form autofill. The
+Sona's Alloy content browsers do not implement persistent form autofill. The
 dialog explains that limitation instead of offering a nonfunctional checkbox;
 the separate DPAPI password vault is preserved.
 

@@ -90,7 +90,7 @@ class Fixture(http.server.BaseHTTPRequestHandler):
         pass
 
 def main():
-    os.environ['SOULU_REGRESSION_SKIP_FIRST_RUN']='1'
+    os.environ['SONA_REGRESSION_SKIP_FIRST_RUN']='1'
     exe = str(Path(sys.argv[1]).resolve())
     output = Path(sys.argv[2]); visuals = output.parent / 'settings-overlay-visuals'
     visuals.mkdir(parents=True, exist_ok=True)
@@ -101,12 +101,12 @@ def main():
     server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Fixture)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     origin = 'http://127.0.0.1:' + str(server.server_port)
-    with tempfile.TemporaryDirectory(prefix='soulu-overlay-', ignore_cleanup_errors=True) as folder:
+    with tempfile.TemporaryDirectory(prefix='sona-overlay-', ignore_cleanup_errors=True) as folder:
         env = os.environ.copy(); env['LOCALAPPDATA'] = folder
         env['APPDATA'] = str(Path(folder) / 'roaming')
-        env['SOULU_REGRESSION_SKIP_FIRST_RUN'] = '1'
-        env['SOULU_UI_TEST_PORT'] = str(s.DEBUG_PORT)
-        data = Path(folder) / 'Soulu' / 'User Data'; data.mkdir(parents=True)
+        env['SONA_REGRESSION_SKIP_FIRST_RUN'] = '1'
+        env['SONA_UI_TEST_PORT'] = str(s.DEBUG_PORT)
+        data = Path(folder) / 'Sona' / 'User Data'; data.mkdir(parents=True)
         (data / 'settings.json').write_text(json.dumps({'settings': {'startupMode':'blank',
             'newTabMode':'blank','theme':'light','mattePanel':False,'matteDefaultV15':True}}))
         process = subprocess.Popen([exe, '--no-proxy-server'], env=env)
@@ -134,14 +134,14 @@ def main():
             after = state()
             check(after['activeTabId'] == before['activeTabId'] and [{k:t[k] for k in ('id','url','pinned','incognito')} for t in after['tabs']] == [{k:t[k] for k in ('id','url','pinned','incognito')} for t in before['tabs']],
                   'Settings leaves tab strip, selected tab and URLs unchanged')
-            return wait(lambda:windows(process.pid, 'SouluSettingsOverlay'))[0]
+            return wait(lambda:windows(process.pid, 'SonaSettingsOverlay'))[0]
         def close_settings():
-            edit('souluSettingsRequestClose()')
+            edit('sonaSettingsRequestClose()')
             wait(lambda:not state()['settingsOverlayOpen'])
             settings.close()
         def composed_capture():
             # Never treat pixels from an unrelated foreground app as evidence.
-            candidates=windows(process.pid,'SouluSettingsOverlay')
+            candidates=windows(process.pid,'SonaSettingsOverlay')
             target=next((h for h in candidates if u.IsWindowVisible(h)),main_window)
             def is_foreground():
                 pid=w.DWORD();u.GetWindowThreadProcessId(u.GetForegroundWindow(),c.byref(pid))
@@ -151,12 +151,12 @@ def main():
                 u.SetForegroundWindow(target)
                 wait(is_foreground,timeout=5)
                 time.sleep(.08)
-            assert is_foreground(), 'Test Soulu must be foreground before composed capture'
+            assert is_foreground(), 'Test Sona must be foreground before composed capture'
             return ImageGrab.grab(bbox=rect(main_window))
         try:
             shell = socket('/ui/index.html')
             wait(lambda:s.evaluate(shell,"typeof window.browserShell?.getState==='function'"))
-            main_window = wait(lambda:windows(process.pid,'SouluBrowserWindow'))[0]
+            main_window = wait(lambda:windows(process.pid,'SonaBrowserWindow'))[0]
             wait(lambda:s.targets() and u.IsWindowVisible(main_window))
             u.MoveWindow(main_window, 50, 50, 1280, 900, True)
             u.ShowWindow(main_window, 9); u.SetForegroundWindow(main_window)
@@ -171,15 +171,15 @@ def main():
             panel=u.GetWindow(overlay,5)
             pr,br=rect(panel),rect(overlay)
             check(pr[1]==br[1] and abs((pr[0]+pr[2])-(br[0]+br[2]))<=1,'Native panel is top anchored and horizontally centered')
-            check(u.GetWindow(overlay,4)==main_window, 'Native host is owned by the current Soulu window')
+            check(u.GetWindow(overlay,4)==main_window, 'Native host is owned by the current Sona window')
             check(wait(lambda: bool(u.IsChild(overlay,focus(main_window)))), 'Real Windows keyboard focus is inside Settings')
             animations = w.BOOL()
             assert u.SystemParametersInfoW(0x1042, 0, c.byref(animations), 0)
             duration = 320 if animations.value else 90
             check(state()['settingsOverlayDuration']==duration, 'Transition duration respects Windows animation preference')
-            initial = edit('JSON.stringify(souluSettings.current)')
+            initial = edit('JSON.stringify(sonaSettings.current)')
             call('openSettingsWindow')
-            check(len(windows(process.pid,'SouluSettingsOverlay'))==1 and edit('JSON.stringify(souluSettings.current)')==initial,
+            check(len(windows(process.pid,'SonaSettingsOverlay'))==1 and edit('JSON.stringify(sonaSettings.current)')==initial,
                   'Repeated opening focuses one existing overlay without resetting saved state')
             time.sleep(.35)
             blurred=composed_capture(); blurred.save(visuals/'settings-composed-blur.png')
@@ -205,19 +205,19 @@ def main():
             time.sleep(.2);check(len(state()['tabs'])==count,'Background Ctrl+T cannot change tabs while Settings is open')
             # Existing managers must stay inside the editor and preserve both
             # browser state and the currently saved settings transaction.
-            before_subviews=state(); draft=edit('JSON.stringify(souluSettings.current)')
+            before_subviews=state(); draft=edit('JSON.stringify(sonaSettings.current)')
             for section,action in [('privacy','passwords'),('profiles','import'),('privacy','siteData'),('privacy','exceptions'),('privacy','adblockExceptions')]:
-                edit('souluSettings.openSection('+json.dumps(section)+');document.querySelector('+json.dumps('#control-settings-'+action+' button')+').click()')
+                edit('sonaSettings.openSection('+json.dumps(section)+');document.querySelector('+json.dumps('#control-settings-'+action+' button')+').click()')
                 wait(lambda:edit("document.querySelector('#actionDialog').open"))
                 check(state()['tabs']==before_subviews['tabs'] and state()['activeTabId']==before_subviews['activeTabId'],action+' subview stays inside Settings without changing browser tabs')
-                check(edit('JSON.stringify(souluSettings.current)')==draft,action+' subview preserves saved settings')
+                check(edit('JSON.stringify(sonaSettings.current)')==draft,action+' subview preserves saved settings')
                 if action=='siteData':
                     snapshot=edit('browserShell.getSettingsSite('+str(before_subviews['activeTabId'])+')')
                     check(snapshot['url']==page_before['url'],'Settings site-data backend addresses the original webpage directly')
                 edit("document.querySelector('#closeAction').click()")
                 wait(lambda:not edit("document.querySelector('#actionDialog').open"))
             for theme in ['light','dark','system']:
-                edit(f'''souluSettings.openSection("interface");document.querySelector('[name="settings-theme"][value="{theme}"]').click()''')
+                edit(f'''sonaSettings.openSection("interface");document.querySelector('[name="settings-theme"][value="{theme}"]').click()''')
                 for matte in [False,True]:
                     edit('(()=>{const n=document.querySelector("#mattePanel");if(n.checked!=='+str(matte).lower()+')n.click();})()')
                     u.MoveWindow(main_window,50,50,1280,900,True);time.sleep(.15)
@@ -234,10 +234,10 @@ def main():
                 check(edit("document.documentElement.scrollWidth<=innerWidth && document.querySelector('#closeSettings').getBoundingClientRect().bottom<=innerHeight+1"),
                       'Settings controls and Close fit at device scale '+str(scale))
             s.command(settings,'Emulation.clearDeviceMetricsOverride')
-            edit('souluSettings.flush()')
+            edit('sonaSettings.flush()')
             # Do not await the close request across the short native animation.
             # Sample immediately instead of adding transport delay plus a fixed sleep.
-            edit('souluSettingsRequestClose();true')
+            edit('sonaSettingsRequestClose();true')
             transition=None;sample_deadline=time.monotonic()+duration/1000+.25
             while time.monotonic()<sample_deadline:
                 sample=state()
@@ -253,7 +253,7 @@ def main():
                   'Closing preserves live URL, scroll, DOM and session state')
             check(after['media']>page_before['media'] and not after['paused'],'Live video playback continues through Settings')
             check(s.command(content,'Page.getNavigationHistory')==nav_before,'Navigation history and back/forward stack are unchanged')
-            check(not windows(process.pid,'SouluSettingsOverlay'),'Native host is released after close')
+            check(not windows(process.pid,'SonaSettingsOverlay'),'Native host is released after close')
             expected=len(s.targets())
             class FT(c.Structure):
                 _fields_=[('low',w.DWORD),('high',w.DWORD)]
@@ -266,7 +266,7 @@ def main():
                 open_settings();close_settings()
                 check(wait(lambda:len(s.targets())==expected),'Repeated cycle '+str(i+1)+' releases its CEF browser')
             metrics.append({'hostCpuMsFor30Cycles':cpu_ms()-cpu_start,'wallMsFor30Cycles':(time.monotonic()-wall_start)*1000})
-            for background in ['soulu://home','soulu://history','about:blank']:
+            for background in ['sona://home','sona://history','about:blank']:
                 call('navigate',background);time.sleep(.4)
                 open_settings();close_settings()
             # Reader uses the layered shell over the existing webpage; opening

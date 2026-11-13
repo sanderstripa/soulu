@@ -1,6 +1,6 @@
-"""Export a rendered SVG master to every shipped Soulu icon alias.
+"""Export a rendered SVG master to every shipped Sona icon alias.
 
-Render ui/branding/soulu-master.svg with a standards-compliant SVG renderer at
+Render ui/branding/sona-master.svg with a standards-compliant SVG renderer at
 4096px or above, then run: python scripts/export-branding.py rendered-master.png
 Requires Pillow. The source alpha is preserved; resizing uses premultiplied
 alpha to prevent light/dark fringes. Never reuse the previous logo.
@@ -14,9 +14,9 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 SIZES = (16, 20, 24, 32, 40, 48, 64, 128, 256)
-PNG_ALIASES = ('soulu-icon.png', 'soulu-icon-new.png', 'browser-icon.png')
-ICO_ALIASES = ('soulu-icon.ico', 'soulu-app-icon.ico', 'soulu-installer-icon.ico',
-               'soulu-shortcut-icon.ico', 'browser-icon.ico', 'browser-app-icon.ico', 'soulu-app-1.160.24.ico', 'soulu-app-1.160.29.ico', 'soulu-app-1.160.30.ico')
+PNG_ALIASES = ('sona-icon.png', 'sona-icon-new.png', 'browser-icon.png')
+ICO_ALIASES = ('sona-icon.ico', 'sona-app-icon.ico', 'sona-installer-icon.ico',
+               'sona-shortcut-icon.ico', 'browser-icon.ico', 'browser-app-icon.ico', 'sona-app-1.160.24.ico', 'sona-app-1.160.29.ico', 'sona-app-1.160.31.ico')
 
 def export(source):
     image = Image.open(source).convert('RGBA')
@@ -39,13 +39,13 @@ def export(source):
     destination = ROOT / 'ui' / 'branding'
     destination.mkdir(exist_ok=True)
     for size in (*SIZES, 512, 1024):
-        frame(size).save(destination / f'soulu-{size}.png')
+        frame(size).save(destination / f'sona-{size}.png')
     master = frame(1024)
     for alias in PNG_ALIASES:
         master.save(ROOT / 'ui' / alias)
     # Build explicit PNG-backed ICO entries so 20/24/40 are not dropped by a
     # library's default icon-size selection. Windows Vista+ supports these.
-    chunks = [(size, (destination / f'soulu-{size}.png').read_bytes()) for size in SIZES]
+    chunks = [(size, (destination / f'sona-{size}.png').read_bytes()) for size in SIZES]
     offset = 6 + 16 * len(chunks)
     entries = []
     for size, data in chunks:
@@ -54,9 +54,9 @@ def export(source):
     ico = struct.pack('<HHH', 0, 1, len(chunks)) + b''.join(entries) + b''.join(data for _, data in chunks)
     for alias in ICO_ALIASES:
         (ROOT / 'ui' / alias).write_bytes(ico)
-    manifest = {'revision': 20261113, 'source': 'ui/branding/soulu-master.svg',
-                'source_sha256': hashlib.sha256((ROOT / 'ui/branding/soulu-master.svg').read_text(encoding='utf-8').encode('utf-8')).hexdigest(),
-                'png_sha256': {str(size): hashlib.sha256((destination / f'soulu-{size}.png').read_bytes()).hexdigest() for size in (*SIZES, 512, 1024)},
+    manifest = {'revision': 20261113, 'source': 'ui/branding/sona-master.svg',
+                'source_sha256': hashlib.sha256((ROOT / 'ui/branding/sona-master.svg').read_text(encoding='utf-8').encode('utf-8')).hexdigest(),
+                'png_sha256': {str(size): hashlib.sha256((destination / f'sona-{size}.png').read_bytes()).hexdigest() for size in (*SIZES, 512, 1024)},
                 'sizes': list(SIZES), 'png_sizes': [*SIZES, 512, 1024],
                 'margin': '0px; full optical diameter at every resolution',
                 'ico_sha256': hashlib.sha256(ico).hexdigest(),

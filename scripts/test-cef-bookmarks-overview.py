@@ -38,7 +38,7 @@ def shell_socket():
     target=wait(lambda:next((t for t in s.targets() if '/ui/index.html' in t.get('url','')),None))
     return s.websocket.create_connection(target['webSocketDebuggerUrl'],timeout=30,origin=s.BASE)
 
-with tempfile.TemporaryDirectory(prefix='soulu-navigation-', ignore_cleanup_errors=True) as isolated:
+with tempfile.TemporaryDirectory(prefix='sona-navigation-', ignore_cleanup_errors=True) as isolated:
     os.environ['LOCALAPPDATA']=isolated
     home=http.server.ThreadingHTTPServer(('127.0.0.1',s.free_port()),s.SiteHandler)
     threading.Thread(target=home.serve_forever,daemon=True).start()
@@ -51,7 +51,7 @@ with tempfile.TemporaryDirectory(prefix='soulu-navigation-', ignore_cleanup_erro
               {'id':2,'type':'url','title':'Example','url':'https://example.com','parentId':1,'order':0},
               {'id':3,'type':'url','title':'Move me','url':'https://move.test','parentId':0,'order':1}]
         assert len(s.evaluate(shell,'window.browserShell.replaceBookmarks('+json.dumps(rows)+')'))==3
-        saved=Path(isolated)/'Soulu'/'User Data'/'bookmarks.json'
+        saved=Path(isolated)/'Sona'/'User Data'/'bookmarks.json'
         assert json.loads(saved.read_text(encoding='utf-8'))[1]['parentId']==1
         assert s.evaluate(shell,"window.browserShell.replaceBookmarks([{id:3,type:'folder',parentId:3}]).then(()=>false,()=>true)") is True
         assert len(s.evaluate(shell,'window.browserShell.getBookmarks()'))==3
@@ -88,7 +88,7 @@ with tempfile.TemporaryDirectory(prefix='soulu-navigation-', ignore_cleanup_erro
             s.command(shell,'Input.dispatchMouseEvent',{'type':'mousePressed','button':'left','clickCount':1,**point})
             s.command(shell,'Input.dispatchMouseEvent',{'type':'mouseReleased','button':'left','clickCount':1,**point})
         assert s.evaluate(shell,"!!document.querySelector('#bookmarkSettingsAction') && !document.querySelector('.bookmark-select-trigger')"), 'Bookmark preferences have one canonical Settings editor'
-        settings_file=Path(isolated)/'Soulu'/'User Data'/'Profiles'/'personal'/'soulu-settings.json'
+        settings_file=Path(isolated)/'Sona'/'User Data'/'Profiles'/'personal'/'sona-settings.json'
         assert json.loads(settings_file.read_text(encoding='utf-8'))['bookmarksBarMode']=='always'
         s.evaluate(shell,"document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))")
         positions=s.evaluate(shell,"(()=>{const p=id=>{const r=document.querySelector('.bookmarks-bar [data-bookmark-id=\"'+id+'\"]').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}};return {from:p(3),to:p(1)}})()")
@@ -136,7 +136,7 @@ with tempfile.TemporaryDirectory(prefix='soulu-navigation-', ignore_cleanup_erro
         assert mark['id'] not in s.evaluate(shell,'window.browserShell.getSettings()')['homeFavoriteIds']
         s.navigate(content,home_url+'/edited')
         wait(lambda:s.evaluate(shell,'window.browserShell.getState()')['page']['url']==home_url+'/edited')
-        s.evaluate(shell,'window.souluNavigation.openBookmarks(1)')
+        s.evaluate(shell,'window.sonaNavigation.openBookmarks(1)')
         s.evaluate(shell,star+'.click()')
         wait(lambda:s.evaluate(shell,"!!document.querySelector('#bookmarkFolder')"))
         assert s.evaluate(shell,"document.querySelector('#bookmarkFolder').value")=='0', 'Editing a root bookmark must not move it into the browsed folder'
@@ -189,7 +189,7 @@ with tempfile.TemporaryDirectory(prefix='soulu-navigation-', ignore_cleanup_erro
         user.GetAncestor.argtypes=[ctypes.c_void_p,ctypes.c_uint];user.GetAncestor.restype=ctypes.c_void_p
         def window_class(window):
             name=ctypes.create_unicode_buffer(128);user.GetClassNameW(window,name,128);return name.value
-        main_window=next(h for h in windows(process.pid) if window_class(h)=='SouluBrowserWindow')
+        main_window=next(h for h in windows(process.pid) if window_class(h)=='SonaBrowserWindow')
         foreground=user.GetForegroundWindow()
         current=ctypes.windll.kernel32.GetCurrentThreadId();attached=[]
         try:
@@ -224,10 +224,10 @@ with tempfile.TemporaryDirectory(prefix='soulu-navigation-', ignore_cleanup_erro
         imported.write_text(json.dumps({'roots':{'bookmark_bar':{'type':'folder','name':'Imported','children':[{'type':'url','name':'Site','url':'https://import.test'}]}}}),encoding='utf-8')
         s.evaluate(shell,"window.confirm=()=>true;window.alert=()=>{}")
         for _ in range(2):
-            s.evaluate(shell,"window.souluNavigation.openBookmarks()")
+            s.evaluate(shell,"window.sonaNavigation.openBookmarks()")
             wait(lambda:s.evaluate(shell,"!document.querySelector('.bookmarks-menu').hidden"))
             s.evaluate(shell,"[...document.querySelectorAll('.bookmark-actions button')].find(b=>b.textContent.startsWith('Импортировать')).click()")
-            assert s.evaluate(shell,"(async()=>{const input=document.querySelector('.bookmarks-menu input[type=file]');window.__souluEmit('state',await window.browserShell.getState());return input===document.querySelector('.bookmarks-menu input[type=file]')})()"), 'State update destroyed the active import input'
+            assert s.evaluate(shell,"(async()=>{const input=document.querySelector('.bookmarks-menu input[type=file]');window.__sonaEmit('state',await window.browserShell.getState());return input===document.querySelector('.bookmarks-menu input[type=file]')})()"), 'State update destroyed the active import input'
             doc=s.command(shell,'DOM.getDocument')
             node=s.command(shell,'DOM.querySelector',{'nodeId':doc['root']['nodeId'],'selector':'.bookmarks-menu input[type=file]'})
             s.command(shell,'DOM.setFileInputFiles',{'nodeId':node['nodeId'],'files':[str(imported)]})

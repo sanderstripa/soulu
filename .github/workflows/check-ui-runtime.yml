@@ -8,7 +8,7 @@ permissions:
   contents: read
   actions: read
 concurrency:
-  group: soulu-ui-candidate
+  group: sona-ui-candidate
   cancel-in-progress: true
 jobs:
   ui:
@@ -35,7 +35,7 @@ jobs:
             if ($run) {
               $list=gh api "repos/sanderstripa/soulu/actions/runs/$($run.id)/artifacts" | ConvertFrom-Json
               if ($LASTEXITCODE -ne 0) { throw 'Cannot read candidate artifacts' }
-              if (@($list.artifacts | Where-Object name -eq "Soulu-cef-candidate-$env:GITHUB_SHA").Count -gt 0) {
+              if (@($list.artifacts | Where-Object name -eq "Sona-cef-candidate-$env:GITHUB_SHA").Count -gt 0) {
                 "run=$($run.id)" >> $env:GITHUB_OUTPUT
                 $ready=$true
                 break
@@ -47,7 +47,7 @@ jobs:
           if (!$ready) { throw 'Matching native candidate was not produced' }
       - uses: actions/download-artifact@v4
         with:
-          name: Soulu-cef-candidate-${{ github.sha }}
+          name: Sona-cef-candidate-${{ github.sha }}
           run-id: ${{ steps.candidate.outputs.run }}
           github-token: ${{ github.token }}
           path: runtime
@@ -73,33 +73,33 @@ jobs:
           python -m pip install --disable-pip-version-check websocket-client pillow
       - name: Check internal controls
         shell: pwsh
-        run: python scripts/test-cef-next-ui.py "$env:GITHUB_WORKSPACE/runtime/Soulu.exe" artifacts/next-ui
+        run: python scripts/test-cef-next-ui.py "$env:GITHUB_WORKSPACE/runtime/Sona.exe" artifacts/next-ui
       - name: Check Reader Mode and styled font listbox
         if: ${{ !cancelled() }}
         shell: pwsh
-        run: python scripts/test-cef-site-reader.py "$env:GITHUB_WORKSPACE/runtime/Soulu.exe"
+        run: python scripts/test-cef-site-reader.py "$env:GITHUB_WORKSPACE/runtime/Sona.exe"
       - name: Check settings theme and toolbar state
         if: ${{ !cancelled() }}
         shell: pwsh
         run: |
-          $env:SOULU_UI_TEST_PORT='9223'
-          $env:SOULU_REGRESSION_SKIP_FIRST_RUN='1'
-          $env:LOCALAPPDATA=Join-Path $env:RUNNER_TEMP 'soulu-ui-theme'
+          $env:SONA_UI_TEST_PORT='9223'
+          $env:SONA_REGRESSION_SKIP_FIRST_RUN='1'
+          $env:LOCALAPPDATA=Join-Path $env:RUNNER_TEMP 'sona-ui-theme'
           New-Item -ItemType Directory -Force $env:LOCALAPPDATA | Out-Null
-          Get-Process Soulu -ErrorAction SilentlyContinue | Stop-Process -Force
-          $app=Start-Process "$env:GITHUB_WORKSPACE/runtime/Soulu.exe" -PassThru
-          $env:SOULU_TEST_PROCESS_ID=[string]$app.Id
+          Get-Process Sona -ErrorAction SilentlyContinue | Stop-Process -Force
+          $app=Start-Process "$env:GITHUB_WORKSPACE/runtime/Sona.exe" -PassThru
+          $env:SONA_TEST_PROCESS_ID=[string]$app.Id
           try {
             python scripts/test-cef-ui.py
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          } finally { Get-Process Soulu -ErrorAction SilentlyContinue | Stop-Process -Force }
+          } finally { Get-Process Sona -ErrorAction SilentlyContinue | Stop-Process -Force }
       - name: Check real YouTube integration
         if: ${{ !cancelled() }}
         shell: pwsh
-        run: python scripts/test-cef-video-translation.py "$env:GITHUB_WORKSPACE/runtime/Soulu.exe" artifacts/video
+        run: python scripts/test-cef-video-translation.py "$env:GITHUB_WORKSPACE/runtime/Sona.exe" artifacts/video
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: Soulu-ui-candidate-${{ github.sha }}
+          name: Sona-ui-candidate-${{ github.sha }}
           path: artifacts/
           if-no-files-found: warn

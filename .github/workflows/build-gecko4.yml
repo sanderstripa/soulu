@@ -1,11 +1,11 @@
-name: Soulu Gecko Preview 4
+name: Sona Gecko Preview 4
 on:
   workflow_dispatch:
 permissions:
   contents: write
   actions: read
 concurrency:
-  group: soulu-gecko-preview4
+  group: sona-gecko-preview4
   cancel-in-progress: true
 jobs:
   windows:
@@ -24,24 +24,24 @@ jobs:
         with:
           go-version: '1.27.0'
           cache: false
-      - name: Assemble pinned Gecko and original Soulu resources
+      - name: Assemble pinned Gecko and original Sona resources
         run: python gecko/build.py --platform win64 --output gecko-out
       - name: Reuse integrity-verified external VPN cores and licenses
         shell: pwsh
         run: |
-          gh release download gecko-preview-3 -p Soulu-Gecko-Preview-3-win64.zip -p SHA256SUMS.txt -D previous
+          gh release download gecko-preview-3 -p Sona-Gecko-Preview-3-win64.zip -p SHA256SUMS.txt -D previous
           $expected = ((Get-Content previous/SHA256SUMS.txt -Raw).Trim() -split '\s+')[0]
-          if ((Get-FileHash previous/Soulu-Gecko-Preview-3-win64.zip -Algorithm SHA256).Hash.ToLowerInvariant() -cne $expected) { throw 'Previous release checksum mismatch' }
-          Expand-Archive previous/Soulu-Gecko-Preview-3-win64.zip previous/expanded
-          Copy-Item previous/expanded/runtime/soulu/vpn gecko-out/runtime/soulu/vpn -Recurse
+          if ((Get-FileHash previous/Sona-Gecko-Preview-3-win64.zip -Algorithm SHA256).Hash.ToLowerInvariant() -cne $expected) { throw 'Previous release checksum mismatch' }
+          Expand-Archive previous/Sona-Gecko-Preview-3-win64.zip previous/expanded
+          Copy-Item previous/expanded/runtime/sona/vpn gecko-out/runtime/sona/vpn -Recurse
       - name: Build and test profile-isolated VPN helper with actual cores
         shell: pwsh
         run: |
-          $env:SOULU_VPN_FIXTURE_BIN = "$env:GITHUB_WORKSPACE/gecko-out/runtime/soulu/vpn"
+          $env:SONA_VPN_FIXTURE_BIN = "$env:GITHUB_WORKSPACE/gecko-out/runtime/sona/vpn"
           Push-Location vpn/helper
           go test ./... -count=1 -timeout 5m -v
           if ($LASTEXITCODE -ne 0) { throw 'VPN helper tests failed' }
-          go build -trimpath -ldflags '-s -w -H=windowsgui' -o ../../gecko-out/runtime/soulu/vpn/SouluVpnHost.exe .
+          go build -trimpath -ldflags '-s -w -H=windowsgui' -o ../../gecko-out/runtime/sona/vpn/SonaVpnHost.exe .
           if ($LASTEXITCODE -ne 0) { throw 'VPN helper compilation failed' }
           Pop-Location
       - name: Select CEF-compatible Rust toolchain
@@ -53,7 +53,7 @@ jobs:
         id: blocker-cache
         with:
           path: gecko-cache/adblock/target
-          key: gecko-blocker4-rust199-${{ hashFiles('cef/soulu/adblock/Cargo.lock', 'cef/soulu/adblock/src/lib.rs', 'gecko/adblock-adapter.rs') }}
+          key: gecko-blocker4-rust199-${{ hashFiles('cef/sona/adblock/Cargo.lock', 'cef/sona/adblock/src/lib.rs', 'gecko/adblock-adapter.rs') }}
           restore-keys: |
             gecko-blocker-rust199-
       - name: Build original Rust engine with isolated atomic-update adapter
@@ -62,16 +62,16 @@ jobs:
         if: always() && steps.blocker-cache.outputs.cache-hit != 'true'
         with:
           path: gecko-cache/adblock/target
-          key: gecko-blocker4-rust199-${{ hashFiles('cef/soulu/adblock/Cargo.lock', 'cef/soulu/adblock/src/lib.rs', 'gecko/adblock-adapter.rs') }}
+          key: gecko-blocker4-rust199-${{ hashFiles('cef/sona/adblock/Cargo.lock', 'cef/sona/adblock/src/lib.rs', 'gecko/adblock-adapter.rs') }}
       - name: Verify atomic filter replacement and corrupt-update recovery
-        run: python gecko/tests/adblock-update.py gecko-out/runtime/soulu/adblock/soulu_adblock.dll gecko-out/adblock-update.json
-      - name: Build launcher with original Soulu icon
+        run: python gecko/tests/adblock-update.py gecko-out/runtime/sona/adblock/sona_adblock.dll gecko-out/adblock-update.json
+      - name: Build launcher with original Sona icon
         shell: pwsh
         run: |
           Push-Location gecko/launcher
-          go run github.com/akavel/rsrc@v0.10.2 -arch amd64 -ico ../../ui/soulu-app-icon.ico -o rsrc.syso
+          go run github.com/akavel/rsrc@v0.10.2 -arch amd64 -ico ../../ui/sona-app-icon.ico -o rsrc.syso
           if ($LASTEXITCODE -ne 0) { throw 'Icon resource compilation failed' }
-          go build -trimpath -ldflags '-s -w -H=windowsgui' -o '../../gecko-out/Soulu Gecko Preview 4.exe' .
+          go build -trimpath -ldflags '-s -w -H=windowsgui' -o '../../gecko-out/Sona Gecko Preview 4.exe' .
           if ($LASTEXITCODE -ne 0) { throw 'Launcher compilation failed' }
           Pop-Location
       - name: Real Windows browser acceptance
@@ -94,10 +94,10 @@ jobs:
           Copy-Item gecko/docs gecko-out/docs -Recurse
           New-Item -ItemType Directory -Force gecko-out/visual-evidence | Out-Null
           Copy-Item gecko4-acceptance/*.png gecko-out/visual-evidence/
-          Compress-Archive -Path gecko-out/* -DestinationPath Soulu-Gecko-Preview-4-win64.zip -CompressionLevel Optimal
-          python gecko/tests/zip_smoke.py Soulu-Gecko-Preview-4-win64.zip gecko4-acceptance
+          Compress-Archive -Path gecko-out/* -DestinationPath Sona-Gecko-Preview-4-win64.zip -CompressionLevel Optimal
+          python gecko/tests/zip_smoke.py Sona-Gecko-Preview-4-win64.zip gecko4-acceptance
           if ($LASTEXITCODE -ne 0) { throw 'Extracted ZIP launch failed' }
-          (Get-FileHash Soulu-Gecko-Preview-4-win64.zip -Algorithm SHA256).Hash.ToLowerInvariant() + '  Soulu-Gecko-Preview-4-win64.zip' | Set-Content SHA256SUMS.txt
+          (Get-FileHash Sona-Gecko-Preview-4-win64.zip -Algorithm SHA256).Hash.ToLowerInvariant() + '  Sona-Gecko-Preview-4-win64.zip' | Set-Content SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -105,7 +105,7 @@ jobs:
           path: gecko4-acceptance/
       - uses: actions/upload-artifact@v4
         with:
-          name: Soulu-Gecko-Preview-4-win64
+          name: Sona-Gecko-Preview-4-win64
           path: |
-            Soulu-Gecko-Preview-4-win64.zip
+            Sona-Gecko-Preview-4-win64.zip
             SHA256SUMS.txt

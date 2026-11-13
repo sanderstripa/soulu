@@ -1,6 +1,6 @@
 //go:build windows
 
-package soulu
+package sona
 
 import (
  "archive/zip"

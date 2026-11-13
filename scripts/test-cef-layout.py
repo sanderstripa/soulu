@@ -82,7 +82,7 @@ def own_window():
         u.GetWindowThreadProcessId(hwnd, C.byref(pid))
         name = C.create_unicode_buffer(128)
         u.GetClassNameW(hwnd, name, len(name))
-        if pid.value == process.pid and name.value == 'SouluBrowserWindow':
+        if pid.value == process.pid and name.value == 'SonaBrowserWindow':
             result.append(hwnd)
         return True
     u.EnumWindows(visit, 0)
@@ -141,7 +141,7 @@ def check(label, sidebar=False, screenshot=False):
         width, height = client(window)
         scale = u.GetDpiForWindow(window) / 96
         ch = children()
-        toolbar = child_rect(ch['SouluAlphaToolbar'])
+        toolbar = child_rect(ch['SonaAlphaToolbar'])
         # Alloy embeds a CefBrowserWindow; Chrome runtime used WidgetWin_1.
         # Measure the actual content host in either runtime, retaining the
         # same bounds, viewport and live modal-loop assertions below.
@@ -192,7 +192,7 @@ def resize(width, height):
 def modal_drag(label, dx, dy, delay):
     resize(850, 580)
     check(label + '-before')
-    if os.environ.get('SOULU_LAYOUT_SKIP_MODAL') == '1':
+    if os.environ.get('SONA_LAYOUT_SKIP_MODAL') == '1':
         # Optional local evidence collection without taking over the desktop's
         # native sizing loop. These samples do not count as modal-loop tests.
         for step in range(1, 9):
@@ -231,12 +231,12 @@ with socket.socket() as s:
     port = s.getsockname()[1]
 base = f'http://127.0.0.1:{port}'
 window = None
-with tempfile.TemporaryDirectory(prefix='soulu-layout-', ignore_cleanup_errors=True) as profile:
+with tempfile.TemporaryDirectory(prefix='sona-layout-', ignore_cleanup_errors=True) as profile:
     # This suite exercises ordinary browsing; seed an existing install fixture.
-    baseline=Path(profile)/'Soulu'/'User Data'
+    baseline=Path(profile)/'Sona'/'User Data'
     baseline.mkdir(parents=True)
     (baseline/'settings.json').write_text('{}')
-    env = dict(os.environ, LOCALAPPDATA=profile, SOULU_UI_TEST_PORT=str(port))
+    env = dict(os.environ, LOCALAPPDATA=profile, SONA_UI_TEST_PORT=str(port))
     process = subprocess.Popen([str(Path(sys.argv[1]).resolve())], env=env)
     try:
         shell = connect('/ui/index.html')
@@ -363,7 +363,7 @@ with tempfile.TemporaryDirectory(prefix='soulu-layout-', ignore_cleanup_errors=T
         diagnostics = evaluate(shell, 'new Promise((resolve,reject)=>cefQuery({request:JSON.stringify({action:"browser.surfaceDiagnostics"}),onSuccess:r=>resolve(JSON.parse(r)),onFailure:(_,m)=>reject(m)}))')
         assert diagnostics['paintError'] == 0, diagnostics
         (out / 'report.json').write_text(json.dumps({'checks': checks, 'diagnostics': diagnostics,
-            'nativeSizingLoopTested': os.environ.get('SOULU_LAYOUT_SKIP_MODAL') != '1',
+            'nativeSizingLoopTested': os.environ.get('SONA_LAYOUT_SKIP_MODAL') != '1',
             'visualReviewRequired': True}, indent=2), encoding='utf-8')
     finally:
         (out / 'checks.json').write_text(json.dumps(checks, indent=2), encoding='utf-8')

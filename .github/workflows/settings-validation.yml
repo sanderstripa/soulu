@@ -10,7 +10,7 @@ permissions:
   actions: write
 
 concurrency:
-  group: soulu-settings-validation
+  group: sona-settings-validation
   cancel-in-progress: true
 
 jobs:
@@ -20,11 +20,11 @@ jobs:
     env:
       BETA_VERSION: 1.0.60-beta
       BETA_NUMBER: 58
-      SOULU_REGRESSION_SKIP_FIRST_RUN: 1
+      SONA_REGRESSION_SKIP_FIRST_RUN: 1
       PYTHONUTF8: 1
       PYTHONDONTWRITEBYTECODE: 1
     steps:
-      - name: Checkout Soulu
+      - name: Checkout Sona
         uses: actions/checkout@v4
         with:
           path: browser
@@ -66,7 +66,7 @@ jobs:
           $pattern = 'set\(CEF_VERSION "[^"]+"\)'
           if ([regex]::Matches($cmake, $pattern).Count -ne 1) { throw 'CEF project version declaration changed' }
           $cmake = [regex]::Replace($cmake, $pattern, ('set(CEF_VERSION "' + $version + '")'))
-          # Soulu needs the wrapper and examples, not upstream CEF test applications.
+          # Sona needs the wrapper and examples, not upstream CEF test applications.
           # The project snapshot's test targets are incompatible with this distribution.
           foreach ($target in @('cefclient', 'cefsimple', 'gtest', 'ceftests')) {
             $line = 'add_subdirectory(${CEF_ROOT}/tests/' + $target + ')'
@@ -105,15 +105,15 @@ jobs:
           python browser/scripts/prepare-home-speech.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: Add Soulu target and assets
+      - name: Add Sona target and assets
         shell: pwsh
         run: |
-          Copy-Item -Recurse -Force browser/cef/soulu cef-project/examples/soulu
-          New-Item -ItemType Directory -Force cef-project/examples/soulu/assets/ui | Out-Null
-          New-Item -ItemType Directory -Force cef-project/examples/soulu/assets/vpn | Out-Null
-          Copy-Item -Recurse -Force browser/ui/* cef-project/examples/soulu/assets/ui/
-          Copy-Item -Recurse -Force browser/vpn/* cef-project/examples/soulu/assets/vpn/
-          Add-Content cef-project/examples/CMakeLists.txt "`nadd_subdirectory(soulu)`n"
+          Copy-Item -Recurse -Force browser/cef/sona cef-project/examples/sona
+          New-Item -ItemType Directory -Force cef-project/examples/sona/assets/ui | Out-Null
+          New-Item -ItemType Directory -Force cef-project/examples/sona/assets/vpn | Out-Null
+          Copy-Item -Recurse -Force browser/ui/* cef-project/examples/sona/assets/ui/
+          Copy-Item -Recurse -Force browser/vpn/* cef-project/examples/sona/assets/vpn/
+          Add-Content cef-project/examples/CMakeLists.txt "`nadd_subdirectory(sona)`n"
 
       - name: Use CEF-compatible Python
         uses: actions/setup-python@v5
@@ -133,9 +133,9 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: |
-            browser/cef/soulu/adblock/target
-            cef-build/examples/soulu/adblock
-          key: adblock-windows-rust-1.99-${{ hashFiles('browser/cef/soulu/adblock/Cargo.lock', 'browser/cef/soulu/adblock/src/**') }}
+            browser/cef/sona/adblock/target
+            cef-build/examples/sona/adblock
+          key: adblock-windows-rust-1.99-${{ hashFiles('browser/cef/sona/adblock/Cargo.lock', 'browser/cef/sona/adblock/src/**') }}
           restore-keys: adblock-windows-rust-1.99-
 
       - name: Compile and test the pinned AdBlock engine
@@ -143,7 +143,7 @@ jobs:
         run: |
           rustup toolchain install 1.99.0 --profile minimal
           rustup default 1.99.0
-          cargo test --locked --manifest-path browser/cef/soulu/adblock/Cargo.toml
+          cargo test --locked --manifest-path browser/cef/sona/adblock/Cargo.toml
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Configure CEF
@@ -163,13 +163,13 @@ jobs:
           if (@($distribution).Count -ne 1) { throw 'Mixed CEF distributions' }
           Get-ChildItem $distribution.FullName -Recurse -File | Select-Object FullName, Length | ConvertTo-Json | Set-Content cef-distribution-files.json
 
-      - name: Build Soulu
+      - name: Build Sona
         id: native_build
         shell: pwsh
         run: |
-          cmake --build cef-build --config Release --target soulu --parallel 2
+          cmake --build cef-build --config Release --target sona --parallel 2
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          $exe = Get-ChildItem cef-build -Recurse -Filter Soulu.exe | Where-Object { $_.FullName -match "Release" } | Select-Object -First 1
+          $exe = Get-ChildItem cef-build -Recurse -Filter Sona.exe | Where-Object { $_.FullName -match "Release" } | Select-Object -First 1
           "build_dir=$($exe.Directory.FullName)" >> $env:GITHUB_ENV
 
       - name: Save compiled Rust dependencies
@@ -177,8 +177,8 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: |
-            browser/cef/soulu/adblock/target
-            cef-build/examples/soulu/adblock
+            browser/cef/sona/adblock/target
+            cef-build/examples/sona/adblock
           key: ${{ steps.rust_cache.outputs.cache-primary-key }}
 
       - name: Verify loaded engine and every CEF runtime component
@@ -192,9 +192,9 @@ jobs:
         if: ${{ always() && steps.native_build.outcome == 'success' }}
         uses: actions/upload-artifact@v4
         with:
-          name: Soulu-cef-candidate-${{ github.sha }}
+          name: Sona-cef-candidate-${{ github.sha }}
           path: |
-            ${{ env.build_dir }}/Soulu.exe
+            ${{ env.build_dir }}/Sona.exe
             ${{ env.build_dir }}/engine-version.json
             ${{ env.build_dir }}/cef-runtime-manifest.json
             ${{ env.build_dir }}/ui/
@@ -205,9 +205,9 @@ jobs:
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client pillow
-          $env:SOULU_UI_TEST_PORT = '9223'
+          $env:SONA_UI_TEST_PORT = '9223'
           foreach ($suite in @('settings','settings-overlay','motion','toolbar','typography')) {
-            python "browser/scripts/test-cef-$suite.py" "$env:build_dir/Soulu.exe" "browser/artifacts/$suite-evidence.json"
+            python "browser/scripts/test-cef-$suite.py" "$env:build_dir/Sona.exe" "browser/artifacts/$suite-evidence.json"
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
 
@@ -215,6 +215,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Soulu-settings-evidence-${{ github.sha }}
+          name: Sona-settings-evidence-${{ github.sha }}
           path: browser/artifacts/
           if-no-files-found: ignore

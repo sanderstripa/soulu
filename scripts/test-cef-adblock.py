@@ -40,10 +40,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
         elif path.endswith('.gif'):
             body=base64.b64decode('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');kind='image/gif'
         elif path=='/inner':
-            body=b'<div class="soulu-ad-slot">Inner advertisement</div><p id="article">Inner content</p>';kind='text/html'
+            body=b'<div class="sona-ad-slot">Inner advertisement</div><p id="article">Inner content</p>';kind='text/html'
         else:
             body=f'''<!doctype html><meta charset="utf-8"><title>AdBlock controlled</title>
-              <div class="soulu-ad-slot">Advertisement</div><div class="soulu-except">Excepted</div>
+              <div class="sona-ad-slot">Advertisement</div><div class="sona-except">Excepted</div>
               <p id="article">Legitimate content</p><script src="/normal.js"></script>
               <script src="http://ads.fixture.test:{port}/advert.js"></script>
               <script src="http://ads.fixture.test:{port}/allow.js"></script>
@@ -65,17 +65,17 @@ class Handler(http.server.BaseHTTPRequestHandler):
 evidence={}
 exe=str(Path(sys.argv[1]).resolve())
 out=Path(sys.argv[2]);out.parent.mkdir(parents=True,exist_ok=True)
-with tempfile.TemporaryDirectory(prefix='soulu-adblock-',ignore_cleanup_errors=True) as root:
+with tempfile.TemporaryDirectory(prefix='sona-adblock-',ignore_cleanup_errors=True) as root:
     rules=Path(root)/'fixture.txt'
     rules.write_text('''||ads.fixture.test^$script,image,subdocument,xmlhttprequest
 @@||ads.fixture.test^*allow.js$script
-##.soulu-ad-slot
-##.soulu-except
-site-a.test#@#.soulu-except
+##.sona-ad-slot
+##.sona-except
+site-a.test#@#.sona-except
 ''',encoding='utf-8')
-    env=dict(os.environ,LOCALAPPDATA=root,SOULU_UI_TEST_PORT=str(s.DEBUG_PORT),
-        SOULU_ADBLOCK_TEST_RULES=str(rules),SOULU_ADBLOCK_NO_UPDATE='1',SOULU_REGRESSION_SKIP_FIRST_RUN='1')
-    os.environ['SOULU_REGRESSION_SKIP_FIRST_RUN']='1'
+    env=dict(os.environ,LOCALAPPDATA=root,SONA_UI_TEST_PORT=str(s.DEBUG_PORT),
+        SONA_ADBLOCK_TEST_RULES=str(rules),SONA_ADBLOCK_NO_UPDATE='1',SONA_REGRESSION_SKIP_FIRST_RUN='1')
+    os.environ['SONA_REGRESSION_SKIP_FIRST_RUN']='1'
     server=http.server.ThreadingHTTPServer(('127.0.0.1',s.free_port()),Handler)
     threading.Thread(target=server.serve_forever,daemon=True).start()
     a=f'http://site-a.test:{server.server_port}';b=f'http://site-b.test:{server.server_port}'
@@ -110,7 +110,7 @@ site-a.test#@#.soulu-except
     try:
         start();blocking('',0);visit(page,a+'/off')
         assert s.evaluate(page,'window.fixtureLoads===5'),'OFF baseline did not load all scripts'
-        assert visible(page,'.soulu-ad-slot') and fetch_ad(page)
+        assert visible(page,'.sona-ad-slot') and fetch_ad(page)
         with lock:off=list(requests)
         blocking('',1);visit(page,a+'/on')
         loads=s.evaluate(page,'window.fixtureLoads');evidence['initial_on_loads']=loads
@@ -119,7 +119,7 @@ site-a.test#@#.soulu-except
         assert loads==2,f'normal/exception scripts or cancellation incorrect: {loads}'
         assert s.evaluate(page,"document.querySelector('#normal-image').naturalWidth===1&&document.querySelector('#ad-image').naturalWidth===0")
         assert not fetch_ad(page),'XHR/fetch bypassed request filtering'
-        wait(lambda:not visible(page,'.soulu-ad-slot'));assert visible(page,'.soulu-except')
+        wait(lambda:not visible(page,'.sona-ad-slot'));assert visible(page,'.sona-except')
         with lock:on=list(requests)
         blocked_paths={'/advert.js','/advert.gif','/advert-frame','/baseline.js','/redirect-ad.js','/fetch-ad.js'}
         assert not any(urlsplit(r['path']).path in blocked_paths for r in on),'Blocked bytes reached the fixture server'
@@ -127,11 +127,11 @@ site-a.test#@#.soulu-except
         assert any('ad.doubleclick.net' in h['url'] for h in snapshot['hits']),'Official EasyList baseline did not hit'
         evidence['controlled']={'offServerRequests':off,'onServerRequests':on,'runtime':snapshot,
             'script':True,'image':True,'iframe':True,'xhr_fetch':True,'redirect':True,'exception':True,'cosmetic':True}
-        s.evaluate(page,"history.pushState({},'', '/spa');const n=document.createElement('div');n.className='soulu-ad-slot';n.id='dynamic-ad';document.body.append(n)")
+        s.evaluate(page,"history.pushState({},'', '/spa');const n=document.createElement('div');n.className='sona-ad-slot';n.id='dynamic-ad';document.body.append(n)")
         wait(lambda:not visible(page,'#dynamic-ad'));evidence['spa_dynamic_cosmetic']=True
-        visit(page,a+'/csp');wait(lambda:not visible(page,'.soulu-ad-slot'));evidence['strict_csp_cosmetic']=True
+        visit(page,a+'/csp');wait(lambda:not visible(page,'.sona-ad-slot'));evidence['strict_csp_cosmetic']=True
         # A runtime change must remove active cosmetic CSS without restarting.
-        blocking('',0);wait(lambda:visible(page,'.soulu-ad-slot'));assert fetch_ad(page)
+        blocking('',0);wait(lambda:visible(page,'.sona-ad-slot'));assert fetch_ad(page)
         blocking('',1);blocking('site-a.test',0);visit(page,a+'/allow');assert fetch_ad(page)
         visit(page,b+'/block');assert not fetch_ad(page)
         evidence['global_without_restart']=True;evidence['per_site']=True
@@ -141,7 +141,7 @@ site-a.test#@#.soulu-except
         invoke('switchProfile','personal');page=active_page(b+'/profile-a-initial');visit(page,b+'/profile-a');assert not fetch_ad(page)
         invoke('newIncognito');private=active_page(b+'/private-initial');visit(private,b+'/private');assert not fetch_ad(private)
         blocking('site-b.test',0);visit(private,b+'/private-allow');assert fetch_ad(private)
-        permanent=Path(root)/'Soulu'/'User Data'/'Profiles'/'personal'/'soulu-site-rules.json'
+        permanent=Path(root)/'Sona'/'User Data'/'Profiles'/'personal'/'sona-site-rules.json'
         assert 'site-b.test' not in json.loads(permanent.read_text(encoding='utf-8'))['blocking']['sites']
         evidence['profile_isolation']=True;evidence['incognito_no_permanent_leak']=True
         stop();start();invoke('switchProfile','personal');page=active_page(b+'/restored-initial')
@@ -149,7 +149,7 @@ site-a.test#@#.soulu-except
         visit(page,b+'/restart-b');assert not fetch_ad(page)
         evidence['restart']=True
         # Simulate a corrupt persisted update; no network update can rescue this run.
-        stop();cache=Path(root)/'Soulu'/'User Data'/'AdBlock'/'filters-v1.json';cache.parent.mkdir(parents=True,exist_ok=True)
+        stop();cache=Path(root)/'Sona'/'User Data'/'AdBlock'/'filters-v1.json';cache.parent.mkdir(parents=True,exist_ok=True)
         cache.write_text('<html>broken cache</html>',encoding='utf-8');start();invoke('switchProfile','personal');page=active_page(b+'/restored-initial')
         visit(page,b+'/corrupt-offline');status=actual_snapshot()
         assert status['ready'] and status['source']=='bundled' and status['lastUpdateError']

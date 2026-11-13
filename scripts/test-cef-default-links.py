@@ -12,7 +12,7 @@ import time
 
 spec=importlib.util.spec_from_file_location('storage',Path(__file__).with_name('test-cef-storage.py'))
 s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
-os.environ.pop('SOULU_REGRESSION_SKIP_FIRST_RUN',None)
+os.environ.pop('SONA_REGRESSION_SKIP_FIRST_RUN',None)
 os.environ['NO_PROXY']='localhost,127.0.0.1,::1'
 checks=[]
 def wait(fn):
@@ -27,7 +27,7 @@ def check(value,label):
     checks.append(label);print('PASS:',label,flush=True)
 class Site(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
-        body=b'<title>Soulu external-link fixture</title>'
+        body=b'<title>Sona external-link fixture</title>'
         self.send_response(200);self.send_header('Content-Length',str(len(body)));self.end_headers()
         try:self.wfile.write(body)
         except (BrokenPipeError,ConnectionResetError):pass
@@ -35,8 +35,8 @@ class Site(http.server.BaseHTTPRequestHandler):
 def main():
     exe=str(Path(sys.argv[1]).resolve());server=http.server.ThreadingHTTPServer(('127.0.0.1',s.free_port()),Site)
     threading.Thread(target=server.serve_forever,daemon=True).start();origin=f'http://127.0.0.1:{server.server_port}'
-    with tempfile.TemporaryDirectory(prefix='soulu-default-links-',ignore_cleanup_errors=True) as root:
-        env=dict(os.environ,LOCALAPPDATA=root,APPDATA=root,SOULU_UI_TEST_PORT=str(s.DEBUG_PORT))
+    with tempfile.TemporaryDirectory(prefix='sona-default-links-',ignore_cleanup_errors=True) as root:
+        env=dict(os.environ,LOCALAPPDATA=root,APPDATA=root,SONA_UI_TEST_PORT=str(s.DEBUG_PORT))
         process=subprocess.Popen([exe,origin+'/initial'],env=env);sockets=[]
         def socket(fragment):
             target=wait(lambda:next((t for t in s.targets() if fragment in t.get('url','')),None))

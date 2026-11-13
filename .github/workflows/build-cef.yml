@@ -1,4 +1,4 @@
-name: Build Soulu Beta
+name: Build Sona Beta
 
 on:
   workflow_dispatch:
@@ -35,7 +35,7 @@ permissions:
 
 # Only fresh source builds can package or publish.
 concurrency:
-  group: ${{ github.ref == 'refs/heads/codex/chrome-extensions-settings' && 'soulu-extensions-ci' || github.ref == 'refs/heads/codex/adaptive-toolbar' && 'soulu-adaptive-ci' || github.ref == 'refs/heads/codex/classic-responsive-implementation' && 'soulu-classic-responsive-ci' || 'soulu-cef-main' }}
+  group: ${{ github.ref == 'refs/heads/codex/chrome-extensions-settings' && 'sona-extensions-ci' || github.ref == 'refs/heads/codex/adaptive-toolbar' && 'sona-adaptive-ci' || github.ref == 'refs/heads/codex/classic-responsive-implementation' && 'sona-classic-responsive-ci' || 'sona-cef-main' }}
   cancel-in-progress: true
 
 jobs:
@@ -48,13 +48,13 @@ jobs:
       # This explicit source marker records the owner's requested 1.0.76 release.
       # Ordinary main pushes continue to build without publishing.
       AUTOMATED_RELEASE: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[release 1.0.76]') }}
-      SOULU_TEST_STORE_INSTALL: 1
-      SOULU_REGRESSION_SKIP_FIRST_RUN: 1
-      SOULU_TEST_DEFAULT_APPS: 1
+      SONA_TEST_STORE_INSTALL: 1
+      SONA_REGRESSION_SKIP_FIRST_RUN: 1
+      SONA_TEST_DEFAULT_APPS: 1
       PYTHONUTF8: 1
       PYTHONDONTWRITEBYTECODE: 1
     steps:
-      - name: Checkout Soulu
+      - name: Checkout Sona
         uses: actions/checkout@v4
         with:
           path: browser
@@ -105,7 +105,7 @@ jobs:
           $pattern = 'set\(CEF_VERSION "[^"]+"\)'
           if ([regex]::Matches($cmake, $pattern).Count -ne 1) { throw 'CEF project version declaration changed' }
           $cmake = [regex]::Replace($cmake, $pattern, ('set(CEF_VERSION "' + $version + '")'))
-          # Soulu needs the wrapper and examples, not upstream CEF test applications.
+          # Sona needs the wrapper and examples, not upstream CEF test applications.
           # The project snapshot's test targets are incompatible with this distribution.
           foreach ($target in @('cefclient', 'cefsimple', 'gtest', 'ceftests')) {
             $line = 'add_subdirectory(${CEF_ROOT}/tests/' + $target + ')'
@@ -146,20 +146,20 @@ jobs:
           python browser/scripts/prepare-home-speech.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: Add Soulu target and assets
+      - name: Add Sona target and assets
         shell: pwsh
         run: |
-          Copy-Item -Recurse -Force browser/cef/soulu cef-project/examples/soulu
-          New-Item -ItemType Directory -Force cef-project/examples/soulu/assets/ui | Out-Null
-          New-Item -ItemType Directory -Force cef-project/examples/soulu/assets/vpn | Out-Null
-          Copy-Item -Recurse -Force browser/ui/* cef-project/examples/soulu/assets/ui/
-          Copy-Item -Recurse -Force browser/vpn/* cef-project/examples/soulu/assets/vpn/
-          Add-Content cef-project/examples/CMakeLists.txt "`nadd_subdirectory(soulu)`n"
+          Copy-Item -Recurse -Force browser/cef/sona cef-project/examples/sona
+          New-Item -ItemType Directory -Force cef-project/examples/sona/assets/ui | Out-Null
+          New-Item -ItemType Directory -Force cef-project/examples/sona/assets/vpn | Out-Null
+          Copy-Item -Recurse -Force browser/ui/* cef-project/examples/sona/assets/ui/
+          Copy-Item -Recurse -Force browser/vpn/* cef-project/examples/sona/assets/vpn/
+          Add-Content cef-project/examples/CMakeLists.txt "`nadd_subdirectory(sona)`n"
 
       - name: Build verified Xray and Sudoku components and VPN helper
         shell: pwsh
         run: |
-          ./browser/scripts/prepare-vpn-components.ps1 -Destination "$env:GITHUB_WORKSPACE/cef-project/examples/soulu/assets/vpn/native-host"
+          ./browser/scripts/prepare-vpn-components.ps1 -Destination "$env:GITHUB_WORKSPACE/cef-project/examples/sona/assets/vpn/native-host"
 
       - name: Use CEF-compatible Python
         uses: actions/setup-python@v5
@@ -179,9 +179,9 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: |
-            browser/cef/soulu/adblock/target
-            cef-build/examples/soulu/adblock
-          key: adblock-windows-rust-1.99-${{ hashFiles('browser/cef/soulu/adblock/Cargo.lock', 'browser/cef/soulu/adblock/src/**') }}
+            browser/cef/sona/adblock/target
+            cef-build/examples/sona/adblock
+          key: adblock-windows-rust-1.99-${{ hashFiles('browser/cef/sona/adblock/Cargo.lock', 'browser/cef/sona/adblock/src/**') }}
           restore-keys: adblock-windows-rust-1.99-
 
       - name: Compile and test the pinned AdBlock engine
@@ -190,7 +190,7 @@ jobs:
           rustup toolchain install 1.99.0 --profile minimal
           rustup default 1.99.0
           if ($env:AUTOMATED_RELEASE -ne 'true') {
-            cargo test --locked --manifest-path browser/cef/soulu/adblock/Cargo.toml
+            cargo test --locked --manifest-path browser/cef/sona/adblock/Cargo.toml
           }
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
@@ -211,13 +211,13 @@ jobs:
           if (@($distribution).Count -ne 1) { throw 'Mixed CEF distributions' }
           Get-ChildItem $distribution.FullName -Recurse -File | Select-Object FullName, Length | ConvertTo-Json | Set-Content cef-distribution-files.json
 
-      - name: Build Soulu
+      - name: Build Sona
         id: native_build
         shell: pwsh
         run: |
-          cmake --build cef-build --config Release --target soulu --parallel 2
+          cmake --build cef-build --config Release --target sona --parallel 2
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          $exe = Get-ChildItem cef-build -Recurse -Filter Soulu.exe | Where-Object { $_.FullName -match "Release" } | Select-Object -First 1
+          $exe = Get-ChildItem cef-build -Recurse -Filter Sona.exe | Where-Object { $_.FullName -match "Release" } | Select-Object -First 1
           "build_dir=$($exe.Directory.FullName)" >> $env:GITHUB_ENV
 
       - name: Save compiled Rust dependencies
@@ -225,8 +225,8 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: |
-            browser/cef/soulu/adblock/target
-            cef-build/examples/soulu/adblock
+            browser/cef/sona/adblock/target
+            cef-build/examples/sona/adblock
           key: ${{ steps.rust_cache.outputs.cache-primary-key }}
 
       - name: Verify loaded engine and every CEF runtime component
@@ -240,9 +240,9 @@ jobs:
         if: ${{ always() && steps.native_build.outcome == 'success' }}
         uses: actions/upload-artifact@v4
         with:
-          name: Soulu-cef-candidate-${{ github.sha }}
+          name: Sona-cef-candidate-${{ github.sha }}
           path: |
-            ${{ env.build_dir }}/Soulu.exe
+            ${{ env.build_dir }}/Sona.exe
             ${{ env.build_dir }}/engine-version.json
             ${{ env.build_dir }}/cef-runtime-manifest.json
             ${{ env.build_dir }}/ui/
@@ -253,8 +253,8 @@ jobs:
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client pillow pywinauto
-          $exe = Get-ChildItem cef-build -Recurse -Filter Soulu.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
-          if ($env:AUTOMATED_RELEASE -eq 'true') { $env:SOULU_UI_HOTFIX='1' }
+          $exe = Get-ChildItem cef-build -Recurse -Filter Sona.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
+          if ($env:AUTOMATED_RELEASE -eq 'true') { $env:SONA_UI_HOTFIX='1' }
           python browser/scripts/test-cef-extensions.py $exe.FullName browser/artifacts/extensions-evidence.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
@@ -263,14 +263,14 @@ jobs:
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client pillow
-          python browser/scripts/test-cef-ui-hotfix.py "$env:build_dir/Soulu.exe" browser/artifacts/ui-hotfix
+          python browser/scripts/test-cef-ui-hotfix.py "$env:build_dir/Sona.exe" browser/artifacts/ui-hotfix
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Verify extension popup worker autofill persistence and profile isolation
         if: ${{ env.AUTOMATED_RELEASE != 'true' }}
         shell: pwsh
         run: |
-          $exe = Get-ChildItem cef-build -Recurse -Filter Soulu.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
+          $exe = Get-ChildItem cef-build -Recurse -Filter Sona.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
           python browser/scripts/test-cef-extension-actions.py $exe.FullName browser/artifacts/extension-actions/evidence.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
@@ -280,21 +280,21 @@ jobs:
         run: |
           node browser/scripts/test-video-runtime.cjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          $testRoot = Join-Path $env:RUNNER_TEMP 'soulu-component-fixtures'
+          $testRoot = Join-Path $env:RUNNER_TEMP 'sona-component-fixtures'
           New-Item -ItemType Directory -Force $testRoot | Out-Null
           $oldLocal = $env:LOCALAPPDATA
           $env:LOCALAPPDATA = $testRoot
-          $env:SOULU_DATA_SECURITY_TEST_ROOT = $testRoot
-          $env:SOULU_UI_TEST_PORT = '19378'
+          $env:SONA_DATA_SECURITY_TEST_ROOT = $testRoot
+          $env:SONA_UI_TEST_PORT = '19378'
           $report = Join-Path $testRoot 'component-evidence.json'
           try {
-            $process = Start-Process -FilePath "$env:build_dir/Soulu.exe" -ArgumentList "--component-test-report=$report" -Wait -PassThru
+            $process = Start-Process -FilePath "$env:build_dir/Sona.exe" -ArgumentList "--component-test-report=$report" -Wait -PassThru
             if ($process.ExitCode -ne 0) { Get-Content $report; throw 'Native component fixtures failed' }
             Copy-Item $report browser/artifacts/component-evidence.json
           } finally {
             $env:LOCALAPPDATA = $oldLocal
-            Remove-Item Env:SOULU_DATA_SECURITY_TEST_ROOT -ErrorAction SilentlyContinue
-            Remove-Item Env:SOULU_UI_TEST_PORT -ErrorAction SilentlyContinue
+            Remove-Item Env:SONA_DATA_SECURITY_TEST_ROOT -ErrorAction SilentlyContinue
+            Remove-Item Env:SONA_UI_TEST_PORT -ErrorAction SilentlyContinue
           }
 
       - name: Verify native internal controls
@@ -302,21 +302,21 @@ jobs:
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client pillow
-          python browser/scripts/test-cef-next-ui.py "$env:build_dir/Soulu.exe" browser/artifacts/next-ui
+          python browser/scripts/test-cef-next-ui.py "$env:build_dir/Sona.exe" browser/artifacts/next-ui
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Verify reported UI regressions and real background lifecycle controls
         if: ${{ env.AUTOMATED_RELEASE != 'true' }}
         shell: pwsh
         run: |
-          python browser/scripts/test-cef-polish-performance.py "$env:build_dir/Soulu.exe" browser/artifacts/polish-performance
+          python browser/scripts/test-cef-polish-performance.py "$env:build_dir/Sona.exe" browser/artifacts/polish-performance
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Verify daily-use fixes in the native browser
         if: ${{ env.AUTOMATED_RELEASE != 'true' }}
         shell: pwsh
         run: |
-          python browser/scripts/test-cef-daily-use.py "$env:build_dir/Soulu.exe" browser/artifacts/daily-use
+          python browser/scripts/test-cef-daily-use.py "$env:build_dir/Sona.exe" browser/artifacts/daily-use
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test Browser Import adapters and native bridge on isolated profiles
@@ -324,7 +324,7 @@ jobs:
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client pillow comtypes pywinauto
-          $exe = Get-ChildItem cef-build -Recurse -Filter Soulu.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
+          $exe = Get-ChildItem cef-build -Recurse -Filter Sona.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
           python browser/scripts/test-browser-import-native.py $exe.FullName browser/artifacts/browser-import-native.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python browser/scripts/test-cef-browser-import.py $exe.FullName browser/artifacts/browser-import-integration.json
@@ -337,7 +337,7 @@ jobs:
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client pillow
-          python browser/scripts/test-cef-video-translation.py "$env:build_dir/Soulu.exe" browser/artifacts/video-translation
+          python browser/scripts/test-cef-video-translation.py "$env:build_dir/Sona.exe" browser/artifacts/video-translation
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test live CEF settings and toolbar on Windows
@@ -348,17 +348,17 @@ jobs:
           $personalize='HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize'
           New-Item $personalize -Force | Out-Null
           Set-ItemProperty $personalize EnableTransparency 1 -Type DWord
-          $env:SOULU_UI_TEST_PORT = "9223"
-          $installedExe = Join-Path "$env:build_dir" "Soulu.exe"
-          Get-Process Soulu -ErrorAction SilentlyContinue | Stop-Process -Force
+          $env:SONA_UI_TEST_PORT = "9223"
+          $installedExe = Join-Path "$env:build_dir" "Sona.exe"
+          Get-Process Sona -ErrorAction SilentlyContinue | Stop-Process -Force
           $app = Start-Process $installedExe -PassThru
-          $env:SOULU_TEST_PROCESS_ID=[string]$app.Id
+          $env:SONA_TEST_PROCESS_ID=[string]$app.Id
           try {
             python browser/scripts/test-cef-ui.py
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
           finally {
-            Get-Process Soulu -ErrorAction SilentlyContinue | Stop-Process -Force
+            Get-Process Sona -ErrorAction SilentlyContinue | Stop-Process -Force
           }
 
       - name: Test third Adaptive toolbar animation and live page retention
@@ -366,7 +366,7 @@ jobs:
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client
-          python browser/scripts/test-cef-adaptive-toolbar.py "$env:build_dir/Soulu.exe" browser/artifacts/adaptive-toolbar-evidence.json
+          python browser/scripts/test-cef-adaptive-toolbar.py "$env:build_dir/Sona.exe" browser/artifacts/adaptive-toolbar-evidence.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Verify live page glass, opaque themes, tabs and resize
@@ -374,14 +374,14 @@ jobs:
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client pillow
-          python browser/scripts/test-cef-page-glass.py "$env:build_dir/Soulu.exe" browser/artifacts/page-glass
+          python browser/scripts/test-cef-page-glass.py "$env:build_dir/Sona.exe" browser/artifacts/page-glass
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Upload page glass verification
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Soulu-page-glass-${{ github.sha }}
+          name: Sona-page-glass-${{ github.sha }}
           path: browser/artifacts/page-glass/
           if-no-files-found: warn
 
@@ -390,7 +390,7 @@ jobs:
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client
-          python browser/scripts/test-cef-classic-responsive.py "$env:build_dir/Soulu.exe" browser/artifacts/classic-responsive-evidence.json
+          python browser/scripts/test-cef-classic-responsive.py "$env:build_dir/Sona.exe" browser/artifacts/classic-responsive-evidence.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Verify Home before broader development regressions
@@ -398,19 +398,19 @@ jobs:
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client pillow numpy soundfile
-          $env:SOULU_UI_TEST_PORT = '9223'
+          $env:SONA_UI_TEST_PORT = '9223'
           foreach ($suite in @('pages', 'speech', 'design', 'focus', 'migration')) {
             $destination = if ($suite -eq 'design') { 'browser/artifacts/home-early/design' } else { "browser/artifacts/home-early/$suite.json" }
-            python "browser/scripts/test-cef-home-$suite.py" "$env:build_dir/Soulu.exe" $destination
+            python "browser/scripts/test-cef-home-$suite.py" "$env:build_dir/Sona.exe" $destination
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
-          (Get-FileHash "$env:build_dir/Soulu.exe" -Algorithm SHA256).Hash | Set-Content browser/artifacts/home-early/runtime-sha256.txt
+          (Get-FileHash "$env:build_dir/Sona.exe" -Algorithm SHA256).Hash | Set-Content browser/artifacts/home-early/runtime-sha256.txt
 
       - name: Upload early Home evidence
         if: (github.ref == 'refs/heads/codex/home-final' || (github.ref == 'refs/heads/main' && !inputs.native_only)) && always()
         uses: actions/upload-artifact@v4
         with:
-          name: Soulu-home-early-${{ github.sha }}
+          name: Sona-home-early-${{ github.sha }}
           path: browser/artifacts/home-early/
           if-no-files-found: ignore
 
@@ -419,8 +419,8 @@ jobs:
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client pillow
-          $env:SOULU_UI_TEST_PORT = '9223'
-          python browser/scripts/test-cef-window-states.py "$env:build_dir/Soulu.exe" browser/artifacts/window-states
+          $env:SONA_UI_TEST_PORT = '9223'
+          python browser/scripts/test-cef-window-states.py "$env:build_dir/Sona.exe" browser/artifacts/window-states
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test local full-page translation in native CEF
@@ -430,9 +430,9 @@ jobs:
           python -m pip install --disable-pip-version-check websocket-client
           node browser/scripts/test-translation-unit.cjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          $exe = Get-ChildItem cef-build -Recurse -Filter Soulu.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
-          $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP 'soulu-translation-regression'
-          $env:SOULU_UI_TEST_PORT = '9223'
+          $exe = Get-ChildItem cef-build -Recurse -Filter Sona.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
+          $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP 'sona-translation-regression'
+          $env:SONA_UI_TEST_PORT = '9223'
           python browser/scripts/test-cef-translation.py $exe.FullName browser/artifacts/translation-evidence
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
@@ -441,8 +441,8 @@ jobs:
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client pillow comtypes
-          $exe = Get-ChildItem cef-build -Recurse -Filter Soulu.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
-          $env:SOULU_UI_TEST_PORT = '9223'
+          $exe = Get-ChildItem cef-build -Recurse -Filter Sona.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
+          $env:SONA_UI_TEST_PORT = '9223'
           python browser/scripts/test-cef-menu-system.py $exe.FullName browser/artifacts/native-menu-visuals
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python browser/scripts/test-cef-menu-actions.py $exe.FullName browser/artifacts/native-menu-actions.json
@@ -453,16 +453,16 @@ jobs:
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client
-          python browser/scripts/test-cef-adblock.py "$env:build_dir/Soulu.exe" browser/artifacts/adblock-controlled.json
+          python browser/scripts/test-cef-adblock.py "$env:build_dir/Sona.exe" browser/artifacts/adblock-controlled.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test HTTPS filter update and last-known-good cache
         if: ${{ env.AUTOMATED_RELEASE != 'true' }}
         shell: pwsh
         run: |
-          python browser/scripts/test-cef-adblock-update.py "$env:build_dir/Soulu.exe" browser/artifacts/adblock-update.json
+          python browser/scripts/test-cef-adblock-update.py "$env:build_dir/Sona.exe" browser/artifacts/adblock-update.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          python browser/scripts/test-cef-adblock-live-update.py "$env:build_dir/Soulu.exe" browser/artifacts/adblock-live-update.json
+          python browser/scripts/test-cef-adblock-live-update.py "$env:build_dir/Sona.exe" browser/artifacts/adblock-live-update.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test AdBlock across tabs and repeated navigation
@@ -470,22 +470,22 @@ jobs:
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check psutil
-          python browser/scripts/test-cef-adblock-lifetime.py "$env:build_dir/Soulu.exe" browser/artifacts/adblock-lifetime.json
+          python browser/scripts/test-cef-adblock-lifetime.py "$env:build_dir/Sona.exe" browser/artifacts/adblock-lifetime.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: Test Soulu site permissions and reading palette
+      - name: Test Sona site permissions and reading palette
         if: ${{ env.AUTOMATED_RELEASE != 'true' }}
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client pillow
-          python browser/scripts/test-cef-site-surfaces.py "$env:build_dir/Soulu.exe" browser/artifacts/site-surfaces.json
+          python browser/scripts/test-cef-site-surfaces.py "$env:build_dir/Sona.exe" browser/artifacts/site-surfaces.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Upload site surface evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Soulu-site-surfaces-${{ github.sha }}
+          name: Sona-site-surfaces-${{ github.sha }}
           path: |
             browser/artifacts/site-surfaces.json
             browser/artifacts/site-surfaces-visuals/
@@ -496,14 +496,14 @@ jobs:
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client pywinauto
-          python browser/scripts/test-cef-platform.py "$env:build_dir/Soulu.exe" browser/artifacts/platform-evidence.json
+          python browser/scripts/test-cef-platform.py "$env:build_dir/Sona.exe" browser/artifacts/platform-evidence.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Upload native platform evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Soulu-platform-${{ github.sha }}
+          name: Sona-platform-${{ github.sha }}
           path: browser/artifacts/platform-evidence.json
           if-no-files-found: ignore
 
@@ -511,21 +511,21 @@ jobs:
         if: ${{ env.AUTOMATED_RELEASE != 'true' }}
         shell: pwsh
         run: |
-          python browser/scripts/test-cef-typography.py "$env:build_dir/Soulu.exe" browser/artifacts/typography-runtime.json
+          python browser/scripts/test-cef-typography.py "$env:build_dir/Sona.exe" browser/artifacts/typography-runtime.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test native Onest dialog consent and Unicode prompts
         if: ${{ env.AUTOMATED_RELEASE != 'true' }}
         shell: pwsh
         run: |
-          python browser/scripts/test-cef-native-typography.py "$env:build_dir/Soulu.exe" browser/artifacts/typography-native.json
+          python browser/scripts/test-cef-native-typography.py "$env:build_dir/Sona.exe" browser/artifacts/typography-native.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Upload typography evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Soulu-typography-${{ github.sha }}
+          name: Sona-typography-${{ github.sha }}
           path: |
             browser/artifacts/typography-static.json
             browser/artifacts/typography-runtime.json
@@ -538,7 +538,7 @@ jobs:
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client
-          $exe = Get-ChildItem cef-build -Recurse -Filter Soulu.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
+          $exe = Get-ChildItem cef-build -Recurse -Filter Sona.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
           python browser/scripts/test-cef-history.py $exe.FullName browser/artifacts/history-evidence.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
@@ -546,7 +546,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Soulu-history-${{ github.sha }}
+          name: Sona-history-${{ github.sha }}
           path: |
             browser/artifacts/history-evidence.json
             browser/artifacts/history-visuals/
@@ -556,7 +556,7 @@ jobs:
         if: ${{ env.AUTOMATED_RELEASE != 'true' }}
         shell: pwsh
         run: |
-          $exe = Get-ChildItem cef-build -Recurse -Filter Soulu.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
+          $exe = Get-ChildItem cef-build -Recurse -Filter Sona.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
           python browser/scripts/test-cef-data-security.py $exe.FullName browser/artifacts/data-security.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
@@ -565,7 +565,7 @@ jobs:
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client
-          $exe = Get-ChildItem cef-build -Recurse -Filter Soulu.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
+          $exe = Get-ChildItem cef-build -Recurse -Filter Sona.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
           python browser/scripts/test-cef-settings.py $exe.FullName browser/artifacts/settings-evidence.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
@@ -574,7 +574,7 @@ jobs:
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client pillow
-          $exe = Get-ChildItem cef-build -Recurse -Filter Soulu.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
+          $exe = Get-ChildItem cef-build -Recurse -Filter Sona.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
           python browser/scripts/test-cef-settings-overlay.py $exe.FullName browser/artifacts/settings-overlay-evidence.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
@@ -582,21 +582,21 @@ jobs:
         if: ${{ env.AUTOMATED_RELEASE != 'true' }}
         shell: pwsh
         run: |
-          python browser/scripts/test-cef-motion.py "$env:build_dir/Soulu.exe" browser/artifacts/motion-evidence.json
+          python browser/scripts/test-cef-motion.py "$env:build_dir/Sona.exe" browser/artifacts/motion-evidence.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test toolbar geometry, caption feedback, popup bounds and native drag
         if: ${{ env.AUTOMATED_RELEASE != 'true' }}
         shell: pwsh
         run: |
-          python browser/scripts/test-cef-toolbar.py "$env:build_dir/Soulu.exe" browser/artifacts/toolbar-evidence.json
+          python browser/scripts/test-cef-toolbar.py "$env:build_dir/Sona.exe" browser/artifacts/toolbar-evidence.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Upload toolbar verification
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Soulu-toolbar-${{ github.sha }}
+          name: Sona-toolbar-${{ github.sha }}
           path: |
             browser/artifacts/toolbar-evidence.json
             browser/artifacts/classic-responsive-evidence.json
@@ -609,7 +609,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Soulu-motion-${{ github.sha }}
+          name: Sona-motion-${{ github.sha }}
           path: |
             browser/artifacts/motion-evidence.json
             browser/artifacts/motion-visuals/
@@ -619,7 +619,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Soulu-settings-${{ github.sha }}
+          name: Sona-settings-${{ github.sha }}
           path: |
             browser/artifacts/settings-evidence.json
             browser/artifacts/settings-overlay-evidence.json
@@ -635,7 +635,7 @@ jobs:
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client
-          $exe = Get-ChildItem cef-build -Recurse -Filter Soulu.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
+          $exe = Get-ChildItem cef-build -Recurse -Filter Sona.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
           python browser/scripts/test-cef-onboarding.py $exe.FullName browser/artifacts/onboarding-evidence.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
@@ -643,7 +643,7 @@ jobs:
         if: ${{ env.AUTOMATED_RELEASE != 'true' }}
         shell: pwsh
         run: |
-          $exe = Get-ChildItem cef-build -Recurse -Filter Soulu.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
+          $exe = Get-ChildItem cef-build -Recurse -Filter Sona.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
           python browser/scripts/test-cef-default-links.py $exe.FullName browser/artifacts/default-links-evidence.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
@@ -652,10 +652,10 @@ jobs:
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client pillow dxcam comtypes
-          $exe = Get-ChildItem cef-build -Recurse -Filter Soulu.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
+          $exe = Get-ChildItem cef-build -Recurse -Filter Sona.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
           & ./browser/scripts/verify-cef-engine.ps1 -BuildDir $exe.Directory.FullName -ReportPath browser/artifacts/engine-version.json
           "build_dir=$($exe.Directory.FullName)" >> $env:GITHUB_ENV
-          $env:SOULU_UI_TEST_PORT = '9223'
+          $env:SONA_UI_TEST_PORT = '9223'
           python browser/scripts/test-cef-home-pages.py $exe.FullName browser/artifacts/home-evidence.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python -m pip install --disable-pip-version-check numpy soundfile
@@ -668,7 +668,7 @@ jobs:
           python browser/scripts/test-cef-home-migration.py $exe.FullName browser/artifacts/home-migration.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           foreach ($suite in @('bookmarks-overview', 'site-reader', 'profile-isolation', 'content-policy', 'navigation', 'link-menu', 'storage')) {
-            $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP "soulu-native-$suite"
+            $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP "sona-native-$suite"
               if ($suite -eq 'link-menu') {
                 python "browser/scripts/test-cef-$suite.py" $exe.FullName browser/artifacts/native-menu-visuals
               } else {
@@ -680,7 +680,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python browser/scripts/test-cef-reader-public.py $exe.FullName browser/artifacts/reader-evidence
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP 'soulu-native-public-sites'
+          $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP 'sona-native-public-sites'
           python browser/scripts/test-cef-sites.py $exe.FullName browser/artifacts/sites-evidence.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
@@ -688,9 +688,9 @@ jobs:
         if: (inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76')) && always()
         uses: actions/upload-artifact@v4
         with:
-          name: Soulu-native-validation-${{ github.sha }}
+          name: Sona-native-validation-${{ github.sha }}
           path: |
-            ${{ env.build_dir }}/Soulu.exe
+            ${{ env.build_dir }}/Sona.exe
             ${{ env.build_dir }}/ui/
             ${{ env.build_dir }}/licenses/
             browser/artifacts/
@@ -712,8 +712,8 @@ jobs:
         id: package
         shell: pwsh
         run: |
-          $exe = Get-ChildItem cef-build -Recurse -Filter Soulu.exe | Where-Object { $_.FullName -match "Release" } | Select-Object -First 1
-          if (-not $exe) { throw "Soulu.exe was not produced" }
+          $exe = Get-ChildItem cef-build -Recurse -Filter Sona.exe | Where-Object { $_.FullName -match "Release" } | Select-Object -First 1
+          if (-not $exe) { throw "Sona.exe was not produced" }
           $buildDir = $exe.Directory.FullName
           # Static libraries/debug symbols are build artifacts, not runtime.
           Get-ChildItem -LiteralPath $buildDir -File | Where-Object { $_.Extension -in @('.lib', '.pdb', '.exp', '.ilk') } | Remove-Item
@@ -721,21 +721,21 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           & ./browser/scripts/verify-cef-engine.ps1 -BuildDir $buildDir -ReportPath (Join-Path $buildDir "engine-version.json")
           New-Item -ItemType Directory -Force browser/artifacts | Out-Null
-          $zip = Join-Path $PWD "browser/artifacts/Soulu-Beta-1.0.$env:BETA_NUMBER-x64.zip"
+          $zip = Join-Path $PWD "browser/artifacts/Sona-Beta-1.0.$env:BETA_NUMBER-x64.zip"
           Compress-Archive -Path "$buildDir/*" -DestinationPath $zip -Force
           Add-Type -AssemblyName System.Drawing
           $browserIcon=[System.Drawing.Icon]::ExtractAssociatedIcon($exe.FullName)
           $browserIcon.ToBitmap().Save((Join-Path $PWD "browser/artifacts/browser-exe-icon.png"))
-          "SOULU_SCREENSHOT:browser-exe-icon="+[Convert]::ToBase64String([IO.File]::ReadAllBytes((Join-Path $PWD "browser/artifacts/browser-exe-icon.png")))
+          "SONA_SCREENSHOT:browser-exe-icon="+[Convert]::ToBase64String([IO.File]::ReadAllBytes((Join-Path $PWD "browser/artifacts/browser-exe-icon.png")))
           "build_dir=$buildDir" >> $env:GITHUB_OUTPUT
 
       - name: Upload native executable for local runtime verification
         if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76')) }}
         uses: actions/upload-artifact@v4
         with:
-          name: Soulu-native-${{ github.sha }}
+          name: Sona-native-${{ github.sha }}
           path: |
-            ${{ steps.package.outputs.build_dir }}/Soulu.exe
+            ${{ steps.package.outputs.build_dir }}/Sona.exe
             ${{ steps.package.outputs.build_dir }}/engine-version.json
           if-no-files-found: error
 
@@ -744,15 +744,15 @@ jobs:
         shell: pwsh
         run: |
           $buildDir = "${{ steps.package.outputs.build_dir }}"
-          $out = Join-Path $PWD "browser/artifacts/Soulu-Beta-1.0.$env:BETA_NUMBER-x64.exe"
-          $zip = Join-Path $PWD "browser/artifacts/Soulu-Beta-1.0.$env:BETA_NUMBER-x64.zip"
+          $out = Join-Path $PWD "browser/artifacts/Sona-Beta-1.0.$env:BETA_NUMBER-x64.exe"
+          $zip = Join-Path $PWD "browser/artifacts/Sona-Beta-1.0.$env:BETA_NUMBER-x64.zip"
           & ./browser/installer/build.ps1 -BuildDir $buildDir -OutFile $out -PayloadZip $zip -TestUI
 
       - name: Verify the actual packaged installer version in its native window
         if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76')) }}
         shell: pwsh
         run: |
-          $installer = Join-Path $PWD "browser/artifacts/Soulu-Beta-1.0.$env:BETA_NUMBER-x64.exe"
+          $installer = Join-Path $PWD "browser/artifacts/Sona-Beta-1.0.$env:BETA_NUMBER-x64.exe"
           python browser/scripts/test-installer-version-ui.py $installer browser/artifacts/installer-version-ui.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
@@ -761,18 +761,18 @@ jobs:
         id: verified
         shell: pwsh
         run: |
-          $zip = Join-Path $PWD "browser/artifacts/Soulu-Beta-1.0.$env:BETA_NUMBER-x64.zip"
-          $out = Join-Path $PWD "browser/artifacts/Soulu-Beta-1.0.$env:BETA_NUMBER-x64.exe"
-          $checkDir = Join-Path $env:RUNNER_TEMP ("soulu-zip-" + $env:GITHUB_RUN_ID)
+          $zip = Join-Path $PWD "browser/artifacts/Sona-Beta-1.0.$env:BETA_NUMBER-x64.zip"
+          $out = Join-Path $PWD "browser/artifacts/Sona-Beta-1.0.$env:BETA_NUMBER-x64.exe"
+          $checkDir = Join-Path $env:RUNNER_TEMP ("sona-zip-" + $env:GITHUB_RUN_ID)
           Expand-Archive -LiteralPath $zip -DestinationPath $checkDir
           & ./browser/scripts/verify-cef-engine.ps1 -BuildDir $checkDir -ReportPath browser/artifacts/engine-version.json
           $manifest=Get-Content -LiteralPath "$out.build.json" -Raw | ConvertFrom-Json
-          $canonicalVersion=& ./browser/scripts/get-soulu-version.ps1
+          $canonicalVersion=& ./browser/scripts/get-sona-version.ps1
           if($manifest.version -cne $canonicalVersion){throw 'Installer/browser version mismatch blocks release'}
           if($manifest.payloadSHA256 -ne (Get-FileHash $zip).Hash.ToLowerInvariant()){throw 'Installer and portable package differ'}
           if($manifest.sha256 -ne (Get-FileHash $out).Hash.ToLowerInvariant()){throw 'Installer checksum mismatch'}
           $version = Get-Content browser/artifacts/engine-version.json -Raw | ConvertFrom-Json
-          "Soulu Beta 1.0.$env:BETA_NUMBER. Verified CEF $($version.cef) / Chromium $($version.chromium). Source: $env:GITHUB_SHA. Build: $env:GITHUB_RUN_ID." | Set-Content browser/artifacts/release-notes.md -Encoding utf8
+          "Sona Beta 1.0.$env:BETA_NUMBER. Verified CEF $($version.cef) / Chromium $($version.chromium). Source: $env:GITHUB_SHA. Build: $env:GITHUB_RUN_ID." | Set-Content browser/artifacts/release-notes.md -Encoding utf8
           'This hotfix checks the real Bitwarden popup position, size and outside dismissal after Store installation and onboarding. General extension workers, autofill, persistence and profile-isolation suites are deferred to the owner for manual checks. Signing into a real Bitwarden vault is not verified.' | Add-Content browser/artifacts/release-notes.md -Encoding utf8
           Get-Content browser/RELEASE_NOTES.md | Add-Content browser/artifacts/release-notes.md -Encoding utf8
           "passed=true" >> $env:GITHUB_OUTPUT
@@ -780,7 +780,7 @@ jobs:
         if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76')) && (success() && steps.verified.outputs.passed == 'true') }}
         uses: actions/upload-artifact@v4
         with:
-          name: Soulu-engine-verification-${{ github.run_id }}
+          name: Sona-engine-verification-${{ github.run_id }}
           path: browser/artifacts/engine-version.json
           if-no-files-found: error
 
@@ -789,20 +789,20 @@ jobs:
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check websocket-client
-          $env:SOULU_UI_TEST_PORT = '9223'
-          python browser/scripts/test-cef-bookmarks-overview.py '${{ steps.package.outputs.build_dir }}/Soulu.exe'
+          $env:SONA_UI_TEST_PORT = '9223'
+          python browser/scripts/test-cef-bookmarks-overview.py '${{ steps.package.outputs.build_dir }}/Sona.exe'
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test Startup New Tab Home in native CEF
         if: ${{ env.AUTOMATED_RELEASE != 'true' && (!(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76')) && (!cancelled() && steps.verified.outputs.passed == 'true')) }}
         shell: pwsh
         run: |
-          $env:SOULU_UI_TEST_PORT = '9223'
+          $env:SONA_UI_TEST_PORT = '9223'
           if($env:GITHUB_REF -eq 'refs/heads/main'){
             $stamp='browser/artifacts/home-early/runtime-sha256.txt'
             if(!(Test-Path $stamp)){throw 'Exact-binary early Home acceptance is missing'}
             $expected=(Get-Content $stamp -Raw).Trim()
-            $actual=(Get-FileHash '${{ steps.package.outputs.build_dir }}/Soulu.exe' -Algorithm SHA256).Hash
+            $actual=(Get-FileHash '${{ steps.package.outputs.build_dir }}/Sona.exe' -Algorithm SHA256).Hash
             if($expected -cne $actual){throw 'Browser changed after Home acceptance'}
             foreach($suite in @('pages','speech','focus','migration','design/home-design')){
               $path="browser/artifacts/home-early/$suite.json"
@@ -819,7 +819,7 @@ jobs:
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
             foreach($suite in @('pages','speech','design','focus','migration')){
               $destination=if($suite -eq 'design'){'browser/artifacts/home-design'}else{"browser/artifacts/home-$suite.json"}
-              python "browser/scripts/test-cef-home-$suite.py" '${{ steps.package.outputs.build_dir }}/Soulu.exe' $destination
+              python "browser/scripts/test-cef-home-$suite.py" '${{ steps.package.outputs.build_dir }}/Sona.exe' $destination
               if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
             }
           }
@@ -828,7 +828,7 @@ jobs:
         if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76')) && (always()) }}
         uses: actions/upload-artifact@v4
         with:
-          name: Soulu-home-evidence-${{ github.run_id }}
+          name: Sona-home-evidence-${{ github.run_id }}
           path: |
             browser/artifacts/home-evidence.json
             browser/artifacts/home-design
@@ -841,17 +841,17 @@ jobs:
         if: ${{ env.AUTOMATED_RELEASE != 'true' && (!(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76')) && (!cancelled() && steps.verified.outputs.passed == 'true')) }}
         shell: pwsh
         run: |
-          $env:SOULU_UI_TEST_PORT = '9223'
-          python browser/scripts/test-cef-site-reader.py '${{ steps.package.outputs.build_dir }}/Soulu.exe'
+          $env:SONA_UI_TEST_PORT = '9223'
+          python browser/scripts/test-cef-site-reader.py '${{ steps.package.outputs.build_dir }}/Sona.exe'
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test persistent CEF cookies and site storage
         if: ${{ env.AUTOMATED_RELEASE != 'true' && (!(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76')) && (!cancelled() && steps.verified.outputs.passed == 'true')) }}
         shell: pwsh
         run: |
-          $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP 'soulu-preview36-storage'
-          $env:SOULU_UI_TEST_PORT = "9223"
-          $installedExe = Join-Path "${{ steps.package.outputs.build_dir }}" "Soulu.exe"
+          $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP 'sona-preview36-storage'
+          $env:SONA_UI_TEST_PORT = "9223"
+          $installedExe = Join-Path "${{ steps.package.outputs.build_dir }}" "Sona.exe"
           python browser/scripts/test-cef-storage.py $installedExe
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
@@ -859,15 +859,15 @@ jobs:
         if: ${{ env.AUTOMATED_RELEASE != 'true' && (!(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76')) && (!cancelled() && steps.verified.outputs.passed == 'true')) }}
         shell: pwsh
         run: |
-          $env:SOULU_UI_TEST_PORT = '9223'
-          python browser/scripts/test-cef-reader-public.py '${{ steps.package.outputs.build_dir }}/Soulu.exe' browser/artifacts/reader-evidence
+          $env:SONA_UI_TEST_PORT = '9223'
+          python browser/scripts/test-cef-reader-public.py '${{ steps.package.outputs.build_dir }}/Sona.exe' browser/artifacts/reader-evidence
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Upload Reader Mode evidence
         if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76')) && (always()) }}
         uses: actions/upload-artifact@v4
         with:
-          name: Soulu-reader-evidence-${{ github.run_id }}
+          name: Sona-reader-evidence-${{ github.run_id }}
           path: browser/artifacts/reader-evidence
           if-no-files-found: ignore
 
@@ -875,16 +875,16 @@ jobs:
         if: ${{ env.AUTOMATED_RELEASE != 'true' && (!(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76')) && (!cancelled() && steps.verified.outputs.passed == 'true')) }}
         shell: pwsh
         run: |
-          $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP 'soulu-cef-upgrade-sites'
-          $env:SOULU_UI_TEST_PORT = '9223'
-          python browser/scripts/test-cef-sites.py '${{ steps.package.outputs.build_dir }}/Soulu.exe' browser/artifacts/sites-evidence.json
+          $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP 'sona-cef-upgrade-sites'
+          $env:SONA_UI_TEST_PORT = '9223'
+          python browser/scripts/test-cef-sites.py '${{ steps.package.outputs.build_dir }}/Sona.exe' browser/artifacts/sites-evidence.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Upload public-site diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Soulu-sites-${{ github.sha }}
+          name: Sona-sites-${{ github.sha }}
           path: |
             browser/artifacts/sites-evidence.json
             cef-distribution-files.json
@@ -894,28 +894,28 @@ jobs:
         if: ${{ env.AUTOMATED_RELEASE != 'true' && (!(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76')) && (!cancelled() && steps.verified.outputs.passed == 'true')) }}
         shell: pwsh
         run: |
-          $env:SOULU_UI_TEST_PORT = '9223'
-          python browser/scripts/test-cef-profile-isolation.py '${{ steps.package.outputs.build_dir }}/Soulu.exe'
+          $env:SONA_UI_TEST_PORT = '9223'
+          python browser/scripts/test-cef-profile-isolation.py '${{ steps.package.outputs.build_dir }}/Sona.exe'
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test native permission overrides and actual content filtering
         if: ${{ env.AUTOMATED_RELEASE != 'true' && (!(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76')) && (!cancelled() && steps.verified.outputs.passed == 'true')) }}
         shell: pwsh
         run: |
-          $env:SOULU_UI_TEST_PORT = '9223'
-          python browser/scripts/test-cef-content-policy.py '${{ steps.package.outputs.build_dir }}/Soulu.exe'
+          $env:SONA_UI_TEST_PORT = '9223'
+          python browser/scripts/test-cef-content-policy.py '${{ steps.package.outputs.build_dir }}/Sona.exe'
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Verify internal tabs and native link context menu
         if: ${{ env.AUTOMATED_RELEASE != 'true' && (!(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76')) && (!cancelled() && steps.verified.outputs.passed == 'true')) }}
         shell: pwsh
         run: |
-          $env:SOULU_UI_TEST_PORT = '9223'
-          $installedExe = Join-Path '${{ steps.package.outputs.build_dir }}' 'Soulu.exe'
-          $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP 'soulu-preview36-navigation'
+          $env:SONA_UI_TEST_PORT = '9223'
+          $installedExe = Join-Path '${{ steps.package.outputs.build_dir }}' 'Sona.exe'
+          $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP 'sona-preview36-navigation'
           python browser/scripts/test-cef-navigation.py $installedExe
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP 'soulu-preview36-menu'
+          $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP 'sona-preview36-menu'
           python browser/scripts/test-cef-link-menu.py $installedExe browser/artifacts/native-menu-visuals
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
@@ -923,21 +923,21 @@ jobs:
         if: ${{ env.AUTOMATED_RELEASE != 'true' && (!(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76')) && (!cancelled() && steps.verified.outputs.passed == 'true')) }}
         shell: pwsh
         run: |
-          $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP 'soulu-preview36-layout'
-          python browser/scripts/test-cef-layout.py '${{ steps.package.outputs.build_dir }}/Soulu.exe' browser/artifacts/layout-evidence
+          $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP 'sona-preview36-layout'
+          python browser/scripts/test-cef-layout.py '${{ steps.package.outputs.build_dir }}/Sona.exe' browser/artifacts/layout-evidence
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Record shared installer acceptance scope
         if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76')) && (!cancelled() && steps.verified.outputs.passed == 'true') }}
         shell: pwsh
         run: |
-          'The pinned shared CONNECT installer UI is retained. This release updates the Soulu adapter engine allowlist after checking its exact upstream source hash. Installer version, payload checksums and bundled CEF integrity were checked in this build; physical desktop acceptance is not claimed.' | Set-Content browser/artifacts/shared-installer-acceptance.txt
+          'The pinned shared CONNECT installer UI is retained. This release updates the Sona adapter engine allowlist after checking its exact upstream source hash. Installer version, payload checksums and bundled CEF integrity were checked in this build; physical desktop acceptance is not claimed.' | Set-Content browser/artifacts/shared-installer-acceptance.txt
       - name: Upload visual checks
         continue-on-error: true
         if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76')) && (always()) }}
         uses: actions/upload-artifact@v4
         with:
-          name: Soulu-visual-checks
+          name: Sona-visual-checks
           path: browser/artifacts/*.png
           if-no-files-found: ignore
 
@@ -947,10 +947,10 @@ jobs:
         if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76')) && (always() && steps.verified.outputs.passed == 'true') }}
         uses: actions/upload-artifact@v4
         with:
-          name: Soulu-Beta-1.0.${{ env.BETA_NUMBER }}-x64
+          name: Sona-Beta-1.0.${{ env.BETA_NUMBER }}-x64
           path: |
-            browser/artifacts/Soulu-Beta-1.0.${{ env.BETA_NUMBER }}-x64.zip
-            browser/artifacts/Soulu-Beta-1.0.${{ env.BETA_NUMBER }}-x64.exe
+            browser/artifacts/Sona-Beta-1.0.${{ env.BETA_NUMBER }}-x64.zip
+            browser/artifacts/Sona-Beta-1.0.${{ env.BETA_NUMBER }}-x64.exe
             browser/artifacts/engine-version.json
           if-no-files-found: error
 
@@ -958,7 +958,7 @@ jobs:
         if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76')) && (always()) }}
         uses: actions/upload-artifact@v4
         with:
-          name: Soulu-data-security-${{ github.run_id }}
+          name: Sona-data-security-${{ github.run_id }}
           path: browser/artifacts/data-security.json
           if-no-files-found: ignore
 
@@ -966,7 +966,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Soulu-installer-typography-${{ github.sha }}
+          name: Sona-installer-typography-${{ github.sha }}
           path: browser/artifacts/installer-typography/
           if-no-files-found: ignore
 
@@ -974,7 +974,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Soulu-native-menu-typography-${{ github.sha }}
+          name: Sona-native-menu-typography-${{ github.sha }}
           path: browser/artifacts/native-menu-visuals/
           if-no-files-found: ignore
 
@@ -982,14 +982,14 @@ jobs:
         if: ${{ env.AUTOMATED_RELEASE != 'true' }}
         shell: pwsh
         run: |
-          python browser/scripts/test-cef-adblock-public.py "$env:build_dir/Soulu.exe" browser/artifacts/adblock-public
+          python browser/scripts/test-cef-adblock-public.py "$env:build_dir/Sona.exe" browser/artifacts/adblock-public
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Upload AdBlock evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Soulu-adblock-${{ github.sha }}
+          name: Sona-adblock-${{ github.sha }}
           path: |
             browser/artifacts/adblock*.json
             browser/artifacts/adblock-public/
@@ -1057,22 +1057,22 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Soulu-verification-${{ github.sha }}
+          name: Sona-verification-${{ github.sha }}
           path: |
             browser/artifacts/**
             !browser/artifacts/*.exe
             !browser/artifacts/*.zip
           if-no-files-found: warn
 
-      - name: Publish Soulu release
+      - name: Publish Sona release
         if: ${{ !(inputs.native_only || (github.ref != 'refs/heads/main' && github.ref != 'refs/tags/beta-1.0.76')) && (success() && (github.ref == 'refs/tags/beta-1.0.76' || (github.ref == 'refs/heads/main' && (inputs.publish || env.AUTOMATED_RELEASE == 'true'))) && steps.verified.outputs.passed == 'true') }}
         uses: softprops/action-gh-release@v2
         with:
           tag_name: beta-1.0.${{ env.BETA_NUMBER }}
-          name: Soulu Beta 1.0.${{ env.BETA_NUMBER }}
+          name: Sona Beta 1.0.${{ env.BETA_NUMBER }}
           target_commitish: ${{ github.sha }}
           prerelease: false
           body_path: browser/artifacts/release-notes.md
           files: |
-            browser/artifacts/Soulu-Beta-1.0.${{ env.BETA_NUMBER }}-x64.exe
-            browser/artifacts/Soulu-Beta-1.0.${{ env.BETA_NUMBER }}-x64.zip
+            browser/artifacts/Sona-Beta-1.0.${{ env.BETA_NUMBER }}-x64.exe
+            browser/artifacts/Sona-Beta-1.0.${{ env.BETA_NUMBER }}-x64.zip

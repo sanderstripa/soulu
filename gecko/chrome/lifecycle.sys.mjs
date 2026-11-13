@@ -12,12 +12,12 @@ function stopOwnedServices(){return shutdownTask??=(async()=>{
  }
 })();}
 export async function closeWindow(win,shared){
- win.__souluClosing=true;
- try{await shared.saveQueue;}catch(error){win.__souluClosing=false;throw error;}
- const others=[...Services.wm.getEnumerator('navigator:browser')].filter(w=>w!==win&&!w.closed&&!w.__souluClosing);
+ win.__sonaClosing=true;
+ try{await shared.saveQueue;}catch(error){win.__sonaClosing=false;throw error;}
+ const others=[...Services.wm.getEnumerator('navigator:browser')].filter(w=>w!==win&&!w.closed&&!w.__sonaClosing);
  if(others.length===0)Services.startup.quit(Ci.nsIAppStartup.eAttemptQuit);
  else win.close();
- if(!win.closed)win.__souluClosing=false;
+ if(!win.closed)win.__sonaClosing=false;
 }
 
 const observer={observe(_subject,topic){
@@ -50,25 +50,25 @@ export function ensureApplicationLifetime(win,shared){
  win.addEventListener('mousedown',interacted,true);win.addEventListener('keydown',interacted,true);
  if(registered)return;registered=true;
  const {AsyncShutdown}=ChromeUtils.importESModule('resource://gre/modules/AsyncShutdown.sys.mjs');
- AsyncShutdown.profileBeforeChange.addBlocker('Soulu: close owned native services',stopOwnedServices);
+ AsyncShutdown.profileBeforeChange.addBlocker('Sona: close owned native services',stopOwnedServices);
  Services.obs.addObserver(observer,'domwindowclosed');Services.obs.addObserver(observer,'quit-application-granted');}
 
 // Suppress only redundant, empty automatic windows before the first user input.
 // User-created windows and every window with actual page data remain untouched.
 export function consolidateAutomaticStart(win){
- const backend=win.Soulu?.backend;if(!backend)return;
+ const backend=win.Sona?.backend;if(!backend)return;
  const {shared,isPrivate}=backend,owner=shared.initialWindow;
  if(isPrivate||shared.initialUserInput||!owner||owner.closed||shared.config.settings.startupMode==='continue')return;
- const startupURL=(w,uri)=>['about:blank','about:newtab','about:home',w.Soulu?.native.homeURL].includes(uri);
- const automatic=w=>!w.closed&&w.Soulu?.backend&&!w.Soulu.backend.isPrivate&&w.gBrowser&&[...w.gBrowser.tabs].every(tab=>{const uri=tab.linkedBrowser.currentURI.spec;return startupURL(w,uri)||/^about:addons(?:[?#]|$)/.test(uri)||uri.startsWith('moz-extension://');});
+ const startupURL=(w,uri)=>['about:blank','about:newtab','about:home',w.Sona?.native.homeURL].includes(uri);
+ const automatic=w=>!w.closed&&w.Sona?.backend&&!w.Sona.backend.isPrivate&&w.gBrowser&&[...w.gBrowser.tabs].every(tab=>{const uri=tab.linkedBrowser.currentURI.spec;return startupURL(w,uri)||/^about:addons(?:[?#]|$)/.test(uri)||uri.startsWith('moz-extension://');});
  for(const other of Services.wm.getEnumerator('navigator:browser')){
-  if(other===owner||other.__souluStartupConsolidated||!automatic(other))continue;
-  other.__souluStartupConsolidated=true;
+  if(other===owner||other.__sonaStartupConsolidated||!automatic(other))continue;
+  other.__sonaStartupConsolidated=true;
   for(const tab of [...other.gBrowser.tabs]){
    if(tab.closing)continue;
    if(startupURL(other,tab.linkedBrowser.currentURI.spec)&&[...owner.gBrowser.tabs].some(t=>startupURL(owner,t.linkedBrowser.currentURI.spec)))continue;
    owner.gBrowser.adoptTab(tab,owner.gBrowser.tabs.length,false);
   }
-  if(!other.closed)other.close();owner.Soulu?.notify();
+  if(!other.closed)other.close();owner.Sona?.notify();
  }
 }

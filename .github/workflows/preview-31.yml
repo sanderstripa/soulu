@@ -1,15 +1,15 @@
-name: Build Soulu Preview 31 test candidate
+name: Build Sona Preview 31 test candidate
 
 on:
   push:
-    branches: [soulu-preview-31]
+    branches: [sona-preview-31]
   workflow_dispatch:
 
 permissions:
   contents: write
 
 concurrency:
-  group: soulu-preview-31
+  group: sona-preview-31
   cancel-in-progress: true
 
 jobs:
@@ -18,7 +18,7 @@ jobs:
     timeout-minutes: 90
     env:
       CEF_VERSION: 154.0.32+g682c378+chromium-154.0.8037.58
-      SOULU_UI_TEST_PORT: 9223
+      SONA_UI_TEST_PORT: 9223
       PYTHONUTF8: 1
     steps:
       - uses: actions/checkout@v4
@@ -32,7 +32,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Prepare pinned CEF and Soulu
+      - name: Prepare pinned CEF and Sona
         shell: pwsh
         run: |
           python -m pip install --disable-pip-version-check six websocket-client
@@ -43,84 +43,84 @@ jobs:
           # The upstream ceftests target requires a gmock target missing in this cef-project revision.
           $text = $text.Replace('add_subdirectory(${CEF_ROOT}/tests/ceftests)', '')
           Set-Content $config $text -Encoding utf8
-          Copy-Item -Recurse browser/cef/soulu cef-project/examples/soulu
-          New-Item -ItemType Directory -Force cef-project/examples/soulu/assets/ui,cef-project/examples/soulu/assets/vpn | Out-Null
-          Copy-Item -Recurse browser/ui/* cef-project/examples/soulu/assets/ui/
-          Copy-Item -Recurse browser/vpn/* cef-project/examples/soulu/assets/vpn/
-          Add-Content cef-project/examples/CMakeLists.txt "`nadd_subdirectory(soulu)`n"
+          Copy-Item -Recurse browser/cef/sona cef-project/examples/sona
+          New-Item -ItemType Directory -Force cef-project/examples/sona/assets/ui,cef-project/examples/sona/assets/vpn | Out-Null
+          Copy-Item -Recurse browser/ui/* cef-project/examples/sona/assets/ui/
+          Copy-Item -Recurse browser/vpn/* cef-project/examples/sona/assets/vpn/
+          Add-Content cef-project/examples/CMakeLists.txt "`nadd_subdirectory(sona)`n"
       - uses: actions/cache@v4
         with:
           path: cef-project/third_party/cef
-          key: soulu-cef154-8037-58-win64-download-v1
+          key: sona-cef154-8037-58-win64-download-v1
       - uses: actions/cache/restore@v4
         id: compiled-cache
         with:
           path: cef-build
-          key: soulu-preview31-cef154-win2025-${{ hashFiles('browser/cef/**') }}
-          restore-keys: soulu-preview31-cef154-win2025-
-      - name: Configure and build Soulu
+          key: sona-preview31-cef154-win2025-${{ hashFiles('browser/cef/**') }}
+          restore-keys: sona-preview31-cef154-win2025-
+      - name: Configure and build Sona
         shell: pwsh
         run: |
           cmake -S cef-project -B cef-build -A x64 -DUSE_SANDBOX=OFF
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          cmake --build cef-build --config Release --target soulu --parallel 2
+          cmake --build cef-build --config Release --target sona --parallel 2
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Verify packaged CEF version
         id: binary
         shell: pwsh
         run: |
-          $exe = Get-ChildItem cef-build -Recurse -Filter Soulu.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
-          if (-not $exe) { throw 'Soulu.exe was not built' }
+          $exe = Get-ChildItem cef-build -Recurse -Filter Sona.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
+          if (-not $exe) { throw 'Sona.exe was not built' }
           $dir = $exe.Directory.FullName
           $cef = (Get-Item (Join-Path $dir 'libcef.dll')).VersionInfo.ProductVersion
           if ($cef -ne $env:CEF_VERSION) { throw "Unexpected CEF binary: $cef" }
           "build_dir=$dir" >> $env:GITHUB_OUTPUT
           New-Item -ItemType Directory -Force browser/artifacts | Out-Null
-          "CEF $cef`nSource $env:GITHUB_SHA`nSoulu Preview 31" | Set-Content browser/artifacts/build-info.txt -Encoding utf8
+          "CEF $cef`nSource $env:GITHUB_SHA`nSona Preview 31" | Set-Content browser/artifacts/build-info.txt -Encoding utf8
       - name: Save compiled candidate for verification
         shell: pwsh
         run: |
-          Compress-Archive -Path '${{ steps.binary.outputs.build_dir }}/*' -DestinationPath browser/artifacts/Soulu-Preview-31-candidate.zip
+          Compress-Archive -Path '${{ steps.binary.outputs.build_dir }}/*' -DestinationPath browser/artifacts/Sona-Preview-31-candidate.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: Soulu-Preview-31-candidate
-          path: browser/artifacts/Soulu-Preview-31-candidate.zip
+          name: Sona-Preview-31-candidate
+          path: browser/artifacts/Sona-Preview-31-candidate.zip
           retention-days: 7
       - uses: actions/cache/save@v4
         if: steps.compiled-cache.outputs.cache-hit != 'true'
         with:
           path: cef-build
-          key: soulu-preview31-cef154-win2025-${{ hashFiles('browser/cef/**') }}
+          key: sona-preview31-cef154-win2025-${{ hashFiles('browser/cef/**') }}
       - name: Verify persistent cookies and storage
         id: storage
         shell: pwsh
         run: |
-          $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP 'soulu-preview31-storage'
-          python browser/scripts/test-cef-storage.py '${{ steps.binary.outputs.build_dir }}/Soulu.exe'
+          $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP 'sona-preview31-storage'
+          python browser/scripts/test-cef-storage.py '${{ steps.binary.outputs.build_dir }}/Sona.exe'
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Verify popup and background tabs
         id: navigation
         shell: pwsh
         run: |
-          $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP 'soulu-preview31-navigation'
-          python browser/scripts/test-cef-navigation.py '${{ steps.binary.outputs.build_dir }}/Soulu.exe'
+          $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP 'sona-preview31-navigation'
+          python browser/scripts/test-cef-navigation.py '${{ steps.binary.outputs.build_dir }}/Sona.exe'
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Record live site navigation and TLS
         id: sites
         continue-on-error: true
         shell: pwsh
         run: |
-          $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP 'soulu-preview31-sites'
-          python browser/scripts/test-cef-sites.py '${{ steps.binary.outputs.build_dir }}/Soulu.exe' browser/artifacts/site-navigation.json
+          $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP 'sona-preview31-sites'
+          python browser/scripts/test-cef-sites.py '${{ steps.binary.outputs.build_dir }}/Sona.exe' browser/artifacts/site-navigation.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Package ZIP and installer
         shell: pwsh
         run: |
           $dir = '${{ steps.binary.outputs.build_dir }}'
-          Compress-Archive -Path "$dir/*" -DestinationPath browser/artifacts/Soulu-Preview-31-x64.zip
+          Compress-Archive -Path "$dir/*" -DestinationPath browser/artifacts/Sona-Preview-31-x64.zip
           choco install nsis -y --no-progress
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          $out = Join-Path $PWD 'browser/artifacts/Soulu-Preview-31-x64.exe'
+          $out = Join-Path $PWD 'browser/artifacts/Sona-Preview-31-x64.exe'
           ./browser/installer/build.ps1 -BuildDir $dir -OutFile $out
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           if (-not (Test-Path $out)) { throw 'Installer was not produced' }
@@ -131,8 +131,8 @@ jobs:
           $setup = Start-Process (Join-Path $PWD 'browser/installer/payload.exe') -ArgumentList @('/S', "/D=$dir") -WindowStyle Hidden -Wait -PassThru
           if ($setup.ExitCode -ne 0) { throw "Installer failed: $($setup.ExitCode)" }
           if ((Get-Item "$dir/libcef.dll").VersionInfo.ProductVersion -ne $env:CEF_VERSION) { throw 'Installed CEF version mismatch' }
-          $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP 'soulu-preview31-installed'
-          python browser/scripts/test-cef-storage.py "$dir/Soulu.exe"
+          $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP 'sona-preview31-installed'
+          python browser/scripts/test-cef-storage.py "$dir/Sona.exe"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Record checksums
         shell: pwsh
@@ -143,6 +143,6 @@ jobs:
           } | Set-Content browser/artifacts/SHA256SUMS.txt -Encoding ascii
       - uses: actions/upload-artifact@v4
         with:
-          name: Soulu-Preview-31-x64
+          name: Sona-Preview-31-x64
           path: browser/artifacts/*
           if-no-files-found: error

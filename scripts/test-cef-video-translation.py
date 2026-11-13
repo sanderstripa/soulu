@@ -2,7 +2,7 @@
 import base64,importlib.util,json,os,re,subprocess,sys,tempfile,time
 from pathlib import Path
 spec=importlib.util.spec_from_file_location('storage',Path(__file__).with_name('test-cef-storage.py'));s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
-os.environ['SOULU_REGRESSION_SKIP_FIRST_RUN']='1';os.environ['NO_PROXY']='localhost,127.0.0.1,::1'
+os.environ['SONA_REGRESSION_SKIP_FIRST_RUN']='1';os.environ['NO_PROXY']='localhost,127.0.0.1,::1'
 out=Path(sys.argv[2]);out.mkdir(parents=True,exist_ok=True);report={'checks':[],'events':[]};process=None;shell=page=None
 def wait(fn,timeout=60):
  end=time.monotonic()+timeout;last=''
@@ -22,15 +22,15 @@ def check(ok,label):
 def photo(name):
  shot=s.command(page,'Page.captureScreenshot',{'format':'png','captureBeyondViewport':False});(out/(name+'.png')).write_bytes(base64.b64decode(shot['data']))
 with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as root:
- profile=Path(root)/'Soulu'/'User Data'/'Profiles'/'personal';profile.mkdir(parents=True)
- (profile/'soulu-settings.json').write_text(json.dumps({'onboarding':{'status':'skipped'},'layout':'adaptive','mattePanel':False,'videoTranslationEnabled':True}),encoding='utf-8')
+ profile=Path(root)/'Sona'/'User Data'/'Profiles'/'personal';profile.mkdir(parents=True)
+ (profile/'sona-settings.json').write_text(json.dumps({'onboarding':{'status':'skipped'},'layout':'adaptive','mattePanel':False,'videoTranslationEnabled':True}),encoding='utf-8')
  try:
-  process=subprocess.Popen([str(Path(sys.argv[1]).resolve()),'--no-proxy-server'],env=dict(os.environ,LOCALAPPDATA=root,SOULU_UI_TEST_PORT=str(s.DEBUG_PORT)))
+  process=subprocess.Popen([str(Path(sys.argv[1]).resolve()),'--no-proxy-server'],env=dict(os.environ,LOCALAPPDATA=root,SONA_UI_TEST_PORT=str(s.DEBUG_PORT)))
   shell=connect(wait(lambda:next((t for t in s.targets() if '/ui/index.html' in t.get('url','')),None)))
   wait(lambda:s.evaluate(shell,'!!window.browserShell'))
   s.evaluate(shell,"browserShell.openTab('https://www.youtube.com/watch?v=jNQXAC9IVRw')")
   page=connect(wait(lambda:next((t for t in s.targets() if 'youtube.com/watch' in t.get('url','')),None)))
-  original_recv=page.recv;fixture_url='https://www.youtube.com/watch?v=SouluTest01';fixture_body=None;internal_id=800000
+  original_recv=page.recv;fixture_url='https://www.youtube.com/watch?v=SonaTest01';fixture_body=None;internal_id=800000
   def capture():
    global internal_id
    raw=original_recv()
@@ -46,8 +46,8 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as root:
    return raw
   page.recv=capture;s.command(page,'Runtime.enable');s.command(page,'Log.enable')
   wait(lambda:s.evaluate(page,"!!document.querySelector('video')"),90)
-  check(s.evaluate(page,"typeof window.__souluVideoNative==='undefined'"),'No public native video bridge on YouTube')
-  wait(lambda:s.evaluate(page,"performance.getEntriesByName('soulu.video.runtime.enabled').length>0"),30)
+  check(s.evaluate(page,"typeof window.__sonaVideoNative==='undefined'"),'No public native video bridge on YouTube')
+  wait(lambda:s.evaluate(page,"performance.getEntriesByName('sona.video.runtime.enabled').length>0"),30)
   check(True,'Native VOT initialization reads the enabled profile preferences')
   player=wait(lambda:s.evaluate(page,"window.ytInitialPlayerResponse?.playabilityStatus"),30)
   blocked=player.get('status')=='LOGIN_REQUIRED' and bool(re.search(r'not a bot|не бот',player.get('reason',''),re.I))
@@ -70,7 +70,7 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as root:
   s.evaluate(shell,"new Promise((resolve,reject)=>cefQuery({request:JSON.stringify({action:'browser.video.settings',payload:{values:{localeLangOverride:'en',responseLanguage:'ru'}}}),onSuccess:resolve,onFailure:(_,s)=>reject(Error(s))}))")
   fixtures=Path(__file__).with_name('fixtures');html=(fixtures/'vot-player.html').read_text(encoding='utf-8').replace('__VIDEO_DATA__',(fixtures/'vot-player.webm.b64').read_text().strip())
   fixture_body=base64.b64encode(html.encode()).decode();s.command(page,'Fetch.enable',{'patterns':[{'urlPattern':fixture_url,'requestStage':'Request'}]});s.command(page,'Page.navigate',{'url':fixture_url})
-  wait(lambda:s.evaluate(page,"document.title==='Soulu synthetic YouTube player fixture'"),30)
+  wait(lambda:s.evaluate(page,"document.title==='Sona synthetic YouTube player fixture'"),30)
   wait(lambda:s.evaluate(page,"document.querySelector('video')?.readyState>=2"),30)
   check(True,'Synthetic player decodes and plays real WebM frames')
   wait(lambda:deep('.vot-translate-button'),60);check(True,'Full pinned VOT creates controls through the native integration on the synthetic player')
@@ -81,7 +81,7 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as root:
  finally:
   if page:
    try:
-    report['page']=s.evaluate(page,"({url:location.href,title:document.title,text:document.body?.innerText?.slice(0,1500),player:window.ytInitialPlayerResponse?.playabilityStatus,marks:performance.getEntriesByType('mark').map(n=>n.name).filter(n=>n.startsWith('soulu.video')),hosts:document.querySelectorAll('vot-shadow-host').length})")
+    report['page']=s.evaluate(page,"({url:location.href,title:document.title,text:document.body?.innerText?.slice(0,1500),player:window.ytInitialPlayerResponse?.playabilityStatus,marks:performance.getEntriesByType('mark').map(n=>n.name).filter(n=>n.startsWith('sona.video')),hosts:document.querySelectorAll('vot-shadow-host').length})")
     photo('youtube-diagnostic')
    except Exception as e:report['diagnosticError']=str(e)
   (out/'video-evidence.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')

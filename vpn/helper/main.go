@@ -5,12 +5,12 @@ func str(v object,k string)string{s,_:=v[k].(string);return s}
 func boolean(v object,k string)bool{b,_:=v[k].(bool);return b}
 func number(v object,k string)int{n,_:=v[k].(float64);return int(n)}
 var proxyPort=17890
-func init(){if value:=os.Getenv("SOULU_SOCKS_PORT");value!=""{n,e:=strconv.Atoi(value);if e!=nil||n<1024||n>65535{panic("Invalid SOULU_SOCKS_PORT")};proxyPort=n}}
+func init(){if value:=os.Getenv("SONA_SOCKS_PORT");value!=""{n,e:=strconv.Atoi(value);if e!=nil||n<1024||n>65535{panic("Invalid SONA_SOCKS_PORT")};proxyPort=n}}
 var running *exec.Cmd
 var finished chan struct{}
 var activeID,configFile string
 var profiles=map[string]string{}
-func rootDir()string{if value:=os.Getenv("SOULU_VPN_ROOT");filepath.IsAbs(value){return value};return filepath.Join(os.Getenv("LOCALAPPDATA"),"Soulu","VPN")}
+func rootDir()string{if value:=os.Getenv("SONA_VPN_ROOT");filepath.IsAbs(value){return value};return filepath.Join(os.Getenv("LOCALAPPDATA"),"Sona","VPN")}
 var packageBase string
 func packageDir()string{if packageBase!=""{return packageBase};exe,_:=os.Executable();return filepath.Dir(exe)}
 func readMessage(r io.Reader)(object,error){var n uint32;var v object;if e:=binary.Read(r,binary.LittleEndian,&n);e!=nil{return v,e};if n==0||n>1048576{return v,errors.New("invalid native message length")};b:=make([]byte,n);if _,e:=io.ReadFull(r,b);e!=nil{return v,e};return v,json.Unmarshal(b,&v)}

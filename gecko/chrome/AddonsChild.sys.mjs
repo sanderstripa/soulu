@@ -1,15 +1,15 @@
 /* Styling only for the native internal add-ons document; never runs on websites. */
-export class SouluAddonsChild extends JSWindowActorChild {
+export class SonaAddonsChild extends JSWindowActorChild {
  handleEvent(){
   if(this.document.documentURI!=='about:addons'||this.observer)return;
   const doc=this.document,win=this.contentWindow;
-  const update=()=>{if(doc.title!=='Расширения — Soulu')doc.title='Расширения — Soulu';const walker=doc.createTreeWalker(doc.body,win.NodeFilter.SHOW_TEXT);while(walker.nextNode()){const n=walker.currentNode;if(/Firefox/.test(n.data))n.data=n.data.replace(/Firefox/g,'Soulu');}
+  const update=()=>{if(doc.title!=='Расширения — Sona')doc.title='Расширения — Sona';const walker=doc.createTreeWalker(doc.body,win.NodeFilter.SHOW_TEXT);while(walker.nextNode()){const n=walker.currentNode;if(/Firefox/.test(n.data))n.data=n.data.replace(/Firefox/g,'Sona');}
 
    for(const card of doc.querySelectorAll('addon-card[addon-id="vot-ext@firefox"]'))card.hidden=true;
    const search=doc.querySelector('search-addons moz-input-search');
    const input=search?.shadowRoot?.querySelector('input');
-   if(input&&!input.hasAttribute('data-soulu-centered')){
-    input.setAttribute('data-soulu-centered','true');
+   if(input&&!input.hasAttribute('data-sona-centered')){
+    input.setAttribute('data-sona-centered','true');
     input.style.setProperty('box-sizing','border-box','important');
     input.style.setProperty('min-height','36px','important');
     input.style.setProperty('height','36px','important');

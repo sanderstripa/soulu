@@ -58,14 +58,14 @@ jobs:
             }
             const artifacts = await github.paginate(github.rest.actions.listArtifactsForRepo, {owner, repo, per_page: 100});
             for (const artifact of artifacts) {
-              if (artifact.name.startsWith('Soulu-Preview-') && new Date(artifact.created_at) <= cutoff) {
+              if (artifact.name.startsWith('Sona-Preview-') && new Date(artifact.created_at) <= cutoff) {
                 await github.rest.actions.deleteArtifact({owner, repo, artifact_id: artifact.id});
                 summary.push('Deleted legacy artifact ' + artifact.id);
               }
             }
             const caches = await github.paginate(github.rest.actions.getActionsCacheList, {owner, repo, per_page: 100});
             for (const cache of caches) {
-              if (cache.key.startsWith('soulu-cef-')) {
+              if (cache.key.startsWith('sona-cef-')) {
                 await github.rest.actions.deleteActionsCacheById({owner, repo, cache_id: cache.id});
                 summary.push('Deleted CEF cache ' + cache.id + ' (' + cache.key + ')');
               }

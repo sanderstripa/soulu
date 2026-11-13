@@ -85,7 +85,7 @@ IDB_WRITE="""new Promise((resolve,reject)=>{
  t.objectStore('data').put('private-value','key');t.oncomplete=()=>{r.result.close();resolve(true)}};
 })"""
 
-with tempfile.TemporaryDirectory(prefix='soulu-profiles-',ignore_cleanup_errors=True) as root:
+with tempfile.TemporaryDirectory(prefix='sona-profiles-',ignore_cleanup_errors=True) as root:
     os.environ['LOCALAPPDATA']=root
     home=http.server.ThreadingHTTPServer(('127.0.0.1',s.free_port()),LoginHandler)
     threading.Thread(target=home.serve_forever,daemon=True).start()
@@ -98,14 +98,14 @@ with tempfile.TemporaryDirectory(prefix='soulu-profiles-',ignore_cleanup_errors=
         s.evaluate(first,"localStorage.setItem('isolation','first');sessionStorage.setItem('session','first')")
         s.evaluate(first,IDB_WRITE)
         invoke(shell,'setSettings',{'theme':'dark'})
-        legacy=json.loads((Path(root)/'Soulu'/'User Data'/'settings.json').read_text(encoding='utf-8'))
+        legacy=json.loads((Path(root)/'Sona'/'User Data'/'settings.json').read_text(encoding='utf-8'))
         assert legacy['settings']['theme']!='dark','Profile settings changed the global migration template'
         assert 'vpn' in legacy,'The existing global VPN owner was lost'
         secret='vault-integration-test-'+str(time.time_ns())
         private_secret='private-web-test-'+str(time.time_ns())
         invoke(shell,'addPassword',{'origin':origin,'username':'user','password':secret})
         password_id=invoke(shell,'getPasswords')[0]['id']
-        worker,answer=answer_native_dialog(process,'Пароли Soulu')
+        worker,answer=answer_native_dialog(process,'Пароли Sona')
         submit_form(first,secret+'-form','form-user');worker.join(22)
         assert answer==[True],'Save prompt was not shown for a real form submit'
         wait(lambda:len(invoke(shell,'getPasswords'))==2)
@@ -113,7 +113,7 @@ with tempfile.TemporaryDirectory(prefix='soulu-profiles-',ignore_cleanup_errors=
         # commits. Do not replace its document while that navigation is pending.
         wait(lambda:s.evaluate(first,"location.pathname==='/signed-in'&&document.readyState==='complete'"))
         s.navigate(first,origin+'/fixture')
-        worker,answer=answer_native_dialog(process,'Пароли Soulu',False)
+        worker,answer=answer_native_dialog(process,'Пароли Sona',False)
         submit_form(first,secret+'-declined','declined-user');worker.join(22)
         assert answer==[True],('Decline prompt was not shown',s.evaluate(first,"({path:location.pathname,submitted:window.fixtureSubmitted,trusted:sessionStorage.getItem('fixtureSubmitTrusted')})"))
         assert len(invoke(shell,'getPasswords'))==2,'Declined credentials were saved'
@@ -122,7 +122,7 @@ with tempfile.TemporaryDirectory(prefix='soulu-profiles-',ignore_cleanup_errors=
         assert s.evaluate(second,"localStorage.getItem('isolation')") is None
         assert s.evaluate(second,"sessionStorage.getItem('session')") is None
         assert not s.evaluate(second,"indexedDB.databases()")
-        assert not any(c['name']=='soulu_auth' for c in s.command(second,'Network.getAllCookies')['cookies'])
+        assert not any(c['name']=='sona_auth' for c in s.command(second,'Network.getAllCookies')['cookies'])
         assert invoke(shell,'getPasswords')==[]
         assert invoke(shell,'getSettings')['theme']!='dark'
         s.evaluate(second,"localStorage.setItem('isolation','second')")
@@ -136,7 +136,7 @@ with tempfile.TemporaryDirectory(prefix='soulu-profiles-',ignore_cleanup_errors=
         private,_=new_page(shell,'newIncognito');sockets.append(private)
         s.navigate(private,origin+'/verify')
         assert s.evaluate(private,"localStorage.getItem('isolation')") is None
-        assert not any(c['name']=='soulu_auth' for c in s.command(private,'Network.getAllCookies')['cookies'])
+        assert not any(c['name']=='sona_auth' for c in s.command(private,'Network.getAllCookies')['cookies'])
         s.evaluate(private,"localStorage.setItem('isolation',"+json.dumps(private_secret)+
                    ");document.cookie="+json.dumps('private_cookie='+private_secret+'; Path=/'))
         s.evaluate(private,IDB_WRITE.replace('private-value',private_secret))
@@ -152,7 +152,7 @@ with tempfile.TemporaryDirectory(prefix='soulu-profiles-',ignore_cleanup_errors=
         for connection in sockets:
             connection.close()
         sockets=[];s.close_normally(process)
-        for path in (Path(root)/'Soulu'/'User Data').rglob('*'):
+        for path in (Path(root)/'Sona'/'User Data').rglob('*'):
             if path.is_file():
                 data=path.read_bytes()
                 for marker in (secret,private_secret):
@@ -166,7 +166,7 @@ with tempfile.TemporaryDirectory(prefix='soulu-profiles-',ignore_cleanup_errors=
         assert invoke(shell,'getPasswords')==[]
         assert 'example.com' not in invoke(shell,'getSiteRules')['sites']
         invoke(shell,'switchProfile','personal')
-        worker,answer=answer_native_dialog(process,'Soulu')
+        worker,answer=answer_native_dialog(process,'Sona')
         rules=invoke(shell,'resetSiteRules','');worker.join(22)
         assert answer==[True] and rules['sites']=={},'Reset-all confirmation did not apply'
         worker,answer=answer_native_dialog(process,'Удаление профиля')
@@ -174,8 +174,8 @@ with tempfile.TemporaryDirectory(prefix='soulu-profiles-',ignore_cleanup_errors=
         assert answer==[True] and len(state['profiles'])==1,'Confirmed profile deletion failed'
         for connection in sockets:connection.close()
         sockets=[];s.close_normally(process)
-        assert not (Path(root)/'Soulu'/'User Data'/'Profiles'/second_id).exists(),'Deleted profile files remained after shutdown'
-        assert (Path(root)/'Soulu'/'User Data'/'Profiles'/'personal'/'soulu-passwords.json').exists(),'Deletion touched another profile'
+        assert not (Path(root)/'Sona'/'User Data'/'Profiles'/second_id).exists(),'Deleted profile files remained after shutdown'
+        assert (Path(root)/'Sona'/'User Data'/'Profiles'/'personal'/'sona-passwords.json').exists(),'Deletion touched another profile'
         print(json.dumps({'profile_storage_isolation':True,'incognito_new_session_empty':True,
                           'password_restart':True,'plaintext_absent':True,'rules_restart_isolation':True}))
     finally:

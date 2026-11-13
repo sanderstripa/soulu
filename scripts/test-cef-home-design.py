@@ -25,11 +25,11 @@ def find_window(pid):
  def visit(hwnd,_):
   owner=W.DWORD();u.GetWindowThreadProcessId(hwnd,ctypes.byref(owner));name=ctypes.create_unicode_buffer(256)
   u.GetClassNameW(hwnd,name,len(name))
-  if owner.value==pid and name.value=='SouluBrowserWindow':handles.append(hwnd)
+  if owner.value==pid and name.value=='SonaBrowserWindow':handles.append(hwnd)
   return True
  u.EnumWindows(visit,0)
  return handles[0] if handles else None
-os.environ['SOULU_REGRESSION_SKIP_FIRST_RUN']='1'
+os.environ['SONA_REGRESSION_SKIP_FIRST_RUN']='1'
 os.environ['NO_PROXY']='localhost,127.0.0.1,::1'
 checks=[]
 def wait(fn,timeout=30):
@@ -44,8 +44,8 @@ def check(value,name):
  checks.append(name);print('PASS:',name,flush=True)
 def main():
  exe=Path(sys.argv[1]).resolve();out=Path(sys.argv[2]).resolve();out.mkdir(parents=True,exist_ok=True)
- with tempfile.TemporaryDirectory(prefix='soulu-home-design-',ignore_cleanup_errors=True) as root:
-  env=dict(os.environ,LOCALAPPDATA=root,SOULU_UI_TEST_PORT=str(s.DEBUG_PORT),SOULU_REGRESSION_SKIP_FIRST_RUN='1')
+ with tempfile.TemporaryDirectory(prefix='sona-home-design-',ignore_cleanup_errors=True) as root:
+  env=dict(os.environ,LOCALAPPDATA=root,SONA_UI_TEST_PORT=str(s.DEBUG_PORT),SONA_REGRESSION_SKIP_FIRST_RUN='1')
   process=subprocess.Popen([str(exe)],env=env);sockets=[]
   def connect(fragment):
    target=wait(lambda:next((x for x in s.targets() if fragment in x.get('url','')),None))
@@ -53,7 +53,7 @@ def main():
   try:
    shell=connect('/ui/index.html')
    wait(lambda:s.evaluate(shell,"typeof window.browserShell?.setSettings==='function'"))
-   home=connect('/ui/home.html');wait(lambda:s.evaluate(home,"typeof window.souluHomeApply==='function' && document.fonts.check('400 14px Onest')"))
+   home=connect('/ui/home.html');wait(lambda:s.evaluate(home,"typeof window.sonaHomeApply==='function' && document.fonts.check('400 14px Onest')"))
    def bridge(ws,action,payload=None):return s.evaluate(ws,"new Promise((resolve,reject)=>cefQuery({request:"+json.dumps(json.dumps({'action':action,'payload':payload}))+",onSuccess:v=>resolve(v?JSON.parse(v):null),onFailure:(_,m)=>reject(Error(m))}))")
    def settings(patch):return s.evaluate(shell,'browserShell.setSettings('+json.dumps(patch)+')')
    def capture(name,native=False):
@@ -87,9 +87,9 @@ def main():
     check(s.evaluate(home,"!document.getElementById('"+name+"Panel').hidden"),name+' panel opens')
     capture(name+'-popover',True)
     s.command(home,'Input.dispatchKeyEvent',{'type':'keyDown','key':'Escape','code':'Escape','windowsVirtualKeyCode':27})
-   bridge(shell,'browser.sites.set',{'domain':'soulu://home','permission':'microphone','value':2})
+   bridge(shell,'browser.sites.set',{'domain':'sona://home','permission':'microphone','value':2})
    check(bridge(home,'home.voice')['status']=='denied','Native microphone denial respects profile permission')
-   bridge(shell,'browser.sites.set',{'domain':'soulu://home','permission':'microphone','value':0})
+   bridge(shell,'browser.sites.set',{'domain':'sona://home','permission':'microphone','value':0})
    s.evaluate(home,"window.voiceResult=null;cefQuery({request:JSON.stringify({action:'home.voice'}),onSuccess:v=>window.voiceResult=JSON.parse(v),onFailure:()=>window.voiceResult={status:'error'}})")
    bridge(home,'home.voice.cancel');wait(lambda:s.evaluate(home,'window.voiceResult!==null'))
    check(s.evaluate(home,"['cancelled','unavailable','denied','error'].includes(window.voiceResult.status)"),'Native voice cancel/no-device path releases without a crash')
@@ -102,9 +102,9 @@ def main():
    check(s.evaluate(home,"!!document.querySelector('#weatherIcon svg[data-condition]')"),'Weather summary and forecast use condition accents')
    check(s.evaluate(home,"document.querySelector('.weather-temperature').textContent.endsWith(String.fromCharCode(176)) && !document.querySelector('#weatherDetail').textContent.includes(String.fromCharCode(194))"),'Weather renders degree units without broken Unicode text')
    capture('weather-real-forecast',True)
-   check((Path(root)/'Soulu/User Data/Profiles/personal/soulu-weather.json').is_file(),'Normal profile weather cache persists')
+   check((Path(root)/'Sona/User Data/Profiles/personal/sona-weather.json').is_file(),'Normal profile weather cache persists')
    s.command(home,'Network.enable');s.command(home,'Network.emulateNetworkConditions',{'offline':True,'latency':0,'downloadThroughput':0,'uploadThroughput':0});s.command(home,'Page.reload')
-   wait(lambda:s.evaluate(home,"typeof window.souluHomeApply==='function' && document.documentElement.classList.contains('typography-ready')"))
+   wait(lambda:s.evaluate(home,"typeof window.sonaHomeApply==='function' && document.documentElement.classList.contains('typography-ready')"))
    check(s.evaluate(home,"document.querySelector('#logo').complete && !document.querySelector('#query').disabled"),'Offline reload renders local logo, font and usable input')
    capture('offline-home')
    (out/'home-design.json').write_text(json.dumps({'passed':True,'checks':checks,'limitations':['DeviceScaleFactor covers renderer scaling; physical Windows monitor DPI must be checked separately.','Synthetic/cancel checks do not prove live RU/EN microphone recognition.']},ensure_ascii=False,indent=2),encoding='utf-8')

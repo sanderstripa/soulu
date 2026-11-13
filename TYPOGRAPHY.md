@@ -1,4 +1,4 @@
-# Soulu typography
+# Sona typography
 
 Baseline: `169a65b7d49fbc3479fb2ba506f1511bceb123aa`, Beta 1.0.50.
 Target: Beta 1.0.51. Engine remains CEF 154.0.33+ga03e714 and Chromium
@@ -8,7 +8,7 @@ Target: Beta 1.0.51. Engine remains CEF 154.0.33+ga03e714 and Chromium
 
 `typography.json` is authoritative. Run `python scripts/generate-typography.py`
 to produce `ui/typography.css`, `installer/typography_metrics.h` and
-`cef/soulu/typography_metrics.h`.
+`cef/sona/typography_metrics.h`.
 CI checks that generated files are current.
 
 | Role | Size (CSS px / DIP) | Line box | Real weight |
@@ -106,7 +106,7 @@ Remaining text-family exceptions:
 
 Only the emergency missing-font error uses an OS message box. Window nonclient
 captions, file pickers, OS security prompts, the silent NSIS payload and system uninstaller
-surfaces are Windows-owned. Soulu does not hook their font configuration.
+surfaces are Windows-owned. Sona does not hook their font configuration.
 No stylesheet/font loader is injected into external sites; only bundled HTML
 links it. Navigation/auth/storage/CEF preferences remain unchanged.
 

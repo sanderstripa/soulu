@@ -1,8 +1,8 @@
-# Soulu Menu System and Soulu Translate
+# Sona Menu System and Sona Translate
 
 ## Native menu ownership
 
-`cef/soulu/soulu_menu.cc` owns copied menu models and renders native popup
+`cef/sona/sona_menu.cc` owns copied menu models and renders native popup
 windows outside website DOM. `TypographyFont(compactControl, dpi)` supplies
 the bundled Onest face. Theme colors, row spacing, separators, rounded corners,
 hover/pressed/focus states and submenu placement are shared by all callers.
@@ -27,7 +27,7 @@ must not be conflated. CEF/Chromium are unchanged by this feature.
 
 Official upstream repositories and the Mozilla fork were inspected; compatibility
 of this supplied binary with the selected current Mozilla models was verified
-by real inference. Soulu wraps upstream JavaScript into a classic local script
+by real inference. Sona wraps upstream JavaScript into a classic local script
 and embeds unchanged WASM in a Blob worker. The worker avoids dynamic JavaScript
 evaluation and uses the shell's restrictive CSP with `wasm-unsafe-eval`.
 
@@ -55,7 +55,7 @@ limits. JavaScript decompresses and verifies the registry size and SHA-256 befor
 acknowledging the downloaded buffer to the native cache. Only acknowledged
 buffers are persisted; failed validation discards the pending download.
 
-The shared cache is `%LOCALAPPDATA%/Soulu/User Data/Translation/Models/v1`,
+The shared cache is `%LOCALAPPDATA%/Sona/User Data/Translation/Models/v1`,
 outside `Profiles` and all website cookies/storage. It stores model resources
 under registry-hash keys with separate compressed-resource SHA-256 records.
 File reads, hashing, pruning and atomic replacement run on CEF's file task
@@ -77,12 +77,12 @@ collections preserve original text per node. Inputs, passwords, selects,
 contenteditable, code/pre, scripts/styles, translate=no, hidden text, SVG,
 canvas and URL-only strings are excluded. A MutationObserver queues inserted
 or changed text and ignores the translator's own writes. Restoration changes
-only nodes still holding Soulu's translated value, preserving subsequent site
+only nodes still holding Sona's translated value, preserving subsequent site
 edits. Full navigation invalidates jobs; same-document URL changes restore the
 original and start with a new generation. Shadow roots and cross-origin frame
 documents are not traversed by the main-document translator.
 
-Always/never preferences are persisted in each profile's `soulu-settings.json`.
+Always/never preferences are persisted in each profile's `sona-settings.json`.
 Private-tab preferences remain in memory and are discarded with that tab.
 Shared downloaded model buffers contain public model files, not private page
 text. QR codes are generated locally with qrcode-generator 2.0.4.
@@ -90,13 +90,13 @@ text. QR codes are generated locally with qrcode-generator 2.0.4.
 ## Verification
 
 Run `node scripts/test-translation-unit.cjs` for routing/detection/integrity.
-`scripts/test-cef-translation.py <Soulu.exe> <output>` checks real native model
+`scripts/test-cef-translation.py <Sona.exe> <output>` checks real native model
 transport, real inference, toolbar translation, original restoration, excluded
 controls, dynamic/long pages, stale and SPA navigation, offline worker/restart,
 preferences and profile/private-tab isolation. Its NetLog evidence checks model
 GETs and absence of cloud translation provider requests.
 
-`scripts/test-cef-menu-system.py <Soulu.exe> <output>` checks native context menus
+`scripts/test-cef-menu-system.py <Sona.exe> <output>` checks native context menus
 in RU/EN, compact/classic, light/dark and 96/120/144/192 DPI. These are dedicated
 native menu layout/font overrides, not changes to Windows monitor settings.
 It records accessibility labels/roles/states, keyboard dismissal, recursive

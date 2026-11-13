@@ -1,4 +1,4 @@
-name: Final resource and Windows checks for Soulu Gecko Preview 5
+name: Final resource and Windows checks for Sona Gecko Preview 5
 on:
   push:
     branches: [gecko-preview]
@@ -39,7 +39,7 @@ jobs:
       - name: Verify corrected Windows line-ending protocol with real RU and EN inference
         id: speech
         continue-on-error: true
-        run: python gecko/tests/speech5.py gecko-out/runtime/soulu/speech/SouluSpeech.exe gecko5-final/speech5.json
+        run: python gecko/tests/speech5.py gecko-out/runtime/sona/speech/SonaSpeech.exe gecko5-final/speech5.json
       - name: Check remaining icon, launcher and per-user registration gates
         id: native
         continue-on-error: true
@@ -63,10 +63,10 @@ jobs:
           Copy-Item gecko5-final/*.json gecko-out/
           New-Item -ItemType Directory -Force gecko-out/visual-evidence | Out-Null
           Copy-Item gecko5-final/*.png gecko-out/visual-evidence/
-          Compress-Archive -Path gecko-out/* -DestinationPath Soulu-Gecko-Preview-5-win64.zip -CompressionLevel Optimal
-          python gecko/tests/zip_smoke.py Soulu-Gecko-Preview-5-win64.zip gecko5-zip
+          Compress-Archive -Path gecko-out/* -DestinationPath Sona-Gecko-Preview-5-win64.zip -CompressionLevel Optimal
+          python gecko/tests/zip_smoke.py Sona-Gecko-Preview-5-win64.zip gecko5-zip
           if ($LASTEXITCODE -ne 0) { throw 'Extracted ZIP failed to launch' }
-          (Get-FileHash Soulu-Gecko-Preview-5-win64.zip -Algorithm SHA256).Hash.ToLowerInvariant() + '  Soulu-Gecko-Preview-5-win64.zip' | Set-Content SHA256SUMS.txt
+          (Get-FileHash Sona-Gecko-Preview-5-win64.zip -Algorithm SHA256).Hash.ToLowerInvariant() + '  Sona-Gecko-Preview-5-win64.zip' | Set-Content SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -74,7 +74,7 @@ jobs:
           path: gecko5-zip/
       - uses: actions/upload-artifact@v4
         with:
-          name: Soulu-Gecko-Preview-5-final
+          name: Sona-Gecko-Preview-5-final
           path: |
-            Soulu-Gecko-Preview-5-win64.zip
+            Sona-Gecko-Preview-5-win64.zip
             SHA256SUMS.txt

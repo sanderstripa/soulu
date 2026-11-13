@@ -9,7 +9,7 @@ import tempfile
 import time
 spec=importlib.util.spec_from_file_location('storage',Path(__file__).with_name('test-cef-storage.py'))
 s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
-os.environ.update(SOULU_REGRESSION_SKIP_FIRST_RUN='1',NO_PROXY='localhost,127.0.0.1,::1')
+os.environ.update(SONA_REGRESSION_SKIP_FIRST_RUN='1',NO_PROXY='localhost,127.0.0.1,::1')
 checks=[]
 def wait(fn,timeout=30):
  end=time.monotonic()+timeout
@@ -20,13 +20,13 @@ def wait(fn,timeout=30):
  raise AssertionError('Home migration timeout')
 def main():
  exe=Path(sys.argv[1]).resolve();report=Path(sys.argv[2]).resolve();connections=[];process=None;shell=None
- with tempfile.TemporaryDirectory(prefix='soulu-home-migration-',ignore_cleanup_errors=True) as root:
-  folder=Path(root)/'Soulu/User Data';folder.mkdir(parents=True)
+ with tempfile.TemporaryDirectory(prefix='sona-home-migration-',ignore_cleanup_errors=True) as root:
+  folder=Path(root)/'Sona/User Data';folder.mkdir(parents=True)
   legacy={'layout':'compact','theme':'light','language':'ru','startupMode':'custom','startupUrl':'https://example.com/startup','newTabMode':'blank','homeMode':'custom','homeUrl':'https://example.com/home','homeWeatherCity':'Paris','homeShortcuts':[{'name':'Old favorite','url':'https://example.com/saved'},{'name':'Duplicate favorite','url':'https://example.com/saved'},{'name':'Другой сайт','url':'https://example.org/legacy'}]}
   (folder/'settings.json').write_text(json.dumps({'settings':legacy,'vpn':{}},ensure_ascii=False),encoding='utf-8')
   original={'id':44,'type':'url','title':'Preserved original title','url':'https://example.com/saved','favicon':'','profileId':'personal','parentId':0,'order':0}
   (folder/'bookmarks.json').write_text(json.dumps([original]),encoding='utf-8')
-  env=dict(os.environ,LOCALAPPDATA=root,SOULU_UI_TEST_PORT=str(s.DEBUG_PORT))
+  env=dict(os.environ,LOCALAPPDATA=root,SONA_UI_TEST_PORT=str(s.DEBUG_PORT))
   def start():
    nonlocal process,shell
    process=subprocess.Popen([str(exe)],env=env)
@@ -52,7 +52,7 @@ def main():
    s.evaluate(shell,"browserShell.createProfile('Fresh migration profile')")
    wait(lambda:s.evaluate(shell,'browserShell.getState()')['activeProfileId']!='personal');s.targets()
    prefs=s.evaluate(shell,'browserShell.getSettings()')
-   check(prefs['startupMode']=='soulu' and prefs['newTabMode']=='soulu' and prefs['homeMode']=='soulu','A genuinely new profile uses Soulu page defaults after legacy migration')
+   check(prefs['startupMode']=='sona' and prefs['newTabMode']=='sona' and prefs['homeMode']=='sona','A genuinely new profile uses Sona page defaults after legacy migration')
    check(prefs['homeProvider']=='google' and prefs['homeFavoriteIds']==[] and prefs['homeWeatherCity']=='','New profile does not inherit migrated favorites provider or location')
    report.parent.mkdir(parents=True,exist_ok=True);report.write_text(json.dumps({'passed':True,'checks':checks},ensure_ascii=False,indent=2),encoding='utf-8')
   finally:

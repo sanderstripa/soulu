@@ -36,5 +36,5 @@
     for (const child of template.content.childNodes) copy(child, fragment, 0);
     return fragment;
   }
-  window.souluReaderSafe = Object.freeze({content, webURL});
+  window.sonaReaderSafe = Object.freeze({content, webURL});
 })();

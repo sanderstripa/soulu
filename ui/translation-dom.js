@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  if(globalThis.__souluTranslate)return;
+  if(globalThis.__sonaTranslate)return;
   const originals=new Map(),ids=new WeakMap(),pending=new Set();
   let serial=0,active=false,observer=null,cleanup=null;
   const excluded='script,style,noscript,code,pre,textarea,input,select,option,[contenteditable],[translate="no"],.notranslate,svg,canvas';
@@ -34,7 +34,7 @@
       }else for(const node of r.addedNodes)add(node);
     }});observer.observe(document.body,{subtree:true,childList:true,characterData:true});
   }
-  globalThis.__souluTranslate={
+  globalThis.__sonaTranslate={
     probe(){return {lang:document.documentElement.lang,sample:sample()};},
     collect(){
       start();scan();const nodes=[];let total=0;

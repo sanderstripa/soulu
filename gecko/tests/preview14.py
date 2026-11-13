@@ -14,13 +14,13 @@ try:
   winreg.SetValueEx(key,'AppsUseLightTheme',0,winreg.REG_DWORD,value)
   for setting in ['light','dark','system']:
    expected=('light' if value else 'dark') if setting=='system' else setting
-   chrome('Soulu.config.settings.theme='+json.dumps(setting)+';Soulu.refresh();Soulu.notify();return true;')
+   chrome('Sona.config.settings.theme='+json.dumps(setting)+';Sona.refresh();Sona.notify();return true;')
    # Refresh onboarding data through its actual IPC/render path.
    ui('location.reload();return true;','page')
    wait(lambda:ui('return !!document.querySelector("#controls select")','page'))
    check('welcome_'+str(value)+'_'+setting,wait(lambda:ui('return document.body.dataset.theme==='+json.dumps(expected),'page')))
    check('toolbar_'+str(value)+'_'+setting,wait(lambda:ui('return document.body.dataset.theme==='+json.dumps(expected))))
-   check('native_'+str(value)+'_'+setting,chrome('return document.documentElement.hasAttribute("soulu-dark")==='+str(expected=='dark').lower()))
+   check('native_'+str(value)+'_'+setting,chrome('return document.documentElement.hasAttribute("sona-dark")==='+str(expected=='dark').lower()))
    (out/('theme-'+str(value)+'-'+setting+'.png')).write_bytes(base64.b64decode(m.screenshot()))
  report['passed']=True
 except Exception as e:

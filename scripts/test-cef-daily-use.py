@@ -2,7 +2,7 @@
 import base64,ctypes,http.server,importlib.util,io,json,math,os,struct,subprocess,sys,tempfile,threading,time,wave
 from pathlib import Path
 spec=importlib.util.spec_from_file_location('storage',Path(__file__).with_name('test-cef-storage.py'));s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
-os.environ['SOULU_REGRESSION_SKIP_FIRST_RUN']='1';os.environ['NO_PROXY']='localhost,127.0.0.1,::1'
+os.environ['SONA_REGRESSION_SKIP_FIRST_RUN']='1';os.environ['NO_PROXY']='localhost,127.0.0.1,::1'
 def wait(fn,timeout=30):
  end=time.monotonic()+timeout;last=''
  while time.monotonic()<end:
@@ -27,7 +27,7 @@ def native_window(pid):
  @callback_type
  def callback(hwnd,_):
   process=ctypes.c_ulong();user.GetWindowThreadProcessId(hwnd,ctypes.byref(process));name=ctypes.create_unicode_buffer(256);user.GetClassNameW(hwnd,name,len(name))
-  if process.value==pid and name.value=='SouluBrowserWindow':handles.append(hwnd);return False
+  if process.value==pid and name.value=='SonaBrowserWindow':handles.append(hwnd);return False
   return True
  user.EnumWindows(callback,0);return handles[0] if handles else None
 buf=io.BytesIO()
@@ -41,8 +41,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
 server=http.server.ThreadingHTTPServer(('127.0.0.1',0),Handler);threading.Thread(target=server.serve_forever,daemon=True).start();origin=f'http://127.0.0.1:{server.server_port}'
 p=None;connections=[]
 with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as root:
- config=Path(root)/'Soulu'/'User Data'/'Profiles'/'personal';config.mkdir(parents=True);(config/'soulu-settings.json').write_text(json.dumps({'onboarding':{'status':'skipped'},'theme':'light','layout':'adaptive','mattePanel':False,'newTabMode':'soulu','homeMode':'soulu','startupMode':'soulu'}))
- env=dict(os.environ,LOCALAPPDATA=root,SOULU_UI_TEST_PORT=str(s.DEBUG_PORT))
+ config=Path(root)/'Sona'/'User Data'/'Profiles'/'personal';config.mkdir(parents=True);(config/'sona-settings.json').write_text(json.dumps({'onboarding':{'status':'skipped'},'theme':'light','layout':'adaptive','mattePanel':False,'newTabMode':'sona','homeMode':'sona','startupMode':'sona'}))
+ env=dict(os.environ,LOCALAPPDATA=root,SONA_UI_TEST_PORT=str(s.DEBUG_PORT))
  try:
   p=subprocess.Popen([str(Path(sys.argv[1]).resolve()),'--no-proxy-server','--use-fake-device-for-media-stream'],env=env)
   shell=socket_for('/ui/index.html');connections.append(shell)
@@ -63,13 +63,13 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as root:
   s.command(shell,'Emulation.clearDeviceMetricsOverride')
   # Repeated loading/state updates must preserve the tab DOM and focused controls.
   s.evaluate(shell,"window.dailyTab=document.querySelector('.classic-tab');window.dailyFavicon=dailyTab.querySelector('.favicon')")
-  for _ in range(15):s.evaluate(shell,'browserShell.getState().then(v=>__souluEmit("state",v))')
+  for _ in range(15):s.evaluate(shell,'browserShell.getState().then(v=>__sonaEmit("state",v))')
   time.sleep(.2);check(s.evaluate(shell,"window.dailyTab===document.querySelector('.classic-tab')"),'Unchanged tab nodes survive repeated state events')
   # A native translation/reader job can create an isolated world in this frame.
   # Such a world must never install its own background-media guard.
   frame=s.command(page,'Page.getFrameTree')['frameTree']['frame']['id']
   world=s.command(page,'Page.createIsolatedWorld',{'frameId':frame,'worldName':'daily-isolated'})['executionContextId']
-  isolated=s.command(page,'Runtime.evaluate',{'expression':"typeof window.__souluMediaPolicy",'contextId':world,'returnByValue':True})
+  isolated=s.command(page,'Runtime.evaluate',{'expression':"typeof window.__sonaMediaPolicy",'contextId':world,'returnByValue':True})
   check(isolated['result'].get('value')=='undefined','Service JavaScript worlds do not install a second background-playback guard')
   original=state()['activeTabId'];s.evaluate(shell,'browserShell.openTab('+json.dumps(origin+'/background')+',true)')
   background=socket_for('/background');connections.append(background);wait(lambda:s.evaluate(background,"document.querySelector('audio')?.readyState>=2"));time.sleep(1)
@@ -77,7 +77,7 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as root:
   bg=next(t['id'] for t in state()['tabs'] if '/background' in t['url']);s.evaluate(shell,f'browserShell.switchTab({bg})');wait(lambda:state()['activeTabId']==bg);click(background,'#play')
   playback=s.command(background,'Runtime.evaluate',{'expression':"document.querySelector('#audio').play().then(()=>({playing:!document.querySelector('#audio').paused}),e=>({error:e.name+': '+e.message}))",'awaitPromise':True,'returnByValue':True,'userGesture':True})
   print('PLAYBACK',json.dumps(playback),flush=True)
-  print('MEDIA_STATE',json.dumps(s.evaluate(background,"(()=>{const a=document.querySelector('#audio');return {paused:a.paused,ready:a.readyState,volume:a.volume,muted:a.muted,error:a.error?.message,policy:typeof window.__souluMediaPolicy,focus:document.hasFocus()}})()")),flush=True)
+  print('MEDIA_STATE',json.dumps(s.evaluate(background,"(()=>{const a=document.querySelector('#audio');return {paused:a.paused,ready:a.readyState,volume:a.volume,muted:a.muted,error:a.error?.message,policy:typeof window.__sonaMediaPolicy,focus:document.hasFocus()}})()")),flush=True)
   check(playback.get('result',{}).get('value',{}).get('playing'),'Selected media tab accepts a user-initiated play request')
   wait(lambda:any(t.get('audible') for t in state()['tabs'] if t['id']==bg))
   wait(lambda:s.evaluate(shell,"!!document.querySelector('[data-mute-tab]')"));click(shell,f'#tabStrip [data-mute-tab="{bg}"]')
@@ -103,9 +103,9 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as root:
   ctypes.windll.user32.keybd_event(0x0D,0,0,0);ctypes.windll.user32.keybd_event(0x0D,0,2,0)
   wait(lambda:s.evaluate(background,"user.value==='daily-user'&&password.value==='daily-test-secret'"));check(True,'Selecting a saved login fills username and password together')
   # Closing only the download surface must preserve both tabs.
-  count=len(state()['tabs']);s.evaluate(shell,'__souluEmit("openDownloads",null)');wait(lambda:s.evaluate(shell,"document.querySelector('#downloadsPanel').classList.contains('open')"));click(shell,'#closeDownloads')
+  count=len(state()['tabs']);s.evaluate(shell,'__sonaEmit("openDownloads",null)');wait(lambda:s.evaluate(shell,"document.querySelector('#downloadsPanel').classList.contains('open')"));click(shell,'#closeDownloads')
   wait(lambda:s.evaluate(shell,"!document.querySelector('#downloadsPanel').classList.contains('open')"));check(len(state()['tabs'])==count,'Downloads close button dismisses the panel without closing a tab')
-  click(shell,'.classic-toolbar [data-home]');wait(lambda:state()['page']['url']=='soulu://home');check(not state()['page']['loading'],'Home button returns to the configured home page without a permanent loading spinner')
+  click(shell,'.classic-toolbar [data-home]');wait(lambda:state()['page']['url']=='sona://home');check(not state()['page']['loading'],'Home button returns to the configured home page without a permanent loading spinner')
   # Native host geometry survives a clean restart, including maximize state.
   class Rect(ctypes.Structure):_fields_=[('left',ctypes.c_long),('top',ctypes.c_long),('right',ctypes.c_long),('bottom',ctypes.c_long)]
   work=Rect();ctypes.windll.user32.SystemParametersInfoW(0x0030,0,ctypes.byref(work),0)
@@ -113,7 +113,7 @@ with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as root:
   hwnd=wait(lambda:native_window(p.pid));wait(lambda:ctypes.windll.user32.IsWindowVisible(hwnd));ctypes.windll.user32.ShowWindow(hwnd,9);ctypes.windll.user32.MoveWindow(hwnd,*expected,True)
   for ws in connections:ws.close()
   connections.clear();s.close_normally(p);p=None
-  placement=Path(root)/'Soulu'/'User Data'/'window-placement.json';check(placement.exists(),'Native window placement is persisted on close')
+  placement=Path(root)/'Sona'/'User Data'/'window-placement.json';check(placement.exists(),'Native window placement is persisted on close')
   p=subprocess.Popen([str(Path(sys.argv[1]).resolve()),'--no-proxy-server'],env=env);shell=socket_for('/ui/index.html');connections.append(shell);hwnd=wait(lambda:native_window(p.pid))
   wait(lambda:ctypes.windll.user32.IsWindowVisible(hwnd));rect=Rect();ctypes.windll.user32.GetWindowRect(hwnd,ctypes.byref(rect));check(abs(rect.left-expected[0])<=2 and abs(rect.top-expected[1])<=2 and abs(rect.right-rect.left-expected[2])<=2,'Window position and normal size are restored on restart')
   ctypes.windll.user32.ShowWindow(hwnd,3)

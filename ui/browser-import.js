@@ -4,10 +4,10 @@
   const statuses={available:['Доступно','Available'],not_found:['Не найдено','Not found'],action_required:['Требует действия','Action required'],unsupported:['Не поддерживается','Unsupported'],blocked:['Недоступно','Unavailable']};
   const reasons={
     passwords:['Экспортируйте пароли штатными средствами браузера и выберите CSV-файл.','Export passwords using the source browser, then choose its CSV file.'],
-    autofill:['В Soulu нет поддерживаемого хранилища адресов и полей форм.','Soulu has no supported address and form autofill store.'],
+    autofill:['В Sona нет поддерживаемого хранилища адресов и полей форм.','Sona has no supported address and form autofill store.'],
     tabs:['Чтение сессий пока не проверено. Приватные вкладки и авторизация не переносятся.','Session reading is not verified. Private tabs and authentication are excluded.'],
     favicons:['Отдельная база значков пока не переносится. Поддерживаются безопасные значки в HTML-экспорте.','Separate favicon databases are not imported. Safe icons in HTML exports are supported.'],
-    preferences:['Совместимость настроек с Soulu пока не проверена.','Preferences have no verified mapping to Soulu.'],
+    preferences:['Совместимость настроек с Sona пока не проверена.','Preferences have no verified mapping to Sona.'],
     other:['Для загрузок и расширений нет проверенного механизма переноса.','Downloads and extensions have no verified import binding.']
   };
   function parseHtml(text) {
@@ -29,7 +29,7 @@
     const root=doc.querySelector('dl');if(!root)throw Error('Неверная структура HTML-экспорта.');const nodes=parse(root);if(!count)throw Error('В файле нет закладок.');return nodes;
   }
   async function open() {
-    const ui=window.souluSettings,api=window.browserShell,{t,el,button,dialog}=ui;
+    const ui=window.sonaSettings,api=window.browserShell,{t,el,button,dialog}=ui;
     const call=(action,payload)=>api.browserImport(action,payload);
     const state=await api.getState();
     const targets=(state.profiles||[]).filter(p=>p.id!=='__incognito__');
@@ -50,7 +50,7 @@
       const toggle=el('button',undefined,'import-select'),value=el('span',label('Выберите источник','Choose a source'));
       toggle.type='button';toggle.id=id;toggle.setAttribute('role','combobox');toggle.setAttribute('aria-labelledby',name.id);
       toggle.setAttribute('aria-haspopup','listbox');toggle.setAttribute('aria-expanded','false');toggle.setAttribute('aria-controls',id+'-list');
-      const chevron=window.souluSettingsIcons.create('chevron');chevron.setAttribute('aria-hidden','true');toggle.append(value,chevron);
+      const chevron=window.sonaSettingsIcons.create('chevron');chevron.setAttribute('aria-hidden','true');toggle.append(value,chevron);
       const list=el('div',undefined,'import-options');list.id=id+'-list';list.setAttribute('role','listbox');list.setAttribute('aria-labelledby',name.id);list.hidden=true;
       anchor.append(toggle,list);row.append(name,anchor);
       let entries=[],selected='',buttons=[];
@@ -69,7 +69,7 @@
       };
     }
     function hideMenus(){from?.hide();to?.hide();}
-    function targetChoices(){to.setOptions([...targets.map(p=>({id:p.id,text:p.name+(p.id===activeTarget?label(' · текущий',' · current'):'' )})),{id:'__new__',text:label('+ Новый профиль Soulu','+ New Soulu profile'),separator:true}]);}
+    function targetChoices(){to.setOptions([...targets.map(p=>({id:p.id,text:p.name+(p.id===activeTarget?label(' · текущий',' · current'):'' )})),{id:'__new__',text:label('+ Новый профиль Sona','+ New Sona profile'),separator:true}]);}
     function sourceChoices(){from.setOptions([...sourceOptions,...extraSources,{id:'__html__',text:label('HTML-файл с закладками…','Bookmarks HTML file…'),separator:true},{id:'__tabs_html__',text:label('HTML-файл с вкладками…','Open tabs HTML file…')},{id:'__csv__',text:label('CSV-файл с паролями…','Passwords CSV file…')},{id:'__portable__',text:label('Другая папка профиля…','Other profile folder…')},{id:'__refresh__',text:label('Обновить список браузеров','Refresh browser list')}]);}
     function lock() {
       const busy=phase!=='form';
@@ -150,7 +150,7 @@
       const selected=source,chosen=Object.fromEntries([...checks].map(([key,c])=>[key,c.checked&&!c.disabled]));
       const approved=consent.checked;let destination=to.value;
       if(destination==='__new__'){
-        phase='creating';box.dataset.importState=phase;execution.hidden=false;execution.textContent=label('Создаём профиль Soulu…','Creating a Soulu profile…');lock();
+        phase='creating';box.dataset.importState=phase;execution.hidden=false;execution.textContent=label('Создаём профиль Sona…','Creating a Sona profile…');lock();
         try{await ui.flush();const profile=await call('createProfile',{name:newName.value.trim()});if(!profile?.id)throw Error(label('Не удалось создать профиль.','Could not create a profile.'));
           if(closed)return;targets.push(profile);targetChoices();to.setValue(profile.id);destination=profile.id;createField.hidden=true;
         }catch(e){if(closed)return;phase='form';box.dataset.importState=phase;execution.hidden=true;error(e);lock();return;}
@@ -207,5 +207,5 @@
     const cleanup=()=>{closed=true;++serial;clearInterval(timer);if(phase==='running')call('cancel').catch(()=>{});box.classList.remove('browser-import');modal.classList.remove('browser-import-dialog');closeButton.onclick=previousClose;modal.removeEventListener('pointerdown',outside);modal.removeEventListener('cancel',escape);modal.removeEventListener('close',cleanup);};modal.addEventListener('close',cleanup);
     await discover();if(!closed)from.toggle.focus();
   }
-  window.souluBrowserImport={open,parseHtml};
+  window.sonaBrowserImport={open,parseHtml};
 })();

@@ -74,9 +74,9 @@ try:
         ws.settimeout(30)
         row['page'] = s.evaluate(ws, '({url:location.href,title:document.title,ready:document.readyState})')
         row['typography'] = s.evaluate(ws, '''({bodyFamily:document.body?getComputedStyle(document.body).fontFamily:null,
-          noSouluInjection:typeof window.souluTypographyReady==='undefined' &&
+          noSonaInjection:typeof window.sonaTypographyReady==='undefined' &&
             !performance.getEntriesByType('resource').some(r=>r.name.startsWith('file:')&&r.name.includes('/fonts/Onest-'))})''')
-        assert row['typography']['noSouluInjection'], 'Soulu font injection on external site: '+host
+        assert row['typography']['noSonaInjection'], 'Sona font injection on external site: '+host
         row['opened'] = (not row['page']['url'].startswith('chrome-error:')
                          and any(e.get('response', {}).get('status') == 200 for e in row['events'])
                          and row['page']['ready'] == 'complete')

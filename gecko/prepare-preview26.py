@@ -10,7 +10,7 @@ import subprocess
 import zipfile
 
 root = Path(__file__).resolve().parents[1]
-archive = root / 'preview17-input/Soulu-0.17.0-Preview-Setup-win64.exe'
+archive, = (root / 'preview17-input').rglob('*.exe')
 out = root / 'gecko-out'
 raw = archive.read_bytes()
 assert hashlib.sha256(raw).hexdigest() == '1e45862d00e9b05f9785e21915cc1d7c284c010f9343e6885edb1ffb6b3e8a56'
@@ -21,7 +21,7 @@ for match in re.finditer(b'PK\x05\x06', raw):
     if start < 0 or raw[start:start+4] != b'PK\x03\x04':
         continue
     with zipfile.ZipFile(io.BytesIO(raw[start:pos+22+comment])) as payload:
-        if 'engine/SouluEngine.exe' not in payload.namelist():
+        if not any(n.endswith('Engine.exe') for n in payload.namelist()):
             continue
         for entry in payload.namelist():
             path = PurePosixPath(entry)
@@ -31,19 +31,20 @@ for match in re.finditer(b'PK\x05\x06', raw):
 else:
     raise ValueError('Preview 17 payload missing')
 
+subprocess.run(['python',str(root/'gecko/rename-owned.py'),str(out)],check=True)
 subprocess.run(['python',str(root/'gecko/upgrade-runtime22.py')],check=True)
-chrome = out / 'engine/soulu/chrome'
+chrome = out / 'engine/sona/chrome'
 ui = chrome / 'ui'
 for locale in ['ru','en-US']:
     shutil.copyfile(root/'gecko/chrome/locales'/locale/'branding/brand.ftl',chrome/'locales'/locale/'branding/brand.ftl')
 for name in ['browser.js','window-controls.sys.mjs','shell-host.js','build-info.sys.mjs','updates.js']:
     source = (root / 'gecko/chrome' / name).read_text(encoding='utf-8')
-    (chrome / name).write_text(re.sub(r'0\.(?:13|14)\.0 Preview','Preview 1.160.30',source),encoding='utf-8')
+    (chrome / name).write_text(re.sub(r'0\.(?:13|14)\.0 Preview','Preview 1.160.31',source),encoding='utf-8')
 for path in chrome.rglob('*'):
     if path.suffix in {'.js','.html','.mjs'} and 'third_party' not in path.parts:
         source = path.read_text(encoding='utf-8')
         if '0.17.0' in source:
-            path.write_text(source.replace('0.17.0','1.160.30'),encoding='utf-8')
+            path.write_text(source.replace('0.17.0','1.160.31'),encoding='utf-8')
 def patch(path, before, after):
     source = path.read_text(encoding='utf-8')
     if before not in source:
@@ -52,14 +53,14 @@ def patch(path, before, after):
 
 index = ui / 'index.html'
 index.write_text(index.read_text(encoding='utf-8').replace('data-matte="true"','data-matte="false"'),encoding='utf-8')
-patch(ui/'renderer.js','if(!wanted.has(id))node.remove();','if(!wanted.has(id)){souluTabExit(node);node.remove();}')
+patch(ui/'renderer.js','if(!wanted.has(id))node.remove();','if(!wanted.has(id)){sonaTabExit(node);node.remove();}')
 patch(ui/'renderer.js','if(container.children[index]!==node)container.insertBefore(node,container.children[index]||null);',"""
     const entering = !node.isConnected;
     if(container.children[index]!==node)container.insertBefore(node,container.children[index]||null);
     if(entering && !matchMedia('(prefers-reduced-motion:reduce)').matches){
       node.animate([{opacity:0,transform:'translateY(6px)'},{opacity:1,transform:'none'}],{duration:170});
     }""")
-patch(ui/'renderer.js','function reconcileClassicTabs(','''function souluTabExit(node) {
+patch(ui/'renderer.js','function reconcileClassicTabs(','''function sonaTabExit(node) {
   if(matchMedia('(prefers-reduced-motion:reduce)').matches)return;
   const r=node.getBoundingClientRect();
   if(!r.width||!r.height)return;
@@ -77,9 +78,9 @@ for path in (out/'engine').rglob('*.exe'):
     if path.name.lower() in {'private_browsing.exe','firefox.exe','helper.exe','default-browser-agent.exe','maintenanceservice_installer.exe'}:
         path.unlink()
 build = json.loads((out/'BUILD.json').read_text(encoding='utf-8'))
-assert build['name'] == 'Soulu 0.17.0 Preview'
+assert build['name'] == 'Sona 0.17.0 Preview'
 build.update(firefox='160.0',mozilla_archive='https://archive.mozilla.org/pub/firefox/releases/160.0/win64/ru/Firefox Setup 160.0.exe',mozilla_sha256='9aca6af4a633546ce9908894d735b0518c36b6a54f108566e517225983cf5173')
-build.update(name='Soulu Preview 1.160.30',base_preview=17,soulu_source=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip())
+build.update(name='Sona Preview 1.160.31',base_preview=17,sona_source=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip())
 (out/'BUILD.json').write_text(json.dumps(build,indent=2),encoding='utf-8')
 
 patch(ui/'renderer.js','mattePanel:true','mattePanel:false,showExtensions:false,showHome:false')
@@ -105,7 +106,7 @@ with zipfile.ZipFile(bundle) as source, zipfile.ZipFile(temporary,'w',zipfile.ZI
             from PIL import Image
             old_image=Image.open(io.BytesIO(data))
             output=io.BytesIO()
-            Image.open(root/'gecko/chrome/branding/soulu-petals.png').resize(old_image.size,Image.Resampling.LANCZOS).save(output,format='PNG')
+            Image.open(root/'gecko/chrome/branding/sona-petals.png').resize(old_image.size,Image.Resampling.LANCZOS).save(output,format='PNG')
             data=output.getvalue()
         private_page = root/'gecko/private-page'/PurePosixPath(name).name
         if name.startswith('chrome/browser/content/browser/') and private_page.is_file():
@@ -128,10 +129,10 @@ with (ui/'gecko-frontend.css').open('a',encoding='utf-8') as css:
 
 # The new native tab briefly has about:blank before the home document commits.
 # Never populate address suggestions with this transient startup URI.
-patch(ui/'renderer.js',"input.value=state.page?.url==='soulu://home'?'':state.page?.url||'';",
-      "input.value=['soulu://home','about:blank'].includes(state.page?.url)?'':state.page?.url||'';")
-patch(ui/'renderer.js',"if(input&&state.page?.url==='soulu://home'){",
-      "if(input&&['soulu://home','about:blank'].includes(state.page?.url)){")
+patch(ui/'renderer.js',"input.value=state.page?.url==='sona://home'?'':state.page?.url||'';",
+      "input.value=['sona://home','about:blank'].includes(state.page?.url)?'':state.page?.url||'';")
+patch(ui/'renderer.js',"if(input&&state.page?.url==='sona://home'){",
+      "if(input&&['sona://home','about:blank'].includes(state.page?.url)){")
 
 patch(ui/'navigation.js', 'menu.append(menuHeading,menuSearch,contents,actions);',
       (root/'gecko/chrome/bookmark-scroll.inc.js').read_text(encoding='utf-8'))
@@ -146,7 +147,7 @@ patch(ui/'select-control.js','menu.showPopover();position();','''
    menu.style[key]=type[key];
  menu.showPopover();position();''')
 with (ui/'select-control.css').open('a', encoding='utf-8') as css:
-    css.write('\n.soulu-select-menu .soulu-select-option {font:inherit;letter-spacing:inherit;padding:6px 12px}\n')
+    css.write('\n.sona-select-menu .sona-select-option {font:inherit;letter-spacing:inherit;padding:6px 12px}\n')
 
 # Pin the bundled interface font and verify the bytes before packaging.
 import urllib.request
@@ -168,17 +169,17 @@ for path in chrome.rglob('*'):
 with (chrome/'early.css').open('a',encoding='utf-8') as css:
     css.write("""
 @-moz-document url-prefix("chrome://"), url-prefix("about:") {
- @font-face{font-family:Inter;src:url("chrome://soulu/content/ui/fonts/Inter.ttf");font-weight:100 900}
+ @font-face{font-family:Inter;src:url("chrome://sona/content/ui/fonts/Inter.ttf");font-weight:100 900}
  :root,body,button,input,select,textarea,menu,menuitem,menucaption,menulist,label,description,.menu-text,.menu-iconic-text{font-family:Inter,"Segoe UI Emoji","Segoe UI Symbol",sans-serif!important}
 }
 """)
 with (ui/'typography.css').open('a',encoding='utf-8') as css:
     css.write('\n@font-face{font-family:Inter;src:url("fonts/Inter.ttf");font-weight:100 900;font-display:block}\n')
 
-patch(ui/'settings.js',"[['Soulu',state.update?.soulu],['Движок',state.update?.gecko],['Xray',state.update?.xray],['Sudoku',state.update?.sudoku],['Adblock',state.update?.adblock]]",
-      "[['Soulu',state.update?.soulu],['Gecko',state.update?.gecko]]")
+patch(ui/'settings.js',"[['Sona',state.update?.sona],['Движок',state.update?.gecko],['Xray',state.update?.xray],['Sudoku',state.update?.sudoku],['Adblock',state.update?.adblock]]",
+      "[['Sona',state.update?.sona],['Gecko',state.update?.gecko]]")
 patch(ui/'settings.js',"old.updates.groups.push(group('Компоненты VPN'",
-      "old.updates.groups[0].ru='Браузер';old.updates.groups[0].en='Browser';old.updates.groups[0].rows[0].ru='Soulu и Gecko';old.updates.groups[0].rows[0].en='Soulu and Gecko';old.updates.groups.push(group('Adblock','Adblock',[row('adblockManager','Блокировка рекламы','Ad blocking','adblockManager')]));old.updates.groups.push(group('Компоненты VPN'")
+      "old.updates.groups[0].ru='Браузер';old.updates.groups[0].en='Browser';old.updates.groups[0].rows[0].ru='Sona и Gecko';old.updates.groups[0].rows[0].en='Sona and Gecko';old.updates.groups.push(group('Adblock','Adblock',[row('adblockManager','Блокировка рекламы','Ad blocking','adblockManager')]));old.updates.groups.push(group('Компоненты VPN'")
 patch(ui/'settings.js',"if(r.type==='extensionCatalog'){","if(r.type==='adblockManager'){n.classList.add('long');const host=el('div');host.dataset.adblockManager='true';n.append(host);card.append(n);continue;}if(r.type==='extensionCatalog'){")
 shutil.copyfile(root/'gecko/chrome/adblock-about.js',ui/'adblock-about.js')
 patch(ui/'settings.html','</head>','<script defer src="adblock-about.js"></script></head>')
@@ -194,7 +195,7 @@ patch(ui/'home.css','#logo{width:112px;height:112px;','#logo{width:128.8px;heigh
 patch(ui/'home.css','#logo{width:100px;height:100px','#logo{width:115px;height:115px')
 patch(ui/'home.css','#logo{width:76px;height:76px','#logo{width:87.4px;height:87.4px')
 
-patch(ui/'settings.js',"old.tabs.id='startup';","old.tabs.groups.push(group('Главная страница','Home page',[row('homeShowLogo','Показывать логотип Soulu','Show Soulu logo','toggle')]));old.tabs.id='startup';")
+patch(ui/'settings.js',"old.tabs.id='startup';","old.tabs.groups.push(group('Главная страница','Home page',[row('homeShowLogo','Показывать логотип Sona','Show Sona logo','toggle')]));old.tabs.id='startup';")
 patch(ui/'home.js','function apply(next){state=next;','function apply(next){state=next;document.body.classList.toggle("home-without-logo",next.homeShowLogo===false);document.getElementById("logo").hidden=next.homeShowLogo===false;')
 with (ui/'home.css').open('a',encoding='utf-8') as css:
     css.write("\nbody.home-without-logo main{position:fixed;inset:0;width:auto;transform:none;display:grid;place-items:center;gap:0}body.home-without-logo .search-anchor{width:min(700px,calc(100vw - 48px))}body.home-without-logo #logo{display:none}\n")

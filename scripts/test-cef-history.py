@@ -32,19 +32,19 @@ class Site(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         cache=self.path.startswith('/cached')
         if cache:Site.cache_requests+=1
-        body=(b'cache payload' if cache else '<!doctype html><meta charset="utf-8"><title>История Soulu fixture</title><h1>History fixture</h1>'.encode())
+        body=(b'cache payload' if cache else '<!doctype html><meta charset="utf-8"><title>История Sona fixture</title><h1>History fixture</h1>'.encode())
         self.send_response(200);self.send_header('Content-Type','text/plain' if cache else 'text/html')
         self.send_header('Cache-Control','max-age=86400' if cache else 'no-store')
-        if self.path.startswith('/seed'):self.send_header('Set-Cookie','soulu_history_cookie=kept; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400')
+        if self.path.startswith('/seed'):self.send_header('Set-Cookie','sona_history_cookie=kept; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400')
         self.send_header('Content-Length',str(len(body)));self.end_headers();self.wfile.write(body)
     def log_message(self,*args):pass
 def main():
     exe=str(Path(sys.argv[1]).resolve());output=Path(sys.argv[2]) if len(sys.argv)>2 else None
     server=http.server.ThreadingHTTPServer(('127.0.0.1',s.free_port()),Site)
     threading.Thread(target=server.serve_forever,daemon=True).start();origin=f'http://127.0.0.1:{server.server_port}'
-    with tempfile.TemporaryDirectory(prefix='soulu-history-',ignore_cleanup_errors=True) as root:
-        env=dict(os.environ,LOCALAPPDATA=root,SOULU_UI_TEST_PORT=str(s.DEBUG_PORT),SOULU_REGRESSION_SKIP_FIRST_RUN='1')
-        os.environ['SOULU_REGRESSION_SKIP_FIRST_RUN']='1'
+    with tempfile.TemporaryDirectory(prefix='sona-history-',ignore_cleanup_errors=True) as root:
+        env=dict(os.environ,LOCALAPPDATA=root,SONA_UI_TEST_PORT=str(s.DEBUG_PORT),SONA_REGRESSION_SKIP_FIRST_RUN='1')
+        os.environ['SONA_REGRESSION_SKIP_FIRST_RUN']='1'
         process=None;shell=None;sockets=[];passed=False
         def socket(target):
             ws=s.websocket.create_connection(target['webSocketDebuggerUrl'],timeout=90,origin=s.BASE);sockets.append(ws);return ws
@@ -81,7 +81,7 @@ def main():
                 try:ws.close()
                 except Exception:pass
             sockets.clear();s.close_normally(process);process=None
-        profile=Path(root)/'Soulu'/'User Data'/'Profiles'/'personal'
+        profile=Path(root)/'Sona'/'User Data'/'Profiles'/'personal'
         try:
             start();content=s.page_socket();sockets.append(content);s.navigate(content,origin+'/seed')
             s.evaluate(content,"localStorage.setItem('history-test','keep');sessionStorage.setItem('history-session','keep')")
@@ -92,7 +92,7 @@ def main():
             s.command(content,'Input.dispatchKeyEvent',dict(type='rawKeyDown',windowsVirtualKeyCode=72,nativeVirtualKeyCode=72,modifiers=2))
             s.command(content,'Input.dispatchKeyEvent',dict(type='keyUp',windowsVirtualKeyCode=72,nativeVirtualKeyCode=72,modifiers=2))
             history=page('/ui/history.html')
-            check(state()['tabs'][-1]['url']=='soulu://history','Ctrl+H opens the internal History page')
+            check(state()['tabs'][-1]['url']=='sona://history','Ctrl+H opens the internal History page')
             s.command(history,'Input.dispatchKeyEvent',dict(type='rawKeyDown',windowsVirtualKeyCode=46,nativeVirtualKeyCode=46,modifiers=10))
             check(wait(lambda:s.evaluate(history,"document.getElementById('clearDialog').open")),'Ctrl+Shift+Delete opens the clearing modal')
             s.command(history,'Input.dispatchKeyEvent',dict(type='rawKeyDown',windowsVirtualKeyCode=27,nativeVirtualKeyCode=27,key='Escape',code='Escape'))
@@ -115,7 +115,7 @@ def main():
                 @ctypes.WINFUNCTYPE(ctypes.c_bool,ctypes.c_void_p,ctypes.c_void_p)
                 def collect(hwnd,_):
                     pid=ctypes.c_ulong();u.GetWindowThreadProcessId(hwnd,ctypes.byref(pid));kind=ctypes.create_unicode_buffer(80);u.GetClassNameW(ctypes.c_void_p(hwnd),kind,80)
-                    if pid.value==process.pid and kind.value=='SouluMenuHost':found.append(hwnd)
+                    if pid.value==process.pid and kind.value=='SonaMenuHost':found.append(hwnd)
                     return True
                 u.EnumWindows(collect,0);return found[0] if found else None
             box=s.evaluate(shell,"(()=>{const n=document.querySelector('.browser-toolbar');const r=n.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+2}})()")
@@ -137,8 +137,8 @@ def main():
             call('switchTab',history_id);wait(lambda:s.evaluate(history,"document.querySelector('.visit-link')!==null"))
             s.command(history,'Runtime.evaluate',dict(expression="document.querySelector('.visit-link').click()",awaitPromise=False))
             check(wait(lambda:next(t['url'] for t in state()['tabs'] if t['active']).startswith(origin)),'A history row opens in its current tab')
-            call('back');wait(lambda:s.evaluate(history,"location.href.includes('/ui/history.html')&&typeof window.souluHistoryClear==='function'"))
-            db=sqlite3.connect(profile/'soulu-history.sqlite')
+            call('back');wait(lambda:s.evaluate(history,"location.href.includes('/ui/history.html')&&typeof window.sonaHistoryClear==='function'"))
+            db=sqlite3.connect(profile/'sona-history.sqlite')
             now=time.time()*1000
             fixtures=[('old-control',origin+'/old','Old control','',now-40*864e5,'old control '+origin+'/old'),('recent-control',origin+'/recent','Recent control','',now-5*60e3,'recent control '+origin+'/recent')]
             db.executemany('INSERT INTO visits VALUES(?,?,?,?,?,?)',fixtures);db.commit()
@@ -149,7 +149,7 @@ def main():
             check(clear(history,history=True,range='15m')['ok'],'Last-15-minutes history clearing succeeds')
             check(query(history)['rows'][0]['id']=='old-control','Time-limited clearing preserves older history')
             check(s.evaluate(content,"localStorage.getItem('history-test')")== 'keep','History-only clearing preserves site data')
-            check(any(c['name']=='soulu_history_cookie' for c in s.command(content,'Network.getAllCookies')['cookies']),'History-only clearing preserves cookies')
+            check(any(c['name']=='sona_history_cookie' for c in s.command(content,'Network.getAllCookies')['cookies']),'History-only clearing preserves cookies')
             for period in ['hour','day','week','month']:
                 check(clear(history,history=True,range=period)['ok'],f'Native history range {period}')
             # Seed more than one page of results using the already-created store.
@@ -171,7 +171,7 @@ def main():
             check(not query(history)['rows'] and query(h_b)['rows'],'Clearing A preserves B history')
             # Site data still exists after its visits were deleted: no origin list shortcut.
             check(clear(history,sites=True)['ok'],'Profile-wide cookies and site storage clearing completes through Chromium')
-            check(not any(c['name']=='soulu_history_cookie' for c in s.command(content,'Network.getAllCookies')['cookies']),'Cookies actually removed')
+            check(not any(c['name']=='sona_history_cookie' for c in s.command(content,'Network.getAllCookies')['cookies']),'Cookies actually removed')
             check(s.evaluate(content,"localStorage.getItem('history-test')") is None,'LocalStorage actually removed')
             check(s.evaluate(content,"indexedDB.databases().then(d=>!d.some(x=>x.name==='history-test'))"),'IndexedDB actually removed')
             check(s.evaluate(content,"caches.keys().then(k=>!k.includes('history-cache'))"),'Cache Storage actually removed')
@@ -195,7 +195,7 @@ def main():
             # Visual checks use the native renderer at every requested device scale.
             if output:
                 visuals=output.parent/'history-visuals';visuals.mkdir(parents=True,exist_ok=True)
-                db.executemany('INSERT INTO visits VALUES(?,?,?,?,?,?)',[(f'visual-{i}',origin+f'/visual/{i}','Название страницы '+str(i)+' · Soulu browser history','',now-i*864e5,'visual '+origin) for i in range(25)]);db.commit()
+                db.executemany('INSERT INTO visits VALUES(?,?,?,?,?,?)',[(f'visual-{i}',origin+f'/visual/{i}','Название страницы '+str(i)+' · Sona browser history','',now-i*864e5,'visual '+origin) for i in range(25)]);db.commit()
                 call('switchTab',bridge(history,'state')['tabId'])
                 s.evaluate(history,"window.dispatchEvent(new Event('focus'))")
                 wait(lambda:s.evaluate(history,"document.querySelectorAll('.visit').length>=25"))
@@ -206,7 +206,7 @@ def main():
                             s.command(history,'Emulation.setDeviceMetricsOverride',dict(width=width,height=height,deviceScaleFactor=dpi,mobile=False))
                             check(s.evaluate(history,"document.documentElement.scrollWidth<=innerWidth+1"),f'History has no horizontal overflow: {theme}, {dpi}, {width}')
                             image=s.command(history,'Page.captureScreenshot',dict(format='png'))['data'];(visuals/f'history-{theme}-{dpi}-{width}.png').write_bytes(base64.b64decode(image))
-                            s.evaluate(history,"souluHistoryClear();document.getElementById('sitesChoice').click()")
+                            s.evaluate(history,"sonaHistoryClear();document.getElementById('sitesChoice').click()")
                             check(s.evaluate(history,"(()=>{const r=document.getElementById('clearDialog').getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight})()"),f'Clear dialog fits: {theme}, {dpi}, {width}')
                             check(s.evaluate(history,"(()=>{const d=document.getElementById('clearDialog').getBoundingClientRect(),r=document.getElementById('confirmClear').getBoundingClientRect();return r.top>=d.top&&r.bottom<=d.bottom})()"),f'Clear actions stay visible: {theme}, {dpi}, {width}')
                             image=s.command(history,'Page.captureScreenshot',dict(format='png'))['data'];(visuals/f'{theme}-{dpi}-{width}.png').write_bytes(base64.b64decode(image))

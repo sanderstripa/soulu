@@ -1,4 +1,4 @@
-"""Exercise real right-click menus and their existing Soulu tab routing."""
+"""Exercise real right-click menus and their existing Sona tab routing."""
 import ctypes
 import http.server
 import importlib.util
@@ -46,7 +46,7 @@ def windows(menu=False):
         u.GetWindowThreadProcessId(hwnd,ctypes.byref(pid))
         cls=ctypes.create_unicode_buffer(80)
         u.GetClassNameW(ctypes.c_void_p(hwnd),cls,80)
-        if pid.value==process.pid and u.IsWindowVisible(ctypes.c_void_p(hwnd)) and (cls.value==('SouluMenuHost' if menu else 'SouluBrowserWindow')):
+        if pid.value==process.pid and u.IsWindowVisible(ctypes.c_void_p(hwnd)) and (cls.value==('SonaMenuHost' if menu else 'SonaBrowserWindow')):
             found.append(hwnd)
         return True
     u.EnumWindows(collect,0)

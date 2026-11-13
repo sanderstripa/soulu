@@ -1,7 +1,7 @@
 // Shared by ordinary Settings and first-run; native helper validates on save.
 (() => {
   'use strict';
-  window.souluParseVpnKey = (value, selectedProtocol) => {
+  window.sonaParseVpnKey = (value, selectedProtocol) => {
     const link=value.trim();
     if(!link||link.length>16384)throw Error('Вставь ключ подключения');
     const protocol=selectedProtocol||(link.startsWith('sudoku://')?'sudoku':'vless');

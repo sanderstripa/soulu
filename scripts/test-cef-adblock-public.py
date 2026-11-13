@@ -1,4 +1,4 @@
-"""Real Soulu OFF/ON network and visual evidence, never synthetic site hits."""
+"""Real Sona OFF/ON network and visual evidence, never synthetic site hits."""
 import base64
 import importlib.util
 import json
@@ -43,11 +43,11 @@ if '--e1-only' in sys.argv:urls=urls[:1]
 legacy='--legacy' in sys.argv
 out=Path(sys.argv[2]);out.mkdir(parents=True,exist_ok=True)
 result=[]
-with tempfile.TemporaryDirectory(prefix='soulu-public-adblock-',ignore_cleanup_errors=True) as root:
-    env=dict(os.environ,LOCALAPPDATA=root,SOULU_UI_TEST_PORT=str(s.DEBUG_PORT),
-        SOULU_REGRESSION_SKIP_FIRST_RUN='1',SOULU_ADBLOCK_NO_UPDATE='1')
-    env.pop('SOULU_ADBLOCK_TEST_RULES',None)
-    os.environ['SOULU_REGRESSION_SKIP_FIRST_RUN']='1'
+with tempfile.TemporaryDirectory(prefix='sona-public-adblock-',ignore_cleanup_errors=True) as root:
+    env=dict(os.environ,LOCALAPPDATA=root,SONA_UI_TEST_PORT=str(s.DEBUG_PORT),
+        SONA_REGRESSION_SKIP_FIRST_RUN='1',SONA_ADBLOCK_NO_UPDATE='1')
+    env.pop('SONA_ADBLOCK_TEST_RULES',None)
+    os.environ['SONA_REGRESSION_SKIP_FIRST_RUN']='1'
     process=subprocess.Popen([sys.argv[1],'--no-proxy-server'],env=env)
     try:
         target=wait(lambda:next((t for t in s.targets() if '/ui/index.html' in t.get('url','')),None))
@@ -73,7 +73,7 @@ with tempfile.TemporaryDirectory(prefix='soulu-public-adblock-',ignore_cleanup_e
                     except (OSError,s.websocket.WebSocketException):
                         # Cross-origin renderer replacement can detach a CDP
                         # connection. Reattach without navigating or hiding a crash.
-                        if process.poll() is not None:raise AssertionError('Soulu exited during public navigation')
+                        if process.poll() is not None:raise AssertionError('Sona exited during public navigation')
                         page.close();page=s.page_socket()
                         s.command(page,'Network.enable')
                         s.command(page,'Network.setCacheDisabled',{'cacheDisabled':True})
@@ -82,7 +82,7 @@ with tempfile.TemporaryDirectory(prefix='soulu-public-adblock-',ignore_cleanup_e
                 actual=s.evaluate(shell,'window.browserShell.getState()')['page']
                 assert actual['generation']>previous, ('Public navigation did not start a new document',url,label,actual)
                 snapshot=s.evaluate(shell,'window.browserShell.getCurrentSite()')
-                dom=s.evaluate(page,"""(()=>{const s=window.__souluCosmetic;return {
+                dom=s.evaluate(page,"""(()=>{const s=window.__sonaCosmetic;return {
                     title:document.title,url:location.href,textLength:document.body?.innerText.length||0,
                     links:document.querySelectorAll('a[href]').length,images:document.images.length,
                     cosmeticSelectors:s?.selectors.size||0,

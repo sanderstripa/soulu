@@ -1,4 +1,4 @@
-# Soulu first-run setup
+# Sona first-run setup
 
 The six-step local flow runs in one native content tab beneath the existing browser shell. It uses existing profile settings, SitePolicy, PasswordVault/importer and VPN helper services. No Settings 2.0, alternative configuration store, cloud importer or new engine is introduced.
 
@@ -6,7 +6,7 @@ The six-step local flow runs in one native content tab beneath the existing brow
 
 `CreateProfile` decides eligibility before creating its CEF cache. Profiles restored from profiles.json, existing profile directories, and legacy personal settings/bookmarks are treated as existing installations. Their missing first-run marker migrates conservatively to `skipped`, preserving settings and session restoration. A genuinely new profile receives `not_started` and step 1. The default settings template explicitly excludes another profile's onboarding state.
 
-State resides in `Profiles/<id>/soulu-settings.json`, under `onboarding`: status (`not_started`, `completed`, `skipped`), step, draft source/category/privacy choices and native outcomes. The existing atomic WriteJson writer is used. Completed/skipped flows never launch automatically again. A pending flow resumes its stored step. Incognito never receives a marker or privileged onboarding bridge. The bridge accepts only the exact packaged document in the active normal tab of the active profile; it cannot invoke arbitrary shell/settings APIs.
+State resides in `Profiles/<id>/sona-settings.json`, under `onboarding`: status (`not_started`, `completed`, `skipped`), step, draft source/category/privacy choices and native outcomes. The existing atomic WriteJson writer is used. Completed/skipped flows never launch automatically again. A pending flow resumes its stored step. Incognito never receives a marker or privileged onboarding bridge. The bridge accepts only the exact packaged document in the active normal tab of the active profile; it cannot invoke arbitrary shell/settings APIs.
 
 Import intent is saved before work starts. Its native report is saved to the originating profile even if the user switches profiles during the background operation. A saved report suppresses repeat import. An interrupted operation requires review in the ordinary password manager and does not run automatically again. Source deduplication and DPAPI encryption remain unchanged. Keys are not persisted in onboarding drafts.
 
@@ -26,11 +26,11 @@ Advertising updates SitePolicy's existing global `blocking.enabled`. Sensitive p
 
 The ordinary Settings parser is extracted to `ui/vpn-key.js` and shared by onboarding. It retains the existing Settings parser for VLESS/Xray and Sudoku formats. The shipped native helper was verified to reject Sudoku with 'Ссылка должна начинаться с vless://.'; onboarding therefore advertises and accepts Xray/VLESS only. Format checking is clearly distinguished from backend validation. The existing native helper validates and saves with `save_profile`; no connect action is sent. Its real profile ID and the existing global VPN settings are reused. VPN remains global in the current architecture; onboarding status remains profile-specific. No Windows proxy mutation is added.
 
-The default action registers Soulu's per-user HTTP/HTTPS capability and ProgID, opens `ms-settings:defaultapps?registeredAppUser=Soulu`, and explains that Windows requires the user's choice. It never writes UserChoice or claims that Soulu is now default. Required HTTP/HTTPS command-line handling supports a new launch and CEF's already-running relaunch; pending external navigation waits until first-run ends. The uninstaller removes the registration. Windows reference: https://learn.microsoft.com/en-us/windows/win32/shell/default-programs
+The default action registers Sona's per-user HTTP/HTTPS capability and ProgID, opens `ms-settings:defaultapps?registeredAppUser=Sona`, and explains that Windows requires the user's choice. It never writes UserChoice or claims that Sona is now default. Required HTTP/HTTPS command-line handling supports a new launch and CEF's already-running relaunch; pending external navigation waits until first-run ends. The uninstaller removes the registration. Windows reference: https://learn.microsoft.com/en-us/windows/win32/shell/default-programs
 
 ## Visuals and accessibility
 
-Production `ui/branding/soulu-128.png` and `soulu-512.png` are composited unchanged. No concept logo is imported. `ui/onboarding-landscape.png` is one shared locally packaged generated landscape. Neutral SVG bookmark/clock/key elements, a glass shield and tunnel provide step illustrations without third-party brands. Real browser icons occur only in the source list. The existing Windows shell and window controls remain in place.
+Production `ui/branding/sona-128.png` and `sona-512.png` are composited unchanged. No concept logo is imported. `ui/onboarding-landscape.png` is one shared locally packaged generated landscape. Neutral SVG bookmark/clock/key elements, a glass shield and tunnel provide step illustrations without third-party brands. Real browser icons occur only in the source list. The existing Windows shell and window controls remain in place.
 
 The shared background was made with the built-in imagegen tool using this prompt: "Production UI hero background only, wide 2.6:1, airy soft blue and white glass-like landscape, smooth icy blue hills, pale luminous sky, reflective blue lake and delicate white flowing light trails, quiet composition with blank space for separately composited production assets. No text, logos, icons, petals, UI, browser logos or stock imagery."
 

@@ -16,7 +16,7 @@ are probed only after an explicit source selection. A stale probe cannot replace
 the latest selected source. Source/target selections are locked during execution
 and remain visible in the compact result.
 
-To defaults to the current Soulu profile. New Soulu profile reveals an inline name
+To defaults to the current Sona profile. New Sona profile reveals an inline name
 field; clicking Import creates it through the existing CreateProfile mechanism
 without changing the active profile or opening tabs. The import-specific handler
 defers catalog persistence until it can write atomically with WriteJson and rejects
@@ -82,7 +82,7 @@ folder, title and URL rather than by URL alone.
 
 History uses HistoryStore, the current visit database and views. Exact URL/time
 matches are skipped in a transaction. Chromium's 1601 epoch is subtracted in integer
-microseconds before conversion to Soulu's Unix milliseconds; Firefox uses Unix
+microseconds before conversion to Sona's Unix milliseconds; Firefox uses Unix
 microseconds. Implausible timestamps and unsupported URL schemes are skipped.
 
 CSV credentials go directly to PasswordVault (the existing user-scope DPAPI
@@ -106,9 +106,9 @@ field names / standard HTML autocomplete tokens. Payment tables, creditCards,
 password/token/card-like field names and unrelated types are excluded. Target data
 is a per-profile DPAPI-encrypted model, atomically saved after complete validation;
 repeated name/value pairs are skipped and cancellation before commit writes nothing.
-The model is consumed by the browser-owned “Fill from Soulu…” field menu, not
+The model is consumed by the browser-owned “Fill from Sona…” field menu, not
 inert import-only JSON. It reads the field in an isolated world, offers matching
-values in Soulu's native menu, and fills only the chosen field. Password choices
+values in Sona's native menu, and fills only the chosen field. Password choices
 are restricted to the current origin. Disabled/read-only fields, autocomplete off,
 new passwords, OTP and payment fields, cross-origin forms and incognito are excluded.
 This adds explicit field-menu filling; automatic focus suggestions are not claimed.
@@ -120,7 +120,7 @@ transferred, never cookies, page state, sessionStorage or POST data. Known encry
 SNSS versions are rejected with an actionable export fallback. An “Open tabs HTML
 file…” source imports a user-exported bookmark HTML list as tabs instead of bookmarks.
 Accepted URLs are opened as background tabs in the explicit target context, with
-URL/profile deduplication across Soulu windows and a 500-tab cap. Pending reads are
+URL/profile deduplication across Sona windows and a 500-tab cap. Pending reads are
 cancelled before opening. No automatic decrypt of encrypted session files is claimed.
 
 Local drive and reparse-point checks restrict sources. SQLite source files are
@@ -173,12 +173,12 @@ unsupported/protected stores require a supported export. Real authenticated
 Google/Ozon sessions, configured VPN connectivity and remaining physical desktop
 acceptance must not be inferred from synthetic fixtures.
 
-Run native checks with a newly built Soulu executable:
+Run native checks with a newly built Sona executable:
 
 ```text
-python scripts/test-browser-import-native.py PATH_TO_NEW_SOULU_EXE REPORT_JSON
-python scripts/test-cef-browser-import.py PATH_TO_NEW_SOULU_EXE REPORT_JSON
-python scripts/test-cef-browser-import-files.py PATH_TO_NEW_SOULU_EXE REPORT_JSON
+python scripts/test-browser-import-native.py PATH_TO_NEW_SONA_EXE REPORT_JSON
+python scripts/test-cef-browser-import.py PATH_TO_NEW_SONA_EXE REPORT_JSON
+python scripts/test-cef-browser-import-files.py PATH_TO_NEW_SONA_EXE REPORT_JSON
 ```
 
 Schema references: [Mozilla Places](https://firefox-source-docs.mozilla.org/browser/places/index.html),
@@ -197,4 +197,4 @@ Additional primary references: [Firefox Chrome migration](https://searchfox.org/
 
 The catalog includes registered Windows StartMenuInternet clients (both registry views), stable and preview channel profile roots, custom Chromium profile directory names, Firefox INI metadata with BOM/whitespace, and unregistered local Mozilla profiles. Chrome/Edge UserDataDir policies are included. Unknown registered products can be selected to choose their local Chromium/Mozilla profile folder. The folder picker also accepts an enclosing User Data or Profiles directory and returns each discovered profile.
 
-Database sources are opened with read/write/delete sharing and shared byte-range locks while a private database/WAL/journal copy is made. Existing WAL-index writer/checkpoint/recovery bytes are locked using SQLite’s standard shared-lock protocol before copying, so concurrent SQLite transactions encounter a normal busy lock. Source locks are released before parsing or destination writes. An actively writing/exclusively locked source requires closing that browser and retrying; no processes are terminated. The source SQLite database is never opened by Soulu, checkpointed or supplied with new WAL/SHM files. App-bound encrypted passwords and unsupported encrypted sessions still require a browser export; no encryption bypass is attempted.
+Database sources are opened with read/write/delete sharing and shared byte-range locks while a private database/WAL/journal copy is made. Existing WAL-index writer/checkpoint/recovery bytes are locked using SQLite’s standard shared-lock protocol before copying, so concurrent SQLite transactions encounter a normal busy lock. Source locks are released before parsing or destination writes. An actively writing/exclusively locked source requires closing that browser and retrying; no processes are terminated. The source SQLite database is never opened by Sona, checkpointed or supplied with new WAL/SHM files. App-bound encrypted passwords and unsupported encrypted sessions still require a browser export; no encryption bypass is attempted.

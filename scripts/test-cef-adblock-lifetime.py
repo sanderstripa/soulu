@@ -31,10 +31,10 @@ def wait(fn,timeout=30):
         time.sleep(.1)
     raise AssertionError('Lifetime fixture timeout')
 out=Path(sys.argv[2]);out.parent.mkdir(parents=True,exist_ok=True);evidence={}
-with tempfile.TemporaryDirectory(prefix='soulu-adblock-lifetime-',ignore_cleanup_errors=True) as root:
-    os.environ['SOULU_REGRESSION_SKIP_FIRST_RUN']='1'
-    env=dict(os.environ,LOCALAPPDATA=root,SOULU_UI_TEST_PORT=str(s.DEBUG_PORT),SOULU_ADBLOCK_NO_UPDATE='1',SOULU_REGRESSION_SKIP_FIRST_RUN='1')
-    env.pop('SOULU_ADBLOCK_TEST_RULES',None)
+with tempfile.TemporaryDirectory(prefix='sona-adblock-lifetime-',ignore_cleanup_errors=True) as root:
+    os.environ['SONA_REGRESSION_SKIP_FIRST_RUN']='1'
+    env=dict(os.environ,LOCALAPPDATA=root,SONA_UI_TEST_PORT=str(s.DEBUG_PORT),SONA_ADBLOCK_NO_UPDATE='1',SONA_REGRESSION_SKIP_FIRST_RUN='1')
+    env.pop('SONA_ADBLOCK_TEST_RULES',None)
     server=http.server.ThreadingHTTPServer(('127.0.0.1',s.free_port()),Handler);threading.Thread(target=server.serve_forever,daemon=True).start()
     start=time.monotonic();process=subprocess.Popen([sys.argv[1],'--no-proxy-server','--host-resolver-rules=MAP ad.doubleclick.net 127.0.0.1'],env=env)
     def private_memory():

@@ -3,7 +3,7 @@ import base64, ctypes, http.server, importlib.util, json, os, pathlib, subproces
 def module(name,file):
     spec=importlib.util.spec_from_file_location(name,pathlib.Path(__file__).with_name(file));m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m);return m
 s=module('storage','test-cef-storage.py');access=module('accessibility','native-menu-accessibility.py')
-os.environ['NO_PROXY']='127.0.0.1,localhost';os.environ['SOULU_REGRESSION_SKIP_FIRST_RUN']='1'
+os.environ['NO_PROXY']='127.0.0.1,localhost';os.environ['SONA_REGRESSION_SKIP_FIRST_RUN']='1'
 u=ctypes.windll.user32
 u.PostMessageW.argtypes=[ctypes.c_void_p,ctypes.c_uint,ctypes.c_size_t,ctypes.c_ssize_t]
 u.SendMessageW.argtypes=[ctypes.c_void_p,ctypes.c_uint,ctypes.c_size_t,ctypes.c_ssize_t]
@@ -37,8 +37,8 @@ def wait(fn,timeout=25):
 process=None
 try:
     for dpi in [96,120,144,168,192]:
-        with tempfile.TemporaryDirectory(prefix='soulu-menu-',ignore_cleanup_errors=True) as profile:
-            env=dict(os.environ,LOCALAPPDATA=profile,SOULU_UI_TEST_PORT=str(s.DEBUG_PORT),SOULU_MENU_TEST_DPI=str(dpi))
+        with tempfile.TemporaryDirectory(prefix='sona-menu-',ignore_cleanup_errors=True) as profile:
+            env=dict(os.environ,LOCALAPPDATA=profile,SONA_UI_TEST_PORT=str(s.DEBUG_PORT),SONA_MENU_TEST_DPI=str(dpi))
             process=subprocess.Popen([str(pathlib.Path(sys.argv[1]).resolve())],env=env)
             page=s.page_socket();target=next(t for t in s.targets() if '/ui/index.html' in t.get('url',''));shell=s.websocket.create_connection(target['webSocketDebuggerUrl'],timeout=30,origin=s.BASE)
             s.navigate(page,f'http://127.0.0.1:{server.server_port}/fixture')
@@ -47,7 +47,7 @@ try:
                 @ctypes.WINFUNCTYPE(ctypes.c_bool,ctypes.c_void_p,ctypes.c_void_p)
                 def visit(hwnd,_):
                     pid=ctypes.c_ulong();u.GetWindowThreadProcessId(hwnd,ctypes.byref(pid));name=ctypes.create_unicode_buffer(80);u.GetClassNameW(ctypes.c_void_p(hwnd),name,80)
-                    if pid.value==process.pid and name.value=='SouluMenuHost':result.append(hwnd)
+                    if pid.value==process.pid and name.value=='SonaMenuHost':result.append(hwnd)
                     return True
                 u.EnumWindows(visit,0);return result
             for language in ['ru','en']:

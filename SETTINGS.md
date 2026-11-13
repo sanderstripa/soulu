@@ -1,6 +1,6 @@
 # Settings 2.0
 
-Settings is a native overlay, separate from tabs. Compact Home expands when entering a section and returns to intrinsic height on Home. The fixed nine sections are General, Interface, Startup and home, Search, Privacy and security, VPN, Reading and translation, Profiles and import, and About Soulu.
+Settings is a native overlay, separate from tabs. Compact Home expands when entering a section and returns to intrinsic height on Home. The fixed nine sections are General, Interface, Startup and home, Search, Privacy and security, VPN, Reading and translation, Profiles and import, and About Sona.
 
 General owns language, default browser and downloads. Interface owns theme, matte, toolbar and bookmarks-bar controls. Startup and home owns independent startup/new-tab/home modes and URLs, last-tab behavior, Home widgets, favorites and weather. Privacy owns permissions, ad blocking/exceptions, history/clearing, passwords and site data. Existing VPN, Reader, translation, profile and import actions retain their working backends.
 
@@ -12,9 +12,9 @@ Ordinary controls commit through `settings.save`: toggles/selects/segments on ch
 
 ## Existing stores and scopes
 
-- Profile browser settings: `Profiles/<id>/soulu-settings.json`.
-- Permission/ad-block policy: profile `soulu-site-rules.json`.
-- Reader preferences: profile `soulu-reader.json`.
+- Profile browser settings: `Profiles/<id>/sona-settings.json`.
+- Permission/ad-block policy: profile `sona-site-rules.json`.
+- Reader preferences: profile `sona-reader.json`.
 - VPN retains the existing global settings and helper profile stores.
 - Password vault, bookmarks, history, imports, translation rules, cookies and cache retain existing backends/scopes.
 

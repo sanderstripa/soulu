@@ -5,17 +5,17 @@ const tick=()=>new Promise(r=>setImmediate(r));
 async function test(enabled){
  let api,cache={responseLanguage:'ru'},watch;const calls=[];
  const context=vm.createContext({console,Promise,Blob,Headers,TextDecoder,TextEncoder,ArrayBuffer,Uint8Array,structuredClone,atob,btoa,setTimeout,clearTimeout,URL,URLSearchParams,crypto:webcrypto,window:{},document:new EventTarget(),Event});
- context.window.__souluVideoNative=(raw,callback)=>{const data=JSON.parse(raw);calls.push(data);if(data.op==='watch'){watch=callback;return;}let result={ok:true};
+ context.window.__sonaVideoNative=(raw,callback)=>{const data=JSON.parse(raw);calls.push(data);if(data.op==='watch'){watch=callback;return;}let result={ok:true};
   if(data.op==='init')result={ok:true,enabled,values:cache,version:'1.12.3'};
   if(data.op==='set')cache[data.key]=data.value;
   if(data.op==='xhr')result={ok:true,status:200,body:btoa('translated'),url:data.url,headers:'Content-Type: text/plain',contentType:'text/plain'};
   callback(JSON.stringify(result));
  };
- const native=context.window.__souluVideoNative;
+ const native=context.window.__sonaVideoNative;
  vm.runInContext('('+bootstrap+')',context)(function(GM,...rest){api={GM,rest}});
- await tick();assert.equal(!!api,enabled);assert.equal(context.window.__souluVideoNative,undefined);
+ await tick();assert.equal(!!api,enabled);assert.equal(context.window.__sonaVideoNative,undefined);
  if(!enabled){assert.equal(calls.length,1);return}
- const previousCalls=calls.length;context.window.__souluVideoNative=native;vm.runInContext('('+bootstrap+')',context)(()=>{throw Error('duplicate runtime started')});await tick();assert.equal(calls.length,previousCalls,'one runtime per document');
+ const previousCalls=calls.length;context.window.__sonaVideoNative=native;vm.runInContext('('+bootstrap+')',context)(()=>{throw Error('duplicate runtime started')});await tick();assert.equal(calls.length,previousCalls,'one runtime per document');
  assert.equal(await api.GM.getValue('responseLanguage'),'ru');await api.GM.setValue('autoTranslate',true);assert.equal(cache.autoTranslate,true);
  let remote;api.GM.addValueChangeListener('responseLanguage',(k,old,value,flag)=>{remote={old,value,flag}});
  watch(JSON.stringify({ok:true,values:{...cache,responseLanguage:'en'}}));assert.equal(await api.GM.getValue('responseLanguage'),'en');assert.deepEqual(remote,{old:'ru',value:'en',flag:true});

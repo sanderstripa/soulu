@@ -1,7 +1,7 @@
 /* Native, local Gecko translation. Web pages receive no privileged bridge. */
 (()=>{
- const base=Soulu.dispatch;
- Soulu.dispatch=async(action,payload,source)=>{
+ const base=Sona.dispatch;
+ Sona.dispatch=async(action,payload,source)=>{
   if(!action.startsWith('browser.translate.'))return base(action,payload,source);
   const op=action.slice('browser.translate.'.length),browser=gBrowser.selectedBrowser;
   if(!/^https?:/.test(browser.currentURI.spec))throw Error('Перевод доступен для веб-страниц.');

@@ -101,7 +101,7 @@ def windows(pid):
         name = C.create_unicode_buffer(100)
         u.GetWindowThreadProcessId(hwnd, C.byref(ident))
         u.GetClassNameW(hwnd, name, 100)
-        if ident.value == pid and name.value == 'SouluBrowserWindow': found.append(hwnd)
+        if ident.value == pid and name.value == 'SonaBrowserWindow': found.append(hwnd)
         return True
     u.EnumWindows(visit, 0)
     return found
@@ -184,7 +184,7 @@ def foreground(hwnd):
         u.AttachThreadInput(current,thread,True)
         try:u.BringWindowToTop(hwnd);u.SetForegroundWindow(hwnd)
         finally:u.AttachThreadInput(current,thread,False)
-    assert u.GetForegroundWindow()==hwnd,'Only isolated Soulu may receive native test input'
+    assert u.GetForegroundWindow()==hwnd,'Only isolated Sona may receive native test input'
 
 def page_focus_ready(page,hwnd):
     info=FocusInfo();info.size=C.sizeof(info)
@@ -216,8 +216,8 @@ def address_ready(shell,hwnd,address):
 
 process = None
 try:
-    with tempfile.TemporaryDirectory(prefix='soulu-window-', ignore_cleanup_errors=True) as profile:
-        env = dict(os.environ, LOCALAPPDATA=profile, APPDATA=profile, SOULU_REGRESSION_SKIP_FIRST_RUN='1')
+    with tempfile.TemporaryDirectory(prefix='sona-window-', ignore_cleanup_errors=True) as profile:
+        env = dict(os.environ, LOCALAPPDATA=profile, APPDATA=profile, SONA_REGRESSION_SKIP_FIRST_RUN='1')
         process = subprocess.Popen([str(Path(sys.argv[1]).resolve())], env=env)
         page = s.page_socket()
         target = next(t for t in s.targets() if '/ui/index.html' in t.get('url',''))

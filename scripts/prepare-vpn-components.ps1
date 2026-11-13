@@ -7,7 +7,7 @@ $stamps=@{}
 foreach($id in @('xray','sudoku')){
  $pin=$pins.$id
  if($pin.url -notmatch ('^https://github.com/'+[regex]::Escape($pin.repository)+'/releases/download/') -or $pin.sha256 -notmatch '^[a-f0-9]{64}$'){throw 'Invalid VPN component pin'}
- $temp=Join-Path $env:RUNNER_TEMP ('soulu-core-'+[guid]::NewGuid().ToString('N'))
+ $temp=Join-Path $env:RUNNER_TEMP ('sona-core-'+[guid]::NewGuid().ToString('N'))
  New-Item -ItemType Directory -Force $temp | Out-Null
  try{
   $archive=Join-Path $temp 'core.zip';Invoke-WebRequest $pin.url -OutFile $archive
@@ -31,10 +31,10 @@ foreach($id in @('xray','sudoku')){
 $stamps|ConvertTo-Json -Depth 5|Set-Content (Join-Path $Destination 'components.json') -Encoding utf8NoBOM
 Push-Location (Join-Path $source 'helper')
 try{
- $env:SOULU_VPN_FIXTURE_BIN = (Resolve-Path $Destination).Path
+ $env:SONA_VPN_FIXTURE_BIN = (Resolve-Path $Destination).Path
  go test -v ./...
  if($LASTEXITCODE -ne 0){throw 'VPN helper tests failed'}
- $targetExe=Join-Path (Resolve-Path $Destination).Path 'SouluVpnHost.exe'
+ $targetExe=Join-Path (Resolve-Path $Destination).Path 'SonaVpnHost.exe'
  go build -trimpath -ldflags '-s -w' -o $targetExe .
  if($LASTEXITCODE -ne 0){throw 'VPN helper build failed'}
-}finally{Remove-Item Env:SOULU_VPN_FIXTURE_BIN -ErrorAction SilentlyContinue;Pop-Location}
+}finally{Remove-Item Env:SONA_VPN_FIXTURE_BIN -ErrorAction SilentlyContinue;Pop-Location}

@@ -3,9 +3,9 @@ import importlib.util,pathlib,subprocess,sys,tempfile,json,hashlib,urllib.reques
 import numpy as np,soundfile as sf
 root=pathlib.Path(__file__).resolve().parents[2];spec=importlib.util.spec_from_file_location('fixtures',root/'scripts/test-cef-home-speech.py');fixtures=importlib.util.module_from_spec(spec);spec.loader.exec_module(fixtures)
 exe=pathlib.Path(sys.argv[1]).resolve();report=pathlib.Path(sys.argv[2]);checks=[]
-with tempfile.TemporaryDirectory(prefix='soulu-local-speech-') as tmp:
+with tempfile.TemporaryDirectory(prefix='sona-local-speech-') as tmp:
  for language,url,digest,expected in fixtures.FIXTURES:
-  with urllib.request.urlopen(urllib.request.Request(url,headers={'User-Agent':'SouluRegression/1.0'}),timeout=40) as r:data=r.read(2000000)
+  with urllib.request.urlopen(urllib.request.Request(url,headers={'User-Agent':'SonaRegression/1.0'}),timeout=40) as r:data=r.read(2000000)
   assert hashlib.sha256(data).hexdigest()==digest;source=pathlib.Path(tmp)/('source-'+language);source.write_bytes(data);audio,rate=sf.read(source,dtype='float32',always_2d=True);audio=audio.mean(axis=1)
   if rate!=16000:audio=np.interp(np.arange(round(len(audio)*16000/rate))*rate/16000,np.arange(len(audio)),audio)
   pcm=pathlib.Path(tmp)/(language+'.pcm');pcm.write_bytes((np.clip(np.concatenate([audio,np.zeros(8000)]),-1,1)*32767).astype('<i2').tobytes());start=time.monotonic();p=subprocess.run([str(exe),language,'--pcm-test',str(pcm)],capture_output=True,timeout=100)

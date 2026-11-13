@@ -11,7 +11,7 @@ vpn/native-host/xray/geoip.dat
 vpn/native-host/xray/geosite.dat
 vpn/native-host/xray/wintun.dll
 __pycache__/
-cef/soulu/adblock/target/
+cef/sona/adblock/target/
 
 /ui/third_party/bergamot-runtime.js
 
@@ -34,5 +34,5 @@ ui/speech/ggml-tiny.bin
 /gecko3-acceptance/
 /gecko/launcher/*.syso
 
-/gecko/launcher/soulu-icon.rc
-/gecko/launcher/soulu-icon.res
+/gecko/launcher/sona-icon.rc
+/gecko/launcher/sona-icon.res

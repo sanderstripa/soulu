@@ -42,8 +42,8 @@ def debug_policy(exe, arguments):
 exe = Path(sys.argv[1]).resolve()
 output = Path(sys.argv[2]).resolve()
 output.parent.mkdir(parents=True, exist_ok=True)
-header = (Path(__file__).resolve().parents[1] / 'cef/soulu/app_version.h').read_text()
-versions = re.findall(r'kSouluVersion\s*=\s*"([^"]+)"', header)
+header = (Path(__file__).resolve().parents[1] / 'cef/sona/app_version.h').read_text()
+versions = re.findall(r'kSonaVersion\s*=\s*"([^"]+)"', header)
 assert len(versions) == 1
 expected = versions[0]
 with socket.socket() as listener:
@@ -51,7 +51,7 @@ with socket.socket() as listener:
     port = listener.getsockname()[1]
 arguments = f'--remote-debugging-port={port} --remote-allow-origins=*'
 opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
-with tempfile.TemporaryDirectory(prefix='soulu-installer-version-') as temporary, debug_policy(exe, arguments):
+with tempfile.TemporaryDirectory(prefix='sona-installer-version-') as temporary, debug_policy(exe, arguments):
     env = dict(os.environ, WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=arguments, WEBVIEW2_USER_DATA_FOLDER=temporary)
     process = subprocess.Popen([str(exe)], env=env)
     ws = None

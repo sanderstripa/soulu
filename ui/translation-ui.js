@@ -1,17 +1,17 @@
 (() => {
   'use strict';
-  const api=window.browserShell,service=window.SouluTranslate;if(!api||!service)return;
+  const api=window.browserShell,service=window.SonaTranslate;if(!api||!service)return;
   const jobs=new Map(),probes=new Map();let state={},site=null,revision=0,engine=null,activeJob=null,prefs={target:'ru',always:[],never:[]};
-  const copy={ru:{title:'Soulu Translate',translate:'Перевести',original:'Показать оригинал',cancel:'Отменить',close:'Закрыть',source:'Язык страницы',target:'Язык перевода',local:'Текст страницы остаётся на устройстве. Модели загружаются один раз.',downloading:'Загрузка языковой модели…',translating:'Перевод страницы…',translated:'Страница переведена',same:'Страница уже на выбранном языке',unsupported:'Эта языковая пара пока не поддерживается',error:'Не удалось перевести страницу. Проверьте сеть при первой загрузке модели и повторите.',always:'Всегда переводить этот язык',never:'Никогда не переводить этот сайт',qr:'QR-код страницы',copy:'Копировать адрес'},en:{title:'Soulu Translate',translate:'Translate',original:'Show original',cancel:'Cancel',close:'Close',source:'Page language',target:'Translate to',local:'Page text stays on your device. Models are downloaded once.',downloading:'Downloading language model…',translating:'Translating page…',translated:'Page translated',same:'The page is already in the selected language',unsupported:'This language pair is not supported yet',error:'Translation failed. Check your connection for the first model download and try again.',always:'Always translate this language',never:'Never translate this site',qr:'Page QR code',copy:'Copy address'}};
+  const copy={ru:{title:'Sona Translate',translate:'Перевести',original:'Показать оригинал',cancel:'Отменить',close:'Закрыть',source:'Язык страницы',target:'Язык перевода',local:'Текст страницы остаётся на устройстве. Модели загружаются один раз.',downloading:'Загрузка языковой модели…',translating:'Перевод страницы…',translated:'Страница переведена',same:'Страница уже на выбранном языке',unsupported:'Эта языковая пара пока не поддерживается',error:'Не удалось перевести страницу. Проверьте сеть при первой загрузке модели и повторите.',always:'Всегда переводить этот язык',never:'Никогда не переводить этот сайт',qr:'QR-код страницы',copy:'Копировать адрес'},en:{title:'Sona Translate',translate:'Translate',original:'Show original',cancel:'Cancel',close:'Close',source:'Page language',target:'Translate to',local:'Page text stays on your device. Models are downloaded once.',downloading:'Downloading language model…',translating:'Translating page…',translated:'Page translated',same:'The page is already in the selected language',unsupported:'This language pair is not supported yet',error:'Translation failed. Check your connection for the first model download and try again.',always:'Always translate this language',never:'Never translate this site',qr:'Page QR code',copy:'Copy address'}};
   const tr=key=>(copy[state.settings?.language==='en'?'en':'ru'])[key];
   const element=(tag,text)=>{const el=document.createElement(tag);if(text!==undefined)el.textContent=text;return el;};
-  const panel=element('section');panel.className='soulu-translation';panel.hidden=true;panel.setAttribute('role','dialog');panel.setAttribute('aria-label','Soulu Translate');document.body.append(panel);
+  const panel=element('section');panel.className='sona-translation';panel.hidden=true;panel.setAttribute('role','dialog');panel.setAttribute('aria-label','Sona Translate');document.body.append(panel);
   const key=s=>`${s.tabId}:${s.generation}:${s.url}`;
   const status=element('p');status.setAttribute('role','status');
   const languages={en:{ru:'Английский',en:'English'},ru:{ru:'Русский',en:'Russian'},de:{ru:'Немецкий',en:'German'}};
-  function position(){const icon=document.querySelector('.soulu-translate-button');const rect=icon?.getBoundingClientRect();const css=getComputedStyle(document.documentElement);const chrome=state.fullscreen?0:state.settings?.layout==='adaptive'?parseFloat(getComputedStyle(document.body).getPropertyValue('--chrome-height')):parseFloat(css.getPropertyValue(['classic','adaptive'].includes(state.settings?.layout)?'--geometry-classic-toolbar':'--geometry-main-toolbar'));const top=Math.max(8,Math.min((rect?.bottom||chrome)+8,innerHeight-120));panel.style.top=top+'px';panel.style.maxHeight=Math.max(100,innerHeight-top-12)+'px';}
+  function position(){const icon=document.querySelector('.sona-translate-button');const rect=icon?.getBoundingClientRect();const css=getComputedStyle(document.documentElement);const chrome=state.fullscreen?0:state.settings?.layout==='adaptive'?parseFloat(getComputedStyle(document.body).getPropertyValue('--chrome-height')):parseFloat(css.getPropertyValue(['classic','adaptive'].includes(state.settings?.layout)?'--geometry-classic-toolbar':'--geometry-main-toolbar'));const top=Math.max(8,Math.min((rect?.bottom||chrome)+8,innerHeight-120));panel.style.top=top+'px';panel.style.maxHeight=Math.max(100,innerHeight-top-12)+'px';}
   window.addEventListener('resize',position);
-  function close(){panel.hidden=true;api.setPopover(false,'translation');api.setSuggestionsHeight(0);document.querySelector('.soulu-translate-button')?.focus();}
+  function close(){panel.hidden=true;api.setPopover(false,'translation');api.setSuggestionsHeight(0);document.querySelector('.sona-translate-button')?.focus();}
   function button(text,action){const b=element('button',text);b.type='button';b.onclick=()=>Promise.resolve().then(action).catch(error=>status.textContent=tr(error.message==='unsupported'?'unsupported':'error'));return b;}
   function select(value){const s=element('select');if(value&&!languages[value]){const o=element('option',value);o.value=value;s.append(o);}for(const lang of Object.keys(languages)){const o=element('option',languages[lang][state.settings?.language==='en'?'en':'ru']);o.value=lang;s.append(o);}s.value=value;return s;}
   async function preference(patch){prefs=await api.translation('preferences',{...site,...patch});const detected=probes.get(`${site.tabId}:${site.generation}:${site.url}`);if(detected&&typeof detected==='object'){detected.target=prefs.target;detected.never=(prefs.never||[]).includes(site.origin);}updateIcon();}
@@ -49,7 +49,7 @@
     if(ticket!==revision)return;
     const probe=await api.translation('probe',site);const source=jobs.get(key(site))?.from||service.detect(probe.sample,probe.lang);
     prefs=await api.translation('preferences',site);if(ticket!==revision)return;
-    panel.classList.remove("soulu-qr");panel.replaceChildren(element('h2',tr('title')));
+    panel.classList.remove("sona-qr");panel.replaceChildren(element('h2',tr('title')));
     const sourceLabel=element('label',tr('source')),from=select(source||'en');sourceLabel.append(from);
     const targetLabel=element('label',tr('target')),to=select(prefs.target||state.settings?.language||'ru');to.querySelector('option[value=de]')?.remove();targetLabel.append(to);
     panel.append(sourceLabel,targetLabel,element('p',tr('local')),status);
@@ -70,9 +70,9 @@
     if(detected&&typeof detected==='object'&&!tab.incognito)detected.target=state.settings?.translationTarget||'ru';
     const translated=[...jobs.values()].some(j=>j.site.tabId===tab.id);
     const valid=/^https?:|^file:/i.test(tab.url)&&!tab.url.includes('/ui/')&&(translated||(detected?.from&&detected.from!==detected.target&&!detected.never));
-    let icon=host.querySelector('.soulu-translate-button');
+    let icon=host.querySelector('.sona-translate-button');
     if(!valid){icon?.remove();return;}
-    if(!icon){icon=element('button');icon.type='button';icon.className='soulu-translate-button';icon.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h12M9 3v2M6 5c0 6 4 10 8 11M13 5c0 6-4 10-8 11M14 21l4-10 4 10M15.5 17h5"/></svg>';icon.onclick=()=>open().catch(()=>{});host.append(icon);}
+    if(!icon){icon=element('button');icon.type='button';icon.className='sona-translate-button';icon.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h12M9 3v2M6 5c0 6 4 10 8 11M13 5c0 6-4 10-8 11M14 21l4-10 4 10M15.5 17h5"/></svg>';icon.onclick=()=>open().catch(()=>{});host.append(icon);}
     icon.title=tr('title');icon.setAttribute('aria-label',tr('title'));icon.dataset.translated=String([...jobs.values()].some(j=>j.site.tabId===tab.id&&j.state==='translated'));
   }
   async function handleState(s){
@@ -96,10 +96,10 @@
     const qr=window.qrcode(0,'M');qr.addData(snapshot.url,'Byte');qr.make();const count=qr.getModuleCount(),scale=Math.max(2,Math.floor(240/(count+8)));
     const canvas=element('canvas');canvas.setAttribute('role','img');canvas.setAttribute('aria-label',tr('qr')+': '+snapshot.url);canvas.width=canvas.height=(count+8)*scale;const dc=canvas.getContext('2d');dc.fillStyle='#fff';dc.fillRect(0,0,canvas.width,canvas.height);dc.fillStyle='#000';
     for(let y=0;y<count;y++)for(let x=0;x<count;x++)if(qr.isDark(y,x))dc.fillRect((x+4)*scale,(y+4)*scale,scale,scale);
-    panel.replaceChildren(element('h2',tr('qr')),canvas,element('p',snapshot.url),button(tr('copy'),()=>api.shareMenu()),button(tr('close'),close));panel.classList.add('soulu-qr');panel.hidden=false;position();api.setPopover(true,'translation');api.setSuggestionsHeight(innerHeight);
+    panel.replaceChildren(element('h2',tr('qr')),canvas,element('p',snapshot.url),button(tr('copy'),()=>api.shareMenu()),button(tr('close'),close));panel.classList.add('sona-qr');panel.hidden=false;position();api.setPopover(true,'translation');api.setSuggestionsHeight(innerHeight);
   });
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!panel.hidden){e.preventDefault();close();}});
-  document.addEventListener('pointerdown',e=>{if(!panel.hidden&&!panel.contains(e.target)&&!e.target.closest('.soulu-translate-button'))close();});
+  document.addEventListener('pointerdown',e=>{if(!panel.hidden&&!panel.contains(e.target)&&!e.target.closest('.sona-translate-button'))close();});
   window.addEventListener('beforeunload',()=>{engine?.delete();});
   api.getState().then(s=>{state=s;updateIcon();});
 })()

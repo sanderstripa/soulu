@@ -1,0 +1,102 @@
+name: Build and publish Sona 0.16.0 Preview
+on:
+  push:
+    branches: [gecko-preview]
+    paths: ['.github/workflows/build-sona16.yml']
+permissions:
+  contents: write
+  actions: write
+jobs:
+  windows:
+    runs-on: windows-2025
+    timeout-minutes: 35
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: sanderstripa/soulu
+      PYTHONUTF8: 1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Cancel superseded Preview 16 checks
+        shell: pwsh
+        run: |
+          $runs = gh run list --workflow build-sona16.yml --branch gecko-preview --limit 30 --json databaseId,status | ConvertFrom-Json
+          foreach ($old in $runs) { if ([long]$old.databaseId -lt [long]$env:GITHUB_RUN_ID -and $old.status -in @('in_progress','queued')) { gh run cancel $old.databaseId } }
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.x'
+      - name: Restore published Preview 15 and apply requested Preview 16 fixes
+        id: assemble
+        shell: pwsh
+        run: |
+          $run = gh run view 42037970355 --json conclusion,headSha | ConvertFrom-Json
+          if ($run.conclusion -ne 'success' -or $run.headSha -ne '05473536c13617c65fbf48af073d28ed42a8377d') { throw 'Preview 12 provenance mismatch' }
+          gh run download 42037970355 -n sona15-verified-installer -D preview15-input
+          if ($LASTEXITCODE) { throw 'Verified Preview 12 download failed' }
+          python gecko/prepare-preview16.py
+          if ($LASTEXITCODE) { throw 'Preview 16 assembly failed' }
+          Push-Location gecko/launcher
+          go run github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.5.0 -64 -o rsrc.syso
+          if ($LASTEXITCODE) { throw 'Launcher resources failed' }
+          go build -trimpath -ldflags '-s -w -H=windowsgui' -o ../../gecko-out/Sona.exe .
+          if ($LASTEXITCODE) { throw 'Launcher compilation failed' }
+          Pop-Location
+          python gecko/brand-engine.py
+          if ($LASTEXITCODE) { throw 'Engine branding failed' }
+          New-Item -ItemType Directory -Force sona16-checks | Out-Null
+          Copy-Item gecko-out/windows-brand-audit.json,gecko-out/default-bookmarks-audit.json sona16-checks
+          python -c "import json; r=json.load(open('gecko-out/windows-brand-audit.json')); assert r and all(x['iconGroupsMatchSona'] for x in r); assert json.load(open('gecko-out/default-bookmarks-audit.json'))['disabled']"
+          if ($LASTEXITCODE) { throw 'Branding/default bookmark audit failed' }
+          python -m pip install marionette_driver pillow psutil websocket-client
+      - name: Verify native presentation without compositor acknowledgements and updater versions
+        run: node gecko/tests/regressions16.mjs gecko-out baseline15
+      - name: Verify four native launches of Preview 16
+        run: python gecko/tests/restart16.py gecko-out sona16-checks
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sona16-native-evidence
+          path: |
+            sona16-checks/
+
+      - name: Build Sona 0.16.0 Preview installer
+        id: installer
+        if: ${{ !cancelled() && steps.assemble.outcome == 'success' }}
+        shell: pwsh
+        run: |
+          ./gecko/installer/build.ps1 -BuildDir gecko-out -OutFile Sona-0.16.0-Preview-Setup-win64.exe
+          if ($LASTEXITCODE) { throw 'Installer build failed' }
+          if ((Get-Item Sona-0.16.0-Preview-Setup-win64.exe).VersionInfo.ProductVersion -ne '0.16.0.0') { throw 'Installer version mismatch' }
+      - name: Verify clean installation, first launch, upgrade and removal
+        if: ${{ !cancelled() && steps.installer.outcome == 'success' }}
+        run: python gecko/tests/installer16.py Sona-0.16.0-Preview-Setup-win64.exe sona16-checks
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sona16-evidence
+          path: sona16-checks/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sona16-verified-installer
+          path: |
+            Sona-0.16.0-Preview-Setup-win64.exe
+            Sona-0.16.0-Preview-Setup-win64.exe.build.json
+      - name: Publish tested Sona 0.16.0 Preview installer
+        shell: pwsh
+        run: |
+          python -c "import json,pathlib; paths=['restart16.json','installer16.json','regressions16.json']; assert all(json.loads((pathlib.Path('sona16-checks')/p).read_text())['passed'] for p in paths)"
+          if ($LASTEXITCODE) { throw 'Acceptance reports not green' }
+          (Get-FileHash Sona-0.16.0-Preview-Setup-win64.exe -Algorithm SHA256).Hash.ToLowerInvariant() + '  Sona-0.16.0-Preview-Setup-win64.exe' | Set-Content SHA256SUMS.txt
+          $branchHead = gh api repos/sanderstripa/soulu/git/ref/heads/gecko-preview --jq '.object.sha'
+          if ($branchHead.Trim() -ne $env:GITHUB_SHA) { throw 'A newer source revision superseded this build' }
+          gh release create sona-preview-16 Sona-0.16.0-Preview-Setup-win64.exe Sona-0.16.0-Preview-Setup-win64.exe.build.json SHA256SUMS.txt sona16-checks/restart16.json sona16-checks/installer16.json sona16-checks/regressions16.json --target $env:GITHUB_SHA --title 'Sona 0.16.0 Preview' --prerelease --notes-file gecko/docs/PREVIEW16-RESULTS.md
+          if ($LASTEXITCODE) { throw 'Release publication failed' }
+
+
+# Verify the updater version by importing the generated module.
+
+# Defer heavy background initialization until paint, without hiding the window.

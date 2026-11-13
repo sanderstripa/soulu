@@ -4,7 +4,7 @@ source=Path(__file__).with_name('preview4.py').read_text().split('\ntry:\n start
 exec(compile(source,str(Path(__file__).with_name('preview4.py')),'exec'),globals())
 report={'passed':False,'checks':{},'samples':[]}
 try:
- (profile/'soulu-settings.json').write_text(json.dumps({'onboarding':{'done':True},'settings':{'theme':'light'}}));start();call('browser.navigate',url);wait(lambda:content('return !!document.getElementById("v")'))
+ (profile/'sona-settings.json').write_text(json.dumps({'onboarding':{'done':True},'settings':{'theme':'light'}}));start();call('browser.navigate',url);wait(lambda:content('return !!document.getElementById("v")'))
  import ctypes as C
  from ctypes import wintypes as W
  from PIL import ImageGrab
