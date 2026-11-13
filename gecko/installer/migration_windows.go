@@ -6,11 +6,27 @@ import (
 	"connect-installer.local/core/core"
 	"encoding/json"
 	"fmt"
+	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
 	"os"
 	"path/filepath"
 	"strings"
 )
+
+const windowsPathsPS = `Add-Type -TypeDefinition 'using System;using System.Text;using System.Runtime.InteropServices;public static class SonaMigrationPaths{[DllImport("kernel32.dll",CharSet=CharSet.Unicode)]public static extern uint GetLongPathName(string path,StringBuilder buffer,uint size);public static string Expand(string path){var buffer=new StringBuilder(32768);return GetLongPathName(path,buffer,(uint)buffer.Capacity)>0?buffer.ToString():path;}}';`
+
+func canonicalWindowsPath(path string) string {
+	p, e := windows.UTF16PtrFromString(path)
+	if e != nil {
+		return path
+	}
+	buf := make([]uint16, 32768)
+	n, e := windows.GetLongPathName(p, &buf[0], uint32(len(buf)))
+	if e == nil && n > 0 && n < uint32(len(buf)) {
+		return windows.UTF16ToString(buf[:n])
+	}
+	return path
+}
 
 func previousInstallations() []string {
 	local := os.Getenv("LOCALAPPDATA")
@@ -71,10 +87,10 @@ func retirePrevious(dir, exe, icon string) error {
 			return fmt.Errorf("choose the new Sona installation directory")
 		}
 		// Rewrite only links targeting a verified previous product installation.
-		script := `$ErrorActionPreference='Stop';$shell=New-Object -ComObject WScript.Shell;$old=` + core.QuotePS(oldDir) + `;$exe=` + core.QuotePS(exe) + `;$icon=` + core.QuotePS(icon) + `;$oldName=` + core.QuotePS(priorName) + `;
+		script := windowsPathsPS + `$ErrorActionPreference='Stop';$shell=New-Object -ComObject WScript.Shell;$old=` + core.QuotePS(oldDir) + `;$exe=` + core.QuotePS(exe) + `;$icon=` + core.QuotePS(icon) + `;$oldName=` + core.QuotePS(priorName) + `;
 $roots=@([Environment]::GetFolderPath('Desktop'),[Environment]::GetFolderPath('Programs'),(Join-Path $env:APPDATA 'Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar'));
 foreach($root in $roots){foreach($file in (Get-ChildItem -LiteralPath $root -Filter *.lnk -Recurse -File -ErrorAction SilentlyContinue)){
-$link=$shell.CreateShortcut($file.FullName);$target=[Environment]::ExpandEnvironmentVariables([string]$link.TargetPath);
+$link=$shell.CreateShortcut($file.FullName);$target=[SonaMigrationPaths]::Expand([Environment]::ExpandEnvironmentVariables([string]$link.TargetPath));$old=[SonaMigrationPaths]::Expand($old);
 if($target.StartsWith($old.TrimEnd('\')+'\',[StringComparison]::OrdinalIgnoreCase)){
 # Build a fresh link so hidden properties cannot retain the former app identity.
 $tmp=Join-Path $file.DirectoryName (([guid]::NewGuid().ToString('N'))+'.lnk');$fresh=$shell.CreateShortcut($tmp);$fresh.TargetPath=$exe;$fresh.Arguments=$link.Arguments;$fresh.WorkingDirectory=[IO.Path]::GetDirectoryName($exe);$fresh.IconLocation=$icon+',0';$fresh.Description='Sona';$fresh.Save();Move-Item -LiteralPath $tmp -Destination $file.FullName -Force;

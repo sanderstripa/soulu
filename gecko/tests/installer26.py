@@ -151,6 +151,7 @@ try:
   (previous/'connect-installed-files.json').write_text(json.dumps({'product':prior.lower(),'files':[prior+'.exe','BUILD.json']}))
   preserved=bytes(range(256));(legacy_profile/'private-data-preservation.bin').write_bytes(preserved)
   old_components=legacy_profile/(prior.lower()+'-vpn')/'Components';old_components.mkdir(parents=True);(old_components/'keep').write_bytes(preserved)
+  older_data=local/'Soul';older_data.mkdir();(older_data/'older-private-data').write_bytes(preserved)
   with winreg.CreateKey(winreg.HKEY_CURRENT_USER,'Software\\'+prior) as key:winreg.SetValueEx(key,'InstallDir',0,winreg.REG_SZ,str(previous))
   (legacy_profile/'user.js').write_text(f'user_pref("remote.prefs.recommended",false);user_pref("marionette.port",{mp});',encoding='utf-8')
   env=dict(os.environ,LOCALAPPDATA=str(local),WEBVIEW2_USER_DATA_FOLDER=str(root/'installer-webview'),MOZ_MARIONETTE='1',MOZ_REMOTE_ALLOW_SYSTEM_ACCESS='1',SONA_GECKO_TEST='1')
@@ -207,12 +208,13 @@ try:
    check('preview12_profile_migrated',profile.exists() and not legacy_profile.exists())
    check('previous_private_data_preserved',(profile/'private-data-preservation.bin').read_bytes()==preserved)
    check('previous_downloaded_vpn_components_preserved',(profile/'sona-vpn/Components/keep').read_bytes()==preserved and not (profile/(prior.lower()+'-vpn')).exists())
+   check('older_data_archived_without_overwriting_current_profile',(local/'Sona/PreviousData/legacy-12/older-private-data').read_bytes()==preserved and not older_data.exists())
    check('previous_owned_installation_removed',not previous.exists())
    new_link=programs/'Sona migration fixture.lnk'
    check('previous_shortcut_identity_replaced',not old_link.exists() and new_link.exists())
    script="$l=(New-Object -ComObject WScript.Shell).CreateShortcut('"+str(new_link).replace("'","''")+"');Write-Output $l.TargetPath;Write-Output $l.Description"
    link_data=subprocess.check_output(['powershell.exe','-NoProfile','-Command',script],text=True)
-   check('migrated_shortcut_points_to_sona',str(destination/'Sona.exe').lower() in link_data.lower() and 'Sona' in link_data);new_link.unlink()
+   check('migrated_shortcut_points_to_sona',long_exe.lower() in link_data.lower() and 'Sona' in link_data);new_link.unlink()
    check('previous_startup_shortcut_removed',not old_startup.exists())
    try:
     with winreg.OpenKey(winreg.HKEY_CURRENT_USER,runkey) as key:winreg.QueryValueEx(key,prior+' migration fixture');old_run=True

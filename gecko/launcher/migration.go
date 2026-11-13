@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -41,7 +42,24 @@ func migrateProductData(local string) error {
 				return e
 			}
 			if len(entries) > 0 {
-				return fmt.Errorf("two browser data folders exist; preserve both and resolve before upgrade")
+				if name == priorName {
+					return fmt.Errorf("two browser data folders exist; preserve both and resolve before upgrade")
+				}
+				label := "legacy-12"
+				if name != "Soul" {
+					label = "legacy-gecko"
+				}
+				archive := filepath.Join(target, "PreviousData", label)
+				if _, e := os.Stat(archive); !os.IsNotExist(e) {
+					return fmt.Errorf("previous data archive already exists; both data folders are preserved")
+				}
+				if e := os.MkdirAll(filepath.Dir(archive), 0700); e != nil {
+					return e
+				}
+				if e := os.Rename(source, archive); e != nil {
+					return e
+				}
+				continue
 			}
 			if e = os.Remove(source); e != nil {
 				return e
@@ -160,6 +178,17 @@ func migrateProductData(local string) error {
 	entries, _ := os.ReadDir(profiles)
 	for _, entry := range entries {
 		if entry.IsDir() {
+			policy := filepath.Join(profiles, entry.Name(), "user.js")
+			if data, e := os.ReadFile(policy); e == nil {
+				updated := bytes.ReplaceAll(data, []byte("// "+priorName+" startup policy "), []byte("// Sona startup policy "))
+				if !bytes.Equal(data, updated) {
+					if e = os.WriteFile(policy, updated, 0600); e != nil {
+						return e
+					}
+				}
+			} else if !os.IsNotExist(e) {
+				return e
+			}
 			if err = os.RemoveAll(filepath.Join(profiles, entry.Name(), "startupCache")); err != nil {
 				return err
 			}
