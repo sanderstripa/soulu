@@ -84,7 +84,7 @@ func verifyGecko(raw []byte) error {
  entries:=map[string]*zip.File{};for _,f:=range zr.File{if _,ok:=entries[f.Name];ok{return fmt.Errorf("duplicate archive entry")};entries[f.Name]=f}
  manifest:=entries["soulu-engine-manifest.json"];if manifest==nil{return fmt.Errorf("Gecko integrity manifest missing")}
  r,err:=manifest.Open();if err!=nil{return err};var m struct{Name string `json:"name"`; Files []struct{Path string `json:"path"`;SHA string `json:"sha256"`} `json:"files"`};err=json.NewDecoder(io.LimitReader(r,4<<20)).Decode(&m);r.Close();if err!=nil{return err}
- if m.Name!="Soulu Preview 1.160.29"||len(m.Files)<10{return fmt.Errorf("unexpected Gecko payload")}
+ if m.Name!="Soulu Preview 1.160.30"||len(m.Files)<10{return fmt.Errorf("unexpected Gecko payload")}
  checked:=map[string]bool{}
  for _,item:=range m.Files{if len(item.SHA)!=64||checked[item.Path]{return fmt.Errorf("invalid manifest entry")};f:=entries[item.Path];if f==nil||f.FileInfo().IsDir(){return fmt.Errorf("missing Gecko component: %s",item.Path)};r,e:=f.Open();if e!=nil{return e};h:=sha256.New();_,e=io.Copy(h,r);r.Close();if e!=nil{return e};if !strings.EqualFold(hex.EncodeToString(h.Sum(nil)),item.SHA){return fmt.Errorf("Gecko component hash mismatch: %s",item.Path)};checked[item.Path]=true}
  for name,f:=range entries{if !f.FileInfo().IsDir()&&name!="soulu-engine-manifest.json"&&!checked[name]{return fmt.Errorf("unverified file: %s",name)}}
@@ -161,7 +161,7 @@ func (a *Adapter) Install(o core.Options) error {
 		return err
 	}
 	exe := filepath.Join(dir, "Soulu.exe")
-	icon := filepath.Join(dir,"engine","soulu","chrome","ui","soulu-app-1.160.29.ico")
+	icon := filepath.Join(dir,"engine","soulu","chrome","ui","soulu-app-1.160.30.ico")
  cleanupLinks := `$shell=New-Object -ComObject WScript.Shell
 $roots=@([Environment]::GetFolderPath('Programs'),[Environment]::GetFolderPath('Desktop'),[Environment]::GetFolderPath('CommonPrograms'))
 $ownedRoots=@($env:SOULU_LINK_ROOT,(Join-Path $env:LOCALAPPDATA 'Programs\Soulu'),(Join-Path $env:LOCALAPPDATA 'Programs\Soul'),(Join-Path $env:LOCALAPPDATA 'Programs\SouluGecko'))
@@ -213,7 +213,7 @@ foreach($root in $roots){
 `
  refreshIcons = "$env:SOULU_SHORTCUT_EXE='" + strings.ReplaceAll(exe,"'","''") + "';$env:SOULU_SHORTCUT_ICON='" + strings.ReplaceAll(icon,"'","''") + "';" + refreshIcons
  if err=core.PowerShell(refreshIcons);err!=nil{return err}
-	if err = setReg(uninstallKey, map[string]string{"DisplayName": "Soulu Preview 1.160.29", "DisplayVersion": products.Version("soulu"), "Publisher": "Soulu", "InstallLocation": dir, "DisplayIcon": icon, "UninstallString": `"` + filepath.Join(dir, "Uninstall Soulu.exe") + `" --uninstall`}); err != nil {
+	if err = setReg(uninstallKey, map[string]string{"DisplayName": "Soulu Preview 1.160.30", "DisplayVersion": products.Version("soulu"), "Publisher": "Soulu", "InstallLocation": dir, "DisplayIcon": icon, "UninstallString": `"` + filepath.Join(dir, "Uninstall Soulu.exe") + `" --uninstall`}); err != nil {
 		return err
 	}
  // Register this isolated product without changing Windows UserChoice.

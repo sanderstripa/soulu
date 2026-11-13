@@ -4,13 +4,13 @@
   <linearGradient id="rim" x1=".1" y1=".2" x2=".75" y2=".9"><stop stop-color="#8bdcff"/><stop offset=".26" stop-color="#34adff"/><stop offset=".55" stop-color="#0074f6"/><stop offset="1" stop-color="#0047c4"/></linearGradient>
   <linearGradient id="card3" x1=".15" y1="0" x2=".85" y2=".9"><stop stop-color="#47bbff"/><stop offset=".28" stop-color="#0088ff"/><stop offset="1" stop-color="#00349f"/></linearGradient>
   <linearGradient id="card2" x1=".08" y1="0" x2=".9" y2=".95"><stop stop-color="#68caff"/><stop offset=".35" stop-color="#168fff"/><stop offset="1" stop-color="#0044be"/></linearGradient>
-  <linearGradient id="card1" x1="0" y1="0" x2=".9" y2="1"><stop stop-color="#b3ebfb"/><stop offset=".22" stop-color="#65c5fb"/><stop offset=".6" stop-color="#1988fa"/><stop offset="1" stop-color="#0054d2"/></linearGradient>
+  <linearGradient id="card1" x1="0" y1="0" x2=".9" y2="1"><stop stop-color="#b9edff"/><stop offset=".22" stop-color="#72ceff"/><stop offset=".6" stop-color="#238fff"/><stop offset="1" stop-color="#0054d2"/></linearGradient>
   <linearGradient id="front" x1=".12" y1=".8" x2=".9" y2=".3"><stop stop-color="#0069ed"/><stop offset=".36" stop-color="#3baaff"/><stop offset=".65" stop-color="#99def8"/><stop offset="1" stop-color="#31a3ff"/></linearGradient>
   <clipPath id="circle"><circle cx="627" cy="627" r="600"/></clipPath>
  </defs>
  <g clip-path="url(#circle)">
   <circle cx="627" cy="627" r="600" fill="url(#base)"/>
-  <path d="M176 1022C61 858 103 597 235 394C434 91 759-27 981 129C765-71 430 1 218 212C-39 467-29 803 176 1022Z" fill="url(#rim)"/>
+  <path d="M176 1022C61 858 103 597 235 394C434 91 759-27 981 129C760-100 400-80 140 140C-130 400-130 900 176 1022Z" fill="url(#rim)"/>
   <path d="M414 478V467Q414 373 500 343L878 242Q1003 209 1082 283Q1139 337 1139 420V843L874 1103H414Z" fill="#65c7ff"/>
   <path d="M414 480V470Q414 376 502 346L879 245Q1004 212 1081 286Q1137 340 1137 421V843L874 1103H414Z" fill="url(#card3)"/>
   <path d="M283 623V588Q283 490 386 464L819 376Q925 353 985 422Q1023 466 1023 532V968L758 1178H283Z" fill="#82d6ff"/>

@@ -48,8 +48,8 @@ def verify_assets():
         assert im.tobytes() == Image.open(ROOT/f'ui/branding/soulu-{size}.png').convert('RGBA').tobytes()
         alpha = im.getchannel('A')
         x0, y0, x1, y1 = alpha.getbbox()
-        assert x0 >= 1 and y0 >= 1 and x1 < size and y1 < size, f'Unsafe edge at {size}'
-        assert (x1-x0)/size >= (.85 if size <= 24 else .90), f'Symbol too small at {size}'
+        assert (x0,y0,x1,y1) == (0,0,size,size), f'Inset optical bounds at {size}'
+        assert (x1-x0)/size >= 1.0, f'Symbol too small at {size}'
         assert im.getpixel((0,0))[3] == 0
         # A white/black perimeter stroke or colored specks is never intentional.
         assert not any(a > 32 and max(r,g,b) < 20 for r,g,b,a in im.getdata()), 'Black pixels'

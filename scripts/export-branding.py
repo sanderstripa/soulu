@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SIZES = (16, 20, 24, 32, 40, 48, 64, 128, 256)
 PNG_ALIASES = ('soulu-icon.png', 'soulu-icon-new.png', 'browser-icon.png')
 ICO_ALIASES = ('soulu-icon.ico', 'soulu-app-icon.ico', 'soulu-installer-icon.ico',
-               'soulu-shortcut-icon.ico', 'browser-icon.ico', 'browser-app-icon.ico', 'soulu-app-1.160.24.ico', 'soulu-app-1.160.29.ico')
+               'soulu-shortcut-icon.ico', 'browser-icon.ico', 'browser-app-icon.ico', 'soulu-app-1.160.24.ico', 'soulu-app-1.160.29.ico', 'soulu-app-1.160.30.ico')
 
 def export(source):
     image = Image.open(source).convert('RGBA')
@@ -24,9 +24,9 @@ def export(source):
     if not box:
         raise ValueError('Master has no visible symbol')
     image = image.crop(box)
-    # 2% per side, with one full transparent safety pixel even at 16px.
+    # Full-size circular silhouette, including taskbar frames; no inset padding.
     def frame(size):
-        margin = max(1, round(size * .02))
+        margin = 0
         available = size - 2 * margin
         ratio = available / max(image.size)
         dims = tuple(max(1, round(v * ratio)) for v in image.size)
@@ -58,7 +58,7 @@ def export(source):
                 'source_sha256': hashlib.sha256((ROOT / 'ui/branding/soulu-master.svg').read_text(encoding='utf-8').encode('utf-8')).hexdigest(),
                 'png_sha256': {str(size): hashlib.sha256((destination / f'soulu-{size}.png').read_bytes()).hexdigest() for size in (*SIZES, 512, 1024)},
                 'sizes': list(SIZES), 'png_sizes': [*SIZES, 512, 1024],
-                'margin': 'max(1px, round(size * 0.02)) per side',
+                'margin': '0px; full optical diameter at every resolution',
                 'ico_sha256': hashlib.sha256(ico).hexdigest(),
                 'aliases': [*PNG_ALIASES, *ICO_ALIASES]}
     (destination / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
